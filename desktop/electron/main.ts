@@ -28,6 +28,10 @@ import { Store } from './store';
 import { prepareLocalData } from './local-data';
 import { requireSecureStorage } from './secure-storage';
 import { Vault } from './vault';
+import { VaultBroker } from './vault-broker';
+import { VaultManagers, type ManagerName } from './vault-managers';
+import { VaultRedaction } from './vault-redaction';
+import { VaultPrompts } from './vault-prompts';
 import { GoogleWorkspace } from './google-workspace';
 import { readGoogleClientFile } from './google-client';
 import { GOOGLE_PAGES, type GoogleService } from '../src/google-services';
@@ -50,6 +54,7 @@ import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
 import { searchPublicWeb } from './public-search';
 import { Splash } from './splash';
 import { documentTool } from '../src/document-tools';
+import { isDocumentQuestion } from './document-tools';
 import { inspectDocumentTemplate } from './document-template';
 import { DocumentTemplates, readTemplateSnapshot } from './document-template-store';
 import { DocumentAssets, documentImageDimensions, readDocumentImage } from './document-assets';
@@ -275,13 +280,14 @@ async function main() {
     vaultProfile,
   );
   const executionAllowed = () => {
-    if (vault.protected()) throw new Error('VAULT_HOST_EXECUTION_BLOCKED');
+    if (vault.protected() && policyState.policy.credentialStorage?.blockHostExecution) throw new Error('VAULT_HOST_EXECUTION_BLOCKED');
   };
   let hostHooks = 0;
   let localMcpActive = () => false;
   const ensureCredentialStorage = () => {
     if (policyState.policy.credentialStorage?.sharedDevice) throw new Error('VAULT_SHARED_DEVICE');
     if (vault.protected()) return;
+    if (!policyState.policy.credentialStorage?.blockHostExecution) return;
     if (
       hostHooks ||
       localMcpActive() ||
@@ -359,6 +365,7 @@ async function main() {
       store.put('settings', 'main', { ...s, consentedAt: new Date().toISOString(), termsVersion: TERMS_VERSION });
   }
   function scanText(text: string, options?: any) {
+    text = vaultRedaction.mask(text, options?.credentialMetadata === true);
     return policyState.policy.checks.privacy
       ? privacy.evaluatePrivacyGate(text, options)
       : credentialsOnly(text, privacy.scanPrivacyText, privacy.CREDENTIAL_PATTERN);
@@ -444,6 +451,18 @@ async function main() {
   const emit = (event: any) => {
     if (window && !window.isDestroyed()) window.webContents.send('step:event', event);
   };
+  const vaultRedaction = new VaultRedaction();
+  const vaultManagers = new VaultManagers(
+    source =>
+      policyState.policy.features.vault &&
+      !policyState.policy.credentialStorage?.blockHostExecution &&
+      !vault.state().suspended &&
+      store.settings().vaultSources?.[source] !== false,
+  );
+  const vaultBroker = new VaultBroker(vault, vaultManagers, vaultRedaction);
+  const vaultPrompts = new VaultPrompts((prompt, closed) =>
+    emit({ sessionId: prompt.sessionId, type: closed ? 'vault-prompt-close' : 'vault-prompt', vaultPrompt: prompt }),
+  );
   const exportWorkspace = new ExportWorkspace(
     () => store.settings(),
     settings => store.put('settings', 'main', settings),
@@ -663,6 +682,9 @@ async function main() {
   watchFile(policyState.path, { interval: 5000 }, () => {
     policyState = readPolicy();
     vault.invalidate();
+    vaultBroker.invalidate();
+    vaultManagers.lock();
+    vaultPrompts.cancelAll();
     google.invalidate();
     closeClaudeSpares();
     if (!claudeSubscriptionOn()) {
@@ -798,10 +820,10 @@ async function main() {
   );
   harness.tools = scope => tools.host(scope);
   const phase4Identity = () => JSON.stringify([store.settings().workspace, store.settings().team, permissionMode()]);
-  const phase4Consent = (title: string, body: string, signal?: AbortSignal) =>
+  const phase4Consent = (title: string, body: string, signal?: AbortSignal, technical?: string) =>
     approvals.request(
       approvals.rule(store.settings().workspace || data, 'phase4', body),
-      { title, body, privacyClass: 'internal', allowRemember: false },
+      { title, body, technical, privacyClass: 'internal', allowRemember: false },
       signal,
     );
   const mcp = new Mcp(() => policyState.policy, phase4Identity, join(data, 'mcp'), harness.privacy, phase4Consent);
@@ -946,36 +968,93 @@ async function main() {
       if (!policyState.policy.features.vault) throw new Error('FEATURE_DISABLED');
       const target = agentBrowser.vaultTarget(request.input, scope.sessionId);
       const binding = JSON.stringify([scope.sessionId, request.input, phase4Identity()]);
-      if (request.args?.action === 'list') return { entries: vault.catalog(binding, target.origin) };
+      if (request.args?.action === 'list') return vaultBroker.list(binding, target.origin);
       if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
+      if (request.args?.action === 'unlock') {
+        const source = request.args.source as ManagerName;
+        if (!['onepassword', 'bitwarden'].includes(source)) throw new Error('INVALID_INPUT');
+        if (vaultManagers.canUnlockWithoutPassword(source)) {
+          await check();
+          await vaultManagers.unlock(source, '');
+          return { status: 'unlocked', source };
+        }
+        const answer = await vaultPrompts.ask(
+          { sessionId: scope.sessionId, kind: 'unlock', origin: target.origin, provider: source },
+          scope.signal,
+        );
+        if (!answer?.password) throw new Error('CANCELLED');
+        await check();
+        await vaultManagers.unlock(source, answer.password);
+        answer.password = '';
+        return { status: 'unlocked', source };
+      }
       if (request.args?.action === 'request_save') {
         emit({ sessionId: scope.sessionId, type: 'vault-open', text: target.origin });
         return { status: 'secure-settings-opened', origin: target.origin };
       }
-      if (request.args?.action !== 'fill') throw new Error('INVALID_INPUT');
-      const expected = await agentBrowser.prepareVault(request.input, scope.sessionId, scope.signal);
-      // Signing in is part of what the employee approves here: after filling, the login page stays hidden from the AI.
-      const submit = request.args?.submit === true;
-      return vault.fill(
-        inputText(request.args.handle, 80),
+      const action = request.args?.action;
+      if (!['fill', 'save_login', 'enter_code'].includes(String(action))) throw new Error('INVALID_INPUT');
+      let handle = typeof request.args?.handle === 'string' ? request.args.handle : '';
+      if (action === 'save_login') {
+        await agentBrowser.prepareVault(request.input, scope.sessionId, scope.signal);
+        const answer = await vaultPrompts.ask({ sessionId: scope.sessionId, kind: 'login', origin: target.origin }, scope.signal);
+        if (!answer?.username || !answer.password) throw new Error('CANCELLED');
+        await check();
+        const current = agentBrowser.vaultTarget(request.input, scope.sessionId);
+        if (current.url !== target.url || current.generation !== target.generation) throw new Error('VAULT_ORIGIN_CHANGED');
+        ensureCredentialStorage();
+        const saved = vault.save({
+          kind: 'website',
+          label: new URL(target.origin).hostname,
+          destination: target.origin,
+          username: answer.username,
+          password: answer.password,
+        });
+        answer.username = '';
+        answer.password = '';
+        await migrateApiKeys();
+        await vaultBroker.list(binding, target.origin);
+        handle = vaultBroker.localHandle(saved.id, binding) || '';
+      }
+      const otp = action === 'enter_code';
+      if (otp && !handle) {
+        const expected = await agentBrowser.prepareProtected(request.input, scope.sessionId, 'code', scope.signal);
+        const answer = await vaultPrompts.ask({ sessionId: scope.sessionId, kind: 'code', origin: target.origin }, scope.signal);
+        if (!answer?.code) throw new Error('CANCELLED');
+        await check();
+        vaultRedaction.register(answer.code);
+        return agentBrowser.fillProtected(request.input, scope.sessionId, expected, { code: answer.code }, scope.signal);
+      }
+      let expected: any;
+      const submit = action === 'save_login' || request.args?.submit === true;
+      return vaultBroker.use(
+        inputText(handle, 80),
         binding,
-        expected.origin,
-        label =>
-          approvals.request(
-            approvals.rule(store.settings().workspace || data, 'browser_vault', randomUUID()),
-            {
-              title: credentialTitle(submit ? 'Fill account and sign in?' : 'Fill account once?'),
-              body: label + '\n' + expected.origin + '\n' + expected.fields.join(', '),
-              privacyClass: 'restricted',
-              allowRemember: false,
-              sessionId: scope.sessionId,
-            },
-            scope.signal,
-          ),
-        async payload => {
+        target.origin,
+        otp,
+        async entry => {
+          expected =
+            otp || entry.kind !== 'website'
+              ? await agentBrowser.prepareProtected(request.input, scope.sessionId, otp ? 'code' : 'address', scope.signal)
+              : await agentBrowser.prepareVault(request.input, scope.sessionId, scope.signal);
+          return true;
+        },
+        async (payload, entry) => {
           await check();
-          if (vault.state().suspended) throw new Error('VAULT_SUSPENDED');
-          return agentBrowser.fillVault(request.input, scope.sessionId, expected, payload, scope.signal, submit);
+          if (otp) {
+            let code = payload.code;
+            if (!code) {
+              const answer = await vaultPrompts.ask({ sessionId: scope.sessionId, kind: 'code', origin: target.origin }, scope.signal);
+              code = answer?.code;
+            }
+            if (!code) throw new Error('CANCELLED');
+            await check();
+            vaultRedaction.register(code);
+            return agentBrowser.fillProtected(request.input, scope.sessionId, expected, { code }, scope.signal);
+          }
+          if (entry.kind === 'website')
+            return agentBrowser.fillVault(request.input, scope.sessionId, expected, payload, scope.signal, submit);
+          return agentBrowser.fillProtected(request.input, scope.sessionId, expected, payload.fields || {}, scope.signal);
         },
       );
     }
@@ -1168,7 +1247,7 @@ async function main() {
   };
   const reviewState = () => ({
     allowed: policyState.policy.features.learningReview,
-    enabled: Boolean(policyState.policy.features.learningReview && store.settings().learningReview),
+    enabled: Boolean(policyState.policy.features.learningReview && store.settings().learningReview !== false),
     today: reviewBudget().count,
     dailyLimit: REVIEW_DAILY,
   });
@@ -1395,8 +1474,18 @@ async function main() {
     (id, tasks, signal) =>
       phase4Consent(
         tm('ตรวจแผนงานย่อยก่อนเริ่ม?'),
-        tm('งาน {0}\n{1}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ', id, JSON.stringify(tasks, null, 2)),
+        tm(
+          'งาน {0}\n{1}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ',
+          id,
+          tasks
+            .map(
+              (task, index) =>
+                `${index + 1}. ${task.query}${task.dependsOn.length ? '\n' + tm('รอขั้นตอน {0}', task.dependsOn.map(dependency => tasks.findIndex(t => t.id === dependency) + 1).join(', ')) : ''}`,
+            )
+            .join('\n'),
+        ),
         signal,
+        JSON.stringify(tasks, null, 2),
       ),
     (query, team) => harness.route(query, { team, workspace: store.settings().workspace }),
     (id, text) => emit({ sessionId: id, type: 'activity', text }),
@@ -1688,6 +1777,9 @@ async function main() {
     const input = raw ?? {};
     if (['workspace', 'settings', 'permissionMode'].includes(method)) {
       vault.invalidate();
+      vaultBroker.invalidate();
+      vaultManagers.lock();
+      vaultPrompts.cancelAll();
       google.invalidate();
     }
     if (['vaultSave', 'googleConnect', 'googleImportClient'].includes(method)) ensureCredentialStorage();
@@ -1695,15 +1787,20 @@ async function main() {
       case 'vaultState':
         return {
           ...vault.state(),
-          entries: vault.list().filter(v => v.kind === 'website' || v.kind === 'api-key'),
+          entries: vault.list().filter(v => ['website', 'address', 'api-key'].includes(v.kind)),
+          sources: vaultManagers.state(),
+          blockHostExecution: Boolean(policyState.policy.credentialStorage?.blockHostExecution),
           enabled: policyState.policy.features.vault && !policyState.policy.credentialStorage?.sharedDevice,
           browsers: agentBrowser.sensitiveTabs(),
         };
       case 'vaultSave': {
-        if (!policyState.policy.features.vault || input.kind !== 'website' || input.remember !== true) throw new Error('FEATURE_DISABLED');
+        if (!policyState.policy.features.vault || !['website', 'address'].includes(input.kind) || input.remember !== true)
+          throw new Error('FEATURE_DISABLED');
         if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
         if (
-          Object.keys(input).some(k => !['id', 'revision', 'kind', 'label', 'destination', 'username', 'password', 'remember'].includes(k))
+          Object.keys(input).some(
+            k => !['id', 'revision', 'kind', 'label', 'destination', 'username', 'password', 'remember', 'otpSecret', 'fields'].includes(k),
+          )
         )
           throw new Error('INVALID_INPUT');
         const saved = vault.save(input);
@@ -1712,7 +1809,7 @@ async function main() {
       }
       case 'vaultRemove': {
         const entry = vault.list().find(v => v.id === input.id);
-        if (!entry || entry.kind !== 'website') throw new Error('VAULT_ACCESS_DENIED');
+        if (!entry || !['website', 'address'].includes(entry.kind)) throw new Error('VAULT_ACCESS_DENIED');
         if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
         if (!(await phase4Consent(credentialTitle('Delete this account from this device?'), entry.label))) throw new Error('CANCELLED');
         vault.remove(entry.id, input.revision);
@@ -1721,9 +1818,43 @@ async function main() {
       case 'vaultSuspend':
         if (typeof input.enabled !== 'boolean') throw new Error('INVALID_INPUT');
         vault.suspend(input.enabled);
+        vaultBroker.invalidate();
+        vaultManagers.lock();
+        vaultPrompts.cancelAll();
         if (input.enabled) service.cancelAll();
         google.invalidate();
         return true;
+      case 'vaultPromptRespond':
+        vaultPrompts.respond(input.id, input.value);
+        return true;
+      case 'vaultSource': {
+        if (!policyState.policy.features.vault || policyState.policy.credentialStorage?.sharedDevice) throw new Error('FEATURE_DISABLED');
+        if (!['onepassword', 'bitwarden'].includes(input.source) || !['enable', 'lock', 'unlock'].includes(input.action))
+          throw new Error('INVALID_INPUT');
+        const source = input.source as ManagerName;
+        if (input.action === 'enable') {
+          if (typeof input.enabled !== 'boolean') throw new Error('INVALID_INPUT');
+          store.put('settings', 'main', {
+            ...store.settings(),
+            vaultSources: { ...store.settings().vaultSources, [source]: input.enabled },
+          });
+          vaultManagers.lock(source);
+          vaultBroker.invalidate();
+        } else if (input.action === 'lock') {
+          vaultManagers.lock(source);
+          vaultBroker.invalidate();
+        } else {
+          if (vaultManagers.canUnlockWithoutPassword(source)) {
+            await vaultManagers.unlock(source, '');
+            return true;
+          }
+          const answer = await vaultPrompts.ask({ sessionId: '', kind: 'unlock', origin: '', provider: source });
+          if (!answer?.password) throw new Error('CANCELLED');
+          await vaultManagers.unlock(source, answer.password);
+          answer.password = '';
+        }
+        return true;
+      }
       case 'vaultResumeBrowser': {
         const tab = inputText(input.tab, 80),
           owner = inputText(input.sessionId, 80);
@@ -3322,17 +3453,38 @@ async function main() {
         store.save(session);
         return session;
       }
+      case 'sideQuestion':
       case 'send': {
         const id = inputText(input.id, 60),
           text = inputText(input.text);
         const sending = store.session(id);
-        if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
+        const aside =
+          method === 'sideQuestion' ||
+          (!input.skill &&
+            !input.documentTool &&
+            !input.attachments?.length &&
+            input.mode === 'draft' &&
+            isDocumentQuestion(sending.documentTool, text));
+        if (
+          aside &&
+          (input.skill ||
+            input.documentTool ||
+            input.attachments?.length ||
+            input.sourceText ||
+            input.workflow ||
+            input.coordinator ||
+            input.autoContinue)
+        )
+          throw new Error('INVALID_INPUT');
+        if ((aside && service.isQuestionActive(id)) || (!aside && (service.isActive(id) || coordinator.has(id))))
+          throw new Error('RUN_ALREADY_ACTIVE');
         if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
         const sendingConnection = store.get<Connection>('connection', sending.connectionId);
         if (!sendingConnection?.ready) throw new Error('CONNECTION_NOT_READY');
         const mode = input.mode === 'image' || input.mode === 'chat' || input.mode === 'draft' ? input.mode : 'draft';
         // A native workflow (plan, execute, requirements, diagnose) runs as chat, never as an image request.
         const workflow = isWorkflow(input.workflow) ? input.workflow : undefined;
+        if (input.autoContinue && workflow !== 'execute') throw new Error('INVALID_INPUT');
         const workMode =
           !workflow && mode === 'chat' && input.autoImage !== false && isImageRequest(text) ? 'image' : workflow ? 'chat' : mode;
         const draftingTool = input.documentTool === undefined ? undefined : documentTool(input.documentTool);
@@ -3379,7 +3531,8 @@ async function main() {
         const attachmentText = templateDescription?.context || selected.map((a: any) => a.text).join('\n\n');
         if (typeof input.sourceText === 'string' && input.sourceText.length > 100_000) throw new Error('INPUT_LIMIT');
         const sourceText = typeof input.sourceText === 'string' ? inputText(input.sourceText, 100_000) : '';
-        const combinedSource = [sourceText, attachmentText].filter(Boolean).join('\n\n---\n\n');
+        const questionSnapshot = aside ? service.questionSnapshot(id) : undefined;
+        const combinedSource = questionSnapshot?.source || [sourceText, attachmentText].filter(Boolean).join('\n\n---\n\n');
         if (combinedSource.length > 100_000) throw new Error('INPUT_LIMIT');
         // Only juristic-person numbers (13 digits starting with 0) that the person checked may stay unmasked.
         const allowIds = (Array.isArray(input.allowIdentifiers) ? input.allowIdentifiers : [])
@@ -3406,7 +3559,7 @@ async function main() {
                 keywordOnly: review.keywordOnly,
                 first,
                 attachment: selected.length > 0,
-                source: Boolean(sourceText),
+                source: Boolean(sourceText) || aside,
                 vision,
                 coordinated,
               },
@@ -3423,7 +3576,11 @@ async function main() {
         }
         if (ask) {
           // The in-app dialog answers with a one-time token bound to this exact request, so a later edit needs a new answer.
-          const sourceDigest = sourceText ? createHash('sha256').update(sourceText).digest('hex') : '';
+          const sourceDigest = (aside ? combinedSource : sourceText)
+            ? createHash('sha256')
+                .update(aside ? combinedSource : sourceText)
+                .digest('hex')
+            : '';
           const fingerprint = createHash('sha256')
             .update(
               [
@@ -3435,6 +3592,8 @@ async function main() {
                 workMode,
                 input.imageModel || '',
                 String(coordinated),
+                String(aside),
+                String(input.autoContinue === true),
                 sourceDigest,
                 ...selected.map((a: any) => a.view.id),
               ].join('\0'),
@@ -3454,7 +3613,7 @@ async function main() {
                 labels: review.labels,
                 attachment: selected.length > 0,
                 vision,
-                source: Boolean(sourceText),
+                source: Boolean(sourceText) || aside,
               },
             };
           }
@@ -3467,7 +3626,8 @@ async function main() {
           }
           acceptTerms();
         }
-        if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
+        if ((aside && service.isQuestionActive(id)) || (!aside && (service.isActive(id) || coordinator.has(id))))
+          throw new Error('RUN_ALREADY_ACTIVE');
         if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
         // Organization hooks see the masked request only, never attachments or credentials.
         const submitted = await fireHook({
@@ -3482,9 +3642,17 @@ async function main() {
           throw new Error('HOOK_BLOCKED');
         }
         // Awaited hooks can admit another run. Check again before changing task state or snapshots.
-        if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
+        if ((aside && service.isQuestionActive(id)) || (!aside && (service.isActive(id) || coordinator.has(id))))
+          throw new Error('RUN_ALREADY_ACTIVE');
         if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
         const queued = store.session(id);
+        if (aside) {
+          void service.sideQuestion(id, text, true, questionSnapshot!).catch(error => {
+            diagnose('side-question-failed', { code: errorCode(error) });
+            emit({ sessionId: id, type: 'changed' });
+          });
+          return { started: true, aside: true, mode: 'chat', masked: review.labels, warning };
+        }
         const templateInfo =
           nativeTemplate && templateDescription
             ? documentTemplates.save(id, nativeTemplate, draftingTool!.id, selected[0].view.name, templateDescription.font)
@@ -3509,6 +3677,7 @@ async function main() {
                 ],
                 {
                   retry: input.retry === true,
+                  autoContinue: input.autoContinue === true,
                   images: selected.flatMap(a => a.images || []),
                   ...(workflow ? { workflow } : {}),
                   ...(draftingTool ? { documentTool: draftingTool.id } : {}),
@@ -3532,6 +3701,9 @@ async function main() {
       case 'cancel':
         coordinator.cancel(input.id);
         service.cancel(input.id);
+        return true;
+      case 'cancelSideQuestion':
+        service.cancelSideQuestion(inputText(input.id, 60));
         return true;
       // Pin and rename are view metadata: keep updatedAt so the list order does not jump.
       case 'pin': {
@@ -3815,6 +3987,9 @@ async function main() {
   window.webContents.on('did-start-navigation', (_event, _url, _inPlace, mainFrame) => {
     if (mainFrame) {
       vault.invalidate();
+      vaultBroker.invalidate();
+      vaultManagers.lock();
+      vaultPrompts.cancelAll();
       google.invalidate();
       approvals.close();
       questions.close();
@@ -3822,6 +3997,9 @@ async function main() {
   });
   window.webContents.on('render-process-gone', () => {
     vault.invalidate();
+    vaultBroker.invalidate();
+    vaultManagers.lock();
+    vaultPrompts.cancelAll();
     google.invalidate();
     approvals.close();
     questions.close();
@@ -3834,6 +4012,9 @@ async function main() {
   app.on('before-quit', event => {
     google.cancel();
     vault.invalidate();
+    vaultBroker.invalidate();
+    vaultManagers.lock();
+    vaultPrompts.cancelAll();
     approvals.close();
     questions.close();
     voice.cancel();

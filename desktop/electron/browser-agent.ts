@@ -5,6 +5,7 @@ import { browserUrl } from './workbench';
 import { publicSite, type Resolve } from './web-fetch';
 import type { LoopRequest } from '../src/tools';
 import { tm } from './i18n';
+import { vaultFieldsScript } from './vault-browser-fields';
 
 // Runs in an isolated world. The page cannot replace these helpers or manufacture references.
 const helpers = `
@@ -30,6 +31,9 @@ const PLAIN_USERNAME = `if (!identifiers.length && passwords.length === 1 && pas
   if (plain.length === 1) identifiers = plain;
 }`;
 const WORLD = 1005;
+const PASSWORD_TARGETS = `const allPasswords=[...document.querySelectorAll('input[type=password]')].filter(visible);
+const passwords=allPasswords.filter(el=>!/(?:^|\\s)(?:new-password|one-time-code)(?:\\s|$)/i.test(el.autocomplete||'')&&!/\\b(?:new|confirm|create|repeat)[ _-]*password\\b/i.test([el.name,el.id,el.getAttribute('aria-label'),...[...(el.labels||[])].map(label=>label.textContent)].join(' ')));
+const excludedPassword=allPasswords.length!==passwords.length;`;
 type Entry = {
   contents: WebContents;
   view?: WebContentsView;
@@ -39,6 +43,7 @@ type Entry = {
   opened: string;
   busy: boolean;
   vaultSensitive?: boolean;
+  protectedKind?: 'address' | 'code';
   generation?: number;
 };
 type Context = {
@@ -191,10 +196,14 @@ export class AgentBrowser {
     );
   }
   private async snapshot(id: string, entry: Entry, signal: AbortSignal) {
-    if (entry.vaultSensitive) throw new Error('BROWSER_VAULT_SENSITIVE');
+    if (entry.vaultSensitive && !entry.protectedKind) throw new Error('BROWSER_VAULT_SENSITIVE');
     const snapshot = randomUUID();
     await this.settle(entry, signal);
     const marker = await this.markListeners(entry, signal);
+    // A submitted OTP/address form may navigate while settling. Read the protection state of the current page,
+    // after those waits, so the next page can be read without carrying the old form's mask forward.
+    if (entry.vaultSensitive && !entry.protectedKind) throw new Error('BROWSER_VAULT_SENSITIVE');
+    const protectedRead = Boolean(entry.vaultSensitive && entry.protectedKind);
     const result = await this.script(
       entry,
       `(() => { ${helpers}
@@ -219,8 +228,9 @@ export class AgentBrowser {
       for (const el of Array.from(document.body?.querySelectorAll('*') || []).slice(0, 4000))
         if (!found.has(el) && pointer(el) && !(el.parentElement && pointer(el.parentElement)) && !el.closest(native) && ![...found].some(f => f !== el && !f.matches(native) && f.contains(el))) found.add(el);
       const all = Array.from(found).filter(visible).sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
-      const login = all.some(el => sensitive(el) && el.type !== 'hidden' && el.type !== 'file');
-      const controls = all.slice(0,150);
+      const protectedRead = ${JSON.stringify(protectedRead)};
+      const login = !protectedRead && all.some(el => sensitive(el) && el.type !== 'hidden' && el.type !== 'file');
+      const controls = (protectedRead ? all.filter(el=>el.matches('button,input[type=submit],input[type=button],a[role=button]')) : all).slice(0,150);
       const refs = new Map();
       const elements = login ? [] : controls.filter(el => !sensitive(el) && !el.disabled).map((el,i) => {
         const ref = 'e'+(i+1); refs.set(ref,{el, fingerprint:fingerprint(el)});
@@ -235,7 +245,7 @@ export class AgentBrowser {
       document.addEventListener('input',()=>{state.dirty=true;},{capture:true,signal:state.controller.signal});
       document.addEventListener('change',()=>{state.dirty=true;},{capture:true,signal:state.controller.signal});
       globalThis.__stepBrowser = state;
-      return {snapshot:${JSON.stringify(snapshot)},url:location.href,title:document.title.slice(0,200),text:login ? '' : (document.body?.innerText || '').slice(0,20000),elements,requiresManualLogin:login};
+      return {snapshot:${JSON.stringify(snapshot)},url:location.href,title:document.title.slice(0,200),text:login || protectedRead ? '' : (document.body?.innerText || '').slice(0,20000),elements,requiresManualLogin:login,...(protectedRead?{protectedForm:true}:{})};
     })()`,
       signal,
     );
@@ -244,6 +254,7 @@ export class AgentBrowser {
   async capture(id: string, context: Context) {
     await context.check();
     const entry = this.get(id, context.sessionId);
+    if (entry.vaultSensitive) throw new Error('BROWSER_IMAGE_SENSITIVE');
     if (entry.busy) throw new Error('BROWSER_BUSY');
     this.dock?.select(id);
     entry.busy = true;
@@ -380,6 +391,7 @@ export class AgentBrowser {
       // A new page no longer holds the filled form, so the AI may read again (after signing in, or the password step).
       contents.on('did-navigate', () => {
         entry.vaultSensitive = false;
+        entry.protectedKind = undefined;
       });
       this.tabs.set(id, entry);
       this.origins.set(contentsId, entry.origin);
@@ -448,7 +460,8 @@ export class AgentBrowser {
       }
     }
     const entry = this.get(request.input, context.sessionId);
-    if (entry.vaultSensitive && action !== 'close') throw new Error('BROWSER_VAULT_SENSITIVE');
+    if (entry.vaultSensitive && action !== 'close' && (!entry.protectedKind || !['read', 'click'].includes(String(action))))
+      throw new Error('BROWSER_VAULT_SENSITIVE');
     context.activity?.(
       `${action === 'read' ? tm('กำลังอ่านผลจากเว็บ') : action === 'close' ? tm('กำลังปิดเว็บ') : action === 'fill' ? tm('ตรวจเป้าหมายก่อนขอกรอกข้อมูล') : tm('ตรวจเป้าหมายก่อนขอคลิก')} ${new URL(entry.origin).host}`,
     );
@@ -476,7 +489,7 @@ export class AgentBrowser {
       );
       if (info.error) throw new Error(info.error);
       context.review(info.url + '\n' + info.label);
-      const final = action === 'click' && info.final === true;
+      const final = action === 'click' && (info.final === true || entry.protectedKind === 'address');
       if (final) context.activity?.(tm('รออนุญาตขั้นสุดท้าย: {0}', info.label));
       if (
         (final || !context.routine?.()) &&
@@ -522,8 +535,7 @@ export class AgentBrowser {
   vaultTarget(id: string, owner: string) {
     const entry = this.get(id, owner);
     const url = new URL(entry.contents.getURL());
-    if (url.protocol !== 'https:' || url.origin !== entry.origin || entry.busy || url.hostname === 'accounts.google.com')
-      throw new Error('VAULT_ORIGIN_CHANGED');
+    if (url.protocol !== 'https:' || url.origin !== entry.origin || entry.busy) throw new Error('VAULT_ORIGIN_CHANGED');
     return { origin: url.origin, url: url.href, generation: entry.generation || 0 };
   }
   async prepareVault(id: string, owner: string, signal: AbortSignal) {
@@ -533,7 +545,8 @@ export class AgentBrowser {
       entry,
       `(() => {
       const visible = el => el.isConnected && el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0 && getComputedStyle(el).visibility !== 'hidden' && getComputedStyle(el).display !== 'none';
-      const passwords = [...document.querySelectorAll('input[type=password]')].filter(visible);
+      ${PASSWORD_TARGETS}
+      if(excludedPassword)return null;
       let identifiers = [...document.querySelectorAll('input')].filter(el => visible(el) && (el.type === 'email' || el.autocomplete === 'username' || /^(username|email|login|identifier)$/i.test(el.name || el.id)));
       ${PLAIN_USERNAME}
       if (passwords.length > 1 || identifiers.length > 1 || !passwords.length && !identifiers.length) return null;
@@ -596,7 +609,8 @@ export class AgentBrowser {
         returnByValue: true,
         functionDeclaration: `function(username,password,expected,submit) {
           const visible = el => el && el.isConnected && el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0 && !el.disabled && !el.readOnly;
-          const passwords=[...document.querySelectorAll('input[type=password]')].filter(visible);
+          ${PASSWORD_TARGETS}
+          if(excludedPassword)return {status:'changed',filledFields:[]};
           let identifiers=[...document.querySelectorAll('input')].filter(el=>visible(el)&&(el.type==='email'||el.autocomplete==='username'||/^(username|email|login|identifier)$/i.test(el.name||el.id)));
           ${PLAIN_USERNAME}
           const user=identifiers[0], pass=passwords[0], form=pass?.form||user?.form;
@@ -660,6 +674,7 @@ export class AgentBrowser {
               },
             ])
             .then(Boolean, () => false);
+        if (moved) entry.vaultSensitive = false;
         return { status: value.status, filledFields: value.filledFields, origin: expected.origin, submitted: true, navigated: moved };
       }
       return {
@@ -687,6 +702,96 @@ export class AgentBrowser {
   resumeVault(id: string, owner: string) {
     const entry = this.get(id, owner);
     entry.vaultSensitive = false;
+    entry.protectedKind = undefined;
+  }
+  async prepareProtected(id: string, owner: string, kind: 'address' | 'code', signal: AbortSignal) {
+    if (!['address', 'code'].includes(kind)) throw new Error('VAULT_FORM_UNSUPPORTED');
+    const target = this.vaultTarget(id, owner),
+      entry = this.get(id, owner);
+    const result = await this.script(
+      entry,
+      `(() => { const kind=${JSON.stringify(kind)}; ${vaultFieldsScript}; return {fingerprint,fields:fields.map(f=>f.name)}; })()`,
+      signal,
+    );
+    return { ...target, ...result, kind } as {
+      origin: string;
+      url: string;
+      generation: number;
+      fingerprint: string;
+      fields: string[];
+      kind: 'address' | 'code';
+    };
+  }
+  async fillProtected(
+    id: string,
+    owner: string,
+    expected: { origin: string; url: string; generation: number; fingerprint: string; kind: 'address' | 'code' },
+    values: Record<string, string>,
+    signal: AbortSignal,
+  ) {
+    if (!['address', 'code'].includes(expected.kind)) throw new Error('VAULT_FORM_UNSUPPORTED');
+    const target = this.vaultTarget(id, owner),
+      entry = this.get(id, owner);
+    if (target.url !== expected.url || target.generation !== expected.generation) throw new Error('VAULT_ORIGIN_CHANGED');
+    if (signal.aborted) throw new Error('CANCELLED');
+    const tool = entry.contents.debugger;
+    if (tool.isAttached()) throw new Error('VAULT_TRANSPORT_BUSY');
+    entry.busy = true;
+    entry.vaultSensitive = true;
+    entry.protectedKind = expected.kind;
+    const stop = () => entry.dispose();
+    signal.addEventListener('abort', stop, { once: true });
+    const timer = setTimeout(stop, 10000);
+    try {
+      tool.attach('1.3');
+      const { frameTree } = await tool.sendCommand('Page.getFrameTree');
+      const world = await tool.sendCommand('Page.createIsolatedWorld', { frameId: frameTree.frame.id, worldName: 'step-vault' });
+      const result = await tool.sendCommand('Runtime.callFunctionOn', {
+        executionContextId: world.executionContextId,
+        returnByValue: true,
+        functionDeclaration: `function(expected, values) {
+          if(location.origin!==expected.origin || location.href!==expected.url) return {status:'changed',filledFields:[]};
+          const kind=expected.kind; ${vaultFieldsScript}
+          if(fingerprint!==expected.fingerprint) return {status:'changed',filledFields:[]};
+          const filled=[];
+          if(kind==='code' && fields.length>1 && fields.length!==values.code?.length) return {status:'changed',filledFields:[]};
+          for(const {el,name,index} of fields) {
+            if(!values[name]) continue;
+            if(location.origin!==expected.origin || location.href!==expected.url || !visible(el) || el.form && new URL(el.form.action||location.href,location.href).origin!==expected.origin) return {status:'partial',filledFields:filled};
+            const value=index===undefined?values[name]:values[name][index];
+            const proto=el instanceof HTMLSelectElement?HTMLSelectElement.prototype:el instanceof HTMLTextAreaElement?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;
+            let selected=value;
+            if(el instanceof HTMLSelectElement){
+              const normal=value=>String(value).trim().toLowerCase();
+              const option=[...el.options].find(option=>[option.value,option.textContent].some(text=>normal(text)===normal(value)||normal(text)===normal(value).replace(/^0/,'')));
+              if(!option)return {status:'partial',filledFields:filled};selected=option.value;
+            }
+            Object.getOwnPropertyDescriptor(proto,'value').set.call(el,selected);
+            el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));
+            filled.push(name);
+          }
+          return {status:'filled',filledFields:filled};
+        }`,
+        arguments: [{ value: expected }, { value: values }],
+      });
+      if (result.exceptionDetails || !result.result?.value) throw new Error('VAULT_OUTCOME_UNKNOWN');
+      const value = result.result.value;
+      if (
+        !['filled', 'partial', 'changed'].includes(value.status) ||
+        !Array.isArray(value.filledFields) ||
+        value.filledFields.some((name: unknown) => typeof name !== 'string' || !Object.hasOwn(values, name))
+      )
+        throw new Error('VAULT_OUTCOME_UNKNOWN');
+      // Values remain unreadable until navigation or a trusted human resume, including on address/card forms.
+      return { status: value.status, filledFields: value.filledFields, origin: expected.origin };
+    } catch {
+      throw new Error('VAULT_OUTCOME_UNKNOWN');
+    } finally {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', stop);
+      if (tool.isAttached()) tool.detach();
+      entry.busy = false;
+    }
   }
   sensitiveTabs() {
     return [...this.tabs]

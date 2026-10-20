@@ -1,6 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron';
 const allowed = new Set([
+  'sideQuestion',
+  'cancelSideQuestion',
   'vaultState',
+  'vaultPromptRespond',
+  'vaultSource',
   'vaultSave',
   'vaultRemove',
   'vaultSuspend',

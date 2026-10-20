@@ -8,10 +8,21 @@ export const WORKFLOW_LABELS: Record<Workflow, string> = {
   execute: 'ลงมือทำตามแผน',
   requirements: 'เขียนเอกสารความต้องการ',
   diagnose: 'วิเคราะห์ปัญหา',
+  coding: 'เขียนและตรวจโค้ด',
 };
 
 /** The plan approved in the plan workflow, ticked off live while the execute workflow works through it. */
-export function WorkPlanCard({ plan, running, onExecute }: { plan: WorkPlan; running: boolean; onExecute: () => void }) {
+export function WorkPlanCard({
+  plan,
+  running,
+  continuation,
+  onExecute,
+}: {
+  plan: WorkPlan;
+  running: boolean;
+  continuation?: import('./types').Session['longTask'];
+  onExecute: (continuous?: boolean) => void;
+}) {
   const done = plan.tasks.filter(task => task.status === 'done').length;
   const finished = done === plan.tasks.length;
   return (
@@ -42,10 +53,33 @@ export function WorkPlanCard({ plan, running, onExecute }: { plan: WorkPlan; run
         ))}
       </ol>
       {!finished && (
-        <button className="work-plan-run" disabled={running} onClick={onExecute}>
-          <Play size={14} />
-          {done ? t('ทำตามแผนต่อ') : t('ลงมือทำตามแผน')}
-        </button>
+        <div className="work-plan-actions">
+          <button className="work-plan-run" disabled={running} onClick={() => onExecute(false)}>
+            <Play size={14} />
+            {done ? t('ทำตามแผนต่อ') : t('ลงมือทำตามแผน')}
+          </button>
+          <button className="quiet" disabled={running || !plan.approvedAt} onClick={() => onExecute(true)}>
+            {t('ทำตามแผนแบบต่อเนื่อง')}
+          </button>
+        </div>
+      )}
+      {!finished && (
+        <p className="work-plan-hint small muted">{t('สูงสุด 3 รอบ / 10 นาที หยุดรับงานเพิ่มเมื่อใช้ถึง 50,000 โทเคนที่รายงาน')}</p>
+      )}
+      {continuation && (
+        <p role="status">
+          {t('งานต่อเนื่องรอบ {0}/{1}', continuation.rounds, continuation.maxRounds)} ·{' '}
+          {t(
+            {
+              running: 'กำลังทำ',
+              completed: 'เสร็จแล้ว',
+              blocked: 'ติดอยู่',
+              budget: 'ถึงขอบเขตที่กำหนด',
+              paused: 'พักเพื่อทบทวน',
+              interrupted: 'งานถูกขัดจังหวะ',
+            }[continuation.status],
+          )}
+        </p>
       )}
     </details>
   );

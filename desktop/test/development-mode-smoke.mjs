@@ -63,6 +63,9 @@ try {
     'appscript',
     'calendar-read',
     'tasks',
+    'calendar',
+    'chat',
+    'meet',
   ]);
   assert.deepEqual(workspaceDefaults.accounts, [], 'available services do not grant access without employee consent');
   const apiOnly = await call('connection', { provider: 'openai', mode: 'api', apiKey: 'synthetic-demo-api-key', model: 'synthetic-model' });

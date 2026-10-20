@@ -58,8 +58,8 @@ let system='';const send=o=>console.log(JSON.stringify({jsonrpc:'2.0',...o}));
 readline.createInterface({input:process.stdin}).on('line',line=>{const m=JSON.parse(line);if(m.id===undefined)return;let result={};
 if(m.method==='thread/start'){system=m.params.developerInstructions||'';result={thread:{id:'fixture'}};}send({id:m.id,result});
 if(m.method==='turn/start'){const prompt=m.params.input?.filter(i=>i.type==='text').map(i=>i.text||'').join('')||'';
-const summary=system.startsWith('Summarize');fs.appendFileSync(${JSON.stringify(audit)},JSON.stringify({summary,images:m.params.input.filter(i=>i.type==='image').length,hasRoute:prompt.includes('<routing_contract>'),hasState:prompt.includes('<task_state>'),hasMemory:prompt.includes('<memory_context>'),hasWorkspace:prompt.includes('STEP.md')})+'\\n');
-const text=summary?'Earlier conversation: preserve the source inventory and current request.':'Completed context-aware response';
+const summary=system.startsWith('Summarize'),review=system.startsWith('You review a finished conversation');fs.appendFileSync(${JSON.stringify(audit)},JSON.stringify({summary,review,images:m.params.input.filter(i=>i.type==='image').length,hasRoute:prompt.includes('<routing_contract>'),hasState:prompt.includes('<task_state>'),hasMemory:prompt.includes('<memory_context>'),hasWorkspace:prompt.includes('STEP.md')})+'\\n');
+const text=summary?'Earlier conversation: preserve the source inventory and current request.':review?'[]':'Completed context-aware response';
 send({method:'thread/tokenUsage/updated',params:{tokenUsage:{total:{inputTokens:10,outputTokens:5,totalTokens:15}}}});
 send({method:'item/agentMessage/delta',params:{delta:text}});send({method:'turn/completed',params:{turn:{status:'completed'}}});}});`,
 );
@@ -210,7 +210,15 @@ try {
   assert.ok(source.loadedContext.some(s => s.includes('Source preference')));
   let calls = (await readFile(audit, 'utf8')).trim().split('\n').map(JSON.parse);
   assert.ok(calls.some(c => c.summary));
-  assert.ok(calls.at(-1).hasRoute && calls.at(-1).hasState && calls.at(-1).hasMemory);
+  const answer = calls.filter(c => !c.review).at(-1);
+  assert.ok(answer.hasRoute && answer.hasState && answer.hasMemory);
+  await expect
+    .poll(async () => {
+      state = await page.evaluate(() => window.step.call('snapshot'));
+      calls = (await readFile(audit, 'utf8')).trim().split('\n').map(JSON.parse);
+      return calls.some(c => c.review) && state.usage.dailyTokens === calls.length * 15;
+    })
+    .toBe(true);
   assert.equal(state.usage.dailyTokens, calls.length * 15);
   await page.getByPlaceholder('ค้นหางานหรือเนื้อหา').fill('Distinct source');
   await expect(page.locator('.session-open')).toHaveCount(1);
@@ -297,7 +305,7 @@ try {
     })
     .toBe('review');
   calls = (await readFile(audit, 'utf8')).trim().split('\n').map(JSON.parse);
-  assert.equal(calls.at(-1).images, 1);
+  assert.equal(calls.filter(c => !c.review).at(-1).images, 1);
   await child.evaluate(
     ({ dialog }, data) => {
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [data.workspace + '/pii.png'] });

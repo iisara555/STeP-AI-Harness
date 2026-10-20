@@ -157,6 +157,9 @@ export function evaluatePermission(
   const effective = policy.permission.modes.includes(mode) ? mode : 'ask';
   if (request.readOnly) return { allowed: true, requiresConfirmation: false, reason: 'read-only' };
   if (effective === 'plan') return { allowed: false, requiresConfirmation: false, reason: 'PLAN_MODE' };
+  // The Vault host owns its masked prompts and exact-origin checks. Saved logins/addresses are automatic;
+  // payment data has its own one-shot approval there. Do not add a generic command dialog in front of it.
+  if (request.tool === 'browser_vault') return { allowed: true, requiresConfirmation: false, reason: 'vault host consent' };
   // Accept edits: a write to one workspace file goes ahead (its diff is staged and a snapshot can undo it).
   // Commands, the sandbox and external tool calls still ask.
   if (effective === 'acceptEdits' && request.tool === 'write' && request.path && !request.execute)

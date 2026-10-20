@@ -22,6 +22,11 @@ runtime source of supported operations; never invent IDs or turn account content
 
 ## Connection and intent
 
+The release offers all 11 supported families (17 permission choices), including Calendar event creation, Chat and Meet.
+Employees can choose full access in Settings without a per-device IT service allowlist. Valid older managed service
+lists upgrade to the complete catalog; account grants only expand after the employee selects services and consents
+in Google. Explicit feature disables, domain/client configuration and shared-device or invalid-policy protections remain.
+
 Settings → Passwords and connections → Google Workspace offers the service choices allowed by policy. Drive and
 Calendar each have one card with an access selector. Separate Docs/Sheets/Slides choices replace the legacy combined
 card when all three are available; existing app-managed `documents` grants remain valid.
@@ -34,7 +39,7 @@ permit form body work while response reads stay blocked. Selecting Forms togethe
 reads through Google's accepted Drive scope even if `forms.responses.readonly` was declined; do not describe that
 combination as body-only access.
 
-The administrator can narrow `googleWorkspace.services`; both that policy and the employee's account intent apply
+Device service lists no longer narrow the offering. Each employee's selected account intent applies
 on every call, followed by actual scope checks. Every read/write asks for the account and exact request. Sending a
 result to AI has its own privacy check. Plan mode, Vault, cancellation, context changes and untrusted-data handling
 keep their existing boundaries.
@@ -44,7 +49,7 @@ keep their existing boundaries.
 Enable the needed APIs in the Google Cloud project that owns the configured Desktop OAuth client: Gmail, Drive,
 Docs, Sheets, Slides, Forms and Apps Script. Configure OAuth audience and Workspace Admin API controls for the
 requested scopes; employees authorize only the services they need. These console changes are separate from shipping
-source and are not performed by a source update. See [managed policy](desktop-policy.md#workspace-services-and-restricted-cohorts).
+source and are not performed by a source update. See [managed policy](desktop-policy.md#self-service-workspace-permissions).
 
 Apps Script project management also requires API access to be enabled in Apps Script settings. `appscript.run` takes
 the **API Executable deployment ID**, uses `devMode: false`, and requires the script and caller to share a standard

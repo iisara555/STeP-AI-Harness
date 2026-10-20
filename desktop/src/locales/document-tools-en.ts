@@ -7,7 +7,7 @@ export const documentToolsEn: Record<string, string> = {
   ระบุเฉพาะส่วนที่ต้องการปรับ: 'Describe only the changes you want',
   'ใช้ร่างล่าสุดและข้อความที่คุณแก้ไว้ คงส่วนอื่นไว้ให้ตรวจเทียบก่อนใช้':
     'Use the latest draft and your edits. Keep other sections for comparison before accepting.',
-  'แก้ร่างเดิมเฉพาะตามคำขอนี้: {0}': 'Revise the existing draft only as requested: {0}',
+  'แก้ร่างเดิมตามคำขอนี้: {0}': 'Revise the existing draft as requested: {0}',
 
   'ส่งออก DOCX: บรรทัดสั้นที่ขึ้นบรรทัดใหม่ไม่ยืดช่องว่างจนคำแยกไปคนละฝั่ง':
     'DOCX export: short lines ending with a manual line break keep their spaces instead of spreading words across the page.',

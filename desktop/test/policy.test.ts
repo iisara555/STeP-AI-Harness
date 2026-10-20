@@ -14,11 +14,13 @@ test('managed policy is optional, administrator-only and fail closed', async () 
     // A file an administrator does not own is ignored: the defaults apply and nothing it asks for is enabled.
     assert.equal(loadPolicy(path, () => false).policy.source, 'default');
     assert.equal(loadPolicy(path, () => false).policy.features.shellByAi, false);
+    assert.equal(loadPolicy(path, () => false).policy.features.learningReview, false);
     if (process.platform === 'win32') assert.equal(trustedPolicyPath(path), false);
     assert.equal(loadPolicy(path, () => true).policy.features.shellByAi, true);
     await writeFile(path, '{broken');
     assert.equal(loadPolicy(path, () => true).policy.source, 'default');
     assert.equal(loadPolicy(path, () => true).policy.features.shellByAi, false);
+    assert.equal(loadPolicy(path, () => true).policy.features.learningReview, false);
     assert.equal(loadPolicy(path, () => true).problems.length, 1);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -32,6 +34,8 @@ test('auto mode needs both organization feature and allowed mode', () => {
   assert.equal(defaultValue.features.cron, true);
   assert.equal(defaultValue.features.hybridSkillSelection, true);
   assert.equal(parsePolicy({ features: { hybridSkillSelection: false } }).policy.features.hybridSkillSelection, false);
+  assert.equal(defaultValue.features.learningReview, true);
+  assert.equal(parsePolicy({ features: { learningReview: false } }).policy.features.learningReview, false);
   // Images reach vision models and Full auto is offered by default, as in other AI apps; commands still need shellByAi.
   assert.equal(defaultValue.features.vision, true);
   assert.equal(defaultValue.features.autoMode, true);
@@ -60,7 +64,7 @@ test('the release offers Claude developer opt-in while organization policy can d
   assert.equal(invalid.policy.features.developmentMode, false);
 });
 
-test('release Workspace configuration is public, isolated per load and replaceable by managed policy', () => {
+test('Workspace services stay self-service across upgrades while client and domain configuration remain isolated', () => {
   const first = defaultPolicy();
   assert.equal(first.features.vault, true);
   assert.equal(first.features.googleWorkspace, true);
@@ -80,15 +84,23 @@ test('release Workspace configuration is public, isolated per load and replaceab
     'appscript',
     'calendar-read',
     'tasks',
+    'calendar',
+    'chat',
+    'meet',
   ]);
   assert.match(first.googleWorkspace!.clientId, /^[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/);
   assert.deepEqual(Object.keys(first.googleWorkspace!).sort(), ['clientId', 'domains', 'services']);
   first.googleWorkspace!.domains.push('changed.test');
   first.googleWorkspace!.services.pop();
   assert.deepEqual(defaultPolicy().googleWorkspace?.domains, ['step.cmu.ac.th']);
-  assert.equal(defaultPolicy().googleWorkspace?.services.length, 14);
+  assert.equal(defaultPolicy().googleWorkspace?.services.length, 17);
   const replacement = { clientId: 'replacement-client.apps.googleusercontent.com', domains: ['example.test'], services: ['tasks'] };
-  assert.deepEqual(parsePolicy({ googleWorkspace: replacement }).policy.googleWorkspace, replacement);
+  assert.deepEqual(parsePolicy({ googleWorkspace: replacement }).policy.googleWorkspace, {
+    ...replacement,
+    services: defaultPolicy().googleWorkspace!.services,
+  });
+  const oldPolicy = { ...replacement, services: ['documents', 'calendar-read', 'tasks'] };
+  assert.deepEqual(parsePolicy({ googleWorkspace: oldPolicy }).policy.googleWorkspace?.services, defaultPolicy().googleWorkspace!.services);
   assert.equal(parsePolicy({ googleWorkspace: null }).policy.googleWorkspace, undefined);
   const disabled = parsePolicy({ features: { vault: false, googleWorkspace: false, developmentMode: false } });
   assert.deepEqual(disabled.problems, []);
@@ -119,7 +131,8 @@ test('invalid blocking definitions cannot silently enable risky features', () =>
     assert.ok(parsed.problems.length);
     assert.equal(parsed.policy.source, 'default');
     assert.equal(parsed.policy.features.shellByAi, false);
-    for (const flag of ['vault', 'googleWorkspace', 'developmentMode'] as const) assert.equal(parsed.policy.features[flag], false);
+    for (const flag of ['vault', 'googleWorkspace', 'developmentMode', 'learningReview'] as const)
+      assert.equal(parsed.policy.features[flag], false);
     assert.equal(parsed.policy.googleWorkspace, undefined);
   }
   const parsed = parsePolicy({ hooks: [{ event: 'pre_tool_use', type: 'prompt', prompt: 'Check metadata', block_on_failure: true }] });

@@ -2,10 +2,13 @@ import { DatabaseSync } from 'node:sqlite';
 import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'node:crypto';
 import { mkdirSync, chmodSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { totp } from './vault-otp';
+import { addressFields } from '../src/vault-fields';
 
-export type VaultKind = 'website' | 'api-key' | 'google-oauth' | 'google-client';
+export type VaultKind = 'website' | 'address' | 'api-key' | 'google-oauth' | 'google-client';
+export type VaultPayload = { username: string; password: string; otpSecret?: string; fields?: Record<string, string> };
 export type VaultMetadata = { id: string; label: string; kind: VaultKind; destination: string; revision: number; at: string };
-type Record = VaultMetadata & { nonce: string; tag: string; ciphertext: string };
+type StoredRecord = VaultMetadata & { nonce: string; tag: string; ciphertext: string };
 export type KeyProtection = { wrap: (value: string) => Buffer; unwrap: (value: Buffer) => string };
 export const vaultOrigin = (value: string) => {
   try {
@@ -62,6 +65,9 @@ export class Vault {
   protected() {
     return Boolean(this.db.prepare("SELECT 1 FROM vault_state WHERE id='key'").get());
   }
+  generation() {
+    return this.epoch;
+  }
   state() {
     return { suspended: this.suspended, protected: this.protected(), entries: this.list() };
   }
@@ -70,11 +76,11 @@ export class Vault {
       .prepare('SELECT value FROM vault_records ORDER BY id')
       .all()
       .map(row => {
-        const { id, label, kind, destination, revision, at } = JSON.parse(String(row.value)) as Record;
+        const { id, label, kind, destination, revision, at } = JSON.parse(String(row.value)) as StoredRecord;
         return { id, label, kind, destination, revision, at };
       });
   }
-  private record(id: string): Record {
+  private record(id: string): StoredRecord {
     const row = this.db.prepare('SELECT value FROM vault_records WHERE id=?').get(id);
     if (!row) throw new Error('VAULT_NOT_FOUND');
     return JSON.parse(String(row.value));
@@ -100,7 +106,7 @@ export class Vault {
   private aad(meta: VaultMetadata) {
     return Buffer.from(JSON.stringify([1, this.profile, meta.id, meta.kind, meta.destination, meta.revision, meta.label, meta.at]));
   }
-  private decode(record: Record) {
+  private decode(record: StoredRecord) {
     const key = this.key();
     try {
       const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(record.nonce, 'base64'));
@@ -122,12 +128,14 @@ export class Vault {
     username?: string;
     password?: string;
     value?: string;
+    otpSecret?: string;
+    fields?: Record<string, string>;
   }): VaultMetadata {
-    if (!['website', 'api-key', 'google-oauth', 'google-client'].includes(input.kind)) throw new Error('INVALID_INPUT');
+    if (!['website', 'address', 'api-key', 'google-oauth', 'google-client'].includes(input.kind)) throw new Error('INVALID_INPUT');
     const previous = input.id ? this.record(string(input.id, 80)) : undefined;
     if (previous && (this.locks.has(previous.id) || previous.revision !== input.revision)) throw new Error('VAULT_REVISION_CHANGED');
     if (previous && previous.kind !== input.kind) throw new Error('VAULT_ACCESS_DENIED');
-    const destination = input.kind === 'website' ? websiteOrigin(input.destination) : string(input.destination, 2000);
+    const destination = ['website', 'address'].includes(input.kind) ? websiteOrigin(input.destination) : string(input.destination, 2000);
     const meta: VaultMetadata = {
       id: previous?.id || randomUUID(),
       label: string(input.label, 100),
@@ -136,6 +144,15 @@ export class Vault {
       revision: (previous?.revision || 0) + 1,
       at: new Date().toISOString(),
     };
+    if (input.otpSecret) totp(input.otpSecret);
+    const fields = input.fields && Object.fromEntries(Object.entries(input.fields).filter(([, value]) => value !== ''));
+    if (input.kind === 'address') {
+      const allowed = addressFields;
+      const required = ['address_line1', 'city', 'postal_code', 'country'];
+      if (!fields || Object.keys(fields).some(k => !allowed.includes(k)) || required.some(k => !fields[k]))
+        throw new Error('INVALID_INPUT');
+      for (const value of Object.values(fields)) string(value, 1000);
+    }
     const payload =
       input.kind === 'website'
         ? {
@@ -145,8 +162,11 @@ export class Vault {
               : previous
                 ? this.decode(previous).password
                 : string(input.password, 4000),
+            otpSecret: input.otpSecret === undefined ? (previous ? this.decode(previous).otpSecret : undefined) : input.otpSecret,
           }
-        : { value: string(input.value, 20000) };
+        : input.kind === 'address'
+          ? { username: '', password: '', fields }
+          : { value: string(input.value, 20000) };
     if (this.list().length >= 200 && !previous) throw new Error('VAULT_LIMIT');
     this.db.exec('BEGIN IMMEDIATE');
     let key: Buffer | undefined;
@@ -164,7 +184,7 @@ export class Vault {
       const cipher = createCipheriv('aes-256-gcm', key, nonce);
       cipher.setAAD(this.aad(meta));
       const ciphertext = Buffer.concat([cipher.update(JSON.stringify(payload), 'utf8'), cipher.final()]);
-      const record: Record = {
+      const record: StoredRecord = {
         ...meta,
         nonce: nonce.toString('base64'),
         tag: cipher.getAuthTag().toString('base64'),
@@ -213,25 +233,43 @@ export class Vault {
     this.invalidate();
   }
   catalog(context: string, origin: string) {
+    return this.browserItems(origin).map(entry => ({ ...entry, handle: this.browserHandle(entry.id, context, origin) }));
+  }
+  browserItems(origin: string) {
     if (this.suspended) throw new Error('VAULT_SUSPENDED');
     const destination = vaultOrigin(origin);
+    return this.list()
+      .filter(entry => ['website', 'address'].includes(entry.kind) && entry.destination === destination)
+      .map(entry => {
+        const payload = this.decode(this.record(entry.id));
+        return {
+          id: entry.id,
+          revision: entry.revision,
+          label: entry.label,
+          origin: entry.destination,
+          kind: entry.kind,
+          identifier: payload.username || undefined,
+          twoFactor: Boolean(payload.otpSecret),
+        };
+      });
+  }
+  browserHandle(id: string, context: string, origin: string) {
+    if (this.suspended) throw new Error('VAULT_SUSPENDED');
+    const entry = this.record(id);
+    if (!['website', 'address'].includes(entry.kind) || entry.destination !== vaultOrigin(origin)) throw new Error('VAULT_ACCESS_DENIED');
     const now = Date.now();
     for (const [handle, entry] of this.handles) if (entry.expires < now) this.handles.delete(handle);
-    return this.list()
-      .filter(entry => entry.kind === 'website' && entry.destination === destination)
-      .map(entry => {
-        if (this.handles.size >= 500) throw new Error('VAULT_LIMIT');
-        const handle = randomUUID();
-        this.handles.set(handle, { id: entry.id, context, revision: entry.revision, expires: now + 90000, epoch: this.epoch });
-        return { handle, label: entry.label, origin: entry.destination };
-      });
+    if (this.handles.size >= 500) throw new Error('VAULT_LIMIT');
+    const handle = randomUUID();
+    this.handles.set(handle, { id, context, revision: entry.revision, expires: now + 90000, epoch: this.epoch });
+    return handle;
   }
   async fill(
     handle: string,
     context: string,
     origin: string,
     approve: (label: string) => Promise<boolean>,
-    sink: (payload: { username: string; password: string }) => Promise<unknown>,
+    sink: (payload: VaultPayload, entry: VaultMetadata) => Promise<unknown>,
   ) {
     const grant = this.handles.get(handle);
     this.handles.delete(handle);
@@ -249,7 +287,7 @@ export class Vault {
       throw new Error('VAULT_REVISION_CHANGED');
     this.locks.add(grant.id);
     try {
-      const result = await sink(this.decode(entry));
+      const result = await sink(this.decode(entry), entry);
       if (result && typeof result === 'object' && 'filledFields' in result && Array.isArray(result.filledFields)) {
         if (result.filledFields.includes('password')) this.attempts.delete(context);
         else if (result.filledFields.includes('username')) {
@@ -274,7 +312,12 @@ export class Vault {
     }
   }
   /** Internal adapter-only access, with a fixed kind/destination; never registered as a tool or IPC method. */
-  async use<T>(id: string, kind: Exclude<VaultKind, 'website'>, destination: string, sink: (value: string) => Promise<T>): Promise<T> {
+  async use<T>(
+    id: string,
+    kind: 'api-key' | 'google-oauth' | 'google-client',
+    destination: string,
+    sink: (value: string) => Promise<T>,
+  ): Promise<T> {
     if (this.suspended) throw new Error('VAULT_SUSPENDED');
     const entry = this.record(id);
     if (entry.kind !== kind || entry.destination !== destination) throw new Error('VAULT_ACCESS_DENIED');

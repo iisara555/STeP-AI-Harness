@@ -20,14 +20,15 @@ export function documentRevisionMarkdown(document: DraftNode, safePlain: string,
 // A question ends with a Thai question word or "?", or opens with one. "…ได้ไหม" and edit words make it a polite request.
 const QUESTION =
   /(?:[?？]|ไหม|มั้ย|หรือเปล่า|รึเปล่า|หรือไม่|อะไร|ยังไง|อย่างไร|เท่าไร|เท่าไหร่|ทำไม|ใคร|เมื่อไร|เมื่อไหร่|ที่ไหน|ตรงไหน|แบบไหน|มาจากไหน|หรอ|เหรอ)(?:\s*(?:ครับ|ค่ะ|คะ|คับ|จ้ะ|จ้า|นะ|ฮะ))*\s*[?？]?\s*$|^\s*(?:ทำไม|อะไร|ใคร|อธิบาย|why\b|what\b|how\b)/i;
-const REQUEST =
-  /ช่วย|ขอ|อยากให้|รบกวน|ใส่|เพิ่ม|แก้|ปรับ|เปลี่ยน|ตัด|ลบ|เติม|ย้าย|ทำให้|เขียน|ให้เป็น|ได้\s*(?:ไหม|มั้ย|หรือเปล่า|รึเปล่า|หรือไม่)/;
+const EXPLAIN = /(?:ช่วย|รบกวน)?\s*(?:อธิบาย|ตอบ|บอก(?:หน่อย)?ว่า)|ขอถาม|อยาก(?:รู้|ทราบ)|\b(?:explain|clarify|tell me|what|why|how)\b/i;
+const EDIT =
+  /(?:^|(?:แล้ว|และ|จากนั้น)\s*)(?:(?:ช่วย|ขอ|อยากให้|รบกวน)\s*)?(?:ใส่|เพิ่ม|แก้|ปรับ|เปลี่ยน|ตัด|ลบ|เติม|ย้าย|ทำให้|เขียน|แปล)|(?:^|(?:and|then)\s+)(?:(?:can|could|would) you\s+)?(?:please\s+)?(?:change|edit|rewrite|replace|remove|add|update|translate)\b/i;
 
 /** A question about the selected document, answered in chat without touching the draft. */
 export function isDocumentQuestion(id: unknown, text: string): boolean {
   const value = text.trim();
   if (!documentTool(id) || !value) return false;
-  return QUESTION.test(value) && !REQUEST.test(value);
+  return !EDIT.test(value) && (QUESTION.test(value) || EXPLAIN.test(value) || /กี่(?:วัน|บาท|คน|ครั้ง|เดือน|ปี)/.test(value));
 }
 
 /** Trusted task constraints supplement, rather than replace, the loaded Skill procedures. */

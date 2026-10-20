@@ -6,9 +6,10 @@ import type { McpServer, Policy } from './policy';
 import { sensitivePath, evaluatePermission } from './permissions';
 import { killPidTree } from './bounded-process';
 import { tm } from './i18n';
+import { consentPreview } from './consent-preview';
 
 export type McpTool = { server: string; name: string; description: string; inputSchema: unknown };
-type Consent = (title: string, text: string, signal?: AbortSignal) => Promise<boolean>;
+type Consent = (title: string, text: string, signal?: AbortSignal, technical?: string) => Promise<boolean>;
 /** SDK capabilities are deliberately empty: servers cannot request sampling, roots or elicitation. */
 export class Mcp {
   localActive = 0;
@@ -215,9 +216,10 @@ export class Mcp {
           'ปลายทาง: {0}\nเครื่องมือ: {1}\nข้อมูลที่จะส่ง:\n{2}\nคำอธิบายและสิทธิ์ที่ server อ้างไม่ใช่การอนุมัติของ STeP',
           name,
           tool,
-          text,
+          consentPreview(text),
         ),
         signal,
+        text,
       ))
     )
       throw new Error('CANCELLED');

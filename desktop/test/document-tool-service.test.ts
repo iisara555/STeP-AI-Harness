@@ -492,12 +492,17 @@ test('sparse TOR inputs reach the Skill as proposed prose; targeted revisions ke
             assert.doesNotMatch(prompt, /\[รอยืนยัน: ความเป็นมา\]/);
             assert.match(context.system || '', /Draft assistance with incomplete inputs/);
           } else {
-            const base = /<current_draft>\n([\s\S]*?)\n<\/current_draft>/.exec(prompt)?.[1];
-            assert.ok(base?.includes('SYNTHETIC-MANUAL-EDIT'));
-            if (prompts.length === 3) assert.ok(base?.includes('ลดความเมื่อยล้าระหว่างปฏิบัติงาน'));
-            body = base!;
-            if (prompts.length === 2) body = body.replace('เพื่อรองรับการนั่งปฏิบัติงานอย่างเหมาะสม', 'ลดความเมื่อยล้าระหว่างปฏิบัติงาน');
-            else body = body.replace('ตรวจจำนวน 2 ตัว', 'ตรวจจำนวน 4 ตัว');
+            const target = JSON.parse(/<document_patch_target>\n([\s\S]*?)\n<\/document_patch_target>/.exec(context.system || '')![1]);
+            assert.doesNotMatch(target.markdown, /SYNTHETIC-MANUAL-EDIT/);
+            target.markdown =
+              prompts.length === 2
+                ? target.markdown.replace('เพื่อรองรับการนั่งปฏิบัติงานอย่างเหมาะสม', 'ลดความเมื่อยล้าระหว่างปฏิบัติงาน')
+                : target.markdown.replace('ตรวจจำนวน 2 ตัว', 'ตรวจจำนวน 4 ตัว');
+            return (
+              '<document_patch>' +
+              JSON.stringify(target) +
+              '</document_patch><document_review>AI_PROPOSED: targeted revision</document_review>'
+            );
           }
           return (
             '<document_draft>' +
@@ -530,6 +535,7 @@ test('sparse TOR inputs reach the Skill as proposed prose; targeted revisions ke
     assert.equal(prompts.length, 3);
     assert.match(store.session(session.id).proposals.at(-1)!.text, /ตรวจจำนวน 4 ตัว/);
     assert.match(store.session(session.id).proposals.at(-1)!.text, /ลดความเมื่อยล้า/);
+    assert.match(store.session(session.id).proposals.at(-1)!.text, /SYNTHETIC-MANUAL-EDIT/);
     assert.equal(store.session(session.id).draft, edited.draft, 'proposals never overwrite the editor before acceptance');
   } finally {
     store.close();

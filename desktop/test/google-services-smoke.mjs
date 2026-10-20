@@ -1,7 +1,7 @@
 // Real renderer and native public configuration; OAuth/account changes use synthetic IPC, never live Google.
 import { _electron as electron, expect } from '@playwright/test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -21,6 +21,17 @@ try {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง', exact: true }).click();
+  await writeFile(
+    join(home, 'desktop-policy.json'),
+    JSON.stringify({
+      googleWorkspace: {
+        clientId: 'synthetic-client.apps.googleusercontent.com',
+        domains: ['step.cmu.ac.th'],
+        services: ['documents', 'calendar-read', 'tasks'],
+      },
+    }),
+  );
+  await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).policy.source).toBe('managed');
   const native = await page.evaluate(() => window.step.call('googleState'));
   for (const service of [
     'gmail-read',
@@ -33,15 +44,20 @@ try {
     'slides',
     'forms',
     'appscript',
+    'calendar',
+    'chat',
+    'meet',
   ])
     assert.ok(native.services.includes(service), service);
   await app.evaluate(({ ipcMain }, state) => {
     const original = ipcMain._invokeHandlers.get('step:call');
     globalThis.googleServiceCalls = [];
+    globalThis.googleAllowedServices = [...state.services];
     let accounts = [];
     ipcMain.removeHandler('step:call');
     ipcMain.handle('step:call', async (event, method, input) => {
-      if (method === 'googleState') return { ...state, clientPreconfigured: true, clientSecretConfigured: true, accounts };
+      if (method === 'googleState')
+        return { ...state, services: globalThis.googleAllowedServices, clientPreconfigured: true, clientSecretConfigured: true, accounts };
       if (method === 'googleConnect') {
         globalThis.googleServiceCalls.push(structuredClone(input));
         accounts = [
@@ -100,6 +116,27 @@ try {
   assert.ok(second.services.includes('gmail-send'));
   assert.equal(second.services.includes('drive-read'), false, 'one explicit Drive access choice');
   await expect(page.locator('.google-account')).toHaveCount(1);
+  await page.getByRole('button', { name: 'ปรับบริการที่อนุญาต', exact: true }).click();
+  await page.getByRole('button', { name: 'เลือกสิทธิ์เต็มทุกบริการ', exact: true }).click();
+  await page.getByRole('button', { name: 'เชื่อมบัญชีงาน', exact: true }).click();
+  await expect.poll(() => app.evaluate(() => globalThis.googleServiceCalls.length)).toBe(3);
+  const full = await app.evaluate(() => globalThis.googleServiceCalls[2]);
+  for (const service of [
+    'gmail-send',
+    'gmail-manage',
+    'drive',
+    'docs',
+    'sheets',
+    'slides',
+    'forms',
+    'appscript',
+    'calendar',
+    'tasks',
+    'chat',
+    'meet',
+  ])
+    assert.ok(full.services.includes(service), service);
+  assert.equal(full.id, 'synthetic-google-account');
   await page.evaluate(async () => {
     const { settings } = await window.step.call('snapshot');
     await window.step.call('settings', { ...settings, theme: 'dark', language: 'en' });
@@ -115,9 +152,18 @@ try {
   await setCard(services.getByRole('checkbox', { name: /^Google Apps Script/ }), false);
   await expect(services.getByRole('checkbox', { name: /^Google Apps Script/ })).not.toBeChecked();
   await page.screenshot({ path: 'release/qa/google-services/narrow-dark-english.png' });
+  await expect(page.locator('.google-admin')).toHaveCount(0);
+  await page.reload();
+  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  await page.getByRole('tab', { name: 'Passwords and connections', exact: true }).click();
+  await expect(page.locator('.google-admin')).toHaveCount(0);
+  for (const name of ['Google Forms', 'Google Apps Script', 'Google Chat', 'Google Meet'])
+    await expect(services.getByRole('checkbox', { name: new RegExp('^' + name) })).toBeVisible();
+  await expect(page.getByText(/Updating the app does not add account permissions/)).toBeVisible();
+  await page.screenshot({ path: 'release/qa/google-services/restricted-policy.png' });
   assert.deepEqual(errors, []);
   console.log(
-    'Google services smoke passed: native defaults for seven families, explicit Gmail send, one Drive/Calendar card, account-bound service upgrades, English and narrow/dark settings. Synthetic OAuth only.',
+    'Google services smoke passed: legacy managed service list upgrades to all eleven supported families, explicit full-access selection, Gmail send intent, one Drive/Calendar card, account-bound upgrades, English and narrow/dark settings. Synthetic OAuth only.',
   );
 } finally {
   clearTimeout(deadline);

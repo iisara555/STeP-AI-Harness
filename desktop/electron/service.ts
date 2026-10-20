@@ -19,7 +19,7 @@ import { Store } from './store';
 import { ProviderSession, type ProviderAdapter, type ProviderContext, type TokenCount } from './providers';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
 import { webSources } from '../src/web';
-import { brokenRequests } from '../src/tools';
+import { brokenRequests, loopRequests } from '../src/tools';
 import { speakingStyleRules } from '../src/speaking-styles';
 import { ToolLoop, TOOL_RULES, BROWSER_RULES, type LoopHost } from './tool-loop';
 import type { ToolScope } from './tools';
@@ -38,6 +38,8 @@ import { selfContainedText } from './text-intent';
 import { selectDiscovery } from './discovery';
 import { highConfidenceSkill, prepareSkillSelection } from './skill-selection';
 import { parseDocumentOutput } from '../src/document-output';
+import { markdownDocument, documentText } from '../src/draft';
+import { documentTarget, patchContract, applyDocumentPatch } from './document-patch';
 import {
   OrganizationKnowledge,
   STRONG_MATCH,
@@ -127,7 +129,7 @@ export type Harness = {
     deictic?: boolean;
   };
   catalog?: () => Promise<any[]>;
-  privacy: (text: string, options?: { allowedIdentifiers?: string[] }) => any;
+  privacy: (text: string, options?: { allowedIdentifiers?: string[]; credentialMetadata?: boolean }) => any;
   skillMetadata: (id: string) => Promise<any>;
   documentPrivacy: (path: string, options: any) => Promise<any>;
   nextOutput: (options: any) => Promise<any>;
@@ -263,6 +265,11 @@ export function conversationFiles(files: ConversationFile[]) {
 }
 
 export type RunOptions = {
+  /** Host-owned snapshot question: no tools, workflow, discovery or web search. */
+  isolatedQuestion?: boolean;
+  /** Explicit continuation of an approved native plan, bounded across provider/tool turns. */
+  autoContinue?: boolean;
+  longBudget?: { deadline: number; tokens: number; maxTokens: number };
   documentTool?: DocumentToolId;
   documentTemplate?: import('../src/types').DocumentTemplateInfo;
   retry?: boolean;
@@ -311,9 +318,111 @@ export class WorkService {
   ) {}
   cancel(id: string) {
     this.active.get(id)?.abort();
+    this.cancelSideQuestion(id);
+  }
+  cancelSideQuestion(id: string) {
+    this.active.get('side:' + id)?.abort();
+  }
+  questionSnapshot(id: string) {
+    const parent = this.store.session(id);
+    const latest = parent.proposals.at(-1);
+    const pending = latest?.baseRevision === parent.revision ? latest : undefined;
+    const source = JSON.stringify({
+      request: parent.originalQuery,
+      revision: parent.revision,
+      proposed: Boolean(pending),
+      document: (pending?.text || parent.draft).slice(0, 60000),
+      truncated: (pending?.text || parent.draft).length > 60000,
+      plan: parent.workPlan,
+    });
+    return { source, revision: parent.revision };
+  }
+  async sideQuestion(id: string, text: string, reviewed = false, snapshot = this.questionSnapshot(id)) {
+    if (!text.trim() || text.length > 30000) throw new Error('INPUT_LIMIT');
+    const scan = this.harness.privacy(text);
+    if (scan.action === 'block-external' || (scan.action === 'human-confirm' && !reviewed)) throw new Error('PRIVACY_REVIEW_REQUIRED');
+    text = scan.redactedText;
+    const parent = this.store.session(id);
+    const key = 'side:' + id;
+    if (this.active.has(key)) throw new Error('RUN_ALREADY_ACTIVE');
+    if (this.active.size >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
+    const controller = new AbortController();
+    const store = new Store(':memory:');
+    this.active.set(key, controller);
+    const record: NonNullable<Session['sideQuestions']>[number] = {
+      id: randomUUID(),
+      question: text,
+      revision: snapshot.revision,
+      at: new Date().toISOString(),
+      status: 'running',
+    };
+    const save = () => {
+      const fresh = this.store.get<Session>('session', id);
+      if (!fresh) return;
+      fresh.sideQuestions = [...(fresh.sideQuestions || []).filter(q => q.id !== record.id), record].slice(-10);
+      this.store.save(fresh);
+      this.emit({ sessionId: id, type: 'side-question' });
+    };
+    const child = new WorkService(
+      store,
+      { ...this.harness, completed: undefined, extraContext: undefined },
+      this.runtime,
+      () => {},
+      this.stepTimeoutMs,
+      undefined,
+      this.retryDelays,
+    );
+    let childId = '';
+    const abort = () => child.cancel(childId);
+    controller.signal.addEventListener('abort', abort, { once: true });
+    try {
+      save();
+      store.put('settings', 'main', this.store.settings());
+      store.put('connection', parent.connectionId, this.store.get('connection', parent.connectionId));
+      const task = store.create(parent.connectionId, parent.team);
+      childId = task.id;
+      task.model = parent.model;
+      task.effort = parent.effort;
+      store.save(task);
+      await child.run(task.id, text, snapshot.source, reviewed, undefined, 'chat', undefined, ['task-snapshot.json'], {
+        isolatedQuestion: true,
+      });
+      if (controller.signal.aborted) throw new Error('CANCELLED');
+      const done = store.session(task.id);
+      if (done.status !== 'review') throw new Error(done.runs?.at(-1)?.code || 'RUN_FAILED');
+      const answer = done.messages.filter(m => m.role === 'assistant').at(-1);
+      record.answer = answer?.text || '';
+      if (loopRequests(record.answer).length) throw new Error('SIDE_QUESTION_TOOLS_BLOCKED');
+      record.docSources = answer?.docSources;
+      record.check = answer?.check;
+      record.status = 'completed';
+      if (done.usage) {
+        const fresh = this.store.session(id),
+          usage = fresh.usage || { input: 0, output: 0, total: 0, runs: 0 };
+        fresh.usage = {
+          input: usage.input + done.usage.input,
+          output: usage.output + done.usage.output,
+          total: usage.total + done.usage.total,
+          runs: usage.runs + 1,
+        };
+        this.store.save(fresh);
+      }
+    } catch (error) {
+      record.status = 'error';
+      delete record.answer;
+      record.code = codeOf(error);
+    } finally {
+      controller.signal.removeEventListener('abort', abort);
+      store.close();
+      this.active.delete(key);
+      save();
+    }
   }
   isActive(id: string) {
-    return this.active.has(id);
+    return this.active.has(id) || this.isQuestionActive(id);
+  }
+  isQuestionActive(id: string) {
+    return this.active.has('side:' + id);
   }
   activeCount() {
     return this.active.size;
@@ -366,14 +475,90 @@ export class WorkService {
     fileNames: string[] = [],
     options: RunOptions = {},
   ) {
+    if (
+      !options.isolatedQuestion &&
+      !options.documentTool &&
+      !skill &&
+      !attachmentText &&
+      mode === 'draft' &&
+      isDocumentQuestion(this.store.session(id).documentTool, input)
+    )
+      return this.sideQuestion(id, input, reviewed);
     if (this.active.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
     if (this.active.size >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
     // Claimed before the first await, so two quick sends to one session cannot both start.
     const controller = new AbortController();
     this.active.set(id, controller);
     try {
-      await this.execute(id, input, attachmentText, reviewed, skill, mode, imageModel, fileNames, options, controller);
+      const initial = this.store.session(id);
+      if (options.autoContinue && (options.workflow !== 'execute' || !initial.workPlan?.approvedAt)) throw new Error('PLAN_REQUIRED');
+      const started = Date.now(),
+        initialTokens = initial.usage?.total || 0;
+      const budget = { maxRounds: 3, maxTokens: 50000, maxMs: 10 * 60 * 1000 };
+      if (options.autoContinue)
+        options = { ...options, longBudget: { deadline: started + budget.maxMs, tokens: 0, maxTokens: budget.maxTokens } };
+      const deadline = options.autoContinue ? setTimeout(() => controller.abort(), budget.maxMs) : undefined;
+      const progress = (s: Session) => (s.workPlan?.tasks || []).map(t => t.status).join(',');
+      try {
+        for (let round = 0; round < (options.autoContinue ? budget.maxRounds : 1); round++) {
+          const before = this.store.session(id),
+            prior = progress(before);
+          if (options.autoContinue) {
+            before.longTask = { ...budget, status: 'running', rounds: round + 1, startedAt: new Date(started).toISOString() };
+            this.store.save(before);
+          }
+          await this.execute(
+            id,
+            round ? 'ต่อจากแผนเดิมที่ยังไม่เสร็จ' : input,
+            round ? '' : attachmentText,
+            reviewed,
+            skill,
+            mode,
+            imageModel,
+            round ? [] : fileNames,
+            options,
+            controller,
+          );
+          if (!options.autoContinue) break;
+          const done = this.store.session(id),
+            tasks = done.workPlan?.tasks || [];
+          const pending = tasks.some(t => t.status === 'todo' || t.status === 'doing');
+          const reason =
+            done.runs?.at(-1)?.code === 'LONG_TASK_BUDGET' || Date.now() - started >= budget.maxMs
+              ? 'budget'
+              : controller.signal.aborted
+                ? 'cancelled'
+                : done.status !== 'review'
+                  ? 'run-stopped'
+                  : !pending
+                    ? tasks.some(t => t.status === 'blocked')
+                      ? 'blocked'
+                      : 'completed'
+                    : (done.usage?.total || 0) - initialTokens >= budget.maxTokens || round + 1 >= budget.maxRounds
+                      ? 'budget'
+                      : progress(done) === prior
+                        ? 'no-progress'
+                        : '';
+          if (reason) {
+            done.longTask = {
+              ...done.longTask!,
+              status: reason === 'completed' ? 'completed' : reason === 'budget' ? 'budget' : reason === 'blocked' ? 'blocked' : 'paused',
+              reason,
+            };
+            this.store.save(done);
+            break;
+          }
+        }
+      } finally {
+        if (deadline) clearTimeout(deadline);
+      }
     } finally {
+      const final = this.store.session(id);
+      if (final.longTask?.status === 'running') {
+        final.longTask.status = 'paused';
+        final.longTask.reason = 'run-stopped';
+        this.store.save(final);
+      }
       this.active.delete(id);
       this.emit({ sessionId: id, type: 'changed' });
     }
@@ -441,6 +626,15 @@ export class WorkService {
           : plainDraft;
     const pending = session.proposals.at(-1),
       working = pending && pending.baseRevision === baseRevision ? masked(pending.text) : draft;
+    const revisionDocument =
+      pending && pending.baseRevision === baseRevision
+        ? pending.document || markdownDocument(working)
+        : session.document || markdownDocument(working);
+    const target = !chat && documentTask && working.trim() ? documentTarget(revisionDocument, text, baseRevision) : undefined;
+    const targetDocument = target ? { type: 'doc', content: revisionDocument.content?.slice(target.start, target.end) } : undefined;
+    const targetText = targetDocument
+      ? documentRevisionMarkdown(targetDocument, outgoing(documentText(targetDocument), true), value => outgoing(value, true))
+      : '';
     // Any draft-mode message in a document task (a field value, "ใส่งบ 5 แสน", "ตรงหัวข้อ 5 ช่วยแก้…") edits that
     // document, with or without an edit verb. Explicit new tools/Skills and chat turns keep their task boundaries.
     if (!chat && documentTask && !clarification && working.trim()) {
@@ -515,6 +709,10 @@ export class WorkService {
     // The model picked for this task overrides the connection default; empty means the provider default.
     const selectedConnection: Connection = { ...stored, model: session.model ?? stored.model };
     const connection: Connection = { ...selectedConnection, ...this.harness.modelLimits?.(selectedConnection) };
+    const recordUsage = (count: TokenCount) => {
+      if (options.longBudget) options.longBudget.tokens += count.total;
+      this.harness.recordUsage?.(connection, count);
+    };
     const recent = (from: number, count: number) =>
       session.messages
         .slice(from)
@@ -589,6 +787,8 @@ export class WorkService {
     // A host heartbeat means the app is responsive, not that the provider made progress.
     const heartbeat = setInterval(() => this.emit({ sessionId: id, type: 'heartbeat' }), 3000);
     const checkAbort = () => {
+      if (options.longBudget && (Date.now() >= options.longBudget.deadline || options.longBudget.tokens >= options.longBudget.maxTokens))
+        throw new Error('LONG_TASK_BUDGET');
       if (controller.signal.aborted) throw new Error('CANCELLED');
     };
     // What happened in this run, without request, source or draft text: for the session history and diagnostics.
@@ -688,7 +888,7 @@ export class WorkService {
       if (internal) activity(tm('งานนี้ใช้ {0} · จะเปิดในแท็บเว็บ', internal.name));
       // With tools, the AI decides when to search the web (web_search), as in Claude Code and opencode. The host searches
       // ahead only for a run without tools.
-      const modelTools = Boolean(!options.draftOnly && this.harness.tools && this.harness.toolLoop?.());
+      const modelTools = Boolean(!options.isolatedQuestion && !options.draftOnly && this.harness.tools && this.harness.toolLoop?.());
       if (
         this.harness.hybridSkillSelection?.() &&
         chat &&
@@ -728,6 +928,7 @@ export class WorkService {
           (trace.providerCalls ||= []).push(call);
           let counted: TokenCount = { input: 0, output: 0, total: 0 };
           try {
+            checkAbort();
             const reply = await selectionRuntime.adapter.run(selection.prompt, connection, {
               ...selectionRuntime.context,
               signal: controller.signal,
@@ -756,7 +957,7 @@ export class WorkService {
             call.ms = Date.now() - calledAt;
             if (counted.total) call.usage = counted;
             searchUsage = combineUsage(searchUsage, counted);
-            this.harness.recordUsage?.(connection, counted);
+            recordUsage(counted);
           }
         }
         if (chosen) {
@@ -777,6 +978,7 @@ export class WorkService {
         }
       }
       const searchPublic =
+        !options.isolatedQuestion &&
         !modelTools &&
         !options.draftOnly &&
         !internal &&
@@ -808,6 +1010,7 @@ export class WorkService {
             ].join('\n\n');
             searchCall = { ...promptMetrics('', searchPrompt), kind: 'web-search', outcome: 'running', ms: 0 };
             (trace.providerCalls ||= []).push(searchCall);
+            checkAbort();
             retrieved = await searchRuntime.adapter.run(searchPrompt, connection, {
               ...searchRuntime.context,
               signal: controller.signal,
@@ -852,7 +1055,7 @@ export class WorkService {
             arm();
           } finally {
             if (searchCall && attemptUsage.total) searchCall.usage = attemptUsage;
-            this.harness.recordUsage?.(connection, attemptUsage);
+            recordUsage(attemptUsage);
             searchUsage = combineUsage(searchUsage, attemptUsage);
           }
         }
@@ -1005,7 +1208,9 @@ export class WorkService {
         sources = [...new Set([...sources, ...paths, ...known.map(k => k.path)])];
         status(step.description || tm('กำลังจัดทำร่าง'));
         // Standing rules and registries precede task-specific instructions and preferences.
-        const toolsEnabled = Boolean(!textOnly && !options.draftOnly && this.harness.tools && this.harness.toolLoop?.());
+        const toolsEnabled = Boolean(
+          !target && !options.isolatedQuestion && !textOnly && !options.draftOnly && this.harness.tools && this.harness.toolLoop?.(),
+        );
         const scopedToolInstructions = toolsEnabled ? this.harness.toolInstructions?.() : undefined;
         const baseRules = textOnly ? TEXT_RULES : chat ? CHAT_RULES : DRAFTING_RULES;
         const documentDiscovery = selectDiscovery(
@@ -1056,6 +1261,9 @@ export class WorkService {
           // A native workflow the employee picked (plan, execute, requirements, diagnose) shapes how this run works.
           options.workflow && workflowRule(options.workflow, this.store.session(id).workPlan),
           draftingTool && documentToolRule(draftingTool.id, Boolean(session.documentTemplate)),
+          target && patchContract(target, targetText),
+          options.isolatedQuestion &&
+            'Answer the side question using the frozen task snapshot and registered knowledge. Do not edit the document, change its goal, use tools or claim current live state. Say when the snapshot does not answer the question.',
           ...(!draftingTool ? personal(this.store.settings()) : []),
           ...(!draftingTool ? speakingStyleRules(this.store.settings()) : []),
           selectedInstructions.length && section('skill_instructions', selectedInstructions.join('\n\n')),
@@ -1079,6 +1287,7 @@ export class WorkService {
             toolResultScope: 'current-run-only',
             decisions: session.followUps || [],
             approvedPlan: this.store.session(id).approvedPlan || '',
+            ...(!textOnly ? { workPlan: this.store.session(id).workPlan, currentRevision: this.store.session(id).revision } : {}),
             plan: steps.map((s: any) => ({ id: s.id, skill: s.skill || s.skillId, description: s.description })),
             completedSteps: index,
           });
@@ -1088,7 +1297,7 @@ export class WorkService {
           section('task_state', taskState()),
           ...(!textOnly ? [section('conversation', JSON.stringify(history))] : []),
           // A reference to earlier work ("หัวข้อ 2 หมายถึงอะไร") needs the draft it points at; a new task never sees it.
-          ...(!textOnly ? [section('current_draft', revising || (!chat && carriesPrevious) ? working : '')] : []),
+          ...(!textOnly ? [section('current_draft', target ? targetText : revising || (!chat && carriesPrevious) ? working : '')] : []),
           ...(!textOnly ? [chat ? section('conversation_files', filesSection) : section('source_document', attachments)] : []),
           ...(known.length
             ? [
@@ -1129,6 +1338,12 @@ export class WorkService {
         const budget = contextBudget(connection);
         const compactPrompt = async (value: string, reactive = false) => {
           const result = await compact(value, {
+            checkpoint: this.store.session(id).contextCheckpoint,
+            retain: checkpoint => {
+              const current = this.store.session(id);
+              current.contextCheckpoint = checkpoint;
+              this.store.save(current);
+            },
             system,
             budget,
             state: taskState(),
@@ -1155,6 +1370,7 @@ export class WorkService {
               };
               stepTrace.providerCalls!.push(call);
               try {
+                checkAbort();
                 const result = await runtime.adapter.run(summaryPrompt, connection, {
                   ...runtime.context,
                   signal: controller.signal,
@@ -1180,7 +1396,7 @@ export class WorkService {
                 if (counted.total) call.usage = counted;
                 usage = combineUsage(usage, counted);
                 stepUsage = combineUsage(stepUsage, counted);
-                this.harness.recordUsage?.(connection, counted);
+                recordUsage(counted);
               }
             },
           });
@@ -1234,6 +1450,7 @@ export class WorkService {
                 throw new Error('VISION_DISABLED');
               stepTrace.promptChars = Math.max(stepTrace.promptChars, nextPrompt.length);
               if (!search) status(tm('กำลังเตรียมคำตอบ'));
+              checkAbort();
               const answer = await selectedRuntime.adapter.run(nextPrompt, connection, {
                 ...selectedRuntime.context,
                 system: providerSystem,
@@ -1295,7 +1512,7 @@ export class WorkService {
             } finally {
               if (call.outcome !== 'error') call.ms = Date.now() - calledAt;
               if (counted.total) call.usage = counted;
-              this.harness.recordUsage?.(connection, counted);
+              recordUsage(counted);
             }
           }
         };
@@ -1335,7 +1552,12 @@ export class WorkService {
           });
           result = await new ToolLoop({
             ...host,
+            check: async () => {
+              checkAbort();
+              await host.check();
+            },
             execute: (request, signal) => {
+              checkAbort();
               if (request.tool === 'reference' && request.input) opened.add(request.input);
               const done = host.execute(request, signal);
               if (request.tool === 'changes' && request.content !== undefined)
@@ -1380,7 +1602,9 @@ export class WorkService {
       // A chat reply that is only tool requests the loop could not read would show as an empty message.
       if (chat && !result.replace(/```step-tool[\s\S]*?(?:```|$)/g, '').trim() && brokenRequests(result).length)
         throw new Error('TOOL_REQUEST_UNREADABLE');
-      const documentOutput = draftingTool ? parseDocumentOutput(handoff, draftingTool.id, { requireEnvelope: true }) : undefined;
+      const patched = target ? applyDocumentPatch(handoff, target, revisionDocument) : undefined;
+      const documentOutput =
+        patched || (draftingTool ? parseDocumentOutput(handoff, draftingTool.id, { requireEnvelope: true }) : undefined);
       if (documentOutput) handoff = documentOutput.draft;
       // The STeP documents a chat answer drew on, shown under it: strong matches given to the AI and documents it opened.
       const groundedIn = chat ? known.filter(k => k.score >= STRONG_MATCH) : [];
@@ -1401,6 +1625,7 @@ export class WorkService {
         trace.steps.at(-1)?.providerCalls?.push(call);
         let counted: TokenCount = { input: 0, output: 0, total: 0 };
         try {
+          checkAbort();
           const reply = await runtime.adapter.run(checkPrompt, connection, {
             ...runtime.context,
             signal: controller.signal,
@@ -1422,7 +1647,7 @@ export class WorkService {
           call.ms = Date.now() - calledAt;
           if (counted.total) call.usage = counted;
           usage = combineUsage(usage, counted);
-          this.harness.recordUsage?.(connection, counted);
+          recordUsage(counted);
         }
       }
       session = this.store.session(id);
@@ -1439,6 +1664,7 @@ export class WorkService {
         session.proposals.push({
           id: randomUUID(),
           text: handoff,
+          ...(patched ? { document: patched.document } : {}),
           ...(documentOutput?.review ? { review: documentOutput.review } : {}),
           baseRevision,
           sources,

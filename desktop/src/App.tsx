@@ -96,12 +96,14 @@ import type { Attachment, Connection, PlanStep, Session, OwnPack, SkillEntry, Sn
 import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, connectionName, shortcut, statusText } from './messages';
 import { SettingsPanel } from './settings';
 import { ApprovalDialog } from './approval';
+import { VaultPromptDialog, type VaultPrompt } from './vault-prompt';
 import type { ApprovalRequest } from './types';
 import { WorkbenchPanel } from './workbench';
 import { toolRequests, visibleStream, type ToolTab, type ToolRequest } from './tools';
 import { isImageRequest, imageModels } from './image-routing';
 import type { WorkMode, Workflow } from './types';
 import { WorkPlanCard, WORKFLOW_LABELS } from './work-plan';
+import { ChatMarkdown } from './chat-markdown';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
 import { publicSourceUrl } from './web';
 import { QuestionCard } from './tool-question';
@@ -144,6 +146,7 @@ export default function App() {
   const api = window.step;
   const [update] = useUpdate(api);
   const [toolApprovals, setToolApprovals] = useState<ApprovalRequest[]>([]);
+  const [vaultPrompts, setVaultPrompts] = useState<VaultPrompt[]>([]);
   // Tools start as one row of icons so the task list keeps the height; the choice is remembered.
   const [toolsOpen, setToolsOpen] = useState(() => {
     try {
@@ -298,6 +301,8 @@ export default function App() {
     documentTool?: DocumentToolId;
     attachmentRole?: DocumentAttachmentRole;
     isolated?: boolean;
+    aside?: boolean;
+    autoContinue?: boolean;
   } | null>(null);
   // The first send (or the first after the terms change) needs the usage terms ticked; a new ask starts unticked.
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -476,6 +481,14 @@ export default function App() {
   useEffect(
     () =>
       api?.onEvent(event => {
+        if (event.type === 'side-question') {
+          void refresh();
+          return;
+        }
+        if (event.type === 'vault-prompt' && event.vaultPrompt)
+          setVaultPrompts(items => [...items.filter(item => item.id !== event.vaultPrompt!.id), event.vaultPrompt!]);
+        if (event.type === 'vault-prompt-close' && event.vaultPrompt)
+          setVaultPrompts(items => items.filter(item => item.id !== event.vaultPrompt!.id));
         if (event.type === 'vault-open') {
           setVaultOrigin(event.text || '');
           setSettingsPage('credentials');
@@ -781,7 +794,7 @@ export default function App() {
     setRight(true);
     setToolTab('output');
     await refresh();
-    await start(id, t('แก้ร่างเดิมเฉพาะตามคำขอนี้: {0}', changes), [], undefined, undefined, undefined, '', 'draft');
+    await start(id, t('แก้ร่างเดิมตามคำขอนี้: {0}', changes), [], undefined, undefined, undefined, '', 'draft');
   }
   async function create() {
     // A new task is only a blank page until the first request or attachment, so no empty tasks pile up.
@@ -814,6 +827,10 @@ export default function App() {
     return s;
   }
   async function send() {
+    if (/^\/btw\s+/i.test(query.trim())) {
+      await askAside(query.trim().replace(/^\/btw\s+/i, ''));
+      return;
+    }
     if (query.trim() === '/vault' || query.trim() === '/google') {
       setQuery('');
       openSettings('credentials');
@@ -881,6 +898,27 @@ export default function App() {
       setSubmitting(false);
     }
   }
+  async function askAside(text = query) {
+    if (files.length || pendingSource) throw new Error('SIDE_QUESTION_SOURCE_NOT_ALLOWED');
+    if (!session || !text.trim() || session.sideQuestions?.some(q => q.status === 'running')) return;
+    await start(
+      session.id,
+      text,
+      [],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'chat',
+      '',
+      false,
+      false,
+      undefined,
+      undefined,
+      true,
+      true,
+    );
+  }
   // The host answers with a consent request when this send needs one; the dialog replays the same payload with its token.
   async function start(
     id: string,
@@ -897,21 +935,25 @@ export default function App() {
     documentTool?: DocumentToolId,
     attachmentRole?: DocumentAttachmentRole,
     isolated: boolean = false,
+    aside: boolean = false,
+    autoContinue: boolean = false,
   ) {
     const attempt = {},
       previousAttempt = runningIds.current.get(id);
-    runningIds.current.set(id, attempt);
-    currentId.current = id;
-    setRunning(true);
-    setStream('');
-    setReasoning('');
-    setProgress(t('กำลังส่งข้อความ'));
-    setStartedAt(Date.now());
-    setHeartbeatAt(Date.now());
-    setActivityAt(Date.now());
+    if (!aside) {
+      runningIds.current.set(id, attempt);
+      currentId.current = id;
+      setRunning(true);
+      setStream('');
+      setReasoning('');
+      setProgress(t('กำลังส่งข้อความ'));
+      setStartedAt(Date.now());
+      setHeartbeatAt(Date.now());
+      setActivityAt(Date.now());
+    }
     let result;
     try {
-      result = await api!.call('send', {
+      result = await api!.call(aside ? 'sideQuestion' : 'send', {
         id,
         text,
         attachments,
@@ -925,9 +967,11 @@ export default function App() {
         coordinator,
         documentTool,
         attachmentRole,
+        autoContinue,
         ...(isolated ? { autoImage: false } : mode === 'chat' && workflowRef.current ? { workflow: workflowRef.current } : {}),
       });
     } catch (e) {
+      if (aside) throw e;
       setRunning(false);
       if (runningIds.current.get(id) === attempt) {
         if (previousAttempt && String(e).includes('RUN_ALREADY_ACTIVE')) runningIds.current.set(id, previousAttempt);
@@ -938,10 +982,12 @@ export default function App() {
       throw e;
     }
     if (result.consent) {
-      setRunning(false);
-      if (runningIds.current.get(id) === attempt) runningIds.current.delete(id);
-      setProgress('');
-      setStartedAt(0);
+      if (!aside) {
+        setRunning(false);
+        if (runningIds.current.get(id) === attempt) runningIds.current.delete(id);
+        setProgress('');
+        setStartedAt(0);
+      }
       setTermsAccepted(false);
       setConsentAsk({
         sessionId: id,
@@ -957,8 +1003,21 @@ export default function App() {
         documentTool,
         attachmentRole,
         isolated,
+        aside,
+        autoContinue,
         ...result.consent,
       });
+      return;
+    }
+    if (result.aside) {
+      setQuery('');
+      const updated = await refresh();
+      if (!aside) {
+        setRunning(['running', 'queued'].includes(updated?.sessions.find(s => s.id === id)?.status || ''));
+        runningIds.current.delete(id);
+        setProgress('');
+        setStartedAt(0);
+      }
       return;
     }
     if (result.started && result.warning) notify(t('ส่งแล้ว ข้อความนี้มีคำที่อาจเป็นข้อมูลอ่อนไหว อย่าใส่ชื่อหรือรหัสของบุคคลในงานนี้'));
@@ -2302,12 +2361,30 @@ export default function App() {
                     <WorkPlanCard
                       plan={session.workPlan}
                       running={running || submitting}
-                      onExecute={() =>
+                      continuation={session.longTask}
+                      onExecute={continuous =>
                         void action(async () => {
                           setWorkflow('execute');
                           workflowRef.current = 'execute';
                           setWorkMode('chat');
-                          await start(session.id, t('ลงมือทำตามแผน'), [], undefined, undefined, undefined, undefined, 'chat');
+                          await start(
+                            session.id,
+                            t('ลงมือทำตามแผน'),
+                            [],
+                            undefined,
+                            undefined,
+                            undefined,
+                            undefined,
+                            'chat',
+                            '',
+                            false,
+                            false,
+                            undefined,
+                            undefined,
+                            false,
+                            false,
+                            continuous,
+                          );
                         })
                       }
                     />
@@ -2457,6 +2534,52 @@ export default function App() {
                       ))}
                     </div>
                   )}
+                  {!!session?.sideQuestions?.length && (
+                    <div className="side-question-history" aria-label={t('ถามแทรก')}>
+                      {session.sideQuestions.map(q => (
+                        <details className="work-plan" key={q.id} open={q.status !== 'completed' || q === session.sideQuestions?.at(-1)}>
+                          <summary>
+                            {t('ถามแทรก')} · {q.question}
+                          </summary>
+                          <small className="muted">{t('อ้างอิงภาพสถานะเอกสารรุ่น {0}', q.revision)}</small>
+                          {q.status === 'running' ? (
+                            <div className="side-question-progress">
+                              <p role="status">{t('กำลังตอบคำถามแทรก')}</p>
+                              <button
+                                className="quiet"
+                                onClick={() => void action(() => api.call('cancelSideQuestion', { id: session.id }))}
+                              >
+                                {t('หยุดคำถามแทรก')}
+                              </button>
+                            </div>
+                          ) : q.code ? (
+                            <p role="alert">{explainError(new Error(q.code))}</p>
+                          ) : (
+                            <>
+                              <ChatMarkdown text={q.answer || ''} />
+                              {!!q.docSources?.length && (
+                                <p className="small muted">
+                                  {t('อ้างอิงเอกสาร STeP')}: {q.docSources.join(' · ')}
+                                </p>
+                              )}
+                              {!!q.check?.unsupported.length && (
+                                <div className="answer-check warn" role="note">
+                                  <p>{t('ข้อความเหล่านี้ไม่พบในเอกสาร STeP โปรดตรวจก่อนใช้')}</p>
+                                  <ul>
+                                    {q.check.unsupported.map((item, i) => (
+                                      <li key={i}>
+                                        “{item.claim}”{item.reason && <span className="muted"> · {item.reason}</span>}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </details>
+                      ))}
+                    </div>
+                  )}
                   {/* While the assistant waits for an answer, the question card is the one place to type. */}
                   {questionPending && (
                     <p className="composer-question-note small muted" role="status">
@@ -2510,6 +2633,45 @@ export default function App() {
                     }}
                   />
                   {snapshot.settings.vimMode && <span className="small muted">Vim: {vimNormal ? 'Normal' : 'Insert'}</span>}
+                  {session && (
+                    <div className="composer-side-actions">
+                      {session?.documentTool && (
+                        <button
+                          className="quiet"
+                          disabled={Boolean(files.length || pendingSource || submitting)}
+                          onClick={() =>
+                            void action(async () => {
+                              const text = query;
+                              await save();
+                              const fresh = await createTask();
+                              if (fresh) {
+                                await selectSession(fresh.id);
+                                setWorkflow('');
+                                workflowRef.current = '';
+                                setForcedSkill('');
+                                setQuery(text);
+                              }
+                            })
+                          }
+                        >
+                          {t('เริ่มงานใหม่')}
+                        </button>
+                      )}
+                      {session && (
+                        <button
+                          className="quiet"
+                          disabled={
+                            !query.trim() ||
+                            Boolean(files.length || pendingSource) ||
+                            session.sideQuestions?.some(q => q.status === 'running')
+                          }
+                          onClick={() => void action(() => askAside())}
+                        >
+                          {t('ถามแทรก')}
+                        </button>
+                      )}
+                    </div>
+                  )}
                   <Readiness api={api} query={query} connectionId={session?.connectionId || connectionId} model={currentModel} />
                   {/* Laid out like Claude Desktop: add and modes on the left, AI and send on the right. */}
                   <div className="composer-tools">
@@ -3261,6 +3423,13 @@ export default function App() {
             }}
           />
         )}
+        {vaultPrompts[0] && (
+          <VaultPromptDialog
+            key={vaultPrompts[0].id}
+            prompt={vaultPrompts[0]}
+            respond={(id, value) => api.call('vaultPromptRespond', { id, value })}
+          />
+        )}
         {toolApprovals[0] && (
           <ApprovalDialog
             key={toolApprovals[0].id}
@@ -3342,6 +3511,8 @@ export default function App() {
                   ask.documentTool,
                   ask.attachmentRole,
                   ask.isolated,
+                  ask.aside,
+                  ask.autoContinue,
                 ),
               );
             }}

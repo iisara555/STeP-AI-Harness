@@ -2,7 +2,7 @@
 
 For employee setup and everyday use, read the [Desktop guide](../desktop/README.md). This page retains implementation, evaluation, packaging and policy details. Unless a section says repository root, run Desktop commands from `desktop/`.
 
-> Prepared source: Harness **0.7.7** / Desktop **0.6.16**, with STeP quality documents (QM, QP, Master Lists) in the knowledge search, answer checks on by default, staff feedback, Skill suggestions, the morning summary card and staff-added Skills. Explicit managed policy can still deny capabilities. Native tools remain experimental outside the shipped app. Source/CI artifacts do not establish installer publication; verify [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) and the [update feed](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest).
+> Prepared source: Harness **0.7.7** / Desktop **0.6.17**, with STeP quality documents (QM, QP, Master Lists) in the knowledge search, answer checks on by default, staff feedback, Skill suggestions, the morning summary card and staff-added Skills. Explicit managed policy can still deny capabilities. Native tools remain experimental outside the shipped app. Source/CI artifacts do not establish installer publication; verify [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) and the [update feed](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest).
 
 Local Electron workspace with Thai chat, Tiptap text editing, SQLite history, conflict-safe proposals, source review, and versioned exports. The shared routing service retains the CLI contract. Graphify is developer tooling only.
 
@@ -15,9 +15,13 @@ The same `/usage` dialog also shows [per-account provider quotas, credits and AP
 
 Phase 3 adds [context and memory controls](desktop-context-memory.md): `/memory`, workspace instructions/persona/styles, bounded compaction, session fork/search/export/resume, local OCR attachments and administrator-gated image input.
 
-[Learning Inbox](desktop-learning.md) adds `/learn`, explicit review of local preference/procedure proposals, version history, disable and rollback. Only approved lessons enter later tasks; this phase does not include automatic review or measured quality improvement.
+[Long tasks and document workflows](desktop-long-tasks.md) add detached snapshot questions, host-enforced section patches, persistent compaction summaries, bounded continuation of approved plans and a coding workflow with local TypeScript diagnostics. This is unreleased source; live model quality and employee-device acceptance remain separate.
+
+[Learning Inbox](desktop-learning.md) adds `/learn`, pending preference/procedure proposals, version history, disable and rollback. Background review defaults on in the next release; explicit employee opt-out and organization denial still win. Only confirmed lessons enter later tasks. Usage/correction metrics and paired Skill evaluation support review; measured live quality improvement remains unverified.
 
 Phase 5 adds [compatible/Copilot profiles, headless drafts, pre-send readiness, command/keybinding controls, on-demand local voice, governed Skill Packs and the LINE draft gateway](desktop-phase5.md). Live account/channel/hardware acceptance remains separate.
+
+Vault browser sign-in now follows the [Hermes-style workflow](desktop-vault-hermes.md): automatic saved-login/address fill, trusted save/OTP prompts, host TOTP, external manager adapters and card-fill consent. Enabled release defaults preserve managed denial. Coding tools retain their ordinary permissions unless IT explicitly enables `credentialStorage.blockHostExecution`; this is the same-OS-user host trust boundary, not a code sandbox. Existing stored credentials remain encrypted with the OS-wrapped key.
 
 ## Local HTML previews
 

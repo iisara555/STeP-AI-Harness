@@ -153,7 +153,7 @@ export type Policy = {
    */
   checks: { authority: boolean; privacy: boolean };
   googleWorkspace?: { clientId: string; domains: string[]; services: GoogleService[] };
-  credentialStorage?: { sharedDevice: boolean };
+  credentialStorage?: { sharedDevice?: boolean; blockHostExecution?: boolean };
   /** สรุปเช้านี้: whether an employee may let it read today's Calendar and Tasks every day without asking again. */
   morningBrief?: { rememberConsent: boolean };
 };
@@ -219,9 +219,9 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // The demo release offers the developer switch on every machine. Each developer must still opt in locally.
   developmentMode: true,
   // A background review after every 10 user turns drafts lessons into the Learning Inbox (proposals only), as Hermes
-  // Agent does. Each review is a model call on the employee's account, so it is off until an administrator allows it,
-  // and each employee then turns it on in the Learning Inbox.
-  learningReview: false,
+  // Agent does. Enabled by default; the employee can opt out in the Learning Inbox and IT can deny the feature.
+  // Each review costs tokens on the employee's account. Every drafted lesson still needs human confirmation.
+  learningReview: true,
   // The Receipt page's OCR trial and measurement tools (local-only reads, a field-by-field report saved as JSON) are
   // for the team running the OCR pilot, not for every employee, so they stay hidden until an administrator turns them on.
   ocrTrial: false,
@@ -285,8 +285,10 @@ export function defaultPolicy(): Policy {
 function closedPolicy(): Policy {
   const policy = defaultPolicy();
   policy.features.vault = false;
+  policy.credentialStorage = { blockHostExecution: true };
   policy.features.googleWorkspace = false;
   policy.features.developmentMode = false;
+  policy.features.learningReview = false;
   delete policy.googleWorkspace;
   return policy;
 }
@@ -334,11 +336,12 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
   if (raw.credentialStorage !== undefined) {
     if (
       !isObject(raw.credentialStorage) ||
-      Object.keys(raw.credentialStorage).some(k => k !== 'sharedDevice') ||
-      typeof raw.credentialStorage.sharedDevice !== 'boolean'
+      Object.keys(raw.credentialStorage).some(k => !['sharedDevice', 'blockHostExecution'].includes(k)) ||
+      !Object.keys(raw.credentialStorage).length ||
+      Object.values(raw.credentialStorage).some(value => typeof value !== 'boolean')
     )
-      problems.push('credentialStorage.sharedDevice must be boolean');
-    else policy.credentialStorage = { sharedDevice: raw.credentialStorage.sharedDevice };
+      problems.push('credentialStorage fields must be boolean');
+    else policy.credentialStorage = { ...raw.credentialStorage };
   }
   if (raw.morningBrief !== undefined) {
     if (
@@ -371,7 +374,9 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
       policy.googleWorkspace = {
         clientId: g.clientId,
         domains: [...new Set<string>(g.domains)],
-        services: [...new Set<GoogleService>(g.services)],
+        // Service access is chosen by each employee in Google consent. Accept legacy lists for upgrades,
+        // but do not require an administrator to expand a device's service allowlist.
+        services: [...DEFAULT_GOOGLE_SERVICES],
       };
   }
   if (raw.pilot !== undefined) {

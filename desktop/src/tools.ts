@@ -27,6 +27,7 @@ export type FileChange = {
   snapshotId?: string;
 };
 export const LOOP_TOOLS = [
+  'code_diagnostics',
   'tool_search',
   'tool_describe',
   'mcp_search',

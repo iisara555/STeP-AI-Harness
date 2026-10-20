@@ -6,8 +6,23 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.6.17
+
+- เปิดรายการบริการ Google Workspace ครบทุกบริการให้พนักงานเลือกเองโดยไม่ต้องตั้งค่าจาก IT รายเครื่อง รวมปุ่มเลือกสิทธิ์เต็ม บัญชีเดิมยังต้องยืนยันสิทธิ์เพิ่มกับ Google
+- แก้คำถามแทรกไม่ให้ล้างข้อความหรือซ่อนปุ่มหยุดงานหลัก เพิ่มปุ่มหยุดคำถามแทรกแยกจากงานหลัก
+- เก็บข้อมูลที่อยู่ไว้เมื่อบันทึกผิดพลาด จัด Vault dialog เป็นคอลัมน์เดียว รองรับ Enter และจัด checkbox/ปุ่มยกเลิกตามมาตรฐาน
+- กล่องยืนยันแสดงผลเครื่องมือและแผนงานย่อยเป็นข้อความอ่านง่าย เก็บ JSON สำหรับตรวจใต้รายละเอียดผู้ดูแล และจัดแถวปุ่มงานต่อเนื่องใหม่
+
+- ถามแทรกระหว่างงานเอกสารด้วยปุ่มหรือ `/btw` โดยไม่เปลี่ยนร่างและแผน ใช้ภาพสถานะเอกสาร ณ ตอนถาม พร้อมปุ่มเริ่มงานใหม่ที่เก็บร่างเดิม
+- แก้เฉพาะหัวข้อหรือย่อหน้าจากแชตด้วย patch ที่โฮสต์ผูกกับรุ่นและ hash รักษาเนื้อหาและรูปแบบนอกส่วนที่เลือกไว้
+- เก็บสรุป Auto compact ใช้ต่อข้ามรอบ และทำตามแผนที่อนุมัติแบบต่อเนื่องได้สูงสุดสามรอบ/สิบนาที พร้อมขอบเขตโทเคน การหยุดเมื่อไม่คืบหน้า และสถานะงานที่คงอยู่หลังเปิดแอปใหม่
+- เพิ่ม workflow เขียนและตรวจโค้ด พร้อม JavaScript/TypeScript language-service diagnostics ใน worker แยก ใช้ร่วมกับ patch, Changes และคำสั่งทดสอบของโครงการ ดูขอบเขตและข้อจำกัดใน [คู่มืองานยาว](docs/desktop-long-tasks.md)
+- Offer all 17 native Google Workspace permissions (11 supported service families) by default, including Calendar event creation, Chat and Meet. Explain which permissions an existing managed policy restricts and how to reauthorize an existing account. Upgrades preserve administrator restrictions and employee grants; Cloud API enablement remains separate.
+
 - พิมพ์งานด้วยภาษาปกติแล้วเลือก Skill ก่อนตอบแบบผสม: ชื่อทักษะที่ระบุชัดและ Router มั่นใจสูงโหลดได้ทันที กรณีอื่นให้ AI ที่เชื่อมต่ออยู่เลือกจากชื่อและคำอธิบาย แล้วตรวจสิทธิและโหลดเนื้อหา Skill จริง งานแปล ตรวจคำผิด และย่อข้อความสั้นยังใช้ทางลัดเดิม
 - แยกงานเขียนโพสต์ใหม่ออกจากงานตรวจน้ำเสียงแบรนด์ บันทึกเวลาและการใช้โทเคนของขั้นเลือก Skill และปิดกลับไปใช้การค้นหา Skill เดิมได้ผ่าน policy `features.hybridSkillSelection`
+- เปิดการทบทวนบทเรียนอัตโนมัติเป็นค่าเริ่มต้นสำหรับผู้ใช้ที่ยังไม่เคยตั้งค่า: ทุกสิบข้อความในงานเดียว สูงสุดสิบครั้งต่อวัน ใช้โทเคนจากบัญชี AI ของงาน ข้อเสนอยังรอยืนยันก่อนนำไปใช้ ผู้ใช้ปิดเองได้และค่าปิดเดิมยังคงอยู่ IT ปิดได้ด้วย `features.learningReview: false` และนโยบายที่ไม่ถูกต้องจะไม่เปิดการทบทวน
+- Enable Hermes-style Vault browser workflows: saved-login/address autofill, trusted Save & sign in and masked verification prompts, host TOTP, detected 1Password/Bitwarden sources and exact-origin address filling; card storage/import/fill are removed at the owner's request. Coding tools keep their usual permissions after Vault enrollment; administrators can retain the previous global execution gate with `credentialStorage.blockHostExecution: true`. Existing OS-wrapped encrypted records remain compatible. See [behavior, trust model and acceptance limits](docs/desktop-vault-hermes.md).
 
 ## Desktop v0.6.16 (2026-10-19)
 

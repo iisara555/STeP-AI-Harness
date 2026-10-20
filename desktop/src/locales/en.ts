@@ -9,7 +9,66 @@ import { documentLayoutEn } from './document-layout-en';
 import { feedbackEn } from './feedback-en';
 import { skillSuggestEn } from './skill-suggest-en';
 import { morningBriefEn } from './morning-brief-en';
+import { uiReviewEn } from './ui-review-en';
 export const en: Record<string, string> = {
+  ...uiReviewEn,
+  ถามแทรก: 'Ask aside',
+  'ถามแทรกใช้ภาพสถานะงานเดิม กรุณานำไฟล์หรือข้อมูลแนบออกก่อน':
+    'Side questions use the task snapshot. Remove attached files or source text first.',
+  'คำถามแทรกใช้สำหรับอ่านภาพสถานะและตอบเท่านั้น งานหลักยังอยู่เหมือนเดิม':
+    'Side questions can only read a snapshot and answer. The main task is unchanged.',
+  เลือกแผนที่ยืนยันแล้วก่อนเริ่มทำงานต่อเนื่อง: 'Select an approved plan before continuing automatically',
+  'ถึงขอบเขตงานต่อเนื่องแล้ว ตรวจผลงานและเลือกทำต่อได้โดยไม่เริ่มงานที่เสร็จแล้วซ้ำ':
+    'The continuation budget was reached. Review the results before continuing from unfinished work.',
+  'ยังระบุส่วนที่จะแก้ไม่ได้ชัดเจน โปรดใช้ชื่อหัวข้อหรือหมายเลขย่อหน้า':
+    'The edit target is ambiguous. Use the section title or paragraph number.',
+  'AI ส่งการแก้เฉพาะส่วนไม่ตรงกับเป้าหมาย ร่างเดิมยังอยู่ กรุณาลองอีกครั้ง':
+    'The AI returned an invalid targeted edit. Your draft is unchanged; try again.',
+  'การตรวจโค้ดนี้รองรับ TypeScript และ JavaScript': 'Code diagnostics support TypeScript and JavaScript',
+  'ตรวจโค้ดไม่สำเร็จ ให้ใช้คำสั่งตรวจของโครงการแทน': 'Code diagnostics failed. Use the project checks instead.',
+  'การตรวจโค้ดใช้เวลาเกินขอบเขต ให้ใช้คำสั่งตรวจของโครงการแทน': 'Code diagnostics timed out. Use the project checks instead.',
+  งานถูกขัดจังหวะ: 'Interrupted',
+  เขียนและตรวจโค้ด: 'Code and verify',
+  ทำตามแผนแบบต่อเนื่อง: 'Continue through the plan',
+  'สูงสุด 3 รอบ / 10 นาที หยุดรับงานเพิ่มเมื่อใช้ถึง 50,000 โทเคนที่รายงาน':
+    'Up to 3 rounds / 10 minutes; stop new calls at 50,000 reported tokens',
+  'งานต่อเนื่องรอบ {0}/{1}': 'Continuation round {0}/{1}',
+  ถึงขอบเขตที่กำหนด: 'Budget reached',
+  พักเพื่อทบทวน: 'Paused for review',
+  'อ้างอิงภาพสถานะเอกสารรุ่น {0}': 'Based on the snapshot at document revision {0}',
+  กำลังตอบคำถามแทรก: 'Answering the side question',
+  'เครื่องมือเขียนโค้ดใช้สิทธิ์ตามปกติ คำสั่งในเครื่องอาจเข้าถึงข้อมูลของผู้ใช้ระบบปฏิบัติการนี้ได้':
+    'Coding tools remain available with their normal permissions. Host commands can access data owned by this OS user.',
+  'Authenticator setup key หรือ otpauth:// (ไม่บังคับ)': 'Authenticator setup key or otpauth:// (optional)',
+  'ลบ Authenticator key ที่บันทึกไว้': 'Remove saved authenticator key',
+  เพิ่มที่อยู่: 'Add address',
+  ชื่อเรียกบัญชี: 'Account label',
+  เว็บไซต์ที่ใช้ได้: 'Allowed website',
+  จำข้อมูลนี้บนเครื่องส่วนตัวของฉัน: 'Remember on my personal device',
+  ที่อยู่: 'Address',
+  ลบจากเครื่อง: 'Delete locally',
+  ตัวจัดการรหัสผ่าน: 'Password managers',
+  ปลดล็อกแล้ว: 'Unlocked',
+  พร้อมเชื่อม: 'Ready to connect',
+  'ติดตั้งและลงชื่อใน CLI ของบริการก่อน': 'Install and sign in to its CLI first',
+  ล็อก: 'Lock',
+  ปลดล็อก: 'Unlock',
+  'CVC / CVV': 'CVC / CVV',
+  ที่อยู่บรรทัดแรก: 'Address line1',
+  ที่อยู่บรรทัดที่สอง: 'Address line2',
+  'เมือง / อำเภอ': 'City',
+  'จังหวัด / รัฐ': 'State',
+  รหัสไปรษณีย์: 'Postal code',
+  ประเทศ: 'Country',
+  บันทึกบัญชีและเข้าสู่ระบบ: 'Save login and sign in',
+  ปลดล็อกตัวจัดการรหัสผ่าน: 'Unlock password manager',
+  รหัสยืนยัน: 'Code',
+  'ข้อมูลส่งตรงให้โปรแกรมในเครื่อง ไม่เข้าแชตหรือโมเดล AI': 'These values go directly to the host, never to the AI conversation.',
+  'Username / อีเมล': 'Username / email',
+  รหัสผ่าน: 'Password',
+  จำบัญชีนี้บนเครื่องส่วนตัวของฉัน: 'Remember this login on my personal device',
+  'บัญชีที่จำไว้ใน Vault ใช้ลงชื่อให้อัตโนมัติ หากยังไม่มีบัญชี ผู้ช่วยเปิดหน้าต่างบันทึกและเข้าสู่ระบบให้ รหัสผ่านและ OTP ไม่เข้าแชต':
+    'Saved Vault accounts sign in automatically. For a new account, the assistant opens Save & sign in. Passwords and codes never enter chat.',
   'เพิ่มรูปโปรไฟล์คนทำงาน 20 แบบ และไอคอนขยับเมื่อชี้หรือใช้คีย์บอร์ด พร้อมรองรับการลดการเคลื่อนไหว':
     '20 more office profile pictures and icons that move on hover or keyboard focus, respecting Reduce Motion',
   'เพิ่มงาน Gmail, Drive, Docs, Sheets, Slides, Forms และ Apps Script ผ่านบัญชี Google ที่เชื่อมไว้':
