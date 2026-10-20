@@ -3014,4 +3014,28 @@ export const en: Record<string, string> = {
   'เอกสาร {0}': 'Document {0}',
   'ไฟล์ {0} รอคุณตรวจในรายการแก้ไข': '{0} is waiting for your review in Changes',
   'บันทึกไฟล์ {0} แล้ว': '{0} saved',
+  แบบฟอร์มช่วยร่าง: 'Drafting form',
+  'ร่าง TOR บันทึกข้อความ หนังสือราชการ โครงการ และรายงานประชุม กรอกข้อมูลหรือแนบต้นเรื่อง แล้วตรวจแก้ก่อนส่งออก':
+    'Draft TORs, memos, official letters, projects and meeting minutes. Enter details or attach source material, then review before exporting.',
+  ชื่อผู้ใช้หรืออีเมล: 'Username or email',
+  เลือกตัวช่วยงานในชุด: 'Choose a helper in this pack',
+  ตัวช่วยงานขององค์กร: 'Organization helpers',
+  'กำลังโหลดตัวช่วยงาน…': 'Loading helpers…',
+  ใช้ตัวช่วยงานและแม่แบบที่ตรงกับเอกสารนี้: 'Use the helper and template for this document',
+  'ไม่พบตัวช่วยงาน ลองเปลี่ยนคำค้นหรือตัวกรอง': 'No helpers found. Try another search or filter.',
+  'ตัวช่วยงานหลัก:': 'Main helper:',
+  สร้างรูปภาพ: 'Create an image',
+  'รุ่น AI สำหรับสร้างรูปภาพ': 'AI model for images',
+  'หากต้องการสร้างรูปภาพ เลือก OpenAI หรือ Google ที่เชื่อมด้วยรหัส API key การลงชื่อแบบนี้ยังสร้างรูปไม่ได้':
+    'To create images, choose OpenAI or Google connected with an API key. This sign-in method does not support image creation.',
+  เสนอปรับปรุงตัวช่วยงาน: 'Suggest a helper improvement',
+  'หากบทเรียนนี้น่าจะช่วยผู้ใช้อื่น เลือกตัวช่วยงานแล้วสร้างไฟล์ข้อเสนอให้ผู้ดูแลตรวจ ไฟล์มีบทเรียน หลักฐาน รายการแก้ไข และกรณีทดสอบ แอปยังไม่แก้ตัวช่วยงานขององค์กร':
+    'If this lesson could help others, choose a helper and create a proposal for its maintainer. The file includes the lesson, evidence, proposed changes and test cases. Organization helpers are not changed yet.',
+  ตัวช่วยงานที่ต้องการปรับปรุง: 'Helper to improve',
+  'บันทึกข้อเสนอที่ {0} ส่งไฟล์นี้ให้ผู้ดูแลตัวช่วยงาน ทีม {1}':
+    'Proposal saved at {0}. Send this file to the helper maintainer in team {1}.',
+  'งานดูแลข้อมูลที่จำและตัวช่วยงาน ({0})': 'Saved information and helper maintenance ({0})',
+  'งานดูแลข้อมูลที่จำและตัวช่วยงาน: ไม่มีงานค้าง': 'Saved information and helper maintenance: nothing pending',
+  'แอปตรวจข้อมูลที่จำ บทเรียน และชุดตัวช่วยงานบนเครื่องนี้วันละครั้ง ไม่ส่งข้อมูลออกและไม่แก้หรือลบเอง เมื่อคุณแก้แล้ว ย้ายงานเป็น "เสร็จแล้ว" เพื่อให้แอปตรวจซ้ำ':
+    'The app checks saved information, lessons and helper packs on this device daily. It sends nothing out and makes no changes or deletions. After fixing an item, move it to "Done" to check it again.',
 };

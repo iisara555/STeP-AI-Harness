@@ -203,7 +203,7 @@ try {
     if (!round) {
       const prompt = page.getByRole('alertdialog', { name: 'บันทึกบัญชีและเข้าสู่ระบบ', exact: true });
       await expect(prompt).toBeVisible({ timeout: 20000 });
-      await prompt.getByLabel('Username / อีเมล', { exact: true }).fill('synthetic-employee');
+      await prompt.getByLabel('ชื่อผู้ใช้หรืออีเมล', { exact: true }).fill('synthetic-employee');
       await prompt.getByLabel('รหัสผ่านของเว็บไซต์นี้', { exact: true }).fill('synthetic-password-marker');
       assert.equal(await prompt.getByLabel('รหัสผ่านของเว็บไซต์นี้', { exact: true }).getAttribute('type'), 'password');
       await prompt.getByRole('checkbox').check();

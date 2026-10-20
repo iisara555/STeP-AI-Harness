@@ -202,7 +202,7 @@ export function DocumentTools({
         <details className="document-skill-info">
           <summary>{t('ขั้นตอนที่ใช้ร่างและตรวจข้อมูล')}</summary>
           <p>
-            {t('Skill หลัก:')} <strong title={profile.skill}>{skillDisplayName(profile.skill)}</strong>
+            {t('ตัวช่วยงานหลัก:')} <strong title={profile.skill}>{skillDisplayName(profile.skill)}</strong>
             {profile.supportSkills.length > 0 && (
               <>
                 {' '}

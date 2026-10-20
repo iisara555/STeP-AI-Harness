@@ -2425,9 +2425,9 @@ export default function App() {
                       <Sparkles size={14} />
                       {imageModels(connection).length ? (
                         <>
-                          <span>Image API</span>
+                          <span>{t('สร้างรูปภาพ')}</span>
                           <select
-                            aria-label="Image model"
+                            aria-label={t('รุ่น AI สำหรับสร้างรูปภาพ')}
                             value={imageModel}
                             onChange={e => setImageModel(e.target.value)}
                             disabled={running}
@@ -2442,7 +2442,9 @@ export default function App() {
                           {imageCatalogError && <small>{imageCatalogError}</small>}
                         </>
                       ) : (
-                        <span>{t('เลือก OpenAI หรือ Google ที่เชื่อมด้วย API key เพื่อสร้างรูป · OAuth นี้ยังไม่มี Image API')}</span>
+                        <span>
+                          {t('หากต้องการสร้างรูปภาพ เลือก OpenAI หรือ Google ที่เชื่อมด้วยรหัส API key การลงชื่อแบบนี้ยังสร้างรูปไม่ได้')}
+                        </span>
                       )}
                     </div>
                   )}

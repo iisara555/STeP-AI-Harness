@@ -391,14 +391,14 @@ export function LearningDialog({
                   {t('หยุดใช้บทเรียน')}
                 </button>
                 <details className="skill-proposal">
-                  <summary>{t('เสนอให้ผู้ดูแล Skill')}</summary>
+                  <summary>{t('เสนอปรับปรุงตัวช่วยงาน')}</summary>
                   <p className="small muted">
                     {t(
-                      'ถ้าบทเรียนนี้ควรใช้กับทุกคนที่ใช้ Skill นั้น ให้ส่งเป็นข้อเสนอ แอปไม่แก้ Skill ขององค์กรเอง ไฟล์ที่ได้มีบทเรียน หลักฐาน patch และกรณีทดสอบ ส่งให้ผู้ดูแล Skill ตรวจผ่าน Git',
+                      'หากบทเรียนนี้น่าจะช่วยผู้ใช้อื่น เลือกตัวช่วยงานแล้วสร้างไฟล์ข้อเสนอให้ผู้ดูแลตรวจ ไฟล์มีบทเรียน หลักฐาน รายการแก้ไข และกรณีทดสอบ แอปยังไม่แก้ตัวช่วยงานขององค์กร',
                     )}
                   </p>
                   <select
-                    aria-label={t('Skill ที่บทเรียนนี้ปรับปรุง')}
+                    aria-label={t('ตัวช่วยงานที่ต้องการปรับปรุง')}
                     value={skillFor[l.id] || ''}
                     onChange={e => setSkillFor({ ...skillFor, [l.id]: e.target.value })}
                   >
@@ -418,7 +418,7 @@ export function LearningDialog({
                         if (result)
                           setProposed({
                             ...proposed,
-                            [l.id]: t('บันทึกข้อเสนอที่ {0} ส่งไฟล์นี้ให้ผู้ดูแล Skill ทีม {1}', result.path, result.owner || '-'),
+                            [l.id]: t('บันทึกข้อเสนอที่ {0} ส่งไฟล์นี้ให้ผู้ดูแลตัวช่วยงาน ทีม {1}', result.path, result.owner || '-'),
                           });
                       })
                     }

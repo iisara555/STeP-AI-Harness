@@ -37,7 +37,7 @@ const words = {
   ],
   disabled: ['เครื่องนี้ยังไม่เปิดใช้การบันทึกข้อมูลบัญชี', 'The administrator has not enabled Vault on this device.'],
   conflict: [
-    'เมื่อมีข้อมูลใน Vault แอปจะปิดการรันคำสั่ง โค้ด และเครื่องมือในเครื่องที่อาจเข้าถึงรหัสผ่าน การพัก Vault ไม่เปิดสิทธิ์เหล่านี้กลับ',
+    'เมื่อบันทึกข้อมูลบัญชี แอปจะปิดคำสั่งขั้นสูง โปรแกรมเชื่อมต่อที่เลือกเอง และเครื่องมือในเครื่องที่อาจเข้าถึงรหัสผ่าน แม้พักการใช้บัญชี สิทธิ์เหล่านี้ก็ยังปิดอยู่',
     'Stored Vault credentials block host commands, custom runtimes and local executable tools. Pausing Vault keeps that protection.',
   ],
   add: ['เพิ่มบัญชีเว็บไซต์', 'Add website account'],
@@ -46,8 +46,8 @@ const words = {
   editHeading: ['แก้ไขบัญชีเว็บไซต์', 'Edit website account'],
   emptyHint: ['กด “เพิ่มบัญชีเว็บไซต์” เพื่อเก็บบัญชีแรก', 'Press “Add website account” to save the first one'],
   origin: ['เว็บไซต์ที่ใช้ได้', 'Allowed website'],
-  username: ['Username / อีเมล', 'Username / email'],
-  password: ['Password', 'Password'],
+  username: ['ชื่อผู้ใช้หรืออีเมล', 'Username / email'],
+  password: ['รหัสผ่านของเว็บไซต์นี้', 'Password for this website'],
   remember: ['จำบัญชีนี้บนเครื่องส่วนตัวของฉัน', 'Remember this account on my personal device'],
   save: ['บันทึก', 'Save'],
   cancel: ['ยกเลิก', 'Cancel'],
@@ -58,7 +58,7 @@ const words = {
   resume: ['กลับมาใช้งาน', 'Resume'],
   replace: ['เว้นว่างเพื่อใช้รหัสผ่านเดิม', 'Leave blank to keep the existing password'],
   usernameEdit: [
-    'พิมพ์ username ใหม่เพื่อแก้ไข ค่าที่บันทึกแล้วไม่ถูกอ่านกลับเข้าหน้าจอ',
+    'กรอกชื่อผู้ใช้ใหม่หากต้องการแก้ไข แอปไม่แสดงข้อมูลเดิมที่บันทึกไว้',
     'Enter the username to edit. Saved values are not read back into this screen.',
   ],
   keys: ['จัดการรหัสเชื่อมต่อ (API key) ที่หน้า “การเชื่อมต่อ AI”', 'Manage API keys in AI connections'],
@@ -71,7 +71,7 @@ const words = {
   step2: ['ลงชื่อด้วยบัญชีงานในเบราว์เซอร์', 'Sign in with your work account in the browser'],
   step3: ['ถามในแชตได้เลย', 'Ask in chat'],
   promise: [
-    'AI ขออนุญาตคุณทุกครั้งก่อนอ่านหรือเปลี่ยนข้อมูล และไม่เห็นรหัสผ่านหรือ token ของคุณ',
+    'AI ขออนุญาตคุณทุกครั้งก่อนอ่านหรือเปลี่ยนข้อมูล และไม่เห็นรหัสผ่านหรือรหัสเชื่อมต่อบัญชีของคุณ',
     'The AI asks you every time before it reads or changes anything, and never sees your password or token.',
   ],
   readOnly: ['อ่านอย่างเดียว', 'Read only'],
@@ -139,7 +139,7 @@ const words = {
   noFiles: ['ยังไม่มีไฟล์ที่แอปนี้เปิดได้', 'No files this app can open yet'],
   files: ['เลือกไฟล์ที่บัญชีนี้เข้าถึงได้', 'Select files this account can access'],
   fileScope: [
-    'รายการนี้จำกัดตามสิทธิ์จริง drive.file ไม่เปิดไฟล์ทั้งหมดจากการวางลิงก์',
+    'แสดงเฉพาะไฟล์ที่อนุญาตให้แอปเข้าถึง การวางลิงก์ไม่เพิ่มสิทธิ์เปิดไฟล์อื่น',
     'This list follows actual grants. drive.file does not grant every file from a pasted link.',
   ],
   resumeBrowser: ['ตรวจแล้ว ให้ AI อ่านเว็บไซต์ต่อ', 'Reviewed: resume AI website reading'],

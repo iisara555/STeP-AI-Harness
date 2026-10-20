@@ -79,7 +79,7 @@ try {
     const dialog = page.getByRole('alertdialog');
     await expect(dialog).toBeVisible();
     if (kind === 'login') {
-      await dialog.getByLabel('Username / อีเมล', { exact: true }).fill('synthetic-user');
+      await dialog.getByLabel('ชื่อผู้ใช้หรืออีเมล', { exact: true }).fill('synthetic-user');
       await dialog.getByRole('checkbox').check();
     }
     const field = dialog.getByLabel(

@@ -226,7 +226,7 @@ export function AIConnections({
                 '{0} ({1}) จะถูกลบพร้อมข้อมูลลงชื่อหรือ API key ที่เก็บในเครื่องนี้ บัญชีของคุณที่ผู้ให้บริการไม่ได้รับผลกระทบ',
                 connectionLabel(removingConnection),
                 removingConnection.mode === 'api'
-                  ? 'รหัสเชื่อมต่อ (API key)'
+                  ? t('รหัสเชื่อมต่อ (API key)')
                   : removingConnection.mode === 'oauth'
                     ? 'Claude Console OAuth'
                     : t('บัญชี'),
