@@ -146,7 +146,7 @@ try {
     const add = page.getByText('เพิ่ม AI อีกบัญชี', { exact: true });
     if ((await add.count()) && !(await page.getByRole('radio', { name: /^Gemini(?! ผ่าน)/ }).isVisible())) await add.click();
     await page.getByRole('radio', { name: /^Gemini(?! ผ่าน)/ }).click();
-    await page.getByLabel('Gemini รหัสเชื่อมต่อ (API key)').fill('synthetic-gemini-key-for-smoke');
+    await page.getByLabel('Gemini API key').fill('synthetic-gemini-key-for-smoke');
     await page.getByRole('button', { name: 'เชื่อมต่อ Gemini', exact: true }).click();
   };
   await page.keyboard.press('ControlOrMeta+,');
@@ -163,7 +163,7 @@ try {
   slowTest = true;
   await connect();
   await page.locator('.ai-connection-status').filter({ hasText: 'กำลังเชื่อมต่อและทดสอบ…' }).waitFor();
-  await page.getByRole('button', { name: /ตัวช่วยงาน/ }).click();
+  await page.getByRole('button', { name: /ศูนย์รวม Skill/ }).click();
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).waitFor({ state: 'hidden' });
   await page.keyboard.press('ControlOrMeta+,');
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
@@ -198,7 +198,7 @@ try {
   // Switching to another page while the receipt is read keeps the work: the sidebar shows it running, and the result
   // is there on return.
   await page.getByText('receipt.png', { exact: true }).waitFor();
-  await page.getByRole('button', { name: /ตัวช่วยงาน/ }).click();
+  await page.getByRole('button', { name: /ศูนย์รวม Skill/ }).click();
   await page.getByLabel('กำลังตรวจใบเสร็จอยู่').waitFor();
   await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
   await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();

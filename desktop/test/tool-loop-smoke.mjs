@@ -132,7 +132,7 @@ try {
   await page.keyboard.press('Enter');
   const usage = page.getByRole('alertdialog', { name: 'การใช้งาน AI' });
   await usage.waitFor();
-  await expect(usage).toContainText('75 โทเคน');
+  await expect(usage).toContainText('75 token');
   await page.screenshot({ path: 'release/qa/tool-loop-usage.png' });
   await usage.getByRole('button', { name: 'ปิด', exact: true }).click();
   // Declined note content is withheld; a provider may continue with a question without that note.

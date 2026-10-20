@@ -103,7 +103,7 @@ try {
   await page.getByRole('radio', { name: /^Groq/ }).click();
   const groqConnect = page.getByRole('button', { name: 'เชื่อมต่อ Groq', exact: true });
   await expect(groqConnect).toBeDisabled();
-  await page.getByLabel('Groq รหัสเชื่อมต่อ (API key)').fill('gsk-synthetic');
+  await page.getByLabel('Groq API key').fill('gsk-synthetic');
   await groqConnect.click();
   await expect.poll(async () => (await connections()).find(c => c.preset === 'groq')?.ready, { timeout: 30000 }).toBe(true);
   assert.equal((await connections()).find(c => c.preset === 'groq').model, 'llama-3.3-70b-versatile');

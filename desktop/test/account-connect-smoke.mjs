@@ -23,14 +23,14 @@ try {
   await page.screenshot({ path: 'release/qa/connect-ai/new-user.png' });
   await expect(page.getByRole('radio', { name: /Gemini ผ่าน Antigravity/ })).toHaveAttribute('aria-checked', 'true');
   await expect(page.getByRole('radio', { name: /Gemini ผ่าน Antigravity/ })).toContainText('แนะนำ');
-  await expect(page.getByLabel('รหัสเชื่อมต่อ (API key)', { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('API key', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('combobox', { name: /วิธีเชื่อมต่อ/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /แพ็กเกจของคุณผ่าน Claude Code/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Gemini', exact: true })).toHaveCount(0);
   // Switching back from administrator settings discards API credentials and billing mode.
   await page.getByRole('button', { name: 'ตั้งค่าขั้นสูงสำหรับผู้ดูแล' }).click();
   await page.getByRole('combobox', { name: /ผู้ให้บริการ/ }).selectOption('gemini');
-  await page.getByLabel('รหัสเชื่อมต่อ (API key)', { exact: true }).fill('synthetic-only');
+  await page.getByLabel('API key', { exact: true }).fill('synthetic-only');
   await page.getByRole('button', { name: 'กลับไปเลือกบริการ' }).click();
   await page.getByRole('radio', { name: /^ChatGPT/ }).click();
   const snapshot = await page.evaluate(() => window.step.call('snapshot'));
@@ -106,7 +106,7 @@ try {
   await expect(page.locator('.connection-state')).toHaveText('พร้อมใช้งาน');
   await expect(page.locator('.connection-card')).toHaveAttribute('data-state', 'ready');
   await expect(page.getByRole('button', { name: 'กลับไปที่งาน', exact: true })).not.toHaveClass(/quiet/);
-  await expect(page.getByRole('combobox', { name: 'รุ่น AI สำหรับงานใหม่' })).toBeHidden();
+  await expect(page.getByRole('combobox', { name: 'โมเดลสำหรับงานใหม่' })).toBeHidden();
   await expect(page.getByRole('button', { name: 'ลบบัญชีนี้', exact: true })).toBeHidden();
 
   const capabilities = page.locator('.ai-connect-step .ai-capabilities');
@@ -121,10 +121,10 @@ try {
   await expect(organization.locator('[data-capability="routing"]')).toContainText('AI ค้นหาและเลือก Skill');
   await expect(organization.locator('[data-capability="mcp"] .ai-capability-state')).toHaveText('ยังใช้ไม่ได้');
   await page.screenshot({ path: 'release/qa/connect-ai/ready.png' });
-  await page.getByText('รุ่น AI และการจัดการบัญชี', { exact: true }).click();
-  await expect(page.getByRole('combobox', { name: 'รุ่น AI สำหรับงานใหม่' })).toBeVisible();
+  await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'โมเดลสำหรับงานใหม่' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'ลบบัญชีนี้', exact: true })).toBeVisible();
-  await page.getByText('รุ่น AI และการจัดการบัญชี', { exact: true }).click();
+  await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();
   await page.evaluate(() => {
     document.documentElement.dataset.theme = 'dark';
   });

@@ -89,12 +89,12 @@ try {
   const geminiConnect = page.getByRole('button', { name: 'เชื่อมต่อ Gemini', exact: true });
   await expect(geminiConnect).toBeDisabled();
   await expect(page.locator('.connection-cost')).toContainText('ใช้งบ API');
-  await page.getByLabel('Gemini รหัสเชื่อมต่อ (API key)').fill('synthetic-gemini-key');
+  await page.getByLabel('Gemini API key').fill('synthetic-gemini-key');
   await expect(geminiConnect).toBeEnabled();
   await assertVisibleButton(geminiConnect);
   await page.getByRole('radio', { name: /^ChatGPT/ }).click();
   await page.getByRole('radio', { name: /^Gemini(?! ผ่าน)/ }).click();
-  await expect(page.getByLabel('Gemini รหัสเชื่อมต่อ (API key)')).toHaveValue('');
+  await expect(page.getByLabel('Gemini API key')).toHaveValue('');
   await page.getByRole('radio', { name: /^ChatGPT/ }).click();
   await page.getByRole('button', { name: 'ตั้งค่าขั้นสูงสำหรับผู้ดูแล' }).click();
   await page.getByRole('combobox', { name: /ผู้ให้บริการ/ }).selectOption('claude');

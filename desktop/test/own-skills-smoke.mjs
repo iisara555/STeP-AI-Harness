@@ -1,4 +1,4 @@
-// Skills hub: "เพิ่มตัวช่วยงานของฉัน" opens the Skill Packs import, the imported Skill shows with its uploader's credit,
+// Skills hub: "เพิ่ม Skill ของฉัน" opens the Skill Packs import, the imported Skill shows with its uploader's credit,
 // and features.staffSkills: false hides both. Synthetic profile and a repository Skill; no provider calls.
 import { _electron as electron, expect } from '@playwright/test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -32,7 +32,7 @@ try {
 
   await page.locator('[data-tour="skills"]').click();
   const hub = page.locator('.skills-hub');
-  await hub.getByRole('button', { name: 'เพิ่มตัวช่วยงานของฉัน', exact: true }).click();
+  await hub.getByRole('button', { name: 'เพิ่ม Skill ของฉัน', exact: true }).click();
   const packs = page.getByRole('alertdialog', { name: 'Skill Packs' });
   await packs.getByLabel('ตั้งชื่อชุด (ใช้เมื่อนำเข้าโฟลเดอร์ Skill เดี่ยว)').fill('my-tone');
   await packs.getByRole('button', { name: 'เลือกโฟลเดอร์และนำเข้า', exact: true }).click();
@@ -55,7 +55,7 @@ try {
     await page.screenshot({ path: join(shots, `skills-hub-own-dark-1024.png`) });
     await page.evaluate(() => (document.documentElement.dataset.theme = 'light'));
   }
-  await own.getByRole('button', { name: 'ใช้ตัวช่วยนี้' }).click();
+  await own.getByRole('button', { name: 'ใช้ Skill นี้' }).click();
   await expect(page.locator('.composer')).toBeVisible();
 
   // An administrator turning staff Skills off removes the button and the list, not just disables them.
@@ -66,7 +66,7 @@ try {
   if (await page.getByRole('dialog', { name: 'มีอะไรใหม่' }).count()) await page.keyboard.press('Escape');
   await page.locator('[data-tour="skills"]').click();
   await expect(page.locator('.skills-grid').first()).toBeVisible();
-  await expect(page.getByRole('button', { name: 'เพิ่มตัวช่วยงานของฉัน' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'เพิ่ม Skill ของฉัน' })).toHaveCount(0);
   await expect(page.locator('.skills-own')).toHaveCount(0);
   console.log('Own Skills smoke passed: add button, import with credit, personal use from the hub, hidden by policy.');
 } finally {

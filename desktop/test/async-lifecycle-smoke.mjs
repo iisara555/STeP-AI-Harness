@@ -171,7 +171,7 @@ try {
     .getByRole('button', { name: /^Synthetic task A/ })
     .click();
   await pending('resume');
-  await page.getByRole('button', { name: /ตัวช่วยงาน/ }).click();
+  await page.getByRole('button', { name: /ศูนย์รวม Skill/ }).click();
   await release('resume');
   await page.waitForTimeout(150);
   await expect(page.locator('[data-tour="skills"].nav-active')).toBeVisible();

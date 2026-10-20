@@ -61,7 +61,7 @@ const words = {
     'กรอกชื่อผู้ใช้ใหม่หากต้องการแก้ไข แอปไม่แสดงข้อมูลเดิมที่บันทึกไว้',
     'Enter the username to edit. Saved values are not read back into this screen.',
   ],
-  keys: ['จัดการรหัสเชื่อมต่อ (API key) ที่หน้า “การเชื่อมต่อ AI”', 'Manage API keys in AI connections'],
+  keys: ['จัดการ API key ที่หน้า “การเชื่อมต่อ AI”', 'Manage API keys in AI connections'],
   googleIntro: [
     'ให้ AI ช่วยค้นเมล ดูนัด และหาไฟล์ในบัญชี Google ของงานคุณ',
     'Let the AI search your mail, check your calendar and find files in your work Google account.',
@@ -71,7 +71,7 @@ const words = {
   step2: ['ลงชื่อด้วยบัญชีงานในเบราว์เซอร์', 'Sign in with your work account in the browser'],
   step3: ['ถามในแชตได้เลย', 'Ask in chat'],
   promise: [
-    'AI ขออนุญาตคุณทุกครั้งก่อนอ่านหรือเปลี่ยนข้อมูล และไม่เห็นรหัสผ่านหรือรหัสเชื่อมต่อบัญชีของคุณ',
+    'AI ขออนุญาตคุณทุกครั้งก่อนอ่านหรือเปลี่ยนข้อมูล และไม่เห็นรหัสผ่านหรือ token ของคุณ',
     'The AI asks you every time before it reads or changes anything, and never sees your password or token.',
   ],
   readOnly: ['อ่านอย่างเดียว', 'Read only'],

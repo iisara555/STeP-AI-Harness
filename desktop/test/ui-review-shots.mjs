@@ -103,7 +103,7 @@ try {
   await shot('06-task-with-draft');
 
   const screens = [
-    ['07-skills-hub', 'ตัวช่วยงาน', '.skills-hub'],
+    ['07-skills-hub', 'ศูนย์รวม Skill', '.skills-hub'],
     ['08-documents', 'เครื่องมือร่างเอกสาร', '.document-tools'],
     ['09-receipt', 'ตรวจใบเสร็จ AFP', '.receipt-app'],
     ['09b-schedules', 'งานตั้งเวลา', '.schedules'],

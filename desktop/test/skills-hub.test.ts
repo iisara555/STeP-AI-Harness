@@ -43,14 +43,14 @@ const render = (props: Partial<Parameters<typeof SkillsHub>[0]>) =>
 
 test('the add-my-Skill button and own Skills appear only while staff Skills are allowed', () => {
   const allowed = render({ ownPacks: [pack], onAddOwn: () => {} });
-  assert.match(allowed, /เพิ่มตัวช่วยงานของฉัน/);
-  assert.match(allowed, /ตัวช่วยงานของฉัน/);
+  assert.match(allowed, /เพิ่ม Skill ของฉัน/);
+  assert.match(allowed, /Skill ของฉัน/);
   assert.match(allowed, /meeting-notes/);
   assert.match(allowed, /เพิ่มโดย สมหญิง ใจดี · cc · /);
   assert.match(allowed, /ใช้เองบนเครื่องนี้/);
   // features.staffSkills: false → App passes no onAddOwn, so neither the button nor imported packs show.
   const off = render({ ownPacks: [pack] });
-  assert.doesNotMatch(off, /เพิ่มตัวช่วยงานของฉัน/);
+  assert.doesNotMatch(off, /เพิ่ม Skill ของฉัน/);
   assert.doesNotMatch(off, /meeting-notes/);
 });
 

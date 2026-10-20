@@ -88,7 +88,7 @@ try {
   await page.locator('.composer textarea').fill('/usage');
   await page.keyboard.press('Enter');
   const dialog = page.getByRole('alertdialog', { name: 'การใช้งาน AI' });
-  await expect(dialog).toContainText('75 โทเคน');
+  await expect(dialog).toContainText('75 token');
   const codex = dialog.locator('[data-usage-account="synthetic-codex"]');
   const api = dialog.locator('[data-usage-account="synthetic-api"]');
   await expect(codex).toContainText('ยังไม่ได้อ่านการใช้งานจากผู้ให้บริการ');

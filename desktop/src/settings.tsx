@@ -31,14 +31,14 @@ const featureNames: Record<string, string> = localized({
   providerPresets: 'บริการ AI อื่นที่รู้จัก (OpenRouter, Groq ฯลฯ)',
   headless: 'สั่งงานแบบไม่เปิดหน้าต่าง',
   skillPacks: 'เปิด Skill Pack ที่ผู้ดูแลรับรอง พร้อม Hooks และ Agent',
-  staffSkills: 'ใช้ตัวช่วยงานที่ทำเองได้เมื่อตรวจผ่าน',
+  staffSkills: 'ใช้ Skill ที่ทำเองได้เมื่อตรวจผ่าน',
   feedback: 'ให้พนักงานแจ้งปัญหาและข้อเสนอแนะถึงผู้ดูแล',
   cron: 'งานตั้งเวลา',
   coordinator: 'ให้ AI แบ่งงานย่อยให้ผู้ช่วยหลายตัว',
   memoryTeam: 'ความจำที่ใช้ร่วมกันในทีม',
-  autoRouting: 'เลือกตัวช่วยงานและถามข้อมูลที่ขาดให้อัตโนมัติ',
-  hybridSkillSelection: 'เลือกตัวช่วยที่เหมาะกับงานก่อนตอบ',
-  skillSuggestions: 'แนะนำตัวช่วยงานเหนือช่องพิมพ์',
+  autoRouting: 'เลือก Skill และถามข้อมูลที่ขาดให้อัตโนมัติ',
+  hybridSkillSelection: 'เลือก Skill ที่เหมาะกับงานก่อนตอบ',
+  skillSuggestions: 'แนะนำ Skill เหนือช่องพิมพ์',
   receiptVision: 'ให้ AI อ่านภาพใบเสร็จ',
   autoUpdate: 'อัปเดตแอปอัตโนมัติ',
   claudeSubscription: 'ใช้แพ็กเกจ Claude Pro/Max',
@@ -47,7 +47,7 @@ const featureNames: Record<string, string> = localized({
   ocrTrial: 'บันทึกผลทดลอง OCR สำหรับทีมนำร่อง',
   answerCheck: 'ตรวจคำตอบเรื่อง STeP กับเอกสาร',
   autoEffort: 'ปรับระดับการคิดตามขนาดงาน',
-  maintenance: 'ตรวจข้อมูลที่จำ บทเรียน และตัวช่วยงานทุกวัน',
+  maintenance: 'ตรวจข้อมูลที่จำ บทเรียน และ Skill ทุกวัน',
 });
 
 /** The policy switches in a few plain groups, so staff can scan them; switches not listed fall into the last group. */

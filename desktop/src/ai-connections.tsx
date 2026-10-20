@@ -135,7 +135,7 @@ export function AIConnections({
       {/* One stable element for the picker, so a choice in progress survives the first account appearing above it. */}
       <div className={connections.length ? 'ai-connect-step ai-add-account' : 'ai-connect-step'}>
         {!connections.length && <StepHeading>{t('เลือก AI และเชื่อมต่อ')}</StepHeading>}
-        {!connections.length && <p className="muted small">{t('Antigravity และ ChatGPT ลงชื่อด้วยบัญชีได้ ไม่ต้องกรอกรหัสเชื่อมต่อ')}</p>}
+        {!connections.length && <p className="muted small">{t('Antigravity และ ChatGPT ลงชื่อด้วยบัญชีได้ ไม่ต้องกรอก API key')}</p>}
         <details
           className="ai-provider-disclosure"
           data-first={!connections.length}
@@ -226,7 +226,7 @@ export function AIConnections({
                 '{0} ({1}) จะถูกลบพร้อมข้อมูลลงชื่อหรือ API key ที่เก็บในเครื่องนี้ บัญชีของคุณที่ผู้ให้บริการไม่ได้รับผลกระทบ',
                 connectionLabel(removingConnection),
                 removingConnection.mode === 'api'
-                  ? t('รหัสเชื่อมต่อ (API key)')
+                  ? t('API key')
                   : removingConnection.mode === 'oauth'
                     ? 'Claude Console OAuth'
                     : t('บัญชี'),
@@ -341,11 +341,11 @@ function ConnectionCard({
           <CapabilityList items={connectionCapabilities(c, snapshot.policy)} />
         </details>
         <details className="ai-account-management">
-          <summary>{t('รุ่น AI และการจัดการบัญชี')}</summary>
+          <summary>{t('โมเดลและการจัดการบัญชี')}</summary>
           <div>
             {Boolean(c.models?.length || c.model) && (
               <label className="connection-model">
-                {t('รุ่น AI สำหรับงานใหม่')}
+                {t('โมเดลสำหรับงานใหม่')}
                 <select
                   value={c.model}
                   disabled={Boolean(busy) || c.policyBlocked}
@@ -370,7 +370,7 @@ function ConnectionCard({
             )}
             {c.modelsAt && (
               <p className="small muted">
-                {t('รุ่น AI')} {c.models?.length || 0} {t('รายการ · อัปเดต')} {shownDate(c.modelsAt, true)}
+                {t('โมเดล')} {c.models?.length || 0} {t('รายการ · อัปเดต')} {shownDate(c.modelsAt, true)}
               </p>
             )}
           </div>
@@ -382,7 +382,7 @@ function ConnectionCard({
                 onClick={() => void run(c.id + ':models', () => call('models', { id: c.id }))}
               >
                 {busy === c.id + ':models' ? <LoaderCircle size={15} className="spin" /> : null}
-                {t('ดูรุ่น AI ที่ใช้ได้')}
+                {t('ดูโมเดลที่ใช้ได้')}
               </button>
             )}
             {/* Only the CLI-based connections have a runtime to choose; API endpoints and Copilot do not. */}
@@ -407,7 +407,7 @@ function ConnectionCard({
               <button
                 className="quiet"
                 disabled={Boolean(busy)}
-                title={t('เลิกใช้โปรแกรมเชื่อมต่อที่เลือกเอง')}
+                title={t('เลิกใช้ runtime ที่เลือกเอง')}
                 onClick={() => void run(c.id, () => call('runtime', { id: c.id, reset: true }))}
               >
                 {c.provider === 'antigravity' ? t('ใช้ Antigravity ที่ STeP ติดตั้ง') : t('กลับไปใช้ตัวเชื่อมที่มากับแอป')}

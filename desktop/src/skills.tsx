@@ -67,18 +67,18 @@ export function SkillsHub({
 
   return (
     <div className="skills-hub">
-      <h1 className="sr-only">{t('ตัวช่วยงาน')}</h1>
+      <h1 className="sr-only">{t('ศูนย์รวม Skill')}</h1>
       <div className="skills-head">
         <div className="skills-controls">
           <div className="skills-search-row">
             <label className="skills-search">
               <Search size={16} />
-              <input placeholder={t('ค้นหาตัวช่วยงาน ทีม หรือคำที่ใช้เรียก')} value={query} onChange={e => setQuery(e.target.value)} />
+              <input placeholder={t('ค้นหา Skill ทีม หรือคำที่ใช้เรียก')} value={query} onChange={e => setQuery(e.target.value)} />
             </label>
             {onAddOwn && (
-              <button className="skills-add" onClick={onAddOwn} title={t('เลือกโฟลเดอร์ตัวช่วยงาน ระบบตรวจรูปแบบและจุดเสี่ยงก่อนเปิดใช้')}>
+              <button className="skills-add" onClick={onAddOwn} title={t('เลือกโฟลเดอร์ Skill ระบบตรวจรูปแบบและจุดเสี่ยงก่อนเปิดใช้')}>
                 <Plus size={15} />
-                {t('เพิ่มตัวช่วยงานของฉัน')}
+                {t('เพิ่ม Skill ของฉัน')}
               </button>
             )}
           </div>
@@ -95,13 +95,13 @@ export function SkillsHub({
               </button>
             ))}
           </div>
-          <p className="small muted">{t('ตัวช่วยงาน (Skill) รวมวิธีทำงานแต่ละแบบ เลือกรายการที่พร้อมใช้ หรือพิมพ์งานตามปกติได้')}</p>
+          <p className="small muted">{t('Skill รวมวิธีทำงานแต่ละแบบ เลือกรายการที่พร้อมใช้ หรือพิมพ์งานตามปกติได้')}</p>
         </div>
         <SectionArt scene="skills" className="skills-illustration" />
       </div>
       {visibleOwn.length > 0 && (
-        <section className="skills-own" aria-label={t('ตัวช่วยงานของฉัน')}>
-          <h2>{t('ตัวช่วยงานของฉัน')}</h2>
+        <section className="skills-own" aria-label={t('Skill ของฉัน')}>
+          <h2>{t('Skill ของฉัน')}</h2>
           <div className="skills-grid">
             {visibleOwn.map(p => (
               <article key={p.id} className="skill-card">
@@ -112,27 +112,27 @@ export function SkillsHub({
                 {p.skills.length > 1 && <p>{p.skills.map(s => s.id).join(', ')}</p>}
                 <div className="skill-tags">
                   <span className={`tag ${p.enabled ? 'routed' : p.invalid ? 'unregistered' : 'registered'}`}>{t(packState(p))}</span>
-                  <span className="tag">{t('ตัวช่วยงานที่พนักงานเพิ่ม')}</span>
+                  <span className="tag">{t('Skill ที่พนักงานเพิ่ม')}</span>
                 </div>
                 {p.credit && <small className="skill-credit">{creditLine([{ ...p.credit, date: p.credit.uploadedAt }])}</small>}
                 {p.enabled && p.skills.length === 1 && onUsePack ? (
                   <button className="quiet" onClick={() => onUsePack(p.id, p.skills[0].id)}>
-                    {t('ใช้ตัวช่วยนี้')}
+                    {t('ใช้ Skill นี้')}
                     <ArrowRight size={14} />
                   </button>
                 ) : (
                   <button className="quiet" onClick={onAddOwn}>
-                    {t(p.enabled ? 'เลือกตัวช่วยงานในชุด' : 'ดูผลตรวจและเปิดใช้')}
+                    {t(p.enabled ? 'เลือก Skill ในชุด' : 'ดูผลตรวจและเปิดใช้')}
                     <ArrowRight size={14} />
                   </button>
                 )}
               </article>
             ))}
           </div>
-          <h2>{t('ตัวช่วยงานขององค์กร')}</h2>
+          <h2>{t('Skill ขององค์กร')}</h2>
         </section>
       )}
-      {!skills && <p className="muted">{t('กำลังโหลดตัวช่วยงาน…')}</p>}
+      {!skills && <p className="muted">{t('กำลังโหลด Skill…')}</p>}
       <div className="skills-grid">
         {visibleTools.map(tool => (
           <article key={tool.id} className="skill-card">
@@ -142,10 +142,7 @@ export function SkillsHub({
             </header>
             <p>{t(tool.description)}</p>
             <div className="skill-tags">
-              <span
-                className="tag tool"
-                title={t(tool.id === 'documents' ? 'ใช้ตัวช่วยงานและแม่แบบที่ตรงกับเอกสารนี้' : statusTag.tool.hint)}
-              >
+              <span className="tag tool" title={t(tool.id === 'documents' ? 'ใช้ Skill และแม่แบบที่ตรงกับเอกสารนี้' : statusTag.tool.hint)}>
                 {t(tool.id === 'documents' ? 'แบบฟอร์มช่วยร่าง' : statusTag.tool.label)}
               </span>
               <span className="tag">{t(tool.stage)}</span>
@@ -178,7 +175,7 @@ export function SkillsHub({
               {!!s.contributors?.length && <small className="skill-credit">{creditLine(s.contributors)}</small>}
               {s.status === 'routed' ? (
                 <button className="quiet" onClick={() => onUse(s.name)}>
-                  {t('ใช้ตัวช่วยนี้')}
+                  {t('ใช้ Skill นี้')}
                   <ArrowRight size={14} />
                 </button>
               ) : (
@@ -188,7 +185,7 @@ export function SkillsHub({
           );
         })}
       </div>
-      {skills && !visible.length && !visibleTools.length && <p className="muted">{t('ไม่พบตัวช่วยงาน ลองเปลี่ยนคำค้นหรือตัวกรอง')}</p>}
+      {skills && !visible.length && !visibleTools.length && <p className="muted">{t('ไม่พบ Skill ลองเปลี่ยนคำค้นหรือตัวกรอง')}</p>}
     </div>
   );
 }

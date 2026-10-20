@@ -11,33 +11,32 @@ import { skillSuggestEn } from './skill-suggest-en';
 import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 export const en: Record<string, string> = {
+  'ยังใช้เครื่องมือที่ AI ขอไม่ได้ ตรวจการเชื่อมต่อ AI ก่อนทำงานต่อ':
+    'The requested tool could not be used. Check the AI connection before continuing.',
+  เปลี่ยนโมเดล: 'Change model',
   'ให้ผู้ช่วยเปิดเว็บไซต์นี้?': 'Let the assistant open this website?',
   'ให้ผู้ช่วยกรอกข้อมูลนี้?': 'Let the assistant fill in this data?',
   'ให้ผู้ช่วยคลิกจุดนี้?': 'Let the assistant click this target?',
   'ให้ผู้ช่วยกดขั้นสุดท้ายนี้?': 'Let the assistant press this final step?',
 
-  'เลือกบริการ รุ่น AI และระดับการคิด': 'Choose an AI service, model and reasoning level',
-  'เลือกโฟลเดอร์ตัวช่วยงาน ระบบตรวจรูปแบบและจุดเสี่ยงก่อนเปิดใช้':
-    'Choose a helper folder; its format and potential risks are checked before use',
-  'Antigravity และ ChatGPT ลงชื่อด้วยบัญชีได้ ไม่ต้องกรอกรหัสเชื่อมต่อ':
+  'เลือกบริการ โมเดลและระดับการคิด': 'Choose an AI service, model and reasoning level',
+  'เลือกโฟลเดอร์ Skill ระบบตรวจรูปแบบและจุดเสี่ยงก่อนเปิดใช้':
+    'Choose a Skill folder; its format and potential risks are checked before use',
+  'Antigravity และ ChatGPT ลงชื่อด้วยบัญชีได้ ไม่ต้องกรอก API key':
     'Sign in to Antigravity or ChatGPT with an account; no API key is needed',
 
-  'ค้นหาตัวช่วยงาน ทีม หรือคำที่ใช้เรียก': 'Search work helpers, teams or keywords',
-  เพิ่มตัวช่วยงานของฉัน: 'Add my work helper',
-  ตัวช่วยงานของฉัน: 'My work helpers',
-  ตัวช่วยงานที่พนักงานเพิ่ม: 'Staff-added helper',
-  ใช้ตัวช่วยนี้: 'Use this helper',
-  'เลือกโฟลเดอร์ตัวช่วยงาน ระบบจะตรวจไฟล์ก่อนเปิดใช้': 'Choose a helper folder; files are checked before use',
+  'ค้นหา Skill ทีม หรือคำที่ใช้เรียก': 'Search Skills, teams or keywords',
+
+  'เลือกโฟลเดอร์ Skill ระบบจะตรวจไฟล์ก่อนเปิดใช้': 'Choose a Skill folder; files are checked before use',
   เครื่องนี้ยังไม่เปิดใช้การบันทึกข้อมูลบัญชี: 'Credential storage is not enabled on this device',
-  'จัดการรหัสเชื่อมต่อ (API key) ที่หน้า “การเชื่อมต่อ AI”': 'Manage API keys in AI connections',
-  'รหัสเชื่อมต่อ (API key)': 'API key',
-  'รหัสเชื่อมต่อ (API key, ไม่บังคับ)': 'API key (optional)',
-  'Gemini รหัสเชื่อมต่อ (API key)': 'Gemini API key',
-  'ใช้รุ่น AI แรกที่บริการมี': 'Use the first available AI model',
-  'ขอรหัสเชื่อมต่อจาก {0}': 'Get an API key from {0}',
-  '{0} รหัสเชื่อมต่อ (API key)': '{0} API key',
-  'ตัวช่วยงาน (Skill) รวมวิธีทำงานแต่ละแบบ เลือกรายการที่พร้อมใช้ หรือพิมพ์งานตามปกติได้':
-    'Work helpers (Skills) provide procedures for different tasks. Choose an available helper or describe your task as usual.',
+  'จัดการ API key ที่หน้า “การเชื่อมต่อ AI”': 'Manage API keys in AI connections',
+  'API key': 'API key',
+
+  'Gemini API key': 'Gemini API key',
+
+  '{0} API key': '{0} API key',
+  'Skill รวมวิธีทำงานแต่ละแบบ เลือกรายการที่พร้อมใช้ หรือพิมพ์งานตามปกติได้':
+    'Skills (Skills) provide procedures for different tasks. Choose an available Skill or describe your task as usual.',
 
   'อ่านเนื้อหาหน้าเว็บนี้ไม่ได้ ลองส่งลิงก์อื่นหรือแนบไฟล์ต้นฉบับ':
     'This page could not be read. Try another link or attach the source file.',
@@ -51,46 +50,40 @@ export const en: Record<string, string> = {
     'The organization network connection to AI is unavailable. Ask support to check it.',
   'องค์กรยังไม่อนุญาตบริการ AI นี้ เลือกบริการที่เปิดใช้หรือแจ้งผู้ดูแล':
     'This AI service is not allowed by your organization. Choose an available service or contact support.',
-  'ชุดตัวช่วยงานนี้ยังไม่ได้รับรอง ให้ผู้ดูแลตรวจและเปิดใช้ก่อน': 'This helper pack needs administrator review and approval before use.',
+  'Skill Pack นี้ยังไม่ได้รับรอง ให้ผู้ดูแลตรวจและเปิดใช้ก่อน': 'This Skill pack needs administrator review and approval before use.',
   'ทำงานครบขอบเขตคำขอนี้แล้ว ตรวจ “รายการแก้ไข” และ “งานเบื้องหลัง” แล้วพิมพ์ “ต่อ” เพื่อทำงานต่อ':
     'This request reached its work limit. Review Changes and Background tasks, then type Continue.',
   องค์กรปิดการทำงานด้วยเครื่องมืออัตโนมัติไว้: 'Automatic tool use is disabled by your organization.',
-  'การเชื่อมต่อนี้ใช้เครื่องมือที่ AI ขอไม่ได้ เลือกรุ่น AI อื่น หรือแนบข้อมูลให้ช่วยสรุป':
+  'การเชื่อมต่อนี้ใช้เครื่องมือที่ AI ขอไม่ได้ เลือกโมเดลอื่น หรือแนบข้อมูลให้ช่วยสรุป':
     'This connection cannot use the requested tool. Choose another AI model or attach source material to summarize.',
-  'ตัวช่วยงานนี้ยังเปิดใช้ในแชตไม่ได้ เลือกตัวช่วยอื่น': 'This work helper is not available in chat. Choose another helper.',
-  'บัญชีนี้ใช้รุ่น AI ที่เลือกไม่ได้ เลือกรุ่นอื่นที่ช่องพิมพ์':
+  'Skill นี้ยังเปิดใช้ในแชตไม่ได้ เลือก Skill อื่น': 'This Skill is not available in chat. Choose another Skill.',
+  'บัญชีนี้ใช้โมเดลที่เลือกไม่ได้ เลือกโมเดลอื่นที่ช่องพิมพ์':
     'Your account cannot use this AI model. Choose another model in the composer.',
   'บัญชีนี้ถึงขีดจำกัดการใช้ AI หรือถูกจำกัดชั่วคราว ลองใหม่ภายหลัง หรือเลือกรุ่นอื่น':
     'Your account reached an AI usage limit or is temporarily restricted. Try later or choose another model.',
   'การสนทนากับ AI ขาดช่วง และเชื่อมต่อใหม่ยังไม่สำเร็จ กด “ลองอีกครั้ง”':
     'The AI conversation was interrupted and reconnecting did not succeed. Select Try again.',
   'การเชื่อมต่อ AI หยุดกลางคัน ลองเชื่อมต่ออีกครั้ง': 'The AI connection stopped unexpectedly. Try connecting again.',
-  'ยังดูรุ่น AI ที่บัญชีนี้ใช้ได้ไม่สำเร็จ ตรวจการเชื่อมต่อแล้วลองใหม่':
+  'ยังดูโมเดลที่บัญชีนี้ใช้ได้ไม่สำเร็จ ตรวจการเชื่อมต่อแล้วลองใหม่':
     'Available AI models could not be loaded. Check the connection and retry.',
   ข้อมูลสำหรับแจ้งปัญหา: 'Support details',
 
-  เลือกตัวช่วยงาน: 'Choose a work helper',
-  ตัวช่วยงาน: 'Work helpers',
-  'ใช้ตัวช่วยงาน: ': 'Work helper: ',
-  'ใช้ตัวช่วยงาน:': 'Work helper:',
-  เลิกใช้ตัวช่วยนี้: 'Stop using this helper',
-  'ตัวช่วยที่เหมาะกับงานนี้:': 'A helper for this task:',
-  'ลองใช้ตัวช่วย: {0}': 'Try helper: {0}',
-  ไม่ใช้ตัวช่วยที่แนะนำ: 'Dismiss this helper',
-  'พิมพ์งานที่อยากให้ช่วย หรือพิมพ์ / เพื่อเลือกตัวช่วยงาน': 'Describe your task, or type / to choose a helper',
-  'รู้จักทีมและตัวช่วยงานของ STeP': 'STeP teams and work helpers',
-  ค้นหาตัวช่วยงานและดูว่ารายการใดพร้อมใช้: 'Find work helpers and see which are available',
+  'Skill ที่เหมาะกับงานนี้:': 'A Skill for this task:',
+  'ลองใช้ Skill: {0}': 'Try Skill: {0}',
+  'ไม่ใช้ Skill ที่แนะนำ': 'Dismiss this Skill',
+  'พิมพ์งานที่อยากให้ช่วย หรือพิมพ์ / เพื่อเลือก Skill': 'Describe your task, or type / to choose a Skill',
+
+  'ค้นหา Skill และดูว่ารายการใดพร้อมใช้': 'Find Skills and see which are available',
   'ใส่ข้อมูลหรือแนบต้นเรื่อง ให้ AI ช่วยร่าง แล้วตรวจแก้ก่อนส่งออก': 'Add details or a source, let AI draft, then review before exporting',
-  'เพิ่มข้อมูลจากชุดตัวช่วยงานแล้ว ตรวจบริการปลายทางก่อนส่ง': 'Helper-pack data added. Check the recipient before sending',
-  'รุ่น AI': 'AI model',
-  'เลือกรุ่น AI': 'Choose an AI model',
-  'กำลังดูรุ่น AI ที่บัญชีนี้ใช้ได้…': 'Checking available AI models\u2026',
-  'รุ่น AI สำหรับงานนี้ เปลี่ยนได้ทุกเมื่อ': 'AI model for this task; you can change it anytime',
-  'เลือกบริการและรุ่น AI': 'Choose an AI service and model',
-  'หรือเลือกรุ่น AI อื่นที่ช่องพิมพ์แล้วลองใหม่': 'Or choose another AI model in the composer and retry',
-  'รุ่น AI และการจัดการบัญชี': 'AI models and account management',
-  'รุ่น AI สำหรับงานใหม่': 'AI model for new tasks',
-  'ดูรุ่น AI ที่ใช้ได้': 'Check available AI models',
+  'เพิ่มข้อมูลจาก Skill Pack แล้ว ตรวจบริการปลายทางก่อนส่ง': 'Skill-pack data added. Check the recipient before sending',
+
+  'กำลังดูโมเดลที่บัญชีนี้ใช้ได้…': 'Checking available AI models…',
+  'โมเดลสำหรับงานนี้ เปลี่ยนได้ทุกเมื่อ': 'AI model for this task; you can change it anytime',
+  เลือกบริการและโมเดล: 'Choose an AI service and model',
+  หรือเลือกโมเดลอื่นที่ช่องพิมพ์แล้วลองใหม่: 'Or choose another AI model in the composer and retry',
+
+  โมเดลสำหรับงานใหม่: 'AI model for new tasks',
+  ดูโมเดลที่ใช้ได้: 'Check available AI models',
   เลิกใช้โปรแกรมเชื่อมต่อที่เลือกเอง: 'Stop using the custom connection program',
   'Antigravity และ ChatGPT ใช้บัญชีที่มีอยู่ลงชื่อเข้าใช้ได้': 'Sign in to Antigravity or ChatGPT with your existing account',
   จำการอนุญาตในโฟลเดอร์นี้: 'Remember permission for this folder',
@@ -102,15 +95,15 @@ export const en: Record<string, string> = {
   ค้นบริการเสริม: 'Find a connected service',
   พื้นที่ทดสอบแยก: 'Isolated test area',
   กำลังเตรียมงาน: 'Preparing your task',
-  'ข้อความที่ส่ง {0} หน่วย · คำตอบ {1} หน่วย จาก {2} ครั้ง': 'Input {0} text units \u00b7 Output {1} text units from {2} calls',
-  '{0} หน่วยข้อความ': '{0} text units',
-  'ย่อข้อมูลประกอบแล้ว จาก {0} เหลือ {1} หน่วยข้อความ (ประมาณการ)': 'Supporting context reduced from {0} to {1} text units (estimated)',
+  'ข้อความที่ส่ง {0} tokens · คำตอบ {1} tokens จาก {2} ครั้ง': 'Input {0} tokens · Output {1} tokens from {2} calls',
+  '{0} tokens': '{0} tokens',
+  'ย่อข้อมูลประกอบแล้ว จาก {0} เหลือ {1} tokens (ประมาณการ)': 'Supporting context reduced from {0} to {1} tokens (estimated)',
   บันทึกและใช้ข้อมูลบัญชี: 'Save and use account credentials',
-  เลือกตัวช่วยงานและถามข้อมูลที่ขาดให้อัตโนมัติ: 'Choose a work helper and ask for missing details automatically',
-  เลือกตัวช่วยที่เหมาะกับงานก่อนตอบ: 'Choose a suitable helper before answering',
-  แนะนำตัวช่วยงานเหนือช่องพิมพ์: 'Suggest work helpers above the composer',
-  ใช้ตัวช่วยงานที่ทำเองได้เมื่อตรวจผ่าน: 'Use your own work helpers after they pass review',
-  'ตรวจข้อมูลที่จำ บทเรียน และตัวช่วยงานทุกวัน': 'Check saved memories, lessons and work helpers daily',
+  'เลือก Skill และถามข้อมูลที่ขาดให้อัตโนมัติ': 'Choose a Skill and ask for missing details automatically',
+
+  'แนะนำ Skill เหนือช่องพิมพ์': 'Suggest Skills above the composer',
+  'ใช้ Skill ที่ทำเองได้เมื่อตรวจผ่าน': 'Use your own Skills after they pass review',
+  'ตรวจข้อมูลที่จำ บทเรียน และ Skill ทุกวัน': 'Check saved memories, lessons and Skills daily',
   'สวัสดีครับ{0} {1} พร้อมช่วยงานครับ ต้องการให้ช่วยเรื่องใด': 'Hello{0}, {1} is ready. What would you like help with?',
 
   กลับมาใช้ข้อมูลบัญชี: 'Resume credential access',
@@ -163,7 +156,7 @@ export const en: Record<string, string> = {
   งานถูกขัดจังหวะ: 'Interrupted',
   เขียนและตรวจโค้ด: 'Code and verify',
   ทำตามแผนแบบต่อเนื่อง: 'Continue through the plan',
-  'สูงสุด 3 รอบ / 10 นาที หยุดรับงานเพิ่มเมื่อใช้ถึง 50,000 โทเคนที่รายงาน':
+  'สูงสุด 3 รอบ / 10 นาที หยุดรับงานเพิ่มเมื่อใช้ถึง 50,000 token ที่รายงาน':
     'Up to 3 rounds / 10 minutes; stop new calls at 50,000 reported tokens',
   'งานต่อเนื่องรอบ {0}/{1}': 'Continuation round {0}/{1}',
   ถึงขอบเขตที่กำหนด: 'Budget reached',
@@ -229,7 +222,7 @@ export const en: Record<string, string> = {
   'การ์ดสรุปเช้านี้ แสดงนัดและงานวันนี้จาก Google Calendar และ Tasks':
     "A morning summary card with today's meetings and tasks from Google Calendar and Tasks",
   'ตอบจากคู่มือคุณภาพ QP และ Master List ของ STeP ได้แล้ว': 'Answers from the STeP Quality Manual, procedures (QP) and Master Lists',
-  'ช่องแชทเลือก AI โมเดล และระดับการคิดได้จากปุ่มเดียว ไม่ล้นเป็นสองบรรทัด':
+  'ช่องแชทเลือก AI โมเดลและระดับการคิดได้จากปุ่มเดียว ไม่ล้นเป็นสองบรรทัด':
     'Pick the AI, model and reasoning level from one button in the composer, so it stays on one row',
   'แถบเครื่องมือผลงานเป็นไอคอนพร้อมคำอธิบาย ไม่ต้องเลื่อนหาเครื่องมือ':
     'The draft toolbar uses icons with tooltips, so you no longer scroll to find a tool',
@@ -583,7 +576,7 @@ export const en: Record<string, string> = {
   'อ่านใบเสร็จ เติมข้อมูลให้ตรวจครั้งเดียว แล้วเตรียมตรวจตามกฎ AFP':
     'Read the receipt, fill the form for one final review, then prepare an AFP pre-check',
   'เรียก Skill ที่พร้อมใช้ได้ตรง ๆ โดยพิมพ์': 'Call an available Skill directly by typing',
-  โทเคน: 'Tokens',
+  token: 'Tokens',
   'ค่าใช้จ่าย (USD)': 'Cost (USD)',
   'AI พยายามใช้เครื่องมือที่การเชื่อมต่อนี้ไม่อนุญาต จึงยังตอบไม่สำเร็จ ลองเปลี่ยนโมเดลหรือแนบแหล่งข้อมูลให้สรุป':
     'The AI attempted a tool this connection does not allow, so the reply could not finish. Try another model or attach a source to summarize.',
@@ -675,7 +668,7 @@ export const en: Record<string, string> = {
   'Gemini ผ่าน Antigravity': 'Gemini via Antigravity',
   'Gemini ผ่าน Antigravity (ทดลอง)': 'Gemini via Antigravity (beta)',
   'โมเดล Gemini': 'Gemini model',
-  '{0} โทเคน': '{0} tokens',
+
   'ถ้า OCR อ่านตัวอักษรผิด AI แบบข้อความแก้จากภาพไม่ได้ ใช้ AI ที่รองรับภาพเพื่ออ่านต้นฉบับ':
     'Text-only AI cannot correct misread characters from the image. Use an image-capable AI to read the original.',
   'ระบบเก็บกุญแจของเครื่องยังไม่พร้อม กรุณาปลดล็อกหรือให้ผู้ดูแลตั้งค่า ก่อนบันทึก API key หรือลงชื่อด้วย OAuth':
@@ -971,7 +964,7 @@ export const en: Record<string, string> = {
   ถอนสิทธิ์และหยุดงาน: 'Revoke and stop task',
   โหมดทำงาน: 'Work mode',
   คุยกับผู้ช่วย: 'Chat',
-  'เลือก AI โมเดล และระดับการคิด': 'Choose AI, model and reasoning level',
+  'เลือก AI โมเดลและระดับการคิด': 'Choose AI, model and reasoning level',
   'AI ของงานนี้': 'AI for this task',
   ระดับการคิด: 'Reasoning level',
   สร้างเอกสาร: 'Create document',
@@ -1069,7 +1062,7 @@ export const en: Record<string, string> = {
   พร้อมทำงาน: 'Ready',
   ยังไม่พร้อม: 'Not ready',
   'ยังไม่เชื่อมต่อ AI': 'No AI connected',
-  'ส่งเข้า {0} · ตอบกลับ {1} token จาก {2} รอบ': 'In {0} · Out {1} tokens over {2} runs',
+  'ส่งเข้า {0} · ตอบกลับ {1} tokens จาก {2} รอบ': 'In {0} · Out {1} tokens over {2} runs',
   โมเดลค่าเริ่มต้น: 'Default model',
   คำสั่ง: 'Commands',
   ปรับความกว้างร่าง: 'Resize draft panel',
@@ -3018,24 +3011,22 @@ export const en: Record<string, string> = {
   'ร่าง TOR บันทึกข้อความ หนังสือราชการ โครงการ และรายงานประชุม กรอกข้อมูลหรือแนบต้นเรื่อง แล้วตรวจแก้ก่อนส่งออก':
     'Draft TORs, memos, official letters, projects and meeting minutes. Enter details or attach source material, then review before exporting.',
   ชื่อผู้ใช้หรืออีเมล: 'Username or email',
-  เลือกตัวช่วยงานในชุด: 'Choose a helper in this pack',
-  ตัวช่วยงานขององค์กร: 'Organization helpers',
-  'กำลังโหลดตัวช่วยงาน…': 'Loading helpers…',
-  ใช้ตัวช่วยงานและแม่แบบที่ตรงกับเอกสารนี้: 'Use the helper and template for this document',
-  'ไม่พบตัวช่วยงาน ลองเปลี่ยนคำค้นหรือตัวกรอง': 'No helpers found. Try another search or filter.',
-  'ตัวช่วยงานหลัก:': 'Main helper:',
+
+  'กำลังโหลด Skill…': 'Loading Skills…',
+  'ใช้ Skill และแม่แบบที่ตรงกับเอกสารนี้': 'Use the Skill and template for this document',
+  'ไม่พบ Skill ลองเปลี่ยนคำค้นหรือตัวกรอง': 'No Skills found. Try another search or filter.',
+  'Skill หลัก:': 'Main Skill:',
   สร้างรูปภาพ: 'Create an image',
-  'รุ่น AI สำหรับสร้างรูปภาพ': 'AI model for images',
-  'หากต้องการสร้างรูปภาพ เลือก OpenAI หรือ Google ที่เชื่อมด้วยรหัส API key การลงชื่อแบบนี้ยังสร้างรูปไม่ได้':
+  โมเดลสำหรับสร้างรูปภาพ: 'AI model for images',
+  'หากต้องการสร้างรูปภาพ เลือก OpenAI หรือ Google ที่เชื่อมด้วย API key การลงชื่อแบบนี้ยังสร้างรูปไม่ได้':
     'To create images, choose OpenAI or Google connected with an API key. This sign-in method does not support image creation.',
-  เสนอปรับปรุงตัวช่วยงาน: 'Suggest a helper improvement',
-  'หากบทเรียนนี้น่าจะช่วยผู้ใช้อื่น เลือกตัวช่วยงานแล้วสร้างไฟล์ข้อเสนอให้ผู้ดูแลตรวจ ไฟล์มีบทเรียน หลักฐาน รายการแก้ไข และกรณีทดสอบ แอปยังไม่แก้ตัวช่วยงานขององค์กร':
-    'If this lesson could help others, choose a helper and create a proposal for its maintainer. The file includes the lesson, evidence, proposed changes and test cases. Organization helpers are not changed yet.',
-  ตัวช่วยงานที่ต้องการปรับปรุง: 'Helper to improve',
-  'บันทึกข้อเสนอที่ {0} ส่งไฟล์นี้ให้ผู้ดูแลตัวช่วยงาน ทีม {1}':
-    'Proposal saved at {0}. Send this file to the helper maintainer in team {1}.',
-  'งานดูแลข้อมูลที่จำและตัวช่วยงาน ({0})': 'Saved information and helper maintenance ({0})',
-  'งานดูแลข้อมูลที่จำและตัวช่วยงาน: ไม่มีงานค้าง': 'Saved information and helper maintenance: nothing pending',
-  'แอปตรวจข้อมูลที่จำ บทเรียน และชุดตัวช่วยงานบนเครื่องนี้วันละครั้ง ไม่ส่งข้อมูลออกและไม่แก้หรือลบเอง เมื่อคุณแก้แล้ว ย้ายงานเป็น "เสร็จแล้ว" เพื่อให้แอปตรวจซ้ำ':
-    'The app checks saved information, lessons and helper packs on this device daily. It sends nothing out and makes no changes or deletions. After fixing an item, move it to "Done" to check it again.',
+  'เสนอปรับปรุง Skill': 'Suggest a Skill improvement',
+  'หากบทเรียนนี้น่าจะช่วยผู้ใช้อื่น เลือก Skill แล้วสร้างไฟล์ข้อเสนอให้ผู้ดูแลตรวจ ไฟล์มีบทเรียน หลักฐาน รายการแก้ไข และกรณีทดสอบ แอปยังไม่แก้ Skill ขององค์กร':
+    'If this lesson could help others, choose a Skill and create a proposal for its maintainer. The file includes the lesson, evidence, proposed changes and test cases. Organization Skills are not changed yet.',
+  'Skill ที่ต้องการปรับปรุง': 'Skill to improve',
+
+  'งานดูแลข้อมูลที่จำและ Skill ({0})': 'Saved information and Skill maintenance ({0})',
+  'งานดูแลข้อมูลที่จำและ Skill: ไม่มีงานค้าง': 'Saved information and Skill maintenance: nothing pending',
+  'แอปตรวจข้อมูลที่จำ บทเรียน และ Skill Pack บนเครื่องนี้วันละครั้ง ไม่ส่งข้อมูลออกและไม่แก้หรือลบเอง เมื่อคุณแก้แล้ว ย้ายงานเป็น "เสร็จแล้ว" เพื่อให้แอปตรวจซ้ำ':
+    'The app checks saved information, lessons and Skill packs on this device daily. It sends nothing out and makes no changes or deletions. After fixing an item, move it to "Done" to check it again.',
 };

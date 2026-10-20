@@ -1344,13 +1344,13 @@ export default function App() {
         ...routedSkills.map(s => ({
           id: 'skill-' + s.name,
           group: 'Skill',
-          label: t('ใช้ตัวช่วยงาน: ') + s.title,
+          label: t('ใช้ Skill: ') + s.title,
           hint: '/' + s.name,
           run: () => useSkill(s.name),
         })),
         ...(connection?.models || []).map(m => ({
           id: 'model-' + m.id,
-          group: t('รุ่น AI'),
+          group: t('โมเดล'),
           label: t('ใช้ ') + m.label,
           hint: m.id === currentModel ? t('ใช้อยู่') : providerName(connection),
           run: () => action(() => chooseModel(m.id)),
@@ -1413,7 +1413,7 @@ export default function App() {
         : view === 'receipt'
           ? t('ตรวจใบเสร็จ AFP')
           : view === 'skills'
-            ? t('ตัวช่วยงาน')
+            ? t('ศูนย์รวม Skill')
             : view === 'schedules'
               ? t('งานตั้งเวลา')
               : session?.title || t('เริ่มต้นงานที่อยากทำ');
@@ -1618,14 +1618,14 @@ export default function App() {
               <button
                 data-tour="skills"
                 className={view === 'skills' && !settings ? 'nav-active' : ''}
-                title={toolsOpen ? undefined : t('ตัวช่วยงาน')}
+                title={toolsOpen ? undefined : t('ศูนย์รวม Skill')}
                 onClick={() => {
                   setSettings(false);
                   navigate('skills');
                 }}
               >
                 <Blocks size={17} />
-                <span className="nav-label">{t('ตัวช่วยงาน')}</span>
+                <span className="nav-label">{t('ศูนย์รวม Skill')}</span>
                 <span className="count">{staffSkills ? staffSkills.length + toolCount : ''}</span>
               </button>
               <button
@@ -1804,7 +1804,7 @@ export default function App() {
                       : view === 'receipt'
                         ? t('ทดลอง · อ่านใบเสร็จด้วย OCR ในเครื่อง แล้วให้คุณตรวจก่อนส่ง')
                         : view === 'skills'
-                          ? t('ค้นหาตัวช่วยงานและดูว่ารายการใดพร้อมใช้')
+                          ? t('ค้นหา Skill และดูว่ารายการใดพร้อมใช้')
                           : view === 'schedules'
                             ? t('ให้ผู้ช่วยทำงานซ้ำตามเวลา ผลเป็นร่างให้คุณตรวจ')
                             : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
@@ -1914,7 +1914,7 @@ export default function App() {
                     `<imported_asset label="${asset.label}" trust="untrusted">\n${asset.text.replace(/</g, '&lt;')}\n</imported_asset>`,
                   );
                   navigate('chat');
-                  notify(t('เพิ่มข้อมูลจากชุดตัวช่วยงานแล้ว ตรวจบริการปลายทางก่อนส่ง'));
+                  notify(t('เพิ่มข้อมูลจาก Skill Pack แล้ว ตรวจบริการปลายทางก่อนส่ง'));
                 })
               }
             />
@@ -1951,7 +1951,7 @@ export default function App() {
                     {session.compaction && (
                       <span className="muted small">
                         {t(
-                          'ย่อข้อมูลประกอบแล้ว จาก {0} เหลือ {1} หน่วยข้อความ (ประมาณการ)',
+                          'ย่อข้อมูลประกอบแล้ว จาก {0} เหลือ {1} tokens (ประมาณการ)',
                           session.compaction.before.toLocaleString(locale()),
                           session.compaction.after.toLocaleString(locale()),
                         )}
@@ -2017,7 +2017,7 @@ export default function App() {
                       </li>
                       <li>
                         <Blocks size={14} />
-                        {t('รู้จักทีมและตัวช่วยงานของ STeP')}
+                        {t('รู้จักทีมและ Skill ของ STeP')}
                       </li>
                     </ul>
                   </div>
@@ -2274,9 +2274,18 @@ export default function App() {
                 )}
                 {!running && (session?.status === 'error' || session?.status === 'interrupted') && lastRequest && (
                   <div className="retry-row">
-                    {/* Continues the stopped task, after any Playbook steps it already finished. */}
+                    {/* Use the reported failure code; only retry resumes the stopped task. */}
                     <button
-                      onClick={() =>
+                      onClick={() => {
+                        if (failureCode === 'TOOL_DENIED') {
+                          openAiSettings();
+                          return;
+                        }
+                        if (failureCode === 'MODEL_NOT_AVAILABLE') {
+                          setAiPicker(true);
+                          composerRef.current?.scrollIntoView({ block: 'nearest' });
+                          return;
+                        }
                         void action(() =>
                           start(
                             session.id,
@@ -2290,10 +2299,16 @@ export default function App() {
                             imageModel,
                             true,
                           ),
-                        )
-                      }
+                        );
+                      }}
                     >
-                      {t('ลองอีกครั้ง')}
+                      {t(
+                        failureCode === 'TOOL_DENIED'
+                          ? 'ตรวจการเชื่อมต่อ AI'
+                          : failureCode === 'MODEL_NOT_AVAILABLE'
+                            ? 'เปลี่ยนโมเดล'
+                            : 'ลองอีกครั้ง',
+                      )}
                     </button>
                     <button
                       className="quiet"
@@ -2314,9 +2329,6 @@ export default function App() {
                         <summary>{t('ข้อมูลสำหรับแจ้งปัญหา')}</summary>
                         <p>{t('รหัสสำหรับแจ้งผู้ดูแล: {0}', failureCode)}</p>
                       </details>
-                    )}
-                    {(connection?.models?.length || 0) > 1 && (
-                      <span className="small muted">{t('หรือเลือกรุ่น AI อื่นที่ช่องพิมพ์แล้วลองใหม่')}</span>
                     )}
                   </div>
                 )}
@@ -2427,12 +2439,12 @@ export default function App() {
                         <>
                           <span>{t('สร้างรูปภาพ')}</span>
                           <select
-                            aria-label={t('รุ่น AI สำหรับสร้างรูปภาพ')}
+                            aria-label={t('โมเดลสำหรับสร้างรูปภาพ')}
                             value={imageModel}
                             onChange={e => setImageModel(e.target.value)}
                             disabled={running}
                           >
-                            <option value="">{availableImages[0] || t('กำลังดูรุ่น AI ที่บัญชีนี้ใช้ได้…')}</option>
+                            <option value="">{availableImages[0] || t('กำลังดูโมเดลที่บัญชีนี้ใช้ได้…')}</option>
                             {availableImages.map(id => (
                               <option key={id} value={id}>
                                 {id}
@@ -2443,7 +2455,7 @@ export default function App() {
                         </>
                       ) : (
                         <span>
-                          {t('หากต้องการสร้างรูปภาพ เลือก OpenAI หรือ Google ที่เชื่อมด้วยรหัส API key การลงชื่อแบบนี้ยังสร้างรูปไม่ได้')}
+                          {t('หากต้องการสร้างรูปภาพ เลือก OpenAI หรือ Google ที่เชื่อมด้วย API key การลงชื่อแบบนี้ยังสร้างรูปไม่ได้')}
                         </span>
                       )}
                     </div>
@@ -2482,7 +2494,7 @@ export default function App() {
                   {suggested && (
                     <div className="skill-chip skill-suggestion" role="status">
                       <Blocks size={13} />
-                      <span>{t('ตัวช่วยที่เหมาะกับงานนี้:')}</span>
+                      <span>{t('Skill ที่เหมาะกับงานนี้:')}</span>
                       <button
                         className="quiet"
                         title={suggested.description}
@@ -2492,11 +2504,11 @@ export default function App() {
                           composerRef.current?.focus();
                         }}
                       >
-                        {t('ลองใช้ตัวช่วย: {0}', suggested.title)}
+                        {t('ลองใช้ Skill: {0}', suggested.title)}
                       </button>
                       <button
                         className="icon"
-                        aria-label={t('ไม่ใช้ตัวช่วยที่แนะนำ')}
+                        aria-label={t('ไม่ใช้ Skill ที่แนะนำ')}
                         onClick={() => {
                           setDismissedSkills(list => [...list, suggested.name]);
                           setSuggestedSkill('');
@@ -2509,15 +2521,15 @@ export default function App() {
                   {forced && (
                     <div className="skill-chip">
                       <Blocks size={13} />
-                      {t('ใช้ตัวช่วยงาน:')} <strong>{forced.title}</strong>
+                      {t('ใช้ Skill:')} <strong>{forced.title}</strong>
                       <code>/{forced.name}</code>
-                      <button className="icon" aria-label={t('เลิกใช้ตัวช่วยนี้')} onClick={() => setForcedSkill('')}>
+                      <button className="icon" aria-label={t('เลิกใช้ Skill นี้')} onClick={() => setForcedSkill('')}>
                         <X size={13} />
                       </button>
                     </div>
                   )}
                   {slashMatches.length > 0 && (
-                    <div className="slash-menu" role="listbox" aria-label={t('เลือกตัวช่วยงาน')}>
+                    <div className="slash-menu" role="listbox" aria-label={t('เลือก Skill')}>
                       {slashMatches.map((s, i) => (
                         <button
                           key={s.name}
@@ -2600,7 +2612,7 @@ export default function App() {
                         ? t('บอกงานสำหรับ {0}…', forced.title)
                         : session?.documentTool && workMode === 'draft'
                           ? t('พิมพ์สิ่งที่อยากแก้ในเอกสารนี้ เช่น ระยะเวลาดำเนินการ 90 วัน หรือถามเกี่ยวกับร่างได้')
-                          : t('พิมพ์งานที่อยากให้ช่วย หรือพิมพ์ / เพื่อเลือกตัวช่วยงาน')
+                          : t('พิมพ์งานที่อยากให้ช่วย หรือพิมพ์ / เพื่อเลือก Skill')
                     }
                     value={query}
                     onChange={e => {
@@ -2807,7 +2819,7 @@ export default function App() {
                         type="button"
                         className="pill-select ai-picker-button"
                         data-tour="model"
-                        aria-label={t('เลือกบริการ รุ่น AI และระดับการคิด')}
+                        aria-label={t('เลือกบริการ โมเดลและระดับการคิด')}
                         aria-expanded={aiPicker}
                         title={aiSummary}
                         disabled={running}
@@ -2839,12 +2851,12 @@ export default function App() {
                           </label>
                           {connection && (
                             <label>
-                              {t('รุ่น AI')}
+                              {t('โมเดล')}
                               <select
-                                aria-label={t('เลือกรุ่น AI')}
+                                aria-label={t('เลือกโมเดล')}
                                 title={
                                   connection.models?.find(m => m.id === currentModel)?.description ||
-                                  t('รุ่น AI สำหรับงานนี้ เปลี่ยนได้ทุกเมื่อ')
+                                  t('โมเดลสำหรับงานนี้ เปลี่ยนได้ทุกเมื่อ')
                                 }
                                 value={currentModel}
                                 disabled={running}
@@ -2944,13 +2956,13 @@ export default function App() {
               <span
                 className="status-item"
                 title={t(
-                  'ข้อความที่ส่ง {0} หน่วย · คำตอบ {1} หน่วย จาก {2} ครั้ง',
+                  'ข้อความที่ส่ง {0} tokens · คำตอบ {1} tokens จาก {2} ครั้ง',
                   session.usage.input.toLocaleString(locale()),
                   session.usage.output.toLocaleString(locale()),
                   session.usage.runs,
                 )}
               >
-                {t('{0} หน่วยข้อความ', formatTokens(session.usage.total))}
+                {t('{0} tokens', formatTokens(session.usage.total))}
               </span>
             )}
             <button className="status-item status-button" data-tour="palette" onClick={() => setPalette(true)}>
@@ -3655,7 +3667,7 @@ export default function App() {
             onClose={() => setPacksOpen(false)}
             onSelect={text => {
               setPendingSource(text);
-              notify(t('เพิ่มข้อมูลจากชุดตัวช่วยงานแล้ว ตรวจบริการปลายทางก่อนส่ง'));
+              notify(t('เพิ่มข้อมูลจาก Skill Pack แล้ว ตรวจบริการปลายทางก่อนส่ง'));
             }}
           />
         )}

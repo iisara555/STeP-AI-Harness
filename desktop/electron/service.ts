@@ -167,7 +167,7 @@ export const DRAFTING_RULES = [
   DATA_SECTIONS,
 ].join(' ');
 const EMPLOYEE_LANGUAGE_RULE =
-  'Write for employees without IT knowledge: use everyday words, short sentences and direct next steps. Explain unavoidable jargon; omit empty introductions and repeated summaries. Keep facts, conditions and requested technical details.';
+  'Write for employees without IT knowledge: use everyday words, short sentences and direct next steps. Keep familiar terms such as Skill, token and API key. Explain unavoidable jargon; omit empty introductions and repeated summaries. Keep facts, conditions and requested technical details.';
 export const CHAT_RULES = [
   'You are the STeP assistant. Reply conversationally in Thai using Markdown. Answer the current message directly. Produce a document only when requested.',
   'Do not execute tools, approve, submit, publish, or claim external actions. Do not invent citations.',

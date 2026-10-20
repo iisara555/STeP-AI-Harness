@@ -391,18 +391,18 @@ export function LearningDialog({
                   {t('หยุดใช้บทเรียน')}
                 </button>
                 <details className="skill-proposal">
-                  <summary>{t('เสนอปรับปรุงตัวช่วยงาน')}</summary>
+                  <summary>{t('เสนอปรับปรุง Skill')}</summary>
                   <p className="small muted">
                     {t(
-                      'หากบทเรียนนี้น่าจะช่วยผู้ใช้อื่น เลือกตัวช่วยงานแล้วสร้างไฟล์ข้อเสนอให้ผู้ดูแลตรวจ ไฟล์มีบทเรียน หลักฐาน รายการแก้ไข และกรณีทดสอบ แอปยังไม่แก้ตัวช่วยงานขององค์กร',
+                      'หากบทเรียนนี้น่าจะช่วยผู้ใช้อื่น เลือก Skill แล้วสร้างไฟล์ข้อเสนอให้ผู้ดูแลตรวจ ไฟล์มีบทเรียน หลักฐาน รายการแก้ไข และกรณีทดสอบ แอปยังไม่แก้ Skill ขององค์กร',
                     )}
                   </p>
                   <select
-                    aria-label={t('ตัวช่วยงานที่ต้องการปรับปรุง')}
+                    aria-label={t('Skill ที่ต้องการปรับปรุง')}
                     value={skillFor[l.id] || ''}
                     onChange={e => setSkillFor({ ...skillFor, [l.id]: e.target.value })}
                   >
-                    <option value="">{t('เลือกตัวช่วยงาน')}</option>
+                    <option value="">{t('เลือก Skill')}</option>
                     {skills.map(skill => (
                       <option key={skill.name} value={skill.name}>
                         {skill.title || skill.name}
@@ -418,7 +418,7 @@ export function LearningDialog({
                         if (result)
                           setProposed({
                             ...proposed,
-                            [l.id]: t('บันทึกข้อเสนอที่ {0} ส่งไฟล์นี้ให้ผู้ดูแลตัวช่วยงาน ทีม {1}', result.path, result.owner || '-'),
+                            [l.id]: t('บันทึกข้อเสนอที่ {0} ส่งไฟล์นี้ให้ผู้ดูแล Skill ทีม {1}', result.path, result.owner || '-'),
                           });
                       })
                     }

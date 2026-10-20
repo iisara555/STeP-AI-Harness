@@ -45,12 +45,12 @@ try {
     await page.screenshot({ path: join(shots, 'suggest-chosen-dark-1440.png') });
     await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
   }
-  await chosen.getByRole('button', { name: 'เลิกใช้ตัวช่วยนี้' }).click();
+  await chosen.getByRole('button', { name: 'เลิกใช้ Skill นี้' }).click();
 
   // Waved away: the same Skill is not offered again in this window.
   await composer.fill('ช่วยตรวจหนังสือราชการฉบับนี้ให้ถูกระเบียบงานสารบรรณอีกฉบับ');
   await expect(offer).toBeVisible();
-  await suggestion.getByRole('button', { name: 'ไม่ใช้ตัวช่วยที่แนะนำ' }).click();
+  await suggestion.getByRole('button', { name: 'ไม่ใช้ Skill ที่แนะนำ' }).click();
   await expect(suggestion).toHaveCount(0);
   await composer.fill('ช่วยตรวจหนังสือราชการฉบับที่สามให้ถูกระเบียบงานสารบรรณ');
   await page.waitForTimeout(1200);

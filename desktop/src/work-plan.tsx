@@ -64,7 +64,7 @@ export function WorkPlanCard({
         </div>
       )}
       {!finished && (
-        <p className="work-plan-hint small muted">{t('สูงสุด 3 รอบ / 10 นาที หยุดรับงานเพิ่มเมื่อใช้ถึง 50,000 โทเคนที่รายงาน')}</p>
+        <p className="work-plan-hint small muted">{t('สูงสุด 3 รอบ / 10 นาที หยุดรับงานเพิ่มเมื่อใช้ถึง 50,000 token ที่รายงาน')}</p>
       )}
       {continuation && (
         <p role="status">
