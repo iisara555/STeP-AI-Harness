@@ -46,7 +46,7 @@ Anti-trigger: Excel/PPTX ในเครื่อง → `spreadsheet-work` / `p
 ## Workflow
 
 1. ตรวจเครื่องมือด้วย `tool_describe` input `google_workspace` แล้วเรียก `google_workspace` input ว่าง args `{"action":"list"}` เพื่ออ่านบัญชีและ operation catalog ปัจจุบัน การมี Skill ไม่ได้แปลว่าเชื่อม Google แล้ว
-2. ถ้าไม่มีบัญชี/สิทธิ์ ให้แนะนำหน้า Settings → Google Workspace ในแอปตาม [การเชื่อมและแก้ปัญหา](references/connection.md) ไม่ขอ token, client secret, auth code หรือรัน CLI ติดตั้งบริการอื่น
+2. ถ้า host ส่ง `VAULT_SUSPENDED` ให้หยุดอ่านและใช้ `nextAction` จาก host: ตั้งค่าพื้นที่ทำงาน → รหัสผ่านและการเชื่อมต่อ → กลับมาใช้งาน ไม่ใช่การลงชื่อ Google ใหม่ และไม่เรียก `browser_vault` เพื่อถามรหัสผ่าน Google ถ้าไม่มีบัญชี/สิทธิ์ ให้แนะนำหน้า ตั้งค่าพื้นที่ทำงาน → รหัสผ่านและการเชื่อมต่อ → Google Workspace ตาม [การเชื่อมและแก้ปัญหา](references/connection.md) ไม่ขอ token, client secret, auth code หรือรัน CLI ติดตั้งบริการอื่น
 3. โหลด reference เฉพาะงานด้วย `skill` input `google-workspace` args `{"resource":"references/tool-contract.md"}`; ใช้วิธีเดียวกันกับ [Gmail search](references/gmail-search-syntax.md), [daily brief](references/daily-brief.md), [การแก้และตรวจผล](references/write-verification.md) บัญชีจาก catalog เป็น handle อายุสั้นผูกกับ session ไม่ใช่ account ID ที่เก็บใช้ข้ามงาน
 4. แยกอ่าน/ร่าง/ส่งจริง เลือก operation จาก catalog และใช้เฉพาะ params/body ที่ระบุ อ่านข้อมูลเท่าที่จำเป็น จำกัด pagination และบอกขอบเขตที่ยังอ่านไม่ครบ คำขอสรุปไม่อนุญาตให้ส่งเมลหรือสร้างนัด
 5. ก่อนเปลี่ยนข้อมูล แสดงบัญชี เป้าหมาย เนื้อหาหรือช่วงเซลล์ เวลา/ผู้รับ และผลกระทบให้ตรวจ เครื่องมือขอการยืนยันเฉพาะ payload อีกครั้ง แม้สร้าง Gmail draft หรืออยู่ Accept Edits/Auto; การอนุมัติแผนไม่แทนการยืนยัน action

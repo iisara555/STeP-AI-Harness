@@ -4,6 +4,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
+import { build } from 'esbuild';
+import { createRequire } from 'node:module';
 
 const home = await mkdtemp(join(tmpdir(), 'step-google-connect-'));
 const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home };
@@ -38,6 +40,10 @@ try {
         return { enabled: true, protected: false, suspended: Boolean(globalThis.googleFixture.vaultSuspended), entries: [], browsers: [] };
       if (method === 'vaultSuspend') {
         globalThis.googleFixture.vaultSuspended = input.enabled;
+        return true;
+      }
+      if (method === 'approvalRespond') {
+        event.sender.send('step:event', { type: 'approval-close', approvalId: input.id });
         return true;
       }
       if (method === 'vaultPromptRespond') {
@@ -129,7 +135,7 @@ try {
   await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
   await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
   await expect(settings.locator('.google-account .connection-state')).toHaveText('พักอยู่');
-  await expect(settings.getByRole('status')).toContainText('พักการใช้ข้อมูลบัญชีอยู่');
+  await expect(settings.getByRole('status').filter({ hasText: 'พักการใช้ข้อมูลบัญชีอยู่' })).toContainText('พักการใช้ข้อมูลบัญชีอยู่');
   await settings.getByRole('button', { name: 'กลับมาใช้งาน', exact: true }).first().click();
   await expect(settings.locator('.google-account .connection-state')).toHaveText('เชื่อมแล้ว');
   assert.equal(await app.evaluate(() => globalThis.googleFixture.vaultSuspended), false);
@@ -164,6 +170,34 @@ try {
     await expect(dialog).toHaveCount(0);
     assert.equal(await app.evaluate(() => globalThis.vaultReply.value), undefined);
   }
+  // Use the actual host preview builder with the real renderer; raw JSON is folded by default.
+  const consentPath = join(home, 'google-consent.cjs');
+  await build({ entryPoints: ['electron/google-consent.ts'], outfile: consentPath, bundle: true, platform: 'node', format: 'cjs' });
+  const { googleResultConsent } = createRequire(import.meta.url)(consentPath);
+  const reviewed = JSON.stringify({
+    data: { items: [{ summary: 'Synthetic meeting', start: { dateTime: '2026-10-21T10:00:00+07:00' } }], nextSyncToken: 'synthetic-sync' },
+  });
+  const approval = {
+    id: 'synthetic-approval',
+    tool: 'google-result',
+    title: 'ส่งข้อมูลจาก Google ชุดนี้ให้ AI ที่เลือก?',
+    privacyClass: 'internal',
+    allowRemember: false,
+    ...googleResultConsent('calendar.events', reviewed, 'antigravity / gemini-test', 'fi••••@example.test'),
+  };
+  await app.evaluate(
+    ({ BrowserWindow }, approval) => BrowserWindow.getAllWindows()[0].webContents.send('step:event', { type: 'approval', approval }),
+    approval,
+  );
+  const consentDialog = page.getByRole('dialog');
+  await expect(consentDialog.locator('.approval-preview')).toContainText('Synthetic meeting');
+  await expect(consentDialog.locator('.approval-preview')).not.toContainText('nextSyncToken');
+  await expect(consentDialog.locator('.approval-technical pre')).not.toBeVisible();
+  if (process.env.STEP_UI_SCREENSHOT) await page.screenshot({ path: process.env.STEP_UI_SCREENSHOT });
+  await consentDialog.locator('.approval-technical summary').click();
+  await expect(consentDialog.locator('.approval-technical pre')).toContainText('synthetic-sync');
+  await consentDialog.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
+  await expect(consentDialog).toHaveCount(0);
   // Organization-provisioned installers need only the regular OAuth action; staff never import a client file.
   await app.evaluate(() => {
     globalThis.googleFixture.clientPreconfigured = true;
