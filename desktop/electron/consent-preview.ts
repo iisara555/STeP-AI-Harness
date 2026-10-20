@@ -52,7 +52,7 @@ export function consentPreview(text: string): string {
     if (typeof v.path === 'string' && v.status === 'applied') return tm('บันทึกไฟล์ {0} แล้ว', v.path);
   }
   const render = (v: unknown, depth = 0): string => {
-    if (depth < 4 && typeof v === 'string' && /^\s*[\[{]/.test(v)) {
+    if (depth < 8 && typeof v === 'string' && /^\s*[\[{]/.test(v)) {
       try {
         return render(JSON.parse(v), depth + 1);
       } catch {
@@ -62,7 +62,7 @@ export function consentPreview(text: string): string {
     if (v === null) return tm('ไม่มีข้อมูล');
     if (typeof v === 'boolean') return v ? tm('ใช่') : tm('ไม่');
     if (typeof v !== 'object') return String(v);
-    if (depth >= 4) return tm('ดูข้อมูลเพิ่มเติมในรายละเอียดสำหรับผู้ดูแล');
+    if (depth >= 8) return tm('ดูข้อมูลเพิ่มเติมในรายละเอียดสำหรับผู้ดูแล');
     if (Array.isArray(v)) return v.length ? v.map((item, i) => `${i + 1}. ${render(item, depth + 1)}`).join('\n') : tm('ไม่มีรายการ');
     return (
       Object.entries(v as Record<string, unknown>)
