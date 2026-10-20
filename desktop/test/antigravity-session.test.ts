@@ -31,6 +31,11 @@ let turns=0;
 createInterface({input:process.stdin}).on('line',line=>{
   const input=JSON.parse(line);turns++;
   fs.appendFileSync(log,JSON.stringify({pid:process.pid,content:input.message.content})+'\\n');
+  const starts=fs.readFileSync(log,'utf8').trim().split('\\n').map(x=>JSON.parse(x)).filter(x=>x.start).length;
+  if((kind==='protocol-first'&&starts===1)||(kind==='protocol-later'&&(turns>1||starts>1))){
+    send({event:'step_update',step_update:{conversation_id:'conv',step_type:'agent_response',text_delta:'UNVALIDATED'}});
+    return console.log('invalid protocol');
+  }
   if(kind==='die' && turns===2) process.exit(0);
   if(kind==='schema-tool' && schema) return send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'finish'}});
   if(kind==='tool' && turns===2) return send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'read_file'}});
@@ -292,5 +297,22 @@ test('cancelling a kept turn stops the process and removes its home', async () =
     assert.deepEqual((await readdir(f.root)).sort(), ['agy.mjs', 'calls.jsonl']);
   } finally {
     await f.close();
+  }
+});
+
+test('protocol recovery covers the first kept turn and never adds a third attempt after a failed kept-turn reset', async () => {
+  for (const kind of ['protocol-first', 'protocol-later']) {
+    const f = await fixture(kind);
+    try {
+      const adapter = new AntigravityAdapter();
+      assert.equal(await adapter.run('Request', f.connection, f.context), 'answer 1');
+      if (kind === 'protocol-later')
+        await assert.rejects(adapter.run('Request + results', f.connection, f.context), { message: 'PROVIDER_STREAM_INVALID' });
+      assert.equal((await f.calls()).filter(call => call.start).length, 2);
+      assert.equal(f.deltas.join(''), 'answer 1');
+      await f.session.closeAndWait();
+    } finally {
+      await f.close();
+    }
   }
 });

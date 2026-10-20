@@ -15,11 +15,18 @@ const deadline = setTimeout(() => {
   console.error('Google connection Settings smoke timed out');
   process.exitCode = 1;
   app?.process().kill('SIGKILL');
-}, 90_000);
+}, 180_000);
 deadline.unref();
 try {
-  app = await electron.launch({ args: ['.'], env, timeout: 45000 });
-  const page = await app.firstWindow();
+  app = await electron.launch({
+    args: ['--force-prefers-reduced-motion', ...(process.platform === 'linux' ? ['--disable-gpu'] : []), '.'],
+    env,
+    timeout: 45000,
+  });
+  await expect.poll(() => app.windows().some(window => window.url().includes('renderer/index.html')), { timeout: 45000 }).toBe(true);
+  const page = app.windows().find(window => window.url().includes('renderer/index.html'));
+  await expect.poll(() => app.evaluate(({BrowserWindow}) => BrowserWindow.getAllWindows().some(window => window.isVisible() && window.webContents.getURL().includes('renderer/index.html'))), {timeout:45000}).toBe(true);
+  await page.bringToFront();
   await page.setViewportSize({ width: 1280, height: 900 });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -127,6 +134,7 @@ try {
   await expect(settings.getByRole('alert')).toHaveCount(0);
   await expect(settings.getByText('กำลังรอให้คุณลงชื่อในเบราว์เซอร์ เสร็จแล้วกลับมาที่แอปนี้', { exact: true })).toHaveCount(0);
   await expect(connect).toBeEnabled();
+  console.log('Google UI: pause and resume connected account');
   // A connected account cannot look ready while credential access is paused.
   await app.evaluate(() => {
     globalThis.googleFixture.vaultSuspended = true;
@@ -136,9 +144,13 @@ try {
   await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
   await expect(settings.locator('.google-account .connection-state')).toHaveText('พักอยู่');
   await expect(settings.getByRole('status').filter({ hasText: 'พักการใช้ข้อมูลบัญชีอยู่' })).toContainText('พักการใช้ข้อมูลบัญชีอยู่');
-  await settings.getByRole('button', { name: 'กลับมาใช้งาน', exact: true }).first().click();
+  const resume = settings.getByRole('button', { name: 'กลับมาใช้ข้อมูลบัญชี', exact: true }).first();
+  await resume.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  await expect(resume).toBeVisible();
+  await resume.click();
   await expect(settings.locator('.google-account .connection-state')).toHaveText('เชื่อมแล้ว');
   assert.equal(await app.evaluate(() => globalThis.googleFixture.vaultSuspended), false);
+  console.log('Google UI: trusted credential prompts');
   // Trusted Vault UI explains the exact input and can be cancelled without providing a secret.
   for (const kind of ['unlock', 'login', 'code']) {
     await app.evaluate(({ BrowserWindow }, kind) => {
@@ -155,7 +167,7 @@ try {
         vaultPrompt: globalThis.promptFixture,
       });
     }, kind);
-    const dialog = page.getByRole('dialog');
+    const dialog = page.getByRole('alertdialog');
     if (kind === 'unlock') {
       await expect(dialog.getByText('Bitwarden', { exact: true })).toBeVisible();
       await expect(dialog.getByLabel('รหัสผ่านหลักของตัวจัดการรหัสผ่าน', { exact: true })).toBeVisible();
@@ -170,6 +182,7 @@ try {
     await expect(dialog).toHaveCount(0);
     assert.equal(await app.evaluate(() => globalThis.vaultReply.value), undefined);
   }
+  console.log('Google UI: Calendar result consent preview');
   // Use the actual host preview builder with the real renderer; raw JSON is folded by default.
   const consentPath = join(home, 'google-consent.cjs');
   await build({ entryPoints: ['electron/google-consent.ts'], outfile: consentPath, bundle: true, platform: 'node', format: 'cjs' });
@@ -189,7 +202,7 @@ try {
     ({ BrowserWindow }, approval) => BrowserWindow.getAllWindows()[0].webContents.send('step:event', { type: 'approval', approval }),
     approval,
   );
-  const consentDialog = page.getByRole('dialog');
+  const consentDialog = page.getByRole('alertdialog');
   await expect(consentDialog.locator('.approval-preview')).toContainText('Synthetic meeting');
   await expect(consentDialog.locator('.approval-preview')).not.toContainText('nextSyncToken');
   await expect(consentDialog.locator('.approval-technical pre')).not.toBeVisible();

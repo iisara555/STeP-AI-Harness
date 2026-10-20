@@ -11,6 +11,7 @@ import { skillSuggestEn } from './skill-suggest-en';
 import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 export const en: Record<string, string> = {
+  'กลับมาใช้ข้อมูลบัญชี': 'Resume credential access',
   'ส่งข้อมูลจาก Google ให้ AI': 'Send Google data to AI',
   รหัสผ่านหลักของตัวจัดการรหัสผ่าน: 'Password manager master password',
   รหัสผ่านของเว็บไซต์นี้: 'Password for this website',
@@ -22,7 +23,7 @@ export const en: Record<string, string> = {
     'Enter the one-time code requested by the website above, such as a code from your authenticator app, email or SMS for the account you are signing into.',
   'Google Workspace ใช้การลงชื่อเข้าใช้ผ่าน Google ไม่ต้องกรอกรหัสผ่าน Google ในกล่องนี้':
     'Google Workspace signs in through Google. Do not enter your Google password in this dialog.',
-  'พักการใช้ข้อมูลบัญชีอยู่ จึงยังใช้ Google Workspace ไม่ได้ กดกลับมาใช้งานเพื่อใช้บัญชีที่เชื่อมไว้':
+  'พักการใช้ข้อมูลบัญชีอยู่ จึงยังใช้ Google Workspace ไม่ได้ เปิดใช้ข้อมูลบัญชีเพื่อใช้บัญชีที่เชื่อมไว้':
     'Credential access is paused, so Google Workspace is unavailable. Select Resume to use your connected account.',
   'รายการในปฏิทิน {0} รายการ': 'Calendar entries: {0}',
   ไม่ระบุชื่อ: 'Untitled',

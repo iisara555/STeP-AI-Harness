@@ -650,10 +650,10 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
             )}
             {google.vaultSuspended && (
               <div className="credential-note" role="status">
-                <p>{t('พักการใช้ข้อมูลบัญชีอยู่ จึงยังใช้ Google Workspace ไม่ได้ กดกลับมาใช้งานเพื่อใช้บัญชีที่เชื่อมไว้')}</p>
+                <p>{t('พักการใช้ข้อมูลบัญชีอยู่ จึงยังใช้ Google Workspace ไม่ได้ เปิดใช้ข้อมูลบัญชีเพื่อใช้บัญชีที่เชื่อมไว้')}</p>
                 <button disabled={Boolean(busy)} onClick={() => void run('pause', () => call('vaultSuspend', { enabled: false }))}>
                   <Play size={15} />
-                  {w('resume')}
+                  {t('กลับมาใช้ข้อมูลบัญชี')}
                 </button>
               </div>
             )}
