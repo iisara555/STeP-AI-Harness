@@ -14,11 +14,13 @@ test('managed policy is optional, administrator-only and fail closed', async () 
     // A file an administrator does not own is ignored: the defaults apply and nothing it asks for is enabled.
     assert.equal(loadPolicy(path, () => false).policy.source, 'default');
     assert.equal(loadPolicy(path, () => false).policy.features.shellByAi, false);
+    assert.equal(loadPolicy(path, () => false).policy.features.learningReview, false);
     if (process.platform === 'win32') assert.equal(trustedPolicyPath(path), false);
     assert.equal(loadPolicy(path, () => true).policy.features.shellByAi, true);
     await writeFile(path, '{broken');
     assert.equal(loadPolicy(path, () => true).policy.source, 'default');
     assert.equal(loadPolicy(path, () => true).policy.features.shellByAi, false);
+    assert.equal(loadPolicy(path, () => true).policy.features.learningReview, false);
     assert.equal(loadPolicy(path, () => true).problems.length, 1);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -32,6 +34,8 @@ test('auto mode needs both organization feature and allowed mode', () => {
   assert.equal(defaultValue.features.cron, true);
   assert.equal(defaultValue.features.hybridSkillSelection, true);
   assert.equal(parsePolicy({ features: { hybridSkillSelection: false } }).policy.features.hybridSkillSelection, false);
+  assert.equal(defaultValue.features.learningReview, true);
+  assert.equal(parsePolicy({ features: { learningReview: false } }).policy.features.learningReview, false);
   // Images reach vision models and Full auto is offered by default, as in other AI apps; commands still need shellByAi.
   assert.equal(defaultValue.features.vision, true);
   assert.equal(defaultValue.features.autoMode, true);
@@ -119,7 +123,8 @@ test('invalid blocking definitions cannot silently enable risky features', () =>
     assert.ok(parsed.problems.length);
     assert.equal(parsed.policy.source, 'default');
     assert.equal(parsed.policy.features.shellByAi, false);
-    for (const flag of ['vault', 'googleWorkspace', 'developmentMode'] as const) assert.equal(parsed.policy.features[flag], false);
+    for (const flag of ['vault', 'googleWorkspace', 'developmentMode', 'learningReview'] as const)
+      assert.equal(parsed.policy.features[flag], false);
     assert.equal(parsed.policy.googleWorkspace, undefined);
   }
   const parsed = parsePolicy({ hooks: [{ event: 'pre_tool_use', type: 'prompt', prompt: 'Check metadata', block_on_failure: true }] });

@@ -311,7 +311,7 @@ export type Session = {
 export type Settings = {
   /** Development mode (Settings → AI): Claude Pro/Max for developers testing; policy features.developmentMode allows it. */
   developmentMode?: boolean;
-  /** The employee turned on the background learning review (policy features.learningReview must allow it). */
+  /** Background review follows the release default when unset; explicit false preserves the employee's opt-out. IT may deny it. */
   learningReview?: boolean;
   keybindings?: import('./commands').Keybindings;
   vimMode?: boolean;
