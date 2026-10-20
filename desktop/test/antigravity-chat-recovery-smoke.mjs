@@ -109,7 +109,7 @@ try {
   const support = page.locator('.retry-code');
   await expect(support.getByText('รหัสสำหรับแจ้งผู้ดูแล: TOOL_DENIED', { exact: true })).not.toBeVisible();
   await support.getByText('ข้อมูลสำหรับแจ้งปัญหา', { exact: true }).click();
-  await expect(support).toContainText('TOOL_DENIED');
+  await expect(support.getByText('รหัสสำหรับแจ้งผู้ดูแล: TOOL_DENIED', { exact: true })).toBeVisible();
   assert.equal(
     (await readFile(calls, 'utf8'))
       .trim()
