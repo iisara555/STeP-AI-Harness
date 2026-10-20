@@ -120,6 +120,7 @@ server.listen(0, '127.0.0.1');
 await once(server, 'listening');
 
 const home = await mkdtemp(join(tmpdir(), 'step-gemini-api-'));
+await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ receiptLocalOnly: false }));
 const env = {
   ...process.env,
   STEP_DESKTOP_TEST_HOME: home,
@@ -411,12 +412,14 @@ try {
   const cacheModel = (await gemini()).find(c => c.id === connectionId).models.find(m => /^gemini-/.test(m.id)).id;
   await writeFile(
     join(home, 'desktop-policy.json'),
-    JSON.stringify({ modelLimits: { [cacheModel]: { promptCaching: 'gemini-explicit', maxOutputTokens: 1024 } } }),
+    JSON.stringify({ receiptLocalOnly: true, modelLimits: { [cacheModel]: { promptCaching: 'gemini-explicit', maxOutputTokens: 1024 } } }),
   );
-  // The host polls policy every five seconds; allow two polling cycles plus renderer scheduling.
+  // Wait for this policy version, returning receipts to local mode while enabling ordinary chat caching.
   await expect
-    .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).policy.source, { timeout: 15000 })
-    .toBe('managed');
+    .poll(async () => (await page.evaluate(() => window.step.call('ocrStatus'))).localOnly, {
+      timeout: 15000,
+    })
+    .toBe(true);
   await page.evaluate(({ id, model }) => window.step.call('connectionModel', { id, model }), { id: connectionId, model: cacheModel });
   const cacheCalls = [];
   for (const text of ['แปลเป็นอังกฤษ: วันนี้อากาศดี', 'แปลเป็นอังกฤษ: พรุ่งนี้อากาศดี']) {

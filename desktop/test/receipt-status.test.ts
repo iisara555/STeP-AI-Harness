@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultPolicy } from '../electron/policy';
+import { defaultPolicy, parsePolicy } from '../electron/policy';
 import { receiptReadingMode, receiptGeminiConnection } from '../electron/receipt-status';
 import type { Connection } from '../src/types';
 
@@ -22,6 +22,7 @@ test('receipt Gemini API selection is independent of chat and excludes unavailab
 
 test('receipt reading capabilities distinguish text-only Antigravity from Gemini image input', () => {
   const policy = defaultPolicy();
+  policy.receiptLocalOnly = false;
   assert.deepEqual(receiptReadingMode(policy, 'antigravity'), { vision: false, textOnly: true });
   assert.deepEqual(receiptReadingMode(policy, 'gemini'), { vision: true, textOnly: false });
   for (const provider of ['compatible', 'copilot'])
@@ -31,4 +32,18 @@ test('receipt reading capabilities distinguish text-only Antigravity from Gemini
   policy.features.receiptVision = false;
   policy.checks.privacy = false;
   assert.deepEqual(receiptReadingMode(policy, 'gemini'), { vision: false, textOnly: true });
+});
+
+test('receipt OCR defaults to local processing without image or text model calls, including existing API accounts', () => {
+  assert.equal(defaultPolicy().receiptLocalOnly, true);
+  for (const raw of [{}, { receiptCloud: { url: 'https://ocr.example.test', model: 'gemini-3.8-flash' } }, { receiptLocalOnly: 'false' }]) {
+    const { policy } = parsePolicy(raw);
+    assert.equal(policy.receiptLocalOnly, true);
+    for (const provider of [undefined, 'gemini', 'openai', 'antigravity'])
+      assert.deepEqual(receiptReadingMode(policy, provider), { vision: false, textOnly: false });
+  }
+  const explicit = parsePolicy({ receiptLocalOnly: false });
+  assert.deepEqual(explicit.problems, []);
+  assert.equal(explicit.policy.receiptLocalOnly, false);
+  assert.deepEqual(receiptReadingMode(explicit.policy, 'gemini'), { vision: true, textOnly: false });
 });

@@ -50,6 +50,7 @@ server.listen(0, '127.0.0.1');
 await once(server, 'listening');
 const cloud = { url: 'https://ocr.example.test', model: 'gemini-3.8-flash' };
 const policy = {
+  receiptLocalOnly: false,
   receiptCloud: cloud,
   googleWorkspace: { clientId: 'synthetic-client.apps.googleusercontent.com', domains: ['example.test'], services: ['documents'] },
 };

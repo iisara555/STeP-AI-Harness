@@ -1598,10 +1598,11 @@ async function main() {
   async function receiptOcrStatus(input: { connectionId?: unknown; localOnly?: unknown }, rawStatus?: OcrStatus) {
     const connection =
       typeof input.connectionId === 'string' ? store.get<Connection>('connection', inputText(input.connectionId, 80)) : undefined;
-    const cloud = input.localOnly !== true && policyState.policy.receiptCloud;
+    const localOnly = policyState.policy.receiptLocalOnly !== false || input.localOnly === true;
+    const cloud = !localOnly && policyState.policy.receiptCloud;
     const cloudAccounts =
       cloud && google.state().configured ? google.state().accounts.filter(account => !account.paused && !account.reauth) : [];
-    const geminiApi = !cloud && input.localOnly !== true && isReceiptGeminiApi(connection);
+    const geminiApi = !cloud && !localOnly && isReceiptGeminiApi(connection);
     const status =
       rawStatus ||
       (geminiApi || cloud
@@ -1611,15 +1612,14 @@ async function main() {
     const current = !managed || (await ocrComponentCurrent(defaultOcrFolder, ocrHome));
     return {
       ...status,
+      localOnly,
       geminiApi,
       ...(cloud ? { cloud: { model: cloud.model, accounts: cloudAccounts } } : {}),
       running: status.running && current,
       installed: status.installed && current,
       updateAvailable: managed && status.installed && !current,
       installing,
-      ...(input.localOnly === true
-        ? { vision: false, textOnly: true }
-        : receiptReadingMode(policyState.policy, cloud ? 'gemini' : connection?.provider)),
+      ...(localOnly ? { vision: false, textOnly: false } : receiptReadingMode(policyState.policy, cloud ? 'gemini' : connection?.provider)),
     };
   }
   /** Retain full-page context and inspect handwriting with source-resolution crops under the same consent. */
@@ -1951,7 +1951,12 @@ async function main() {
         return true;
       }
       case 'receiptCloudConnect': {
-        if (!policyState.policy.receiptCloud || !policyState.policy.features.googleWorkspace || permissionMode() === 'plan')
+        if (
+          policyState.policy.receiptLocalOnly !== false ||
+          !policyState.policy.receiptCloud ||
+          !policyState.policy.features.googleWorkspace ||
+          permissionMode() === 'plan'
+        )
           throw new Error('FEATURE_DISABLED');
         const context = googleContext(new AbortController().signal, async () => ensureCredentialStorage());
         return google.connect([], { ...context, approve: async () => true }, undefined, true);
@@ -3223,16 +3228,14 @@ async function main() {
           // Without the local OCR, a receipt can still be read by the vision model alone (one reading, no comparison).
           const connection =
             typeof input.connectionId === 'string' ? store.get<Connection>('connection', inputText(input.connectionId, 80)) : undefined;
-          const cloud = input.localOnly !== true && policyState.policy.receiptCloud;
-          const useGeminiApi = input.localOnly !== true && (Boolean(cloud) || isReceiptGeminiApi(connection));
+          const localOnly = policyState.policy.receiptLocalOnly !== false || input.localOnly === true;
+          const cloud = !localOnly && policyState.policy.receiptCloud;
+          const useGeminiApi = !localOnly && (Boolean(cloud) || isReceiptGeminiApi(connection));
           if (useGeminiApi && !receiptVisionAllowed(cloud ? ({ provider: 'gemini' } as Connection) : connection))
             throw new Error('VISION_DISABLED');
           const health = useGeminiApi ? { running: false, crosscheck: false, tesseract: false, handwriting: false } : await ocr.health();
           check();
-          if (
-            !health.running &&
-            (input.localOnly === true || !receiptVisionAllowed(cloud ? ({ provider: 'gemini' } as Connection) : connection))
-          )
+          if (!health.running && (localOnly || !receiptVisionAllowed(cloud ? ({ provider: 'gemini' } as Connection) : connection)))
             throw new Error('OCR_UNAVAILABLE');
           const picked = await dialog.showOpenDialog(window, {
             title: tm('เลือกใบเสร็จ'),
@@ -3263,6 +3266,7 @@ async function main() {
         });
       }
       case 'ocrResolve': {
+        if (policyState.policy.receiptLocalOnly !== false) throw new Error('OCR_LOCAL_ONLY');
         return receiptOperations.run(async signal => {
           const check = receiptPolicyGuard(signal);
           if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
@@ -3327,6 +3331,7 @@ async function main() {
         });
       }
       case 'receiptVision': {
+        if (policyState.policy.receiptLocalOnly !== false) throw new Error('OCR_LOCAL_ONLY');
         return receiptOperations.run(async signal => {
           const check = receiptPolicyGuard(signal);
           // A second, independent reading of the receipt by a vision model; the page compares it with the OCR field by field.

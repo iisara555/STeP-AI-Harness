@@ -34,7 +34,7 @@ try {
       ipcMain.handle('step:call', async (event, method, input) => {
         const state = globalThis.receiptSendFixture;
         if (method === 'models') return (await original(event, 'snapshot', {})).connections.find(c => c.id === id);
-        if (method === 'ocrStatus') return { installed: true, running: true, vision: false };
+        if (method === 'ocrStatus') return { installed: true, running: true, vision: false, localOnly: false };
         if (method === 'ocrResolve') return { cancelled: true };
         if (method === 'ocrRead') {
           const lines = [

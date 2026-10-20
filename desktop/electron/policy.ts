@@ -154,6 +154,8 @@ export type Policy = {
    * results; off, nothing is masked, blocked or asked about on privacy grounds.
    */
   checks: { authority: boolean; privacy: boolean };
+  /** Local receipt OCR has no external API or hosting fees. External receipt AI requires explicit administrator opt-in. */
+  receiptLocalOnly?: boolean;
   receiptCloud?: ReceiptCloudConfig;
   googleWorkspace?: { clientId: string; domains: string[]; services: GoogleService[] };
   credentialStorage?: { sharedDevice?: boolean; blockHostExecution?: boolean };
@@ -275,6 +277,7 @@ export function defaultPolicy(): Policy {
     budgets: {},
     pilot: true,
     checks: { authority: false, privacy: false },
+    receiptLocalOnly: true,
     // Managed policy contains public configuration only; build-time native client credentials stay in main.
     ...(typeof __STEP_RECEIPT_CLOUD__ !== 'undefined' && __STEP_RECEIPT_CLOUD__ ? { receiptCloud: __STEP_RECEIPT_CLOUD__ } : {}),
     googleWorkspace: {
@@ -357,6 +360,10 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
     )
       problems.push('morningBrief.rememberConsent must be boolean');
     else policy.morningBrief = { rememberConsent: raw.morningBrief.rememberConsent };
+  }
+  if (raw.receiptLocalOnly !== undefined) {
+    if (typeof raw.receiptLocalOnly !== 'boolean') problems.push('receiptLocalOnly must be boolean');
+    else policy.receiptLocalOnly = raw.receiptLocalOnly;
   }
   if (raw.receiptCloud === null) delete policy.receiptCloud;
   else if (raw.receiptCloud !== undefined) {

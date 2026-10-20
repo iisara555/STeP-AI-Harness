@@ -11,6 +11,9 @@ import { skillSuggestEn } from './skill-suggest-en';
 import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 export const en: Record<string, string> = {
+  'อ่านและตรวจใบเสร็จในเครื่อง ไม่มีค่าบริการ OCR หรือ API และไม่ต้องลงชื่อเข้าใช้ Google':
+    'Read and check receipts on this computer. No OCR or API service fees and no Google sign-in required.',
+  'โหมด OCR ในเครื่องไม่เรียกบริการ AI ภายนอก': 'Local OCR mode does not call external AI services.',
   ...uiReviewEn,
   'ลงชื่อเข้าใช้ Google เพื่อใช้ OCR ของ STeP ก่อน': 'Sign in to Google to use STeP OCR first',
   'บัญชี Google สำหรับ OCR ของ STeP': 'Google account for STeP OCR',

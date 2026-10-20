@@ -4,6 +4,7 @@ import { formatLocalDate, formatLocalMonth } from './thai-date';
 import { credentialErrorsTh } from './credential-copy';
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = localized({
+  OCR_LOCAL_ONLY: 'โหมด OCR ในเครื่องไม่เรียกบริการ AI ภายนอก',
   DOCX_PRESENTATION_ONLY: 'สารบัญและหัวท้ายกระดาษที่ตั้งไว้ใช้กับ DOCX กรุณาส่งออก DOCX หรือปิดตัวเลือกเหล่านี้ก่อนส่งออกรูปแบบอื่น',
   ...credentialErrorsTh,
   WEB_EXTRACT_INVALID: 'หน้าเว็บนี้ยังแยกเนื้อหาไม่ได้ ลองอ่านด้วย web_fetch หรือระบุแหล่งอื่น',

@@ -112,6 +112,7 @@ type OcrStatus = {
   folder: string;
   installing?: boolean;
   updateAvailable?: boolean;
+  localOnly?: boolean;
   /** A vision model may read the receipt image too (policy receiptVision, privacy checks off). */
   vision?: boolean;
   textOnly?: boolean;
@@ -219,6 +220,7 @@ export function ReceiptApp({
   const [status, setStatus] = useState<OcrStatus | null>(null),
     [busy, setBusy] = useState(''),
     [installProgress, setInstallProgress] = useState('');
+  const localOnly = status?.localOnly !== false;
   const cloudAccountId = status?.cloud?.accounts.find(a => a.id === preferredCloudAccount)?.id || status?.cloud?.accounts[0]?.id;
   const [doc, setDoc] = useState<Doc | null>(null),
     [fields, setFields] = useState<Record<string, Field>>({}),
@@ -368,6 +370,7 @@ export function ReceiptApp({
     setZoom(false);
     setTypeOverride('');
     setCategory(null);
+    if (localOnly) return;
     // The second, independent reading by a vision model, compared with the OCR field by field below.
     if (status?.vision && (readingConnectionId || cloudAccountId)) await readWithAi(formValues(nextValues), nextGuessed, sourceId);
     // Without the image reading, the AI still sorts the OCR candidates into the fields (OCR text only, masked).
@@ -809,7 +812,10 @@ export function ReceiptApp({
             </p>
           )}
           <p className="small muted">{t('รองรับ PDF, PNG, JPG, WebP, BMP, TIFF ขนาดไม่เกิน 25 MB')}</p>
-          {!status?.cloud && connections.some(isReceiptGeminiApi) && (
+          {localOnly && (
+            <p className="small muted">{t('อ่านและตรวจใบเสร็จในเครื่อง ไม่มีค่าบริการ OCR หรือ API และไม่ต้องลงชื่อเข้าใช้ Google')}</p>
+          )}
+          {!localOnly && !status?.cloud && connections.some(isReceiptGeminiApi) && (
             <div className="receipt-ocr-choice">
               <label>
                 {t('Google AI สำหรับอ่านใบเสร็จ')}
@@ -930,7 +936,7 @@ export function ReceiptApp({
             <p className="small muted">{t('OCR เป็นส่วนเสริมที่ดาวน์โหลดเมื่อคุณติดตั้ง อ่านไฟล์ในเครื่องโดยไม่ส่งไปบริการ OCR ภายนอก')}</p>
           )}
           {status?.vision && <p className="small muted">{t('AI อ่านภาพได้เมื่อคุณยินยอม ส่งต่อในแชตจะส่งเฉพาะข้อความที่ตรวจแล้ว')}</p>}
-          {status && !status.geminiApi && !status.cloud && !connections.some(isReceiptGeminiApi) && openAiSettings && (
+          {!localOnly && status && !status.geminiApi && !status.cloud && !connections.some(isReceiptGeminiApi) && openAiSettings && (
             <p className="small muted">
               {t('เชื่อมต่อ Google AI แบบ API key เพื่อใช้ Gemini อ่านใบเสร็จ แยกจาก AI ที่ใช้แชต')}{' '}
               <button className="text-link" onClick={openAiSettings}>
@@ -1175,57 +1181,61 @@ export function ReceiptApp({
                 </label>
               </>
             )}
-            <div className="receipt-handoff-target">
-              <label>
-                {t('AI สำหรับตรวจทาน')}
-                <select
-                  aria-label={t('AI สำหรับตรวจทาน')}
-                  value={usableConnectionId || ''}
-                  disabled={Boolean(busy)}
-                  onChange={e => chooseConnection?.(e.target.value)}
-                >
-                  <option value="">{t('เลือก AI ที่พร้อมใช้งาน')}</option>
-                  {connections
-                    .filter(c => c.ready)
-                    .map(c => (
-                      <option key={c.id} value={c.id}>
-                        {connectionName(c)}
-                      </option>
-                    ))}
-                </select>
-              </label>
-              {!usableConnectionId && <p className="small muted">{t('เชื่อมต่อและทดสอบ AI ก่อนส่งตรวจทาน ข้อมูลในหน้านี้ยังอยู่')}</p>}
-              {openAiSettings && (
-                <button type="button" className="text-link" onClick={openAiSettings}>
-                  {t('ไปที่การเชื่อมต่อ AI')}
-                </button>
-              )}
-            </div>
+            {!localOnly && (
+              <div className="receipt-handoff-target">
+                <label>
+                  {t('AI สำหรับตรวจทาน')}
+                  <select
+                    aria-label={t('AI สำหรับตรวจทาน')}
+                    value={usableConnectionId || ''}
+                    disabled={Boolean(busy)}
+                    onChange={e => chooseConnection?.(e.target.value)}
+                  >
+                    <option value="">{t('เลือก AI ที่พร้อมใช้งาน')}</option>
+                    {connections
+                      .filter(c => c.ready)
+                      .map(c => (
+                        <option key={c.id} value={c.id}>
+                          {connectionName(c)}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                {!usableConnectionId && <p className="small muted">{t('เชื่อมต่อและทดสอบ AI ก่อนส่งตรวจทาน ข้อมูลในหน้านี้ยังอยู่')}</p>}
+                {openAiSettings && (
+                  <button type="button" className="text-link" onClick={openAiSettings}>
+                    {t('ไปที่การเชื่อมต่อ AI')}
+                  </button>
+                )}
+              </div>
+            )}
             {doc && (
               <>
-                {!requiredChecked && (
+                {!localOnly && !requiredChecked && (
                   <p className="small muted">
                     {requiredFilled ? t('ติ๊ก “ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว” ก่อนส่งให้ AI') : t('กรอกช่องที่มี * ให้ครบก่อนส่งให้ AI')}
                   </p>
                 )}
                 <div className="receipt-actions">
-                  <button
-                    disabled={!requiredChecked || !usableConnectionId || Boolean(busy)}
-                    onClick={() =>
-                      void run('handoff', () =>
-                        handoff(
-                          summary(),
-                          receiptSourceText(draft()),
-                          confirmed.taxId && /^0\d{12}$/.test(review.normalizeDigits(values.taxId || ''))
-                            ? [review.normalizeDigits(values.taxId)]
-                            : [],
-                        ),
-                      )
-                    }
-                  >
-                    {busy === 'handoff' ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}
-                    {t('ให้ AI ตรวจทานต่อ')}
-                  </button>
+                  {!localOnly && (
+                    <button
+                      disabled={!requiredChecked || !usableConnectionId || Boolean(busy)}
+                      onClick={() =>
+                        void run('handoff', () =>
+                          handoff(
+                            summary(),
+                            receiptSourceText(draft()),
+                            confirmed.taxId && /^0\d{12}$/.test(review.normalizeDigits(values.taxId || ''))
+                              ? [review.normalizeDigits(values.taxId)]
+                              : [],
+                          ),
+                        )
+                      }
+                    >
+                      {busy === 'handoff' ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}
+                      {t('ให้ AI ตรวจทานต่อ')}
+                    </button>
+                  )}
                   <button
                     className="text-link"
                     disabled={Boolean(busy)}
@@ -1244,7 +1254,7 @@ export function ReceiptApp({
                     {t('บันทึกผลตรวจเก็บไว้')}
                   </button>
                 </div>
-                <p className="small muted">{t('ส่งเฉพาะผลตรวจและข้อความ ภาพต้นฉบับไม่ถูกส่งในขั้นตอนนี้')}</p>
+                {!localOnly && <p className="small muted">{t('ส่งเฉพาะผลตรวจและข้อความ ภาพต้นฉบับไม่ถูกส่งในขั้นตอนนี้')}</p>}
               </>
             )}
             <p className="small muted">{t('ผลตรวจช่วยเตรียมเอกสาร ไม่ใช่การอนุมัติเบิกจ่าย เก็บต้นฉบับและยืนยันเงื่อนไขกับ AFP')}</p>

@@ -1,5 +1,7 @@
 # STeP receipt OCR — Gemini API service
 
+**Optional external service, disabled by default.** The owner selected local OCR with no service charges. Desktop defaults to `receiptLocalOnly: true` and ignores this gateway even when its public URL is configured. Employees install the local OCR component once from the receipt page and need no Google sign-in, API key or Cloud Billing. The deployment steps below are for a separately authorized paid-capable integration; they are not required for employee OCR. External receipt workflows require explicit administrator `receiptLocalOnly: false` and can incur both API and hosting charges.
+
 Desktop sends bounded receipt images to this service, authenticated with a verified Google OIDC identity. The Gemini key is held only in Cloud Secret Manager. Employees sign in through the existing Google flow; OCR-only sign-in requests `openid email`, with no Drive, Gmail or Calendar scope. Chat can continue using Antigravity.
 
 This source is not a deployed service. Live Gemini accuracy, signed-in staff acceptance and billing remain unverified. The redesigned four-type/three-answer UI is still a separate prototype; this adapter preserves the current production receipt form and its signature/source evidence.

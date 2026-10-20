@@ -2,16 +2,18 @@
 // No real OCR, provider, or receipt data is used. Usage: node test/receipt-smoke.mjs <receipt-image> [screenshot-dir]
 import { _electron as electron, expect } from '@playwright/test';
 import { createServer } from 'node:http';
-import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
 import { build } from 'esbuild';
 import { pathToFileURL } from 'node:url';
+import { createRequire } from 'node:module';
 
 const out = process.argv[3] || (await mkdtemp(join(tmpdir(), 'step-receipt-qa-')));
 await mkdir(out, { recursive: true });
-const image = process.argv[2] ? resolve(process.argv[2]) : join(out, 'synthetic-receipt.png');
+const fixtureDir = await mkdtemp(join(tmpdir(), 'step-receipt-fixture-'));
+const image = process.argv[2] ? resolve(process.argv[2]) : join(fixtureDir, 'synthetic-receipt.png');
 if (!process.argv[2])
   await writeFile(
     image,
@@ -60,8 +62,34 @@ await new Promise((ok, fail) => {
 
 const home = await mkdtemp(join(tmpdir(), 'step-receipt-'));
 // Private trial APIs remain tested separately from the simplified employee UI.
-await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { ocrTrial: true } }));
-const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home };
+await writeFile(
+  join(home, 'desktop-policy.json'),
+  JSON.stringify({
+    features: { ocrTrial: true },
+    receiptCloud: { url: 'https://ocr.example.test', model: 'gemini-3.8-flash' },
+  }),
+);
+// Existing API profiles and organization routing cannot turn local receipt processing into a model call.
+const storeModule = join(out, 'store.cjs');
+await build({ entryPoints: ['electron/store.ts'], outfile: storeModule, bundle: true, platform: 'node', format: 'cjs' });
+const { Store } = createRequire(import.meta.url)(storeModule);
+const store = new Store(join(home, 'workspace.sqlite'));
+store.put('connection', 'existing-api', { id: 'existing-api', provider: 'gemini', mode: 'api', model: 'gemini-3.8-flash', ready: true });
+store.close();
+let externalCalls = 0;
+const external = createServer((req, res) => {
+  externalCalls++;
+  req.resume();
+  res.writeHead(503).end();
+});
+await new Promise(resolve => external.listen(0, '127.0.0.1', resolve));
+const externalUrl = 'http://127.0.0.1:' + external.address().port;
+const env = {
+  ...process.env,
+  STEP_DESKTOP_TEST_HOME: home,
+  STEP_TEST_RECEIPT_CLOUD_URL: externalUrl,
+  STEP_TEST_GEMINI_BASE_URL: externalUrl,
+};
 delete env.ELECTRON_RUN_AS_NODE;
 const app = await electron.launch({ args: ['.'], env, timeout: 45000 });
 try {
@@ -70,6 +98,24 @@ try {
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
   await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
   await page.getByText('OCR ในเครื่องพร้อมใช้').waitFor();
+  await expect(page.getByText('อ่านและตรวจใบเสร็จในเครื่อง ไม่มีค่าบริการ OCR หรือ API และไม่ต้องลงชื่อเข้าใช้ Google')).toBeVisible();
+  await expect(page.getByLabel('Google AI สำหรับอ่านใบเสร็จ')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'ลงชื่อเข้าใช้ Google สำหรับ OCR', exact: true })).toHaveCount(0);
+  const status = await page.evaluate(() => window.step.call('ocrStatus', { connectionId: 'existing-api', localOnly: false }));
+  assert.equal(status.localOnly, true);
+  assert.equal(status.geminiApi, false);
+  assert.equal(status.cloud, undefined);
+  assert.equal(status.vision, false);
+  assert.equal(status.textOnly, false);
+  for (const method of ['receiptVision', 'ocrResolve'])
+    await assert.rejects(
+      page.evaluate(method => window.step.call(method, { connectionId: 'existing-api', localOnly: false }), method),
+      /OCR_LOCAL_ONLY/,
+    );
+  await assert.rejects(
+    page.evaluate(() => window.step.call('receiptCloudConnect')),
+    /FEATURE_DISABLED/,
+  );
   await page.screenshot({ path: join(out, 'receipt-empty.png') });
   await app.evaluate(({ dialog }, file) => {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
@@ -86,12 +132,12 @@ try {
   await page.getByRole('heading', { name: 'ต้องแก้หรือเติมข้อมูลก่อนใช้ประกอบการเบิก', exact: true }).waitFor();
   await page.screenshot({ path: join(out, 'receipt-review.png') });
   // One confirmation covers every field and the flagged line: the verdict flips to ready, never to "approved".
-  assert.equal(await page.getByRole('button', { name: 'ให้ AI ตรวจทานต่อ' }).isDisabled(), true);
+  await expect(page.getByRole('button', { name: 'ให้ AI ตรวจทานต่อ' })).toHaveCount(0);
   await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
   await expect(page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/)).toBeChecked();
-  // No AI connection in this fixture: confirmation permits saving, not provider handoff.
-  assert.equal(await page.getByRole('button', { name: 'ให้ AI ตรวจทานต่อ' }).isDisabled(), true);
-  await expect(page.getByText('เชื่อมต่อและทดสอบ AI ก่อนส่งตรวจทาน ข้อมูลในหน้านี้ยังอยู่')).toBeVisible();
+  // Local processing permits saving after review without handing off to the existing API profile.
+  await expect(page.getByRole('button', { name: 'ให้ AI ตรวจทานต่อ' })).toHaveCount(0);
+  await expect(page.getByText('เชื่อมต่อและทดสอบ AI ก่อนส่งตรวจทาน ข้อมูลในหน้านี้ยังอยู่')).toHaveCount(0);
   const saved = resolve(out, 'receipt-provenance.json');
   await app.evaluate(({ dialog }, path) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
@@ -164,7 +210,7 @@ try {
   const frozen = trialReading(local.fields, ['date'], local.elapsedMs);
   const pilot = trialReport(frozen, null, { ...local.fields, total: '108.00' }, true, 'receipt:synthetic-pilot');
   assert.equal(pilot.summary.ocr.exact, 6);
-  const trialPath = resolve(out, 'receipt-trial.json');
+  const trialPath = resolve(fixtureDir, 'receipt-trial.json');
   await app.evaluate(({ dialog }, path) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
   }, trialPath);
@@ -194,8 +240,20 @@ try {
   await page.getByLabel('ยอดรวมที่ชำระ').fill('107.00');
   await page.getByRole('region', { name: 'องค์ประกอบพื้นฐานใบเสร็จ' }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: join(out, 'receipt-components.png') });
-  console.log('Receipt mini app smoke passed with a fake local OCR service.');
+  await new Promise(resolve => ocr.close(resolve));
+  await assert.rejects(
+    page.evaluate(() => window.step.call('ocrRead', { connectionId: 'existing-api', localOnly: false })),
+    /OCR_UNAVAILABLE/,
+  );
+  assert.equal(externalCalls, 0);
+  console.log(
+    'Local receipt smoke passed: existing API/cloud configuration ignored, external OCR/text/Google calls blocked, human review preserved and no model fallback when local OCR is unavailable.',
+  );
 } finally {
   await app.close();
-  ocr.close();
+  if (ocr.listening) await new Promise(resolve => ocr.close(resolve));
+  await new Promise(resolve => external.close(resolve));
+  assert.ok(home.startsWith(tmpdir()) && fixtureDir.startsWith(tmpdir()));
+  await rm(home, { recursive: true, force: true });
+  await rm(fixtureDir, { recursive: true, force: true });
 }
