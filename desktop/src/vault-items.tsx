@@ -46,18 +46,36 @@ export function VaultItems({
           autoComplete="off"
           onSubmit={event => {
             event.preventDefault();
+            if (disabled) return;
             const value = form;
-            setForm(undefined);
-            void run('save-item', () => call('vaultSave', value));
+            void run('save-item', async () => {
+              await call('vaultSave', value);
+              setForm(undefined);
+            });
           }}
         >
           <label>
             {t('ชื่อเรียกบัญชี')}
-            <input required maxLength={100} value={form.label} onChange={event => setForm({ ...form, label: event.target.value })} />
+            <input
+              required
+              disabled={disabled}
+              maxLength={100}
+              value={form.label}
+              onChange={event => setForm({ ...form, label: event.target.value })}
+            />
           </label>
           <label>
             {t('เว็บไซต์ที่ใช้ได้')}
-            <input required type="url" value={form.destination} onChange={event => setForm({ ...form, destination: event.target.value })} />
+            <input
+              required
+              disabled={disabled}
+              type="url"
+              pattern="https://.+"
+              placeholder="https://example.org"
+              title={t('ใช้เว็บไซต์ที่ขึ้นต้นด้วย https://')}
+              value={form.destination}
+              onChange={event => setForm({ ...form, destination: event.target.value })}
+            />
           </label>
           {addressFields.map(name => (
             <label key={name}>
@@ -66,22 +84,30 @@ export function VaultItems({
                 type="text"
                 autoComplete="off"
                 maxLength={1000}
+                disabled={disabled}
                 required={['address_line1', 'city', 'postal_code', 'country'].includes(name)}
                 value={form.fields[name] || ''}
                 onChange={event => setForm({ ...form, fields: { ...form.fields, [name]: event.target.value } })}
               />
             </label>
           ))}
-          <label>
-            <input type="checkbox" checked={form.remember} onChange={event => setForm({ ...form, remember: event.target.checked })} />
+          <label className="credential-check">
+            <input
+              disabled={disabled}
+              type="checkbox"
+              checked={form.remember}
+              onChange={event => setForm({ ...form, remember: event.target.checked })}
+            />
             {t('จำข้อมูลนี้บนเครื่องส่วนตัวของฉัน')}
           </label>
-          <button type="button" onClick={() => setForm(undefined)}>
-            {t('ยกเลิก')}
-          </button>
-          <button type="submit" disabled={!form.remember || disabled}>
-            {t('บันทึก')}
-          </button>
+          <div className="credential-actions">
+            <button type="button" className="quiet" disabled={disabled} onClick={() => setForm(undefined)}>
+              {t('ยกเลิก')}
+            </button>
+            <button type="submit" disabled={!form.remember || disabled}>
+              {t('บันทึก')}
+            </button>
+          </div>
         </form>
       )}
       {entries
@@ -105,7 +131,7 @@ export function VaultItems({
       <h3>{t('ตัวจัดการรหัสผ่าน')}</h3>
       {sources.map(source => (
         <div className="credential-row" key={source.source}>
-          <label>
+          <label className="credential-source">
             <input
               type="checkbox"
               disabled={disabled}
@@ -119,6 +145,7 @@ export function VaultItems({
           </label>
           {source.installed && source.enabled && (
             <button
+              className="quiet"
               disabled={disabled}
               onClick={() =>
                 void run('source', () => call('vaultSource', { source: source.source, action: source.unlocked ? 'lock' : 'unlock' }))

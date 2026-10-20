@@ -31,6 +31,8 @@ const toolLabels: Record<string, string> = localized({
   sandbox: 'Docker sandbox',
   ask_user: 'คำถามถึงคุณ',
   plan: 'แผนงาน',
+  phase4: 'การทำงานที่ต้องยืนยัน',
+  google_workspace: 'Google Workspace',
 });
 const STEP = /^(?:[-*+•]\s*(?:\[[ xX]\]\s*)?|\d{1,2}[.)]\s+)(.+)$/;
 /** A plan's steps as a list: marked lines (1. / - / *) are steps; a plan of one plain line is one step. */

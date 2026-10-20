@@ -481,6 +481,10 @@ export default function App() {
   useEffect(
     () =>
       api?.onEvent(event => {
+        if (event.type === 'side-question') {
+          void refresh();
+          return;
+        }
         if (event.type === 'vault-prompt' && event.vaultPrompt)
           setVaultPrompts(items => [...items.filter(item => item.id !== event.vaultPrompt!.id), event.vaultPrompt!]);
         if (event.type === 'vault-prompt-close' && event.vaultPrompt)
@@ -2539,7 +2543,15 @@ export default function App() {
                           </summary>
                           <small className="muted">{t('อ้างอิงภาพสถานะเอกสารรุ่น {0}', q.revision)}</small>
                           {q.status === 'running' ? (
-                            <p role="status">{t('กำลังตอบคำถามแทรก')}</p>
+                            <div className="side-question-progress">
+                              <p role="status">{t('กำลังตอบคำถามแทรก')}</p>
+                              <button
+                                className="quiet"
+                                onClick={() => void action(() => api.call('cancelSideQuestion', { id: session.id }))}
+                              >
+                                {t('หยุดคำถามแทรก')}
+                              </button>
+                            </div>
                           ) : q.code ? (
                             <p role="alert">{explainError(new Error(q.code))}</p>
                           ) : (

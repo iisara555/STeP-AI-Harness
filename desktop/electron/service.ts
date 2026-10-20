@@ -318,6 +318,9 @@ export class WorkService {
   ) {}
   cancel(id: string) {
     this.active.get(id)?.abort();
+    this.cancelSideQuestion(id);
+  }
+  cancelSideQuestion(id: string) {
     this.active.get('side:' + id)?.abort();
   }
   questionSnapshot(id: string) {
@@ -358,7 +361,7 @@ export class WorkService {
       if (!fresh) return;
       fresh.sideQuestions = [...(fresh.sideQuestions || []).filter(q => q.id !== record.id), record].slice(-10);
       this.store.save(fresh);
-      this.emit({ sessionId: id, type: 'changed' });
+      this.emit({ sessionId: id, type: 'side-question' });
     };
     const child = new WorkService(
       store,

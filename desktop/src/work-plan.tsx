@@ -53,17 +53,19 @@ export function WorkPlanCard({
         ))}
       </ol>
       {!finished && (
-        <button className="work-plan-run" disabled={running} onClick={() => onExecute(false)}>
-          <Play size={14} />
-          {done ? t('ทำตามแผนต่อ') : t('ลงมือทำตามแผน')}
-        </button>
+        <div className="work-plan-actions">
+          <button className="work-plan-run" disabled={running} onClick={() => onExecute(false)}>
+            <Play size={14} />
+            {done ? t('ทำตามแผนต่อ') : t('ลงมือทำตามแผน')}
+          </button>
+          <button className="quiet" disabled={running || !plan.approvedAt} onClick={() => onExecute(true)}>
+            {t('ทำตามแผนแบบต่อเนื่อง')}
+          </button>
+        </div>
       )}
       {!finished && (
-        <button className="quiet" disabled={running || !plan.approvedAt} onClick={() => onExecute(true)}>
-          {t('ทำตามแผนแบบต่อเนื่อง')}
-        </button>
+        <p className="work-plan-hint small muted">{t('สูงสุด 3 รอบ / 10 นาที หยุดรับงานเพิ่มเมื่อใช้ถึง 50,000 โทเคนที่รายงาน')}</p>
       )}
-      {!finished && <small className="muted">{t('สูงสุด 3 รอบ / 10 นาที หยุดรับงานเพิ่มเมื่อใช้ถึง 50,000 โทเคนที่รายงาน')}</small>}
       {continuation && (
         <p role="status">
           {t('งานต่อเนื่องรอบ {0}/{1}', continuation.rounds, continuation.maxRounds)} ·{' '}

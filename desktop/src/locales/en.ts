@@ -9,7 +9,9 @@ import { documentLayoutEn } from './document-layout-en';
 import { feedbackEn } from './feedback-en';
 import { skillSuggestEn } from './skill-suggest-en';
 import { morningBriefEn } from './morning-brief-en';
+import { uiReviewEn } from './ui-review-en';
 export const en: Record<string, string> = {
+  ...uiReviewEn,
   ถามแทรก: 'Ask aside',
   'ถามแทรกใช้ภาพสถานะงานเดิม กรุณานำไฟล์หรือข้อมูลแนบออกก่อน':
     'Side questions use the task snapshot. Remove attached files or source text first.',

@@ -488,6 +488,7 @@ export type RunEvent = {
     | 'activity'
     | 'heartbeat'
     | 'changed'
+    | 'side-question'
     | 'auth-code'
     | 'auth-code-close'
     | 'plan'

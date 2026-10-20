@@ -80,9 +80,10 @@ const words = {
   calendarRead: ['ดูอย่างเดียว', 'View only'],
   calendarWrite: ['ดูและสร้างนัด', 'View and create events'],
   canChange: ['แก้ไขได้ · ถามก่อนทุกครั้ง', 'Can change · asks first'],
-  adminMore: [
-    'สิทธิ์บริการต่อไปนี้ยังถูกจำกัดโดย policy ของเครื่อง ให้ผู้ดูแลปรับบริการที่อนุญาตก่อนเชื่อมเพิ่ม',
-    'These service permissions are restricted by this device’s policy. Ask an administrator to allow them before connecting.',
+  fullAccess: ['เลือกสิทธิ์เต็มทุกบริการ', 'Select full access to all services'],
+  selfService: [
+    'เลือกใช้บริการทั้งหมดที่แอปรองรับได้เอง ไม่ต้องให้ IT เปิดสิทธิ์รายบริการ Google จะให้คุณตรวจและอนุญาตก่อนเชื่อมบัญชี',
+    'Choose any supported service yourself, without per-service IT setup. Google asks you to review and authorize access before connecting.',
   ],
   reauthorize: [
     'อัปเดตแอปแล้วสิทธิ์บัญชีเดิมจะไม่เพิ่มเอง กด “ปรับบริการที่อนุญาต” ที่บัญชีเดิม เลือกบริการ แล้วให้สิทธิ์ใน Google',
@@ -250,15 +251,6 @@ const SERVICES: Record<GoogleService, ServiceInfo> = {
 };
 const lang = () => (language() === 'en' ? 1 : 0);
 const serviceName = (s: string) => SERVICES[s as GoogleService]?.name[lang()] || s;
-const blockedGoogleServices = (allowed: GoogleService[]) =>
-  DEFAULT_GOOGLE_SERVICES.filter(
-    s =>
-      s !== 'documents' &&
-      !allowed.includes(s) &&
-      !(s === 'drive-read' && allowed.includes('drive')) &&
-      !(s === 'calendar-read' && allowed.includes('calendar')),
-  );
-
 const visibleGoogleServices = (allowed: GoogleService[]) =>
   allowed.filter(s => s !== 'documents' || !(['docs', 'sheets', 'slides'] as GoogleService[]).every(v => allowed.includes(v)));
 const selectedGoogleServices = (selected: GoogleService[], allowed: GoogleService[]) => {
@@ -782,6 +774,23 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
                 ))}
               </div>
             )}
+            <div className="google-service-actions">
+              <p className="small muted">{w('selfService')}</p>
+              <button
+                className="quiet"
+                disabled={Boolean(busy)}
+                onClick={() =>
+                  setServices(
+                    DEFAULT_GOOGLE_SERVICES.filter(
+                      s => google.services.includes(s) && !['documents', 'drive-read', 'calendar-read'].includes(s),
+                    ),
+                  )
+                }
+              >
+                <Check size={15} />
+                {w('fullAccess')}
+              </button>
+            </div>
             <fieldset className="google-services">
               <legend>{editingGoogle ? w('editServices') : google.accounts.length ? w('addAccount') : w('selectServices')}</legend>
               {visibleGoogleServices(google.services)
@@ -830,12 +839,6 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
                   );
                 })}
             </fieldset>
-            {blockedGoogleServices(google.services).length > 0 && (
-              <div className="muted small google-admin" role="note">
-                <p>{w('adminMore')}</p>
-                <p>{blockedGoogleServices(google.services).map(serviceName).join(' · ')}</p>
-              </div>
-            )}
             {google.accounts.length > 0 && <p className="muted small">{w('reauthorize')}</p>}
             {connectionError !== undefined && (
               <p className="credential-note" role="alert">

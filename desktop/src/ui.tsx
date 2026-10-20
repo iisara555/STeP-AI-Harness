@@ -18,6 +18,7 @@ export function ConfirmDialog({
   focusCancel = false,
   confirmDisabled = false,
   info = false,
+  submitOnEnter = false,
 }: {
   title: string;
   children: ReactNode;
@@ -31,6 +32,8 @@ export function ConfirmDialog({
   confirmDisabled?: boolean;
   /** Information only: the one button closes, so no separate cancel button that does the same thing. */
   info?: boolean;
+  /** Credential prompts submit from a text input; other dialogs retain their own form behavior. */
+  submitOnEnter?: boolean;
 }) {
   const [pending, setPending] = useState(false),
     [error, setError] = useState('');
@@ -106,6 +109,19 @@ export function ConfirmDialog({
         if (e.key === 'Escape') {
           e.preventDefault();
           onCancel();
+        } else if (
+          submitOnEnter &&
+          e.key === 'Enter' &&
+          !e.nativeEvent.isComposing &&
+          !e.altKey &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !e.shiftKey &&
+          e.target instanceof HTMLInputElement &&
+          !['checkbox', 'radio'].includes(e.target.type)
+        ) {
+          e.preventDefault();
+          void confirm();
         }
       }}
     >

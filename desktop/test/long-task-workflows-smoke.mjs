@@ -13,6 +13,7 @@ await writeFile(
   executable,
   `
 import {createInterface} from 'node:readline';
+import {existsSync} from 'node:fs';
 const send=x=>process.stdout.write(JSON.stringify(x)+'\\n');
 let system='',thread='';
 const text=reply=>{send({method:'thread/tokenUsage/updated',params:{tokenUsage:{total:{inputTokens:10,outputTokens:2,totalTokens:12}}}});send({method:'item/agentMessage/delta',params:{delta:reply}});send({method:'turn/completed',params:{turn:{status:'completed'}}});};
@@ -39,7 +40,11 @@ createInterface({input:process.stdin}).on('line',line=>{
   if(results.length===1){const d=JSON.parse(results[0].text);return d.diagnostics.some(e=>e.code===2322)?tool({tool:'patch',input:'main.ts',args:{old_string:'= 123',new_string:'= "fixed"'}}):text('Applied code diagnostics passed');}
   return text('Patch staged; apply before rechecking');
  }
- if(system.includes('<document_tool_contract>'))return setTimeout(()=>text('<document_draft># โครงการจำลอง\\n\\n## 1 วัตถุประสงค์\\n\\nก่อนแก้\\n\\n## 2 กิจกรรม\\n\\nคงเดิม</document_draft><document_review>ตรวจจำลอง</document_review>'),thread.includes('LONG_RUNNING_FIXTURE')?5000:0);
+ if(system.includes('<document_tool_contract>')){
+  const finish=()=>text('<document_draft># โครงการจำลอง\\n\\n## 1 วัตถุประสงค์\\n\\nก่อนแก้\\n\\n## 2 กิจกรรม\\n\\nคงเดิม</document_draft><document_review>ตรวจจำลอง</document_review>');
+  const wait=()=>existsSync(${JSON.stringify(join(home, 'main-release'))})?finish():setTimeout(wait,25);
+  return thread.includes('LONG_RUNNING_FIXTURE')?wait():finish();
+ }
  text('General synthetic response');
 });`,
 );
@@ -134,7 +139,7 @@ try {
   const before = await current();
   await page.locator('.composer textarea').fill('ช่วยอธิบายว่าวัตถุประสงค์ข้อนี้หมายถึงอะไร');
   await page.keyboard.press('Enter');
-  await expect(page.getByText('Side snapshot answer', { exact: true })).toBeVisible();
+  await expect(page.getByText('Side snapshot answer', { exact: true })).toBeVisible({ timeout: 30000 });
   assert.equal((await current()).originalQuery, before.originalQuery);
   assert.equal((await current()).proposals.length, 0);
   await send('แก้เฉพาะข้อ 1 ให้เปลี่ยนจากก่อนแก้เป็นหลังแก้');
@@ -144,10 +149,13 @@ try {
   await page.evaluate(({ id, proposalId }) => window.step.call('accept', { id, proposalId }), { id, proposalId: s.proposals[0].id });
   await send('ปรับภาษาให้ชัดขึ้น LONG_RUNNING_FIXTURE');
   await expect.poll(async () => (await current()).status).toBe('running');
+  await expect(page.getByRole('button', { name: 'หยุดงาน', exact: true })).toBeVisible();
   await page.locator('.composer textarea').fill('อธิบายเป้าหมายให้ฟังหน่อย');
   await page.getByRole('button', { name: 'ถามแทรก', exact: true }).click();
   await expect.poll(async () => (await current()).sideQuestions.filter(q => q.status === 'completed').length).toBe(2);
   assert.equal((await current()).status, 'running');
+  await expect(page.getByRole('button', { name: 'หยุดงาน', exact: true })).toBeVisible();
+  await writeFile(join(home, 'main-release'), 'release synthetic main run');
   await waitDone();
   await page.setViewportSize({ width: 960, height: 720 });
   const inputBox = await page.locator('.composer textarea').boundingBox();

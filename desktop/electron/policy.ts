@@ -374,7 +374,9 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
       policy.googleWorkspace = {
         clientId: g.clientId,
         domains: [...new Set<string>(g.domains)],
-        services: [...new Set<GoogleService>(g.services)],
+        // Service access is chosen by each employee in Google consent. Accept legacy lists for upgrades,
+        // but do not require an administrator to expand a device's service allowlist.
+        services: [...DEFAULT_GOOGLE_SERVICES],
       };
   }
   if (raw.pilot !== undefined) {

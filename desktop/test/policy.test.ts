@@ -64,7 +64,7 @@ test('the release offers Claude developer opt-in while organization policy can d
   assert.equal(invalid.policy.features.developmentMode, false);
 });
 
-test('release Workspace configuration is public, isolated per load and replaceable by managed policy', () => {
+test('Workspace services stay self-service across upgrades while client and domain configuration remain isolated', () => {
   const first = defaultPolicy();
   assert.equal(first.features.vault, true);
   assert.equal(first.features.googleWorkspace, true);
@@ -95,7 +95,12 @@ test('release Workspace configuration is public, isolated per load and replaceab
   assert.deepEqual(defaultPolicy().googleWorkspace?.domains, ['step.cmu.ac.th']);
   assert.equal(defaultPolicy().googleWorkspace?.services.length, 17);
   const replacement = { clientId: 'replacement-client.apps.googleusercontent.com', domains: ['example.test'], services: ['tasks'] };
-  assert.deepEqual(parsePolicy({ googleWorkspace: replacement }).policy.googleWorkspace, replacement);
+  assert.deepEqual(parsePolicy({ googleWorkspace: replacement }).policy.googleWorkspace, {
+    ...replacement,
+    services: defaultPolicy().googleWorkspace!.services,
+  });
+  const oldPolicy = { ...replacement, services: ['documents', 'calendar-read', 'tasks'] };
+  assert.deepEqual(parsePolicy({ googleWorkspace: oldPolicy }).policy.googleWorkspace?.services, defaultPolicy().googleWorkspace!.services);
   assert.equal(parsePolicy({ googleWorkspace: null }).policy.googleWorkspace, undefined);
   const disabled = parsePolicy({ features: { vault: false, googleWorkspace: false, developmentMode: false } });
   assert.deepEqual(disabled.problems, []);

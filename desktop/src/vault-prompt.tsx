@@ -35,15 +35,23 @@ export function VaultPromptDialog({
       confirmLabel={title}
       onConfirm={() => send(true)}
       onCancel={() => void send(false).catch(() => {})}
+      submitOnEnter
       confirmDisabled={prompt.kind === 'login' ? !remember || !username.trim() || !password : prompt.kind === 'unlock' ? !password : !code}
     >
       <p>{prompt.provider || prompt.origin}</p>
       <p className="muted">{t('ข้อมูลส่งตรงให้โปรแกรมในเครื่อง ไม่เข้าแชตหรือโมเดล AI')}</p>
-      <div className="credential-form">
+      <div className="credential-form vault-prompt-form">
         {prompt.kind === 'login' && (
           <label>
             {t('Username / อีเมล')}
-            <input autoComplete="off" autoFocus required value={username} onChange={event => setUsername(event.target.value)} />
+            <input
+              autoComplete="off"
+              autoFocus
+              required
+              maxLength={4000}
+              value={username}
+              onChange={event => setUsername(event.target.value)}
+            />
           </label>
         )}
         {prompt.kind !== 'code' && (
@@ -54,6 +62,7 @@ export function VaultPromptDialog({
               autoComplete="off"
               autoFocus={prompt.kind === 'unlock'}
               required
+              maxLength={4000}
               value={password}
               onChange={event => setPassword(event.target.value)}
             />
@@ -68,13 +77,14 @@ export function VaultPromptDialog({
               autoComplete="off"
               autoFocus
               required
+              maxLength={4000}
               value={code}
               onChange={event => setCode(event.target.value)}
             />
           </label>
         )}
         {prompt.kind === 'login' && (
-          <label>
+          <label className="credential-check">
             <input type="checkbox" checked={remember} onChange={event => setRemember(event.target.checked)} />
             {t('จำบัญชีนี้บนเครื่องส่วนตัวของฉัน')}
           </label>

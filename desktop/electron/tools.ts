@@ -2,6 +2,7 @@ import { constants } from 'node:fs';
 import { realpath, lstat, open } from 'node:fs/promises';
 import { resolve, relative, isAbsolute, extname, dirname, sep, join } from 'node:path';
 import { createHash } from 'node:crypto';
+import { consentPreview } from './consent-preview';
 import type { Connection, Workflow, WorkTask } from '../src/types';
 import { parsePlan } from './workflows';
 import { taskAction, type LoopRequest } from '../src/tools';
@@ -90,23 +91,6 @@ export const ownAnswer = (r: LoopRequest | undefined, text: string) => {
   } catch {
     return false;
   }
-};
-/** What a tool result reads like to staff: the file's text or the answer, instead of the JSON envelope. */
-const readable = (text: string) => {
-  try {
-    const value = JSON.parse(text);
-    if (value && typeof value === 'object') {
-      if (typeof value.text === 'string') return value.text;
-      if (typeof value.content === 'string') return value.content;
-      if (typeof value.answer === 'string') return value.answer;
-      if (typeof value.path === 'string' && value.status === 'staged-for-human-review')
-        return tm('ไฟล์ {0} รอคุณตรวจในรายการแก้ไข', value.path);
-      if (typeof value.path === 'string' && value.status === 'applied') return tm('บันทึกไฟล์ {0} แล้ว', value.path);
-    }
-  } catch {
-    /* Plain text stays as it is. */
-  }
-  return text;
 };
 const blocked = (c: any) => c?.authority?.status !== 'ALLOW' || ['BLOCK', 'ESCALATE', 'UNAVAILABLE', 'CLARIFY'].includes(c?.mode);
 export function documentSections(text: string) {
@@ -265,7 +249,7 @@ export class DesktopTools {
               : tm('ไม่พบข้อมูลส่วนบุคคลที่ต้องปิดบัง'),
         },
       ],
-      preview: readable(review.redactedText).slice(0, 1500),
+      preview: consentPreview(review.redactedText).slice(0, 1500),
       technical: review.redactedText.slice(0, 1500),
       privacyClass: review.classification === 'public' ? 'internal' : review.classification,
       allowRemember: false,

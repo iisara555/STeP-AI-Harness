@@ -199,7 +199,7 @@ Run `npm test`, `npm run format:check`, `npm run build` and `npm run test:electr
 
 The release enables `vault`, `googleWorkspace` and `developmentMode` without a per-machine policy file. `claudeSubscription` remains false: a developer turns Dev mode on to use a personal Claude Pro/Max account for evaluation/demo, then selects **Switch back to normal mode** to turn it off. The owner chose manual shutdown; there is no scheduled expiry. This does not establish Anthropic approval for organizational distribution of subscription sign-in.
 
-The default policy contains the public installed-app client ID, `step.cmu.ac.th` and all 17 supported service permissions (11 product families). Availability is not account authorization. `calendar-read` requests only read-only Calendar scopes; `calendar` additionally allows reviewed event creation. Google API enablement, OAuth audience/test users and administrator access still require project/tenant configuration. A managed `googleWorkspace` object replaces the entire configuration; `googleWorkspace: null` explicitly clears it. Explicit `features.vault`, `features.googleWorkspace` or `features.developmentMode` false values deny the respective capability. Malformed or untrusted managed policy disables all three capabilities instead of falling back to release-enabled credential/demo features.
+The default policy contains the public installed-app client ID, `step.cmu.ac.th` and all 17 supported service permissions (11 product families). Availability is not account authorization. `calendar-read` requests only read-only Calendar scopes; `calendar` additionally allows reviewed event creation. Google API enablement, OAuth audience/test users and administrator access still require project/tenant configuration. A managed `googleWorkspace` object can replace the public client ID and domains; its legacy services list is accepted but all supported services remain available for employee consent; `googleWorkspace: null` explicitly clears it. Explicit `features.vault`, `features.googleWorkspace` or `features.developmentMode` false values deny the respective capability. Malformed or untrusted managed policy disables all three capabilities instead of falling back to release-enabled credential/demo features.
 
 ### Desktop OAuth client credentials
 
@@ -240,41 +240,19 @@ Import retains Vault enrollment, shared-device, suspension and executable-tool g
 rejected; importing for the same client replaces its stored value. Account disconnect and Google revocation remain
 separate operations.
 
-### Workspace services and restricted cohorts
+### Self-service Workspace permissions
 
-An existing managed `googleWorkspace.services` list replaces release defaults; it is never widened by an app upgrade.
-This explained the reported missing 0.6.16 services: that installer contained the new methods and UI, while the device
-policy still allowed only `documents`, `calendar-read`, `tasks`, `calendar`. Settings now names the restricted
-permissions and explains how to upgrade the existing account. Administrators who approve every supported service
-can keep their existing client/domain and set `services` to:
+Every supported service is available without per-device IT setup. Valid legacy `googleWorkspace.services` lists are
+accepted for upgrades and normalized to the complete release service catalog. A managed client ID/domain override
+still works; an explicit feature disable, shared-device restriction or invalid/untrusted policy still fails closed.
+In Settings, choose **Select full access to all services** to select each service and the broader Drive/Calendar
+choices. This is an explicit employee action, including Gmail send intent; it never silently adds account grants.
+Existing accounts use **Change allowed services**, then reauthorize the same Google account. Each read/write action
+keeps its existing consent checks. `googleWorkspace: null` still explicitly disables the connection.
 
-```json
-["documents", "docs", "sheets", "slides", "drive-read", "drive", "gmail-read", "gmail-draft", "gmail-send", "gmail-manage", "forms", "appscript", "calendar-read", "tasks", "calendar", "chat", "meet"]
-```
+The legacy `documents` permission covers app-managed files through `drive.file`; full Docs, Sheets and Slides access
+uses their separate native scopes. The old device service allowlist no longer hides or gates those choices.
 
-This does not enable Cloud APIs or grant employee OAuth permissions. Keep intentionally restricted policies explicit.
-
-The bundled policy offers Gmail, Drive, Docs, Sheets, Slides, Forms and Apps Script alongside the original app-managed
-documents, Calendar read/event creation, Tasks, Chat and Meet. This offers choices; it does not widen existing account grants. Employees opt
-in through Google consent, and the host separately checks the selected service intent, including draft versus send.
-Administrators can restrict the offering to an approved cohort with a `googleWorkspace` object. It replaces the whole bundled
-configuration, so it repeats the public client ID and domain. Policy contains no secret: installed-app client IDs are
-public; a required native client credential comes from the installer build or local Vault fallback described above.
-
-```json
-{
-  "googleWorkspace": {
-    "clientId": "991643024129-1gd4866dn064tm72kjtavsu6qpgpa1hp.apps.googleusercontent.com",
-    "domains": ["step.cmu.ac.th"],
-    "services": ["documents", "drive-read", "gmail-read", "calendar-read", "tasks"]
-  }
-}
-```
-
-- This example restricts Gmail and Drive to read-only. Remove services to prohibit them. `gmail-draft`, `gmail-send`
-  and `gmail-manage` are separate employee intents even though Google's compose/modify scopes can also send.
-  `drive` manages files/sharing, `docs`/`sheets`/`slides` grant their native app surfaces, `forms` edits forms/reads
-  responses, and `appscript` manages projects/deployments. Each write still asks every time, including Full auto.
 - Before connecting: in the organization's Google Cloud project, confirm this Desktop OAuth client, enable the APIs
   needed (Gmail, Drive, Docs, Sheets, Slides, Forms, Apps Script, Calendar, Tasks, Chat and Meet), and set the OAuth audience.
   `gmail.readonly` and `drive.readonly` are restricted scopes:

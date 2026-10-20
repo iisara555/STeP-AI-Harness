@@ -758,6 +758,44 @@ nav button,
 .side-question-history summary {
   overflow-wrap: anywhere;
 }
+.side-question-progress,
+.work-plan-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.work-plan-hint {
+  margin: 8px 0 0;
+}
+.credential-form.vault-prompt-form {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 0;
+  border: 0;
+}
+.credential-form .credential-check,
+.settings-content label.credential-source {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+}
+.credential-check input,
+.credential-source input {
+  flex: 0 0 auto;
+  margin-top: 5px;
+}
+.google-service-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 16px 0;
+}
+.google-service-actions p {
+  flex: 1 1 300px;
+  margin: 0;
+}
 .composer-tools > button {
   flex-shrink: 0;
 }

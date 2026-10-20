@@ -820,10 +820,10 @@ async function main() {
   );
   harness.tools = scope => tools.host(scope);
   const phase4Identity = () => JSON.stringify([store.settings().workspace, store.settings().team, permissionMode()]);
-  const phase4Consent = (title: string, body: string, signal?: AbortSignal) =>
+  const phase4Consent = (title: string, body: string, signal?: AbortSignal, technical?: string) =>
     approvals.request(
       approvals.rule(store.settings().workspace || data, 'phase4', body),
-      { title, body, privacyClass: 'internal', allowRemember: false },
+      { title, body, technical, privacyClass: 'internal', allowRemember: false },
       signal,
     );
   const mcp = new Mcp(() => policyState.policy, phase4Identity, join(data, 'mcp'), harness.privacy, phase4Consent);
@@ -1474,8 +1474,18 @@ async function main() {
     (id, tasks, signal) =>
       phase4Consent(
         tm('ตรวจแผนงานย่อยก่อนเริ่ม?'),
-        tm('งาน {0}\n{1}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ', id, JSON.stringify(tasks, null, 2)),
+        tm(
+          'งาน {0}\n{1}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ',
+          id,
+          tasks
+            .map(
+              (task, index) =>
+                `${index + 1}. ${task.query}${task.dependsOn.length ? '\n' + tm('รอขั้นตอน {0}', task.dependsOn.map(dependency => tasks.findIndex(t => t.id === dependency) + 1).join(', ')) : ''}`,
+            )
+            .join('\n'),
+        ),
         signal,
+        JSON.stringify(tasks, null, 2),
       ),
     (query, team) => harness.route(query, { team, workspace: store.settings().workspace }),
     (id, text) => emit({ sessionId: id, type: 'activity', text }),
@@ -3691,6 +3701,9 @@ async function main() {
       case 'cancel':
         coordinator.cancel(input.id);
         service.cancel(input.id);
+        return true;
+      case 'cancelSideQuestion':
+        service.cancelSideQuestion(inputText(input.id, 60));
         return true;
       // Pin and rename are view metadata: keep updatedAt so the list order does not jump.
       case 'pin': {

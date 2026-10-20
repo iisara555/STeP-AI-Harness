@@ -4,7 +4,7 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-10-19_
+_Last updated: 2026-10-20_
 
 ## Latest release
 
@@ -38,6 +38,8 @@ _Last updated: 2026-10-19_
 - **Desktop v0.5.39** (2026-10-11) — published from PR #135 (`7f33d12`): managed/local Dev mode gates for Claude plan access, bounded cold fallback and idle prewarming cleanup. Windows x64 and macOS Apple silicon installers are published; Harness **0.7.7**. Intel Macs stay on 0.5.35. The audit fixes below are pull requests and are not in this release.
 
 ## In progress
+
+- **UI review fixes and self-service Google Workspace release (2026-10-20, owner authorized fixes, full-service access and publication)**: integrates #217–#220 with separate side-question events/cancellation, retained address forms on failed saves, keyboard-friendly single-column secret prompts, grouped plan actions and readable consent summaries with technical JSON disclosure. Valid legacy Google service allowlists upgrade to the full catalog; employees can select full access and reauthorize their own account without per-device IT service configuration. Existing OAuth grants, action consent, client/domain overrides and fail-closed credential protections remain. Local/CI verification and release publication are in progress; do not treat this entry as publication evidence.
 
 - **Long-task document/coding workflows (2026-10-19, owner: implement the Hermes comparison recommendations in order)**: built on hybrid Skill selection. Natural document questions and `/btw` use a frozen, tool-free side channel with source/check warnings; explicit new-task UI preserves the draft. Host-selected section/paragraph patches bind revision/hash and preserve every node outside the target. Compaction summaries persist with prefix validation; approved plans can continue for at most three rounds/ten minutes, admitting no new turns after 50,000 reported tokens and stopping on no progress/error/questions. Restart retains progress without replay. Coding workflow combines staged exact patches, bounded JS/TS language-service diagnostics and actual project checks/diff. Desktop full unit passes 874/878 (four platform skips), including detached answer-evidence regressions. An initial full run hit the previously documented Windows subprocess cleanup EBUSY; the full retry passed. Harness 1,060/1,068, validator, generated plugin check, final rebuild/format and focused native workflow smoke pass. Full native verification exposed a generic revision-form wrapper incorrectly requesting a section patch; its wording is corrected, Thai-numbered targets are supported, and 33 revision/i18n regressions plus a 960×720 native composer check pass. Questions now scroll within a bounded history area and task actions wrap separately from AI controls. The five-form native rerun passes, including revision preservation and native exports. The full Windows Electron run reached the form regression; remaining native coverage and exact-head CI results are tracked in PR #217. No version bump or publication. Known limits and usage: [desktop-long-tasks.md](desktop-long-tasks.md). Real-model answer quality, full project/multi-language LSP and employee-device acceptance remain separate; no claim of full Hermes parity.
 

@@ -189,13 +189,13 @@ try {
       await prompt.getByLabel('รหัสผ่าน', { exact: true }).fill('synthetic-password-marker');
       assert.equal(await prompt.getByLabel('รหัสผ่าน', { exact: true }).getAttribute('type'), 'password');
       await prompt.getByRole('checkbox').check();
-      await prompt.getByRole('button', { name: 'บันทึกบัญชีและเข้าสู่ระบบ', exact: true }).click();
+      await prompt.getByLabel('รหัสผ่าน', { exact: true }).press('Enter');
     }
     if (round < 2) {
       const code = page.getByRole('alertdialog', { name: 'รหัสยืนยัน', exact: true });
       await expect(code).toBeVisible({ timeout: 30000 });
       await code.getByLabel('รหัสยืนยัน', { exact: true }).fill('123456');
-      await code.getByRole('button', { name: 'รหัสยืนยัน', exact: true }).click();
+      await code.getByLabel('รหัสยืนยัน', { exact: true }).press('Enter');
     }
     const verify = page.getByRole('alertdialog', { name: 'ให้ Agent กดขั้นสุดท้ายนี้?', exact: true });
     await expect(verify).toBeVisible({ timeout: 30000 });
