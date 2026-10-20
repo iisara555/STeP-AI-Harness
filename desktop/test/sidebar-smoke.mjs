@@ -187,9 +187,9 @@ try {
   await expect(page.locator('.message')).toHaveCount(0);
 
   // Tools: the Skill hub, the receipt check and settings each open their page and mark themselves active.
-  await sidebar.getByRole('button', { name: /ศูนย์รวม Skill/ }).click();
+  await sidebar.getByRole('button', { name: /ตัวช่วยงาน/ }).click();
   await expect(page.locator('.topbar-heading strong')).toHaveText('ตัวช่วยงาน');
-  await expect(sidebar.getByRole('button', { name: /ศูนย์รวม Skill/ })).toHaveClass(/nav-active/);
+  await expect(sidebar.getByRole('button', { name: /ตัวช่วยงาน/ })).toHaveClass(/nav-active/);
   const count = Number(await sidebar.locator('nav .count').innerText());
   assert.ok(count > 0, 'the Skill hub shows how many Skills and tools there are');
   await sidebar.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();

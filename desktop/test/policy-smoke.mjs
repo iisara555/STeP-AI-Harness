@@ -94,7 +94,7 @@ try {
     window.step.call('toolStage', { path: 'review-only.md', content: 'Email: test@example.invalid' }),
   );
   await apply(classified.id);
-  await approval.getByText(/ระดับข้อมูลจากการตรวจรูปแบบ: จำกัดการเข้าถึง/).waitFor();
+  await approval.getByText(/ผลตรวจข้อมูลเบื้องต้น: จำกัดการเข้าถึง/).waitFor();
   await approval.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
   await page.waitForFunction(() => window.policyApply.done);
   assert.doesNotMatch(JSON.stringify(rules), /notes\.md|Reviewed/);

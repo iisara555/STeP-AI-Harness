@@ -85,7 +85,7 @@ try {
   await composer.fill('Read the notes and prepare a preview EVAL_SCOPED');
   await composer.press('Enter');
   await expect(consent).toContainText('Synthetic public');
-  const scopeChoice = consent.getByRole('checkbox', { name: /อนุญาตส่งข้อมูลในขอบเขตนี้/ });
+  const scopeChoice = consent.getByRole('checkbox', { name: /ไม่ถามซ้ำสำหรับข้อมูลกลุ่มนี้จนจบคำขอ/ });
   await expect(scopeChoice).not.toBeChecked();
   await scopeChoice.check();
   await consent.getByRole('button', { name: 'อนุญาตเฉพาะขอบเขตนี้จนจบคำขอ', exact: true }).click();

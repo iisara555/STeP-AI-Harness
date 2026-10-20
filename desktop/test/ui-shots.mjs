@@ -68,7 +68,7 @@ try {
   await page.locator('.session-group').first().waitFor();
   await page.locator('.session-open').nth(1).click();
   await page.screenshot({ path: join(out, 'shell.png') });
-  await page.getByRole('button', { name: /ศูนย์รวม Skill/ }).click();
+  await page.getByRole('button', { name: /ตัวช่วยงาน/ }).click();
   await page.locator('.skill-card').first().waitFor();
   await page.screenshot({ path: join(out, 'skills-hub.png') });
   await page.getByRole('button', { name: 'ใช้ตัวช่วยนี้' }).first().click();
