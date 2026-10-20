@@ -1107,10 +1107,12 @@ test('agent poll reports rolling-log loss with absolute sanitized-output cursors
     await writeFile(join(f.root, 'loud.cjs'), "process.stdout.write(('A'.repeat(99)+'\\n').repeat(1100));");
     const job = (await f.tools.execute({ tool: 'terminal', input: `${node} loud.cjs` }, f.scope)) as any;
     const done = (await f.tools.execute(
-      { tool: 'tasks', input: job.id, args: { action: 'wait', timeoutMs: 2000, offset: 0, length: 100 } },
+      // Completion, rather than shell startup speed, is the precondition for checking the rolling log.
+      { tool: 'tasks', input: job.id, args: { action: 'wait', timeoutMs: 30000, offset: 0, length: 100 } },
       f.scope,
     )) as any;
     assert.equal(done.status, 'done');
+    assert.equal(done.timedOut, false);
     assert.equal(done.output.length, 100);
     assert.equal(done.truncated, true);
     assert.equal(done.offset, 10000);
@@ -1134,8 +1136,12 @@ test('agent wait is bounded, cancellable and uses the existing process cancellat
   f.scope.signal = abort.signal;
   const host = await f.tools.host(f.scope);
   try {
-    await writeFile(join(f.root, 'slow.cjs'), "process.stdout.write('started'); setTimeout(() => process.stdout.write('finished'), 800);");
-    const job = (await host.execute({ tool: 'terminal', input: `${node} slow.cjs` }, abort.signal)) as any;
+    await writeFile(
+      join(f.root, 'controlled.cjs'),
+      "process.stdout.write('started'); const timer = setInterval(() => { if (require('node:fs').existsSync('finish')) { clearInterval(timer); process.stdout.write('finished'); } }, 10);",
+    );
+    await writeFile(join(f.root, 'slow.cjs'), 'setTimeout(() => {}, 30000);');
+    const job = (await host.execute({ tool: 'terminal', input: `${node} controlled.cjs` }, abort.signal)) as any;
     const request = { tool: 'tasks' as const, input: job.id, args: { action: 'wait', timeoutMs: 20 } };
     let activity = '';
     f.scope.activity = text => {
@@ -1148,7 +1154,9 @@ test('agent wait is bounded, cancellable and uses the existing process cancellat
     assert.equal(waiting.status, 'running');
     assert.equal(waiting.timedOut, true);
     await assert.rejects(host.execute({ ...request, args: { action: 'wait', timeoutMs: 30001 } }, abort.signal), /INVALID_INPUT/);
-    const done = (await host.execute({ ...request, args: { action: 'wait', timeoutMs: 2000 } }, abort.signal)) as any;
+    // Release only after the short wait timed out; process startup cannot make that assertion race completion.
+    await writeFile(join(f.root, 'finish'), '');
+    const done = (await host.execute({ ...request, args: { action: 'wait', timeoutMs: 30000 } }, abort.signal)) as any;
     assert.equal(done.status, 'done');
     assert.equal(done.timedOut, false);
     assert.match(done.output, /startedfinished/);
@@ -1177,7 +1185,7 @@ test('agent wait is bounded, cancellable and uses the existing process cancellat
   }
   const plan = await fixture('plan');
   try {
-    const job = await plan.workbench.start(`${node} -e \"setTimeout(()=>{},1000)\"`, plan.scope.sessionId);
+    const job = await plan.workbench.start(`${node} -e \"setTimeout(()=>{},30000)\"`, plan.scope.sessionId);
     await assert.rejects(plan.tools.execute({ tool: 'tasks', input: job.id, args: { action: 'cancel' } }, plan.scope), /PLAN_MODE/);
     assert.equal(
       ((await plan.tools.execute({ tool: 'tasks', input: job.id, args: { action: 'status' } }, plan.scope)) as any).status,
