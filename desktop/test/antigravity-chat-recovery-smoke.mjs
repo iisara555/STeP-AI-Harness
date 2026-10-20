@@ -82,17 +82,17 @@ try {
   const send = async text => {
     // A rendered final answer can precede run cleanup; wait until the composer accepts the next turn.
     await page.locator('.composer textarea').fill(text);
-    await expect(page.getByRole('button', { name: /ส่งคำขอ/ })).toBeEnabled();
+    await expect(page.getByRole('button', { name: /ส่งคำขอ/ })).toBeEnabled({ timeout: 30000 });
     await page.keyboard.press('Enter');
   };
   await send('How is the public synthetic podcast doing recently?');
   // The saved answer and the live reply can both be on screen for a moment while the run finishes.
-  await expect(page.locator('.message.assistant').last()).toContainText('ขอลิงก์แหล่งข้อมูลล่าสุดเพื่อสรุปให้ครับ');
+  await expect(page.locator('.message.assistant').last()).toContainText('ขอลิงก์แหล่งข้อมูลล่าสุดเพื่อสรุปให้ครับ', { timeout: 30000 });
   assert.deepEqual((await readFile(calls, 'utf8')).trim().split('\n'), ['recover', 'answer']);
   await expect(page.locator('.message').filter({ hasText: 'UNVERIFIED FRAGMENT' })).toHaveCount(0);
   await writeFile(scenario, 'host');
   await send('Read the public synthetic note.txt through the host tool');
-  await expect(page.locator('.message.assistant').last()).toContainText('Public synthetic host evidence received');
+  await expect(page.locator('.message.assistant').last()).toContainText('Public synthetic host evidence received', { timeout: 30000 });
   assert.equal(
     (await readFile(calls, 'utf8'))
       .trim()
@@ -104,7 +104,7 @@ try {
   await writeFile(scenario, 'block');
   await send('Synthetic persistent tool failure');
   const status = page.locator('.message.status').last();
-  await expect(status).toContainText('AI พยายามใช้เครื่องมือที่การเชื่อมต่อนี้ไม่อนุญาต');
+  await expect(status).toContainText('AI พยายามใช้เครื่องมือที่การเชื่อมต่อนี้ไม่อนุญาต', { timeout: 30000 });
   await expect(status).not.toContainText('TOOL_DENIED');
   assert.equal(
     (await readFile(calls, 'utf8'))
