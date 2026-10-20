@@ -12,6 +12,32 @@ import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 export const en: Record<string, string> = {
   ...uiReviewEn,
+  'ลงชื่อเข้าใช้ Google เพื่อใช้ OCR ของ STeP ก่อน': 'Sign in to Google to use STeP OCR first',
+  'บัญชี Google สำหรับ OCR ของ STeP': 'Google account for STeP OCR',
+  'ลงชื่อเข้าใช้บัญชี Google ขององค์กรเพื่ออ่านใบเสร็จ ไม่ต้องใส่ API key':
+    'Sign in with your organization Google account to read receipts. No API key is needed.',
+  'ลงชื่อเข้าใช้ Google สำหรับ OCR': 'Sign in to Google for OCR',
+  'บริการ OCR ของ STeP พร้อมใช้': 'STeP OCR is ready',
+  'บริการ OCR ของ STeP รอการเชื่อมต่อ': 'STeP OCR needs a connection',
+  'ส่งใบเสร็จให้บริการ OCR ของ STeP': 'Send receipt to STeP OCR',
+  'ส่ง {0} จำนวน {1} หน้าและภาพขยาย ไปยัง {2} โดยยืนยันสิทธิ์ด้วยบัญชี Google {3} บริการจะอ่านด้วย Gemini {4} ไม่เกินสองครั้ง ค่าบริการเป็นของโครงการองค์กร โปรดเทียบข้อมูลกับต้นฉบับ':
+    'Send {0}, {1} pages and detail crops, to {2}, authenticated with Google account {3}. The service uses Gemini {4} for at most two readings, billed to the organization project. Compare the results with the original.',
+  'ถึงโควตา OCR ของวันนี้แล้ว ตรวจใบเสร็จด้วยคนหรือรอรอบวันใหม่':
+    'Today’s OCR quota has been reached. Review manually or wait for the next day.',
+  'คำขอนี้ถูกส่งแล้ว ตรวจผลก่อนลองอ่านใบเสร็จใหม่':
+    'This request was already submitted. Check its outcome before reading the receipt again.',
+  'บริการ OCR ของ STeP ยังไม่พร้อม ลองอีกครั้งภายหลัง ข้อมูลที่ตรวจยังอยู่':
+    'STeP OCR is unavailable. Try again later; your review is preserved.',
+
+  'Google AI สำหรับอ่านใบเสร็จ': 'Google AI for receipt reading',
+  'Gemini API พร้อมอ่านใบเสร็จ': 'Gemini API is ready to read receipts',
+  นโยบายยังไม่อนุญาตให้ส่งภาพใบเสร็จ: 'Policy does not allow sending receipt images',
+  'เชื่อมต่อ Google AI แบบ API key เพื่อใช้ Gemini อ่านใบเสร็จ แยกจาก AI ที่ใช้แชต':
+    'Connect Google AI with an API key to read receipts independently of your chat AI',
+  'ส่งใบเสร็จให้ Google AI (Gemini API)': 'Send receipt to Google AI (Gemini API)',
+  'ส่ง {0} ให้โมเดล {1} ที่ generativelanguage.googleapis.com ภาพเต็ม {2} หน้า พร้อมภาพขยายเฉพาะจุด อ่านหลักหนึ่งครั้งและอาจตรวจซ้ำหนึ่งครั้ง มีค่าใช้จ่ายตามบัญชี Google ของคุณ ค่าที่อ่านยังต้องเทียบต้นฉบับ':
+    'Send {0} to model {1} at generativelanguage.googleapis.com: {2} full pages and detail crops, with one reading and at most one recheck. Your Google account may be charged. Compare extracted values against the original.',
+
   ถามแทรก: 'Ask aside',
   'ถามแทรกใช้ภาพสถานะงานเดิม กรุณานำไฟล์หรือข้อมูลแนบออกก่อน':
     'Side questions use the task snapshot. Remove attached files or source text first.',

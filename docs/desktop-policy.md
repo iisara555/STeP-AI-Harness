@@ -267,3 +267,9 @@ See [Workspace functions](google-workspace-functions.md) for the supported opera
 API Executable requirements. No production Google Cloud API or Workspace Admin setting is changed by a source update.
 
 An API-only profile remains in its existing OS-encrypted key store until the employee explicitly remembers a website account or connects Workspace. That first enrollment activates Vault protection and migration; the existing cross-session executable-tool restrictions persist even after pause, feature disable or deletion. Startup/first key use retries migration for an already protected profile; authoritative references never fall back to legacy secrets.
+
+## Central Gemini receipt OCR
+
+`receiptCloud: {"url":"https://<service-origin>","model":"gemini-3.8-flash"}` routes receipt reading to the organization's authenticated Gemini service. Only an HTTPS origin and model are accepted; never put a Gemini key here. `receiptCloud: null` removes this route. `vision`/`receiptVision` denials and strict privacy checks still block image transmission. `googleWorkspace` must remain configured for the Desktop OAuth client and verified employee domains; OCR-only sign-in requests just `openid email` and gives no Workspace content access.
+
+Installer builds can embed the same public URL/model using Actions variables `STEP_RECEIPT_CLOUD_URL` / `STEP_RECEIPT_CLOUD_MODEL`. Employees then sign in without key entry or per-device IT setup. Central routing takes precedence over personal AI/CLI/local OCR; it does not silently switch providers on failure. The Gemini key stays in Secret Manager and quotas are reserved atomically in Firestore. See the [deployment and cost guide](../gateway/receipt/README.md). A configured origin is a trusted recipient of the employee ID token and receipt images; distribute it only after service acceptance. This source addition is not proof of live deployment or OCR accuracy.

@@ -53,7 +53,7 @@
 
 **STeP Desktop**
 
-- [แบบระบบตรวจใบเสร็จใหม่](receipt-review-redesign.md) — ต้นแบบ 3 คำตอบ, OCR ภาษาไทย, preprocessing/grouping และเกณฑ์ benchmark; ยังไม่เปลี่ยนแอปจริง
+- [แบบระบบตรวจใบเสร็จใหม่](receipt-review-redesign.md) — ต้นแบบ 3 คำตอบ, preprocessing/grouping และเกณฑ์ benchmark; [บริการ Gemini OCR กลาง](../gateway/receipt/README.md) เพิ่มใน source แล้ว ยังไม่ deploy
 - [Vault and Google Workspace implementation](vault-workspace-implementation.md) - employee flow, managed configuration, operation limits, local verification and remaining live/packaged gates
 
 - [Vault design handoff — username/password และ API key](desktop-vault-design.md) — แบบเสนอและแผน P0–P3 สำหรับพัฒนาต่อ ยังไม่มีฟีเจอร์ในแอป

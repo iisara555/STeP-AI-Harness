@@ -775,3 +775,36 @@ test('read-only Calendar reads events but cannot create them', async () => {
     f.clean();
   }
 });
+
+test('OCR-only sign-in requests identity scopes, keeps its token private and obeys pause', async () => {
+  const f = fixture();
+  let granted: string[] = [];
+  const google = new GoogleWorkspace(
+    f.store,
+    f.vault,
+    () => config,
+    async () => {},
+    undefined,
+    async (_config, scopes) => {
+      granted = scopes;
+      return {
+        who: { sub: '1234', email: 'synthetic@example.test', hd: 'example.test' },
+        scopes,
+        tokens: { refresh: 'synthetic-refresh', access: 'synthetic-access', identity: 'synthetic-id-token', expires: Date.now() + 3600000 },
+      };
+    },
+  );
+  try {
+    await google.connect([], context, undefined, true);
+    assert.deepEqual(granted, ['openid', 'email']);
+    const state = google.state();
+    assert.ok(!JSON.stringify(state).includes('synthetic-id-token'));
+    const id = state.accounts[0].id;
+    assert.equal(await google.receiptIdentity(id, context.signal), 'synthetic-id-token');
+    assert.deepEqual(state.accounts[0].services, []);
+    google.pause(id, true);
+    await assert.rejects(google.receiptIdentity(id, context.signal), /GOOGLE_ACCESS_DENIED/);
+  } finally {
+    f.clean();
+  }
+});

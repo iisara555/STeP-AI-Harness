@@ -6,6 +6,9 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- เพิ่ม source บริการตรวจใบเสร็จด้วย Gemini API กลางบน Cloud Run: พนักงานลงชื่อ Google โดยไม่ใส่คีย์องค์กร แชต Antigravity แยกจาก OCR คีย์อยู่ Secret Manager; มีโควตาถาวรใน Firestore การยืนยันก่อนส่งภาพ และพิกัด/ลายเซ็นสำหรับตรวจต้นฉบับ ยังไม่ deploy หรือวัดความแม่นยำกับบริการจริง
+- เพิ่มแบบหน้าสรุปใบเสร็จ 4 ประเภท/3 คำตอบ พร้อมต้นแบบลายเซ็นและข้อมูลผู้ซื้อ STeP; จัดข้อมูลที่ผู้ดูแลให้มาเป็นเอกสารอ้างอิงองค์กร หน้าสรุปใหม่และ buyer name/address matcher ยังไม่ใช่ UI production
+
 ## Desktop v0.6.18
 
 - รองรับคำตอบสุดท้ายของ Gemini ผ่าน Antigravity ที่ปรับจากข้อความชั่วคราว แทนการหยุดด้วย `PROVIDER_STREAM_INVALID` ก่อนเรียก Workspace; host ใช้เฉพาะคำสั่งจากผลสุดท้ายที่ตรวจ session และ turn แล้ว

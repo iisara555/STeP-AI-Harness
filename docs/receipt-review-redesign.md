@@ -2,7 +2,7 @@
 
 วันที่ค้นคว้า: 20 ตุลาคม 2569 (Asia/Bangkok) · ฐาน Desktop 0.6.18 / main `5af0943`
 
-สถานะ: **แบบระบบและต้นแบบกดลองได้ ยังไม่เปลี่ยนแอปหรือเปลี่ยน OCR ที่ใช้งานจริง**
+สถานะ: **แบบหน้าจอใหม่ยังเป็นต้นแบบ; เพิ่มเส้นทาง Gemini API OCR ใน source แล้ว ยังไม่เผยแพร่และยังไม่วัดความแม่นยำกับบริการจริง**
 เปิด [ต้นแบบหน้าจอ](prototypes/receipt-review/index.html) ในเบราว์เซอร์ได้โดยตรง ใช้เอกสาร/ผลตรวจสังเคราะห์ และข้อมูลอ้างอิงผู้ซื้อที่ผู้ดูแลให้มา ไม่รับไฟล์จริง ไม่เรียก OCR/API และไม่ส่งข้อมูลออก
 
 ## ผลลัพธ์ที่ผู้ใช้ต้องเห็น
@@ -121,18 +121,26 @@ Desktop เดิมมี [signature reading contract](../desktop/src/receipt-v
 | **Azure Document Intelligence v4.0, `prebuilt-receipt` + Read/Layout ตามจำเป็น** | เอกสาร official ระบุ Thai ใน receipt และ Read/Layout; ให้ข้อมูลมีโครงสร้าง [languages](https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/language-support/prebuilt?view=doc-intel-4.0.0), [receipt](https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/prebuilt/receipt?view=doc-intel-4.0.0) | รองรับภาษาไม่ได้แปลว่าตรงแบบภาษีไทย/AFP; วัด field roles, item rows และต้นทุนทุก operation; ไม่เรียก Layout ซ้ำทุกใบโดยอัตโนมัติ                                                                                                  |
 | **Google Document AI Enterprise OCR**                                            | OCR รองรับ Thai และมี image-quality signal [processors](https://docs.cloud.google.com/document-ai/docs/processors-list), [OCR](https://docs.cloud.google.com/document-ai/docs/enterprise-document-ocr)                                                                                                                                       | ต้องมีชั้น grouping/extraction เพิ่ม; Invoice Parser ในรายการที่เปิดตรวจไม่ได้ระบุ Thai ห้ามนำความสามารถ OCR ไปอ้างว่า Invoice Parser รองรับ Thai แล้ว                                                                            |
 
-**ตัวตั้งต้นของแบบ:** ใช้ PaddleOCR-VL 1.6 เป็นผู้สมัครหลักด้านโครงสร้าง และ Typhoon OCR 1.5 เป็นผู้สมัครอ่านภาษาไทย/ตรวจเฉพาะจุด ให้ Azure receipt เป็นผู้สมัคร Cloud พร้อมใช้ เทียบกับ baseline PP-OCRv5 ปัจจุบันก่อนเลือก production champion ไม่ติดตั้ง engine สองตัวลงเครื่องพนักงานทุกเครื่อง และไม่รันทุก engine ทุกใบ
+**การตัดสินใจล่าสุดของผู้ดูแล:** ใช้ **Google AI (Gemini API)** เป็น OCR ในรอบนี้ งานวิจัย engine อื่นข้างบนเก็บไว้เป็นข้อมูลเปรียบเทียบ ไม่ใช่เส้นทาง production ที่เลือก และไม่อ้างว่า Gemini แม่นยำที่สุดก่อน benchmark ใบเสร็จไทยจริง
 
-ทางเลือกให้บริการมีสองแบบ ใช้ UI/result contract เดียวกัน:
+### บริการ Gemini OCR กลางที่เพิ่มใน source
 
-- **Cloud จัดการให้:** ทดลอง Azure ในโควตาฟรีก่อนและเทียบ Google OCR ตามความเหมาะสม ต้องมีบัญชี/ภูมิภาค/เงื่อนไขข้อมูลที่องค์กรยอมรับ ไม่มีการส่งใบเสร็จจริงในงานออกแบบนี้
-- **บริการกลางที่องค์กรโฮสต์:** PaddleOCR-VL/Typhoon อยู่หลัง authenticated gateway ในองค์กรหรือ cloud account ขององค์กร มีต้นทุนเครื่อง/GPU การดูแลและการอัปเดต แม้ไม่มีค่า license ต่อหน้า ความเร็ว/หน่วยความจำบน Windows/Mac ยังต้องวัด ไม่รับรองว่าเครื่องพนักงานรันไหวจากขนาดพารามิเตอร์
+ผู้ดูแลเลือก **บริการกลางสำหรับพนักงานทุกคน** คีย์ Gemini อยู่ใน Google Secret Manager; Desktop ไม่มีคีย์องค์กร พนักงานลงชื่อ Google ด้วยสิทธิ์ `openid email` สำหรับ OCR เท่านั้น ใช้แชต Antigravity ต่อได้ สิทธิ์ Gemini ใน Workspace และ Gemini API billing เป็นคนละส่วน
 
-เครื่องที่ไม่มีเครือข่ายยังเปิดผลเดิม/ตรวจด้วยคนได้ และใช้ OCR เดิมเป็น fallback ที่แจ้งสถานะชัด หากอ่านไม่ได้ห้ามให้ระบบเปลี่ยนเป็น “ครบ” หรือส่งไฟล์ไป provider อื่นเงียบ ๆ
+- [บริการกลางและคู่มือติดตั้ง](../gateway/receipt/README.md): Cloud Run เรียก `generativelanguage.googleapis.com` โดยตรง ด้วย native image input + `responseJsonSchema`; host/parser ตรวจผลซ้ำ ไม่ใช้ Gemini CLI อ่านภาพ ไม่สร้าง explicit prefix cache ของใบเสร็จ
+- ตรวจ Google ID token ด้วยลายเซ็น issuer/audience/expiry/verified email/Workspace domain ใช้ client ID ที่ตรงกับ Desktop เก็บ refresh/access/ID token ใน Vault เดิม ไม่ส่ง token เข้า renderer หรือโมเดล ส่งเฉพาะ ID token ให้ปลายทางกลางที่องค์กรกำหนด
+- เมื่อฝัง URL กลางใน installer หรือ managed policy แล้ว หน้าใบเสร็จแสดง “ลงชื่อเข้าใช้ Google สำหรับ OCR” โดยไม่ต้องใส่ API key/ตั้งค่าต่อเครื่อง เลือกบัญชีงานแยกจาก AI แชต ก่อนส่งบอกไฟล์ จำนวนหน้า ปลายทาง บัญชี โมเดล และขอบเขตค่าใช้จ่ายของโครงการองค์กร ยกเลิก/เปลี่ยนบัญชี/นโยบายปิด vision แล้วไม่ส่ง
+- Preprocess ที่เชื่อมแล้ว: snapshot ไฟล์ไม่เกิน 25 MB; PDF raster ไม่เกิน 3 หน้า (เกินแล้วปฏิเสธทั้งไฟล์); ภาพเต็มลดขนาดตามเพดาน + source-resolution crops ที่มีพิกัดเทียบกลับภาพเต็ม ไม่เกิน 6 ภาพ/4 MB ต่อภาพ/12 MB รวม Output ไม่เกิน 16,384 tokens อ่านหลักหนึ่งครั้ง และตรวจซ้ำตัวเลขที่ขัดกันไม่เกินหนึ่งครั้ง
+- Schema แยกผู้ออก/เลขภาษีผู้ซื้อ/รายการ/ยอด/บทบาทลายเซ็น พร้อมหลักฐานและพิกัด ค่าทั้งหมดยังต้องให้คนเทียบต้นฉบับ **การแยกหลายใบในภาพ, perspective/deskew, buyer name/address matcher และหน้าสรุปสี่ประเภทในแอปจริงยังเป็นงานถัดไป** ต้นแบบแสดงแบบระบบครบแล้ว ไม่อ้างว่า rollout เสร็จ
+- Firestore จองโควตาถาวรแบบ atomic ก่อนเรียก Gemini ทั้งองค์กร/รายคน ป้องกันคำขอชนและรีสตาร์ตแล้วโควตาหาย ค่าเริ่มต้นเสนอ 200 requests/วันทั้งองค์กร และ 20/คน (วัน UTC) ไม่ใช่วงเงินสกุลเงินจริง เมื่อโควตาหรือที่เก็บโควตาไม่พร้อมให้หยุด ไม่มี automatic billing retry บันทึกเฉพาะตัวนับ keyed subject hash และ request ID; ไม่เก็บภาพ/ข้อความใบเสร็จ/อีเมลลง ledger
+- เมื่อกำหนดบริการกลางแล้ว ไม่เปิด PaddleOCR หรือไปใช้คีย์ส่วนตัวเป็น fallback เงียบ ๆ หาก API ไม่พร้อมเก็บข้อมูลให้คนตรวจ/ลองใหม่ เครื่องที่ยังไม่กำหนดบริการกลางยังใช้ OCR เดิมหรือ Gemini API แบบคีย์เข้ารหัสส่วนตัวได้
+- โมเดลกำหนดฝั่งบริการ เลือกรุ่นที่บัญชีรองรับภาพ/structured output เช่น stable `gemini-3.8-flash` เป็นจุดเริ่ม benchmark ไม่ถือว่าตัวใดแม่นที่สุดสำหรับใบเสร็จไทยก่อนวัดจริง [โมเดล](https://ai.google.dev/gemini-api/docs/models), [API key](https://ai.google.dev/gemini-api/docs/api-key), [schema](https://ai.google.dev/gemini-api/docs/structured-output)
+
+**ยังไม่ติดตั้งจริง:** cloud executor ไม่มี outbound identity/ข้อมูลรับรอง Google Cloud และเครือข่ายยังไม่อนุญาต Gemini/control-plane endpoints จึงทดสอบด้วยข้อมูลสังเคราะห์และ loopback HTTP เท่านั้น คีย์จริงที่ให้มาไม่ถูกบันทึก/เรียกใช้/ใส่ Git หรือไฟล์ติดตั้ง ยังไม่ถือว่าเชื่อมบริการจริงหรือผ่านเกณฑ์ความแม่นยำ
 
 ## ค่าใช้จ่ายและการควบคุม
 
-ผู้ใช้ถามเรื่องค่าบริการ Cloud แต่ยังไม่ได้เลือก provider/วงเงินหรืออนุญาตส่งเอกสารจริง ราคาเป็นข้อมูลที่เปิดตรวจวันที่ข้างต้น ไม่ใช่ใบเสนอราคา และแยกจากแพ็กเกจ Google Workspace
+ผู้ใช้เลือกบริการ Gemini API กลางแล้ว แต่ยังไม่ได้กำหนดวงเงินหรือชุดใบเสร็จสำหรับ benchmark จริง **Gemini API คิดตามโมเดลและปริมาณโทเคน/ภาพ** ตาม [ราคาทางการ](https://ai.google.dev/gemini-api/docs/pricing) ไม่ใช่ราคาต่อหน้าของ Google Document AI ด้านล่าง และแยกจากแพ็กเกจ Google Workspace ฟรีหรือไม่ขึ้นกับ model/tier/project ของคีย์ ต้องตรวจในบัญชีก่อนใช้งานจริง ตารางเดิมเก็บเพื่อเปรียบเทียบ engine อื่น ไม่ใช่ใบเสนอราคา Gemini
 
 | เส้นทาง               | ราคาที่ตรวจพบ/ข้อจำกัด                                                                                                                                                                                                                                                                |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -141,7 +149,7 @@ Desktop เดิมมี [signature reading contract](../desktop/src/receipt-v
 | Typhoon API ทดลอง     | เอกสาร [บริการ](https://opentyphoon.ai/model/typhoon-ocr) ระบุ free API 20 requests/minute; ไม่ใช้ free endpoint เป็นหลักประกัน SLA/สิทธิใช้ข้อมูล/บริการ production และตรวจเงื่อนไขอีกครั้งก่อนส่งจริง                                                                               |
 | โฮสต์เอง              | ค่า license โมเดลที่ระบุข้างต้นไม่คิดต่อหน้า แต่มี compute/storage/operations รวมถึงค่า cloud GPU หากเช่าเครื่อง                                                                                                                                                                      |
 
-นับ **pages/operations ที่ provider คิดเงิน** ไม่ใช่จำนวนไฟล์: การ crop ซ้ำ, retries และ extraction อีก model อาจมีค่าใช้จ่ายเพิ่ม ทำ local quality gate ก่อนส่ง, hash/cache ภายในขอบเขตผู้ใช้, จำกัดหนึ่ง primary pass และหนึ่ง targeted recheck เฉพาะที่จำเป็น ตั้ง hard quota ที่ gateway (ไม่ใช่ budget alert อย่างเดียว) เมื่อถึงเพดานหยุด/ให้ตรวจด้วยคน ไม่โยกไปบริการเสียเงินอื่น
+สำหรับ Gemini บันทึก usage tokens ของแต่ละ request และคิดตามเรตรุ่นที่ใช้; สำหรับ OCR engine อื่นนับ **pages/operations ที่ provider คิดเงิน** ไม่ใช่จำนวนไฟล์: การ crop ซ้ำ, retries และ extraction อีก model อาจมีค่าใช้จ่ายเพิ่ม ทำ local quality gate ก่อนส่ง, hash/cache ภายในขอบเขตผู้ใช้, จำกัดหนึ่ง primary pass และหนึ่ง targeted recheck เฉพาะที่จำเป็น ตั้ง hard quota ที่ gateway (ไม่ใช่ budget alert อย่างเดียว) เมื่อถึงเพดานหยุด/ให้ตรวจด้วยคน ไม่โยกไปบริการเสียเงินอื่น
 
 ก่อนเรียกจริงแสดงปลายทาง จำนวนหน้า และขอบเขตข้อมูลให้ผู้ใช้เห็น รับ consent ตาม policy ที่ใช้ เก็บ secret ใน host/Vault ไม่ใส่ renderer หรือ shared key ใน installer; provider/model เปลี่ยนต้องตรวจสิทธิใหม่ ห้ามส่งเต็มเอกสารหากได้รับอนุญาตเฉพาะ crop ห้าม raw receipt/PII อยู่ใน log
 

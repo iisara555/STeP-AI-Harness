@@ -24,6 +24,30 @@ export function ocrPython(folder: string) {
 export const isOcrFolder = (folder: string) =>
   Boolean(folder) && existsSync(join(folder, 'app.py')) && existsSync(join(folder, 'web', 'receipt-review.js'));
 
+/** Bound a host-picked immutable receipt snapshot before creating image buffers or uploading. */
+export async function readOcrInput(path: string) {
+  const extension = extname(path).slice(1).toLowerCase();
+  if (!OCR_EXTENSIONS.includes(extension)) throw new Error('OCR_UNSUPPORTED_FILE');
+  const handle = await open(path, 'r');
+  let bytes: Buffer<ArrayBuffer>;
+  try {
+    const info = await handle.stat();
+    if (!info.isFile() || !info.size || info.size > OCR_MAX_BYTES) throw new Error('OCR_FILE_TOO_LARGE');
+    const buffer = Buffer.alloc(info.size + 1);
+    let offset = 0;
+    while (offset < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, null);
+      if (!bytesRead) break;
+      offset += bytesRead;
+    }
+    if (offset !== info.size) throw new Error('OCR_FILE_CHANGED');
+    bytes = buffer.subarray(0, offset);
+  } finally {
+    await handle.close();
+  }
+  return { extension, bytes };
+}
+
 export class OcrService {
   private child?: ChildProcess;
   private starting?: Promise<OcrStatus>;
@@ -116,25 +140,7 @@ export class OcrService {
   }
 
   async recognize(path: string, crosscheck: boolean, tesseract = false, handwriting = false, signal?: AbortSignal) {
-    const extension = extname(path).slice(1).toLowerCase();
-    if (!OCR_EXTENSIONS.includes(extension)) throw new Error('OCR_UNSUPPORTED_FILE');
-    const handle = await open(path, 'r');
-    let bytes: Buffer<ArrayBuffer>;
-    try {
-      const info = await handle.stat();
-      if (!info.isFile() || !info.size || info.size > OCR_MAX_BYTES) throw new Error('OCR_FILE_TOO_LARGE');
-      const buffer = Buffer.alloc(info.size + 1);
-      let offset = 0;
-      while (offset < buffer.length) {
-        const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, null);
-        if (!bytesRead) break;
-        offset += bytesRead;
-      }
-      if (offset !== info.size) throw new Error('OCR_FILE_CHANGED');
-      bytes = buffer.subarray(0, offset);
-    } finally {
-      await handle.close();
-    }
+    const { bytes, extension } = await readOcrInput(path);
     const url = `${this.base}/api/ocr?filename=${encodeURIComponent(basename(path))}&threshold=0.80&handwriting=${handwriting ? 'on' : 'off'}&crosscheck=${crosscheck ? 'on' : 'off'}&tesseract=${tesseract ? 'on' : 'off'}`;
     let response: Response;
     try {

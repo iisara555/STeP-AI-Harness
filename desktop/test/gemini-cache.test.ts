@@ -22,6 +22,64 @@ const context = (extra: Partial<ProviderContext> = {}): ProviderContext => ({
   signal: new AbortController().signal,
   ...extra,
 });
+
+test('receipt images use Gemini REST without CLI or explicit caches, with bounded output and JSON schema', async () => {
+  const calls: any[] = [];
+  const image = { mime: 'image/jpeg' as const, data: Buffer.from('synthetic image').toString('base64') };
+  const schema = { type: 'object', properties: { signatures: { type: 'object' } } };
+  const api = new GeminiApiAdapter(
+    (async (url: any, init: any) => {
+      calls.push({ url: String(url), body: JSON.parse(init.body), headers: init.headers });
+      return stream();
+    }) as typeof fetch,
+    new Map(),
+  );
+  const adapter = new GeminiAdapter(api);
+  await adapter.run(
+    'Read the source',
+    { ...connection, promptCaching: 'off', maxOutputTokens: 100_000 },
+    context({ key: 'AQ.synthetic-only-not-a-real-key', receiptOcr: true, images: [image], jsonSchema: schema }),
+  );
+  assert.equal(calls.length, 1);
+  assert.match(
+    calls[0].url,
+    /^https:\/\/generativelanguage.googleapis.com\/v1beta\/models\/gemini-2.5-flash:streamGenerateContent\?alt=sse$/,
+  );
+  assert.equal(calls[0].headers['x-goog-api-key'], 'AQ.synthetic-only-not-a-real-key');
+  assert.equal(calls[0].body.cachedContent, undefined);
+  assert.deepEqual(calls[0].body.contents[0].parts[1], { inlineData: { mimeType: 'image/jpeg', data: image.data } });
+  assert.deepEqual(calls[0].body.generationConfig.responseJsonSchema, schema);
+  assert.equal(calls[0].body.generationConfig.maxOutputTokens, 16_384);
+});
+
+test('receipt API rejects malformed, unsupported and oversized images before any request', async () => {
+  let calls = 0;
+  const adapter = new GeminiApiAdapter(
+    (async () => {
+      calls++;
+      return stream();
+    }) as typeof fetch,
+    new Map(),
+  );
+  const schema = { type: 'object' };
+  for (const images of [
+    [],
+    [{ mime: 'image/jpeg', data: 'broken' }],
+    [{ mime: 'text/plain', data: 'YWJj' }],
+    Array(7).fill({ mime: 'image/png', data: 'YWJj' }),
+    [{ mime: 'image/jpeg', data: 'A'.repeat(5_333_340) }],
+  ]) {
+    await assert.rejects(
+      adapter.run('Read', connection, context({ receiptOcr: true, jsonSchema: schema, images })),
+      /INVALID_INPUT|RECEIPT_VISION_FORMAT|ATTACH_TOO_LARGE/,
+    );
+  }
+  await assert.rejects(
+    adapter.run('Read', connection, context({ images: [{ mime: 'image/jpeg', data: 'YWJj' }] })),
+    /PROVIDER_CAPABILITY_UNSUPPORTED/,
+  );
+  assert.equal(calls, 0);
+});
 const event = (data: unknown) => 'data: ' + JSON.stringify(data) + '\n\n';
 const stream = (cached = 40, complete = true) =>
   new Response(

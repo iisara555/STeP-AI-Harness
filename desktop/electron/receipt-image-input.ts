@@ -1,3 +1,4 @@
+import type { ReceiptCloudManifest } from './receipt-cloud';
 import type { NativeImage } from 'electron';
 import type { VisionInput } from '../src/types';
 import type { ReceiptRegion } from '../src/receipt-vision';
@@ -9,6 +10,7 @@ export function receiptVisionImages(pages: NativeImage[], regions?: ReceiptRegio
   if (pages.length > 3) throw new Error('ATTACH_SCANNED_TOO_LONG');
   const images: VisionInput[] = [];
   const descriptions: string[] = [];
+  const manifest: ReceiptCloudManifest = [];
   let bytes = 0;
   const append = (image: NativeImage, description: string, longest = 1800) => {
     if (image.isEmpty()) throw new Error('RECEIPT_VISION_FORMAT');
@@ -22,17 +24,22 @@ export function receiptVisionImages(pages: NativeImage[], regions?: ReceiptRegio
     images.push({ mime: 'image/jpeg', data: jpeg.toString('base64') });
     descriptions.push(`Image ${images.length}: ${description}`);
   };
-  pages.forEach((image, index) => append(image, `full page ${index + 1}`));
+  pages.forEach((image, index) => {
+    append(image, `full page ${index + 1}`);
+    manifest.push({ page: index + 1 });
+  });
   const details = regions ?? (pages.length === 1 ? receiptDetailRegions() : []);
   for (const region of details.slice(0, 3)) {
     const image = pages[region.page - 1];
     if (!image) continue;
     const size = image.getSize();
     const rect = receiptCropRectangle(size.width, size.height, region);
+    manifest.push({ page: region.page, region });
     append(image.crop(rect), `detail of page ${region.page}, full-page region ${JSON.stringify(region)}`, 2048);
   }
   return {
     images,
+    manifest,
     description: descriptions.join('\n'),
     pagePreviews: images.slice(0, pages.length).map(image => `data:${image.mime};base64,${image.data}`),
   };

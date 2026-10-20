@@ -25,7 +25,7 @@ type Account = {
   revision: number;
   reauth?: boolean;
 };
-type Tokens = { refresh: string; access: string; expires: number };
+type Tokens = { refresh: string; access: string; expires: number; identity?: string };
 type Context = { check: () => Promise<void>; approve: (title: string, body: string) => Promise<boolean>; signal: AbortSignal };
 function reject(code: string): never {
   throw new Error(code);
@@ -151,7 +151,7 @@ export class GoogleWorkspace {
   cancel() {
     this.connecting?.abort();
   }
-  async connect(services: GoogleService[], context: Context, accountId?: string) {
+  async connect(services: GoogleService[], context: Context, accountId?: string, identityOnly = false) {
     if (this.vault.state().suspended) reject('VAULT_SUSPENDED');
     const config = this.config();
     if (!config?.clientId || !config.domains.length) reject('GOOGLE_NOT_CONFIGURED');
@@ -159,7 +159,7 @@ export class GoogleWorkspace {
     const target = accountId === undefined ? undefined : this.account(accountId);
     if (
       !Array.isArray(services) ||
-      !services.length ||
+      (!services.length && !identityOnly) ||
       services.length > Object.keys(GOOGLE_SERVICES).length ||
       services.some(s => !config.services.includes(s) || !Object.hasOwn(GOOGLE_SERVICES, s))
     )
@@ -261,10 +261,10 @@ export class GoogleWorkspace {
     if (!h || h.context !== context || h.epoch !== this.epoch || h.expires < Date.now()) reject('GOOGLE_ACCOUNT_CHANGED');
     return h.account;
   }
-  private async tokens(a: Account, signal: AbortSignal): Promise<Tokens> {
+  private async tokens(a: Account, signal: AbortSignal, identityRequired = false): Promise<Tokens> {
     const destination = `${a.clientId}:${a.subject}`;
     const value: Tokens = await this.vault.use(a.credentialId, 'google-oauth', destination, async s => JSON.parse(s));
-    if (value.expires > Date.now() + 60000) return value;
+    if (value.expires > Date.now() + 60000 && (!identityRequired || value.identity)) return value;
     const pending = this.refreshes.get(a.id);
     if (pending) return pending;
     const revision = a.revision;
@@ -297,6 +297,7 @@ export class GoogleWorkspace {
       const tokens = {
         refresh: typeof refreshed.refresh_token === 'string' ? refreshed.refresh_token : value.refresh,
         access: refreshed.access_token,
+        ...(typeof refreshed.id_token === 'string' ? { identity: refreshed.id_token } : {}),
         expires: Date.now() + refreshed.expires_in * 1000,
       };
       const entry = this.vault.list().find(v => v.id === a.credentialId)!;
@@ -321,6 +322,24 @@ export class GoogleWorkspace {
       .finally(() => this.refreshes.delete(a.id));
     this.refreshes.set(a.id, work);
     return work;
+  }
+  /** Host-only identity for the configured organization OCR service. No Workspace access/refresh token leaves the host. */
+  async receiptIdentity(accountId: string, signal: AbortSignal) {
+    const a = this.account(accountId),
+      config = this.config(),
+      epoch = this.epoch;
+    const check = () => {
+      if (!config || a.clientId !== config.clientId || !config.domains.includes(a.domain) || a.paused || a.reauth)
+        reject('GOOGLE_ACCESS_DENIED');
+      if (epoch !== this.epoch || this.account(a.id).revision !== a.revision || JSON.stringify(config) !== JSON.stringify(this.config()))
+        reject('GOOGLE_ACCOUNT_CHANGED');
+      signal.throwIfAborted();
+    };
+    check();
+    const tokens = await this.tokens(a, signal, true);
+    check();
+    if (!tokens.identity || tokens.identity.length > 20000) reject('GOOGLE_REAUTH_REQUIRED');
+    return tokens.identity;
   }
   async execute(accountId: string, input: GoogleRequest, context: Context) {
     const request = structuredClone(input);
