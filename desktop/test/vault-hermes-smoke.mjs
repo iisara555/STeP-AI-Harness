@@ -204,10 +204,10 @@ try {
       const prompt = page.getByRole('alertdialog', { name: 'บันทึกบัญชีและเข้าสู่ระบบ', exact: true });
       await expect(prompt).toBeVisible({ timeout: 20000 });
       await prompt.getByLabel('Username / อีเมล', { exact: true }).fill('synthetic-employee');
-      await prompt.getByLabel('รหัสผ่าน', { exact: true }).fill('synthetic-password-marker');
-      assert.equal(await prompt.getByLabel('รหัสผ่าน', { exact: true }).getAttribute('type'), 'password');
+      await prompt.getByLabel('รหัสผ่านของเว็บไซต์นี้', { exact: true }).fill('synthetic-password-marker');
+      assert.equal(await prompt.getByLabel('รหัสผ่านของเว็บไซต์นี้', { exact: true }).getAttribute('type'), 'password');
       await prompt.getByRole('checkbox').check();
-      await prompt.getByLabel('รหัสผ่าน', { exact: true }).press('Enter');
+      await prompt.getByLabel('รหัสผ่านของเว็บไซต์นี้', { exact: true }).press('Enter');
     }
     if (round < 2) {
       const code = page.getByRole('alertdialog', { name: 'รหัสยืนยัน', exact: true });

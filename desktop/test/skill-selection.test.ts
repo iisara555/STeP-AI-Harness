@@ -250,3 +250,29 @@ test('a follow-up keeps its selected procedure and rechecks its route without an
     f.store.close();
   }
 });
+
+test('personal Workspace questions load the procedure without a separate model selection or manual Skill', async () => {
+  for (const query of ['พรุ่งนี้ผมมีประชุมกี่โมง', 'อาทิตย์หน้ามีประชุมอะไรบ้าง', 'ช่วยสรุปอีเมลที่ยังไม่ได้อ่าน']) {
+    const f = fixture();
+    try {
+      await f.service.run(f.session.id, query, '', true, undefined, 'chat');
+      const done = f.store.session(f.session.id);
+      assert.equal(done.runs!.at(-1)!.route, 'skill:google-workspace');
+      assert.equal(done.runs!.at(-1)!.skillSelection?.method, 'router');
+      assert.ok(f.calls.length > 0);
+      assert.ok(f.calls.every(c => !c.selection));
+      assert.match(f.calls[0].system, /<skill_instructions>/);
+    } finally {
+      f.store.close();
+    }
+  }
+  for (const query of ['สรุปบันทึกประชุมที่แนบมา', 'ขั้นตอนจัดประชุมของ STeP มีอะไรบ้าง', 'ร่างกำหนดการประชุมให้หน่อย']) {
+    const routed = await routing.queryStepRouter(query, {
+      autoRoute: false,
+      authorityChecks: true,
+      disableMemory: true,
+      conversational: true,
+    });
+    assert.notEqual(highConfidenceSkill(routed, [{ name: 'google-workspace', status: 'routed' }], query), 'google-workspace');
+  }
+});

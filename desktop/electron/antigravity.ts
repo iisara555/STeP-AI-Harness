@@ -462,7 +462,7 @@ export class AntigravityAdapter implements ProviderAdapter {
         if (
           attempt === 0 &&
           error instanceof Error &&
-          error.message === 'TOOL_DENIED' &&
+          (error.message === 'TOOL_DENIED' || (error.message === 'PROVIDER_STREAM_INVALID' && !(error as any).protocolRecoveryAttempted)) &&
           !signal.aborted &&
           !(error as any)?.shutdownIncomplete
         )
@@ -589,7 +589,11 @@ export class AntigravityAdapter implements ProviderAdapter {
           deadline,
           Date.now(),
           'session-invalid',
-        );
+        ).catch(error => {
+          // This run already used its fresh protocol retry; the outer transport must not replay it again.
+          if (error instanceof Error) Object.assign(error, { protocolRecoveryAttempted: true });
+          throw error;
+        });
       }
     }
     const started = Date.now();

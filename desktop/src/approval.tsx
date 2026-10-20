@@ -33,6 +33,7 @@ const toolLabels: Record<string, string> = localized({
   plan: 'แผนงาน',
   phase4: 'การทำงานที่ต้องยืนยัน',
   google_workspace: 'Google Workspace',
+  'google-result': 'ส่งข้อมูลจาก Google ให้ AI',
 });
 const STEP = /^(?:[-*+•]\s*(?:\[[ xX]\]\s*)?|\d{1,2}[.)]\s+)(.+)$/;
 /** A plan's steps as a list: marked lines (1. / - / *) are steps; a plan of one plain line is one step. */
