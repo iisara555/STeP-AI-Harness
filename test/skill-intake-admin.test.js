@@ -20,6 +20,7 @@ import {
   manifestEntry,
 } from "../scripts/skill-intake/admin.mjs";
 import { installPack } from "../src/modules/packs/index.js";
+import { findPython } from "../scripts/validate-repo.js";
 
 // A synthetic staff Skill (Standard v2) as the intake's Drive folder holds it: flat names, "/" stored as "__".
 const skill = `---
@@ -195,14 +196,18 @@ test("add copies the Skill into the repository at stage draft with its contribut
   );
   assert.match(manifest, /meeting-room-booking:[\s\S]*stage: draft\n/);
   // The repository's manifest linter accepts the new entry.
+  const runtime = findPython();
+  assert.ok(runtime, "Python 3.10+ is required for the Skill intake manifest check");
   const lint = execFileSync(
-    "python3",
+    runtime.command,
     [
+      ...runtime.prefix,
+      "-B",
       "-c",
       "import sys; sys.path.insert(0, 'scripts'); import validate_repo as v; print('\\n'.join(v.lint_manifest_text('skills.yaml', open(sys.argv[1], encoding='utf-8').read())))",
       join(root, "manifest/skills.yaml"),
     ],
-    { encoding: "utf8" },
+    { encoding: "utf8", windowsHide: true, env: { ...process.env, PYTHONUTF8: "1" } },
   );
   assert.equal(lint.trim(), "");
   // A second add of the same name is refused instead of overwriting.
