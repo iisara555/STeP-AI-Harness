@@ -4,13 +4,13 @@
 
 สำหรับพนักงาน STeP / RSP North ที่ต้องสรุปประชุม เตรียมเอกสาร จัดข้อมูล หรือดูความครบถ้วนของใบเสร็จก่อนส่ง AFP คุณเริ่มจากต้นเรื่องที่มี ตรวจร่างในแอป แล้วส่งออกไปใช้ต่อ
 
-[ดูตัวติดตั้ง Windows / Mac](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.17) · [เริ่มใช้งาน](#เริ่มใช้งาน) · [ขอความช่วยเหลือ](../SUPPORT.md)
+[ดูตัวติดตั้ง Windows / Mac](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest) · [เริ่มใช้งาน](#เริ่มใช้งาน) · [ขอความช่วยเหลือ](../SUPPORT.md)
 
 ![พื้นที่ทำงานและแถบผลงานของ STeP Desktop](../docs/images/gui/02-workspace.png)
 
 ภาพใช้ข้อมูลตัวอย่าง หน้าจอและตัวเลือกอาจต่างตามรุ่นและการตั้งค่าขององค์กร
 
-ตัวติดตั้งล่าสุดที่เผยแพร่คือ Desktop **0.6.18** ซึ่งแก้การรับคำตอบ Gemini ผ่าน Antigravity ก่อนใช้ Google Workspace การแก้ไขหลังรุ่นนี้อยู่ในส่วน **Unreleased** ของ CHANGELOG และยังไม่อยู่ในตัวติดตั้ง
+รุ่นใน source คือ Desktop **0.6.19** รวมการแก้ Google Workspace ภาษาที่อ่านง่ายขึ้น และ OCR ใบเสร็จในเครื่องเป็นค่าเริ่มต้น ดูตัวติดตั้งที่เผยแพร่จริงจากลิงก์ดาวน์โหลดด้านบน หน้าสรุปใบเสร็จใหม่ 4 ประเภทยังเป็นต้นแบบ และผล OCR ยังต้องตรวจเทียบต้นฉบับ
 
 Desktop **0.6.15** กดปุ่มเข้าสู่ระบบเว็บอย่าง STeP MBS ให้เองหลังกรอกบัญชีจาก Vault ไม่ต้องสลับไปกดเอง
 
@@ -168,4 +168,4 @@ AI ได้รับโครงและชื่อช่องที่ร�
 
 อ่าน [ภาพรวม STeP AI](../README.md) หรือ [รายละเอียดสำหรับผู้ดูแลและนักพัฒนา](../docs/desktop-development.md) เมื่อต้องตั้งค่าระบบ ทดสอบ หรือสร้างตัวติดตั้ง
 
-รุ่นใน source: **STeP Desktop v0.6.18** ดูไฟล์ที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การมี release ไม่ได้แทนการอนุมัติใช้งานในหน่วยงาน
+รุ่นใน source: **STeP Desktop v0.6.19** ดูไฟล์ที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การมี release ไม่ได้แทนการอนุมัติใช้งานในหน่วยงาน

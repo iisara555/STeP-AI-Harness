@@ -2,7 +2,7 @@
 
 For employee setup and everyday use, read the [Desktop guide](../desktop/README.md). This page retains implementation, evaluation, packaging and policy details. Unless a section says repository root, run Desktop commands from `desktop/`.
 
-> Prepared source: Harness **0.7.7** / Desktop **0.6.18**, with STeP quality documents (QM, QP, Master Lists) in the knowledge search, answer checks on by default, staff feedback, Skill suggestions, the morning summary card and staff-added Skills. Explicit managed policy can still deny capabilities. Native tools remain experimental outside the shipped app. Source/CI artifacts do not establish installer publication; verify [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) and the [update feed](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest).
+> Prepared source: Harness **0.7.7** / Desktop **0.6.19**, with STeP quality documents (QM, QP, Master Lists) in the knowledge search, answer checks on by default, staff feedback, Skill suggestions, the morning summary card and staff-added Skills. Explicit managed policy can still deny capabilities. Native tools remain experimental outside the shipped app. Source/CI artifacts do not establish installer publication; verify [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) and the [update feed](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest).
 
 Local Electron workspace with Thai chat, Tiptap text editing, SQLite history, conflict-safe proposals, source review, and versioned exports. The shared routing service retains the CLI contract. Graphify is developer tooling only.
 

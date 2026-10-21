@@ -11,6 +11,17 @@ import { skillSuggestEn } from './skill-suggest-en';
 import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 export const en: Record<string, string> = {
+  'ถามเรื่อง Google Workspace ได้โดยไม่ต้องเลือก Skill เอง พร้อมปุ่มกลับมาใช้ข้อมูลบัญชีเมื่อคุณเคยพักไว้':
+    'Ask about Google Workspace without choosing a Skill first, and resume account access if you paused it',
+  'กล่องยืนยันข้อมูล Google อ่านง่ายขึ้น พร้อมบอกบัญชีและ AI ที่จะได้รับข้อมูล':
+    'Google consent dialogs show a readable preview, the account and the AI receiving the data',
+  'ปรับภาษาและปุ่มแก้ปัญหาให้ชัดเจน โดยคงคำที่คุ้นเคย เช่น Skill, token และ API key':
+    'Clearer wording and recovery buttons, keeping familiar terms such as Skill, token and API key',
+  'ตรวจใบเสร็จด้วย OCR ในเครื่องเป็นค่าเริ่มต้น ไม่ส่งภาพไป Cloud อัตโนมัติ และปรับการอ่านภาพสแกนให้ดีขึ้น':
+    'Receipt checks default to local OCR, with improved scan processing and no automatic image uploads to the cloud',
+  'ผล OCR ยังต้องเทียบกับต้นฉบับ ตรวจแก้และบันทึกผลได้ แม้ OCR ไม่พร้อม':
+    'Compare OCR results with the original; you can still edit and save the review when OCR is unavailable',
+
   'ยังใช้เครื่องมือที่ AI ขอไม่ได้ ตรวจการเชื่อมต่อ AI ก่อนทำงานต่อ':
     'The requested tool could not be used. Check the AI connection before continuing.',
   เปลี่ยนโมเดล: 'Change model',
