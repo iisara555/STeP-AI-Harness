@@ -702,7 +702,7 @@ function ProviderDetail({
       )}
       {needsKey && (
         <label>
-          {preset?.signIn ? t('API key (ไม่บังคับ)') : `${tile.label} API key`}
+          {preset?.signIn ? t('API key (ไม่บังคับ)') : t('{0} API key', tile.label)}
           <input
             type="password"
             autoComplete="off"
@@ -894,7 +894,7 @@ function AdvancedProviderFields({
       ) : (
         mode === 'api' && (
           <label>
-            API key
+            {t('API key')}
             <input
               type="password"
               autoComplete="off"

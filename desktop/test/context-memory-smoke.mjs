@@ -141,7 +141,7 @@ try {
   await expect(memory.getByRole('button', { name: 'แก้ไข', exact: true })).toBeEnabled();
   // Maintenance board (step 6 of the agent-learning plan): a near-duplicate memory shows up as a to-do, and "done" is
   // only kept once the check no longer finds it.
-  await memory.getByRole('button', { name: 'งานดูแลความจำ บทเรียน และ Skill: ไม่มีงานค้าง', exact: true }).click();
+  await memory.getByRole('button', { name: 'งานดูแลข้อมูลที่จำและ Skill: ไม่มีงานค้าง', exact: true }).click();
   await memory.getByRole('button', { name: 'เพิ่มความจำ', exact: true }).click();
   await memory.getByLabel('ชื่อความจำ', { exact: true }).fill('Source preference copy');
   await memory.getByLabel('ข้อความความจำ', { exact: true }).fill('Prefer concise responses and identify missing evidence!');

@@ -21,7 +21,7 @@ const styles: { id: Personality; label: string; tone: string; sample: (user: str
     id: 'professional',
     label: 'มืออาชีพ',
     tone: 'สุภาพ มีโครงสร้าง ชัดเจน',
-    sample: (u, a) => t('เรียน{0} {1} พร้อมให้การสนับสนุน กรุณาระบุงานที่ต้องการดำเนินการครับ', u ? t('คุณ{0}', u) : t('ท่าน'), a),
+    sample: (u, a) => t('สวัสดีครับ{0} {1} พร้อมช่วยงานครับ ต้องการให้ช่วยเรื่องใด', u ? t('คุณ{0}', u) : t('ท่าน'), a),
   },
   {
     id: 'concise',

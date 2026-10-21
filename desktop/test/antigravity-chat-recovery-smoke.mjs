@@ -104,8 +104,14 @@ try {
   await writeFile(scenario, 'block');
   await send('Synthetic persistent tool failure');
   const status = page.locator('.message.status').last();
-  await expect(status).toContainText('AI พยายามใช้เครื่องมือที่การเชื่อมต่อนี้ไม่อนุญาต', { timeout: 30000 });
+  await expect(status).toContainText('ยังใช้เครื่องมือที่ AI ขอไม่ได้', { timeout: 30000 });
   await expect(status).not.toContainText('TOOL_DENIED');
+  await expect(page.locator('.retry-row').getByRole('button', { name: 'ลองอีกครั้ง', exact: true })).toHaveCount(0);
+  await expect(page.locator('.retry-row').getByRole('button', { name: 'ตรวจการเชื่อมต่อ AI', exact: true })).toBeVisible();
+  const support = page.locator('.retry-code');
+  await expect(support.getByText('รหัสสำหรับแจ้งผู้ดูแล: TOOL_DENIED', { exact: true })).not.toBeVisible();
+  await support.getByText('ข้อมูลสำหรับแจ้งปัญหา', { exact: true }).click();
+  await expect(support.getByText('รหัสสำหรับแจ้งผู้ดูแล: TOOL_DENIED', { exact: true })).toBeVisible();
   assert.equal(
     (await readFile(calls, 'utf8'))
       .trim()
@@ -119,7 +125,7 @@ try {
     await window.step.call('settings', { assistant: s.assistant, team: s.team, theme: s.theme, language: 'en' });
   });
   await page.reload();
-  await expect(page.locator('.message.status').last()).toContainText('The AI attempted a tool this connection does not allow');
+  await expect(page.locator('.message.status').last()).toContainText('The requested tool could not be used');
   console.log(
     'Antigravity chat recovery smoke passed: bounded recovery, withheld partial text, real host file tool and localized failure; no live provider calls.',
   );

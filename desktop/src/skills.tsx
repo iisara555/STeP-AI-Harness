@@ -73,14 +73,10 @@ export function SkillsHub({
           <div className="skills-search-row">
             <label className="skills-search">
               <Search size={16} />
-              <input placeholder={t('ค้นหา Skill, ทีม หรือคำที่ใช้เรียก')} value={query} onChange={e => setQuery(e.target.value)} />
+              <input placeholder={t('ค้นหา Skill ทีม หรือคำที่ใช้เรียก')} value={query} onChange={e => setQuery(e.target.value)} />
             </label>
             {onAddOwn && (
-              <button
-                className="skills-add"
-                onClick={onAddOwn}
-                title={t('นำเข้า Skill จากโฟลเดอร์บนเครื่อง ระบบตรวจมาตรฐานและความปลอดภัยให้ก่อนใช้')}
-              >
+              <button className="skills-add" onClick={onAddOwn} title={t('เลือกโฟลเดอร์ Skill ระบบตรวจรูปแบบและจุดเสี่ยงก่อนเปิดใช้')}>
                 <Plus size={15} />
                 {t('เพิ่ม Skill ของฉัน')}
               </button>
@@ -99,10 +95,7 @@ export function SkillsHub({
               </button>
             ))}
           </div>
-          <p className="small muted">
-            {t('เรียก Skill ที่พร้อมใช้ได้ตรง ๆ โดยพิมพ์')} <code>{t('/ชื่อ-skill')}</code>{' '}
-            {t('ในกล่องพิมพ์ ระบบยังตรวจสิทธิ์และขอบเขตของงานทุกครั้ง')}
-          </p>
+          <p className="small muted">{t('Skill รวมวิธีทำงานแต่ละแบบ เลือกรายการที่พร้อมใช้ หรือพิมพ์งานตามปกติได้')}</p>
         </div>
         <SectionArt scene="skills" className="skills-illustration" />
       </div>
@@ -139,7 +132,7 @@ export function SkillsHub({
           <h2>{t('Skill ขององค์กร')}</h2>
         </section>
       )}
-      {!skills && <p className="muted">{t('กำลังโหลดรายชื่อ Skill…')}</p>}
+      {!skills && <p className="muted">{t('กำลังโหลด Skill…')}</p>}
       <div className="skills-grid">
         {visibleTools.map(tool => (
           <article key={tool.id} className="skill-card">
@@ -149,11 +142,8 @@ export function SkillsHub({
             </header>
             <p>{t(tool.description)}</p>
             <div className="skill-tags">
-              <span
-                className="tag tool"
-                title={t(tool.id === 'documents' ? 'ฟอร์มเรียก Skill ที่เกี่ยวข้องโดยตรง พร้อมกฎและแม่แบบ' : statusTag.tool.hint)}
-              >
-                {t(tool.id === 'documents' ? 'ฟอร์มร่างด้วย Skill' : statusTag.tool.label)}
+              <span className="tag tool" title={t(tool.id === 'documents' ? 'ใช้ Skill และแม่แบบที่ตรงกับเอกสารนี้' : statusTag.tool.hint)}>
+                {t(tool.id === 'documents' ? 'แบบฟอร์มช่วยร่าง' : statusTag.tool.label)}
               </span>
               <span className="tag">{t(tool.stage)}</span>
               <span className="tag">{ownerLabel(tool.owner)}</span>
@@ -195,7 +185,7 @@ export function SkillsHub({
           );
         })}
       </div>
-      {skills && !visible.length && !visibleTools.length && <p className="muted">{t('ไม่พบ Skill ที่ตรงกับคำค้นหรือตัวกรอง')}</p>}
+      {skills && !visible.length && !visibleTools.length && <p className="muted">{t('ไม่พบ Skill ลองเปลี่ยนคำค้นหรือตัวกรอง')}</p>}
     </div>
   );
 }

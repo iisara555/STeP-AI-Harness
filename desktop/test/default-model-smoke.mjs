@@ -51,7 +51,7 @@ try {
   await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
   await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();
-  const choose = page.getByLabel('โมเดลเริ่มต้นสำหรับงานใหม่');
+  const choose = page.getByLabel('โมเดลสำหรับงานใหม่');
   assert.equal(await choose.inputValue(), '');
   await expect(choose.locator('option').first()).toHaveText('ค่าเริ่มต้น (Fast 1)');
   await choose.selectOption('deep-2');

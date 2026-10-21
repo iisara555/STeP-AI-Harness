@@ -57,7 +57,7 @@ export function AutomationDialog({
       </p>
       <details className="dialog-fold">
         <summary>
-          {t('เครื่องมือ MCP')} {features.mcp ? '' : t('(ยังไม่เปิดใช้)')}
+          {t('บริการเสริม')} {features.mcp ? '' : t('(ยังไม่เปิดใช้)')}
         </summary>
         {!features.mcp ? (
           <p className="small muted">{t('ผู้ดูแลยังไม่เปิดเครื่องมือ MCP บนเครื่องนี้ ถ้าต้องใช้ ติดต่อผู้ดูแลระบบ')}</p>

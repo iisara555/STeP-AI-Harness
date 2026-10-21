@@ -135,7 +135,7 @@ export function AIConnections({
       {/* One stable element for the picker, so a choice in progress survives the first account appearing above it. */}
       <div className={connections.length ? 'ai-connect-step ai-add-account' : 'ai-connect-step'}>
         {!connections.length && <StepHeading>{t('เลือก AI และเชื่อมต่อ')}</StepHeading>}
-        {!connections.length && <p className="muted small">{t('Antigravity และ ChatGPT ลงชื่อด้วยบัญชีได้ ไม่ต้องขอ API key')}</p>}
+        {!connections.length && <p className="muted small">{t('Antigravity และ ChatGPT ลงชื่อด้วยบัญชีได้ ไม่ต้องกรอก API key')}</p>}
         <details
           className="ai-provider-disclosure"
           data-first={!connections.length}
@@ -225,7 +225,11 @@ export function AIConnections({
               {t(
                 '{0} ({1}) จะถูกลบพร้อมข้อมูลลงชื่อหรือ API key ที่เก็บในเครื่องนี้ บัญชีของคุณที่ผู้ให้บริการไม่ได้รับผลกระทบ',
                 connectionLabel(removingConnection),
-                removingConnection.mode === 'api' ? 'API key' : removingConnection.mode === 'oauth' ? 'Claude Console OAuth' : t('บัญชี'),
+                removingConnection.mode === 'api'
+                  ? t('API key')
+                  : removingConnection.mode === 'oauth'
+                    ? 'Claude Console OAuth'
+                    : t('บัญชี'),
               )}
             </p>
           )}
@@ -341,7 +345,7 @@ function ConnectionCard({
           <div>
             {Boolean(c.models?.length || c.model) && (
               <label className="connection-model">
-                {t('โมเดลเริ่มต้นสำหรับงานใหม่')}
+                {t('โมเดลสำหรับงานใหม่')}
                 <select
                   value={c.model}
                   disabled={Boolean(busy) || c.policyBlocked}
@@ -378,7 +382,7 @@ function ConnectionCard({
                 onClick={() => void run(c.id + ':models', () => call('models', { id: c.id }))}
               >
                 {busy === c.id + ':models' ? <LoaderCircle size={15} className="spin" /> : null}
-                {t('โหลดรายชื่อโมเดล')}
+                {t('ดูโมเดลที่ใช้ได้')}
               </button>
             )}
             {/* Only the CLI-based connections have a runtime to choose; API endpoints and Copilot do not. */}
