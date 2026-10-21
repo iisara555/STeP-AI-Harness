@@ -224,7 +224,7 @@ try {
   await page.evaluate(({ id, model }) => window.step.call('connectionModel', { id, model }), ocrProfile);
   await page.getByRole('button', { name: 'เลือกใบเสร็จ' }).click();
   await consent.getByRole('checkbox').check();
-  await consent.getByRole('button', { name: 'อนุญาตใน workspace นี้', exact: true }).click();
+  await consent.getByRole('button', { name: 'จำการอนุญาตในโฟลเดอร์นี้', exact: true }).click();
   // Switching to another page while the receipt is read keeps the work: the sidebar shows it running, and the result
   // is there on return.
   await page.getByText('receipt.png', { exact: true }).waitFor();
