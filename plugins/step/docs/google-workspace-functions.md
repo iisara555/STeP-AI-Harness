@@ -44,6 +44,11 @@ on every call, followed by actual scope checks. Every read/write asks for the ac
 result to AI has its own privacy check. Plan mode, Vault, cancellation, context changes and untrusted-data handling
 keep their existing boundaries.
 
+Account discovery returns masked account labels with a distinguishing number. Token refresh is shared across active
+callers, with cancellation isolated per task; account invalidation stops the shared request. A temporary network,
+server or malformed-response failure leaves the account available for a later explicit attempt. Revoked grants still
+require reauthorization. Accounts already marked for reauthorization by an older version need one reconnect.
+
 ## Google-side prerequisites
 
 Enable the needed APIs in the Google Cloud project that owns the configured Desktop OAuth client: Gmail, Drive,
@@ -60,23 +65,31 @@ six minutes; cancellation/timeout does not prove the remote function stopped or 
 ## Limits and write confirmation
 
 - Named Google operations only: no caller-selected URL, HTTP method, token, raw MIME or shell command.
+- Drive search includes accessible Shared drives by default, supports a checked `driveId`, and accepts
+  `includeItemsFromAllDrives=false` for My Drive only. Check both `nextPageToken` and `incompleteSearch`;
+  a partial all-drives search must be narrowed before claiming that a file does not exist. OAuth visibility is unchanged.
 - JSON/text responses are bounded to 1 MB, pages normally to 20 items. Use the returned page token and state the
   inspected scope. Binary files, PDF/DOCX exports and binary attachments must be opened in Google; transfer commands
   here validate UTF-8 decoding and reject NUL bytes, not every binary MIME type: an ASCII-only PDF can pass those
   text checks. Do not treat this as binary conversion or rely on MIME-based rejection. Upload text is at most
   50,000 characters. Encoded MIME/attachment bodies are decoded
   before privacy review; raw base64 is never returned to the model.
+- Gmail plain-text bodies honor their MIME charset, including legacy Thai windows-874/TIS-620. Undecodable parts
+  set `contentUnavailable` instead of silently replacing bytes; any readable sibling text is partial. Attachment
+  reads keep their UTF-8-only restriction.
 - Batch writes accept at most 50 allowlisted Google request types and 100 KB of structured input. Docs, Slides and
   Forms require fresh revision IDs. Sheets value writes use matching rectangles and at most 500 cells in total.
   The 500-cell and explicit `valueInputOption` rules apply to values APIs, not generic `sheets.batchUpdate` or clear
   operations; generic batch requests can target an entire sheet and set formulas via `userEnteredValue`. Review
   their full ranges and effects. Sheets has no atomic revision guard; do not promise protection against concurrent editors.
-- Apps Script file updates require `contentHash` from `getContent`. The host rereads and compares the hash after
-  approval, merges changed/new files, preserves all other files and removes only explicit `deleteFiles`. It retains
+- Apps Script file updates require `contentHash` from `getContent`. The host queues writes per account/project,
+  then rereads and compares the hash after approval and queue ownership. Stale queued writes stop with
+  `GOOGLE_SOURCE_CHANGED`; writes already queued behind an unknown outcome stop with `GOOGLE_OUTCOME_UNKNOWN`.
+  It merges changed/new files, preserves all other files and removes only explicit `deleteFiles`. It retains
   the manifest, refuses writing credential-redaction placeholders, and never sends unchanged private source to AI
   as a side effect of editing another file. The write receipt includes only script ID, changed file names/types,
   explicitly deleted names and a content hash; reading source requires a separate read. Google has no atomic content precondition, so a concurrent edit can still
-  occur between the check and the write.
+  from another process/device between the check and the write.
 - Malformed Apps Script update responses remain a robustness limit: a non-string upstream `scriptId` is not schema
   validated in the receipt, and a malformed file source can make post-write hash parsing return
   `GOOGLE_RESPONSE_INVALID` after the write instead of `GOOGLE_OUTCOME_UNKNOWN`. No automatic retry is performed;

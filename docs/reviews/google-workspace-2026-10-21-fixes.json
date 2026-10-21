@@ -1,0 +1,49 @@
+{
+  "baseline": "127218295efbeb8b4b4d9a85b471033011574bbb",
+  "mode": "fix-verification",
+  "live": false,
+  "status": "passed",
+  "findings": [
+    "GWA-01",
+    "GWA-02",
+    "GWA-03",
+    "GWA-04",
+    "GWA-05",
+    "GWA-06",
+    "GWA-07"
+  ],
+  "evidence": [
+    {
+      "check": "native-synthetic-execution",
+      "operations": 76,
+      "families": {
+        "drive": 11,
+        "docs": 4,
+        "sheets": 9,
+        "slides": 5,
+        "gmail": 16,
+        "calendar": 3,
+        "tasks": 4,
+        "chat": 3,
+        "meet": 1,
+        "forms": 6,
+        "appscript": 14
+      },
+      "live": false
+    },
+    {
+      "check": "native-regressions",
+      "tests": 15,
+      "passed": 15,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "check": "optional-gws-regressions",
+      "tests": 9,
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0
+    }
+  ]
+}

@@ -1,5 +1,8 @@
 # ตรวจ Google Workspace, gogcli และ Skill — 2026-10-21
 
+รายงานนี้เก็บผลก่อนแก้จาก baseline ด้านล่าง ดู [การแก้ production code และผลตรวจใหม่](google-workspace-2026-10-21-fixes.md)
+สำหรับสถานะปัจจุบัน สคริปต์ใน source ปัจจุบันตรวจ regression หลังแก้; ตัวทำซ้ำปัญหาเดิมอยู่ใน audit commit `49f91c8`
+
 ตรวจ `origin/main` หลัง `git fetch origin main --tags`: **127218295efbeb8b4b4d9a85b471033011574bbb**
 (`Merge pull request #228`, 2026-10-21). ตรวจ GitHub Release แล้ว `desktop-v0.6.19` เผยแพร่เมื่อ
 2026-10-21T04:55:49Z จาก `aacabd5e64238601ede961c0da26cf9d036bccd6`; release กับ main ที่ตรวจเป็นคนละ commit

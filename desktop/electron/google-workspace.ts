@@ -26,9 +26,31 @@ type Account = {
   reauth?: boolean;
 };
 type Tokens = { refresh: string; access: string; expires: number; identity?: string };
+type Refresh = { promise: Promise<Tokens>; controller: AbortController; waiters: number };
 type Context = { check: () => Promise<void>; approve: (title: string, body: string) => Promise<boolean>; signal: AbortSignal };
 function reject(code: string): never {
   throw new Error(code);
+}
+/** Cancel this waiter without cancelling work owned by other callers. Always consume the work's eventual rejection. */
+function waitForGoogleWork<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
+  return new Promise((resolve, fail) => {
+    const cancel = () => {
+      signal.removeEventListener('abort', cancel);
+      fail(new Error('CANCELLED'));
+    };
+    if (signal.aborted) cancel();
+    else signal.addEventListener('abort', cancel, { once: true });
+    work.then(
+      value => {
+        signal.removeEventListener('abort', cancel);
+        resolve(value);
+      },
+      error => {
+        signal.removeEventListener('abort', cancel);
+        fail(error);
+      },
+    );
+  });
 }
 export const googleAuthorize = (
   config: GoogleConfig & { clientSecret?: string },
@@ -44,7 +66,8 @@ export class GoogleWorkspace {
   private epoch = 0;
   private connecting?: AbortController;
   private connectionError?: string;
-  private refreshes = new Map<string, Promise<Tokens>>();
+  private refreshes = new Map<string, Refresh>();
+  private scriptWrites = new Map<string, Promise<boolean>>();
   private handles = new Map<string, { account: string; context: string; epoch: number; expires: number }>();
   constructor(
     private store: Store,
@@ -148,6 +171,8 @@ export class GoogleWorkspace {
     this.handles.clear();
     this.connectionError = undefined;
     this.connecting?.abort();
+    for (const refresh of this.refreshes.values()) refresh.controller.abort();
+    this.refreshes.clear();
   }
   cancel() {
     this.connecting?.abort();
@@ -251,11 +276,11 @@ export class GoogleWorkspace {
     for (const [id, h] of this.handles) if (h.expires < now) this.handles.delete(id);
     return this.accounts()
       .filter(a => !a.paused && !a.reauth)
-      .map(a => {
+      .map((a, index) => {
         if (this.handles.size >= 500) reject('GOOGLE_HANDLE_LIMIT');
         const handle = randomUUID();
         this.handles.set(handle, { account: a.id, context, epoch: this.epoch, expires: now + 300000 });
-        return { handle, label: 'Work Google account', services: this.state().accounts.find(v => v.id === a.id)?.services };
+        return { handle, label: `${a.label} (${index + 1})`, services: this.services(a) };
       });
   }
   resolve(handle: string, context: string) {
@@ -264,66 +289,114 @@ export class GoogleWorkspace {
     return h.account;
   }
   private async tokens(a: Account, signal: AbortSignal, identityRequired = false): Promise<Tokens> {
+    const epoch = this.epoch;
     const destination = `${a.clientId}:${a.subject}`;
-    const value: Tokens = await this.vault.use(a.credentialId, 'google-oauth', destination, async s => JSON.parse(s));
-    if (value.expires > Date.now() + 60000 && (!identityRequired || value.identity)) return value;
-    const pending = this.refreshes.get(a.id);
-    if (pending) return pending;
-    const revision = a.revision;
-    const work = (async () => {
-      const refreshed = await this.withClientSecret(a.clientId, secret =>
-        googleJson(
-          'https://oauth2.googleapis.com/token',
-          {
-            method: 'POST',
-            headers: { 'content-type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-              client_id: a.clientId,
-              refresh_token: value.refresh,
-              grant_type: 'refresh_token',
-              ...(secret ? { client_secret: secret } : {}),
-            }),
-            signal,
-          },
-          this.transport,
-        ),
-      );
-      if (
-        typeof refreshed.access_token !== 'string' ||
-        refreshed.token_type?.toLowerCase() !== 'bearer' ||
-        !Number.isFinite(refreshed.expires_in) ||
-        refreshed.expires_in <= 0
-      )
-        reject('GOOGLE_REAUTH_REQUIRED');
-      if (this.account(a.id).revision !== revision) reject('GOOGLE_ACCOUNT_CHANGED');
-      const tokens = {
-        refresh: typeof refreshed.refresh_token === 'string' ? refreshed.refresh_token : value.refresh,
-        access: refreshed.access_token,
-        ...(typeof refreshed.id_token === 'string' ? { identity: refreshed.id_token } : {}),
-        expires: Date.now() + refreshed.expires_in * 1000,
-      };
-      const entry = this.vault.list().find(v => v.id === a.credentialId)!;
-      this.vault.save({
-        id: entry.id,
-        revision: entry.revision,
-        label: entry.label,
-        kind: 'google-oauth',
-        destination,
-        value: JSON.stringify(tokens),
+    // Claim the shared refresh in the Vault sink, before yielding a decoded token snapshot to another turn.
+    return this.vault.use(a.credentialId, 'google-oauth', destination, async raw => {
+      const value: Tokens = JSON.parse(raw);
+      if (signal.aborted) reject('CANCELLED');
+      if (epoch !== this.epoch || this.account(a.id).revision !== a.revision) reject('GOOGLE_ACCOUNT_CHANGED');
+      if (value.expires > Date.now() + 60000 && (!identityRequired || value.identity)) return value;
+      let refresh = this.refreshes.get(a.id);
+      if (!refresh) {
+        const controller = new AbortController(),
+          revision = a.revision;
+        const work = (async () => {
+          const refreshed = await this.withClientSecret(a.clientId, secret =>
+            googleJson(
+              'https://oauth2.googleapis.com/token',
+              {
+                method: 'POST',
+                headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                  client_id: a.clientId,
+                  refresh_token: value.refresh,
+                  grant_type: 'refresh_token',
+                  ...(secret ? { client_secret: secret } : {}),
+                }),
+                signal: controller.signal,
+              },
+              this.transport,
+            ),
+          );
+          if (
+            typeof refreshed.access_token !== 'string' ||
+            !refreshed.access_token ||
+            typeof refreshed.token_type !== 'string' ||
+            refreshed.token_type.toLowerCase() !== 'bearer' ||
+            !Number.isFinite(refreshed.expires_in) ||
+            refreshed.expires_in <= 0
+          )
+            reject('GOOGLE_RESPONSE_INVALID');
+          if (controller.signal.aborted) reject('CANCELLED');
+          if (epoch !== this.epoch || this.account(a.id).revision !== revision) reject('GOOGLE_ACCOUNT_CHANGED');
+          if (this.vault.state().suspended) reject('VAULT_SUSPENDED');
+          const tokens = {
+            refresh: typeof refreshed.refresh_token === 'string' ? refreshed.refresh_token : value.refresh,
+            access: refreshed.access_token,
+            ...(typeof refreshed.id_token === 'string' ? { identity: refreshed.id_token } : {}),
+            expires: Date.now() + refreshed.expires_in * 1000,
+          };
+          const entry = this.vault.list().find(v => v.id === a.credentialId)!;
+          this.vault.save({
+            id: entry.id,
+            revision: entry.revision,
+            label: entry.label,
+            kind: 'google-oauth',
+            destination,
+            value: JSON.stringify(tokens),
+          });
+          return tokens;
+        })()
+          .catch(error => {
+            if (
+              error.message === 'GOOGLE_REAUTH_REQUIRED' &&
+              !controller.signal.aborted &&
+              this.store.get<Account>('google-account', a.id)?.revision === revision
+            )
+              this.store.put('google-account', a.id, { ...a, reauth: true, revision: a.revision + 1 });
+            throw error;
+          })
+          .finally(() => {
+            if (this.refreshes.get(a.id)?.controller === controller) this.refreshes.delete(a.id);
+          });
+        refresh = { promise: work, controller, waiters: 0 };
+        this.refreshes.set(a.id, refresh);
+      }
+      refresh.waiters++;
+      try {
+        return await waitForGoogleWork(refresh.promise, signal);
+      } finally {
+        if (--refresh.waiters === 0 && this.refreshes.get(a.id) === refresh) {
+          this.refreshes.delete(a.id);
+          refresh.controller.abort();
+        }
+      }
+    });
+  }
+  /** Only the owner may read/merge/write a project; a cancelled queue entry still waits behind its predecessor. */
+  private async scriptWrite<T>(key: string, signal: AbortSignal, work: () => Promise<T>) {
+    const previous = this.scriptWrites.get(key) || Promise.resolve(true);
+    let release!: (known: boolean) => void,
+      known = true;
+    const turn = new Promise<boolean>(done => {
+      release = done;
+    });
+    const tail = previous.then(async previousKnown => (await turn) && previousKnown);
+    this.scriptWrites.set(key, tail);
+    try {
+      if (!(await waitForGoogleWork(previous, signal))) reject('GOOGLE_OUTCOME_UNKNOWN');
+      if (signal.aborted) reject('CANCELLED');
+      return await work();
+    } catch (error) {
+      if ((error as Error).message === 'GOOGLE_OUTCOME_UNKNOWN') known = false;
+      throw error;
+    } finally {
+      release(known);
+      void tail.then(() => {
+        if (this.scriptWrites.get(key) === tail) this.scriptWrites.delete(key);
       });
-      return tokens;
-    })()
-      .catch(error => {
-        if (
-          ['GOOGLE_REQUEST_FAILED', 'GOOGLE_REAUTH_REQUIRED'].includes(error.message) &&
-          this.store.get<Account>('google-account', a.id)?.revision === revision
-        )
-          this.store.put('google-account', a.id, { ...a, reauth: true, revision: a.revision + 1 });
-        throw error;
-      })
-      .finally(() => this.refreshes.delete(a.id));
-    this.refreshes.set(a.id, work);
-    return work;
+    }
   }
   /** Host-only identity for the configured organization OCR service. No Workspace access/refresh token leaves the host. */
   async receiptIdentity(accountId: string, signal: AbortSignal) {
@@ -373,53 +446,65 @@ export class GoogleWorkspace {
     )
       reject('CANCELLED');
     await check();
-    const tokens = await this.tokens(a, context.signal);
-    await check();
-    if (invocation.preflight) {
-      const current = await googleJson(
-        invocation.preflight.url,
-        { headers: { authorization: `Bearer ${tokens.access}` }, signal: context.signal },
-        this.transport,
-      );
+    const run = async () => {
       await check();
-      if (googleScriptContentHash(current) !== invocation.preflight.contentHash) reject('GOOGLE_SOURCE_CHANGED');
-      const changed = new Map((invocation.body as any).files.map((file: any) => [file.name, file]));
-      const files = current.files
-        .filter((file: any) => !changed.has(file.name) && !invocation.preflight!.deleteFiles.includes(file.name))
-        .map(({ name, type, source = '' }: any) => ({ name, type, source }));
-      files.push(...changed.values());
-      if (files.length > 500 || !files.some((file: any) => file.name === 'appsscript' && file.type === 'JSON'))
-        reject('INVALID_GOOGLE_INPUT');
-      invocation.body = { files };
-    }
-    let result: any;
-    try {
-      result = await googleJson(
-        invocation.url,
-        {
-          method: invocation.method,
-          headers: { authorization: `Bearer ${tokens.access}`, 'content-type': invocation.contentType || 'application/json' },
-          ...(invocation.payload !== undefined
-            ? { body: invocation.payload }
-            : invocation.body
-              ? { body: JSON.stringify(invocation.body) }
-              : {}),
-          signal: context.signal,
-        },
-        this.transport,
-        { response: invocation.response, timeoutMs: invocation.timeoutMs },
-      );
-    } catch (error) {
-      if (invocation.write && !['GOOGLE_ACCESS_DENIED', 'GOOGLE_REAUTH_REQUIRED', 'GOOGLE_QUOTA_LIMIT'].includes((error as Error).message))
-        reject('GOOGLE_OUTCOME_UNKNOWN');
-      throw error;
-    }
-    try {
+      const tokens = await this.tokens(a, context.signal);
       await check();
-    } catch {
-      if (invocation.write) reject('GOOGLE_OUTCOME_UNKNOWN');
-      throw new Error('GOOGLE_ACCOUNT_CHANGED');
-    }
+      if (invocation.preflight) {
+        const current = await googleJson(
+          invocation.preflight.url,
+          { headers: { authorization: `Bearer ${tokens.access}` }, signal: context.signal },
+          this.transport,
+        );
+        await check();
+        if (googleScriptContentHash(current) !== invocation.preflight.contentHash) reject('GOOGLE_SOURCE_CHANGED');
+        const changed = new Map((invocation.body as any).files.map((file: any) => [file.name, file]));
+        const files = current.files
+          .filter((file: any) => !changed.has(file.name) && !invocation.preflight!.deleteFiles.includes(file.name))
+          .map(({ name, type, source = '' }: any) => ({ name, type, source }));
+        files.push(...changed.values());
+        if (files.length > 500 || !files.some((file: any) => file.name === 'appsscript' && file.type === 'JSON'))
+          reject('INVALID_GOOGLE_INPUT');
+        invocation.body = { files };
+      }
+      let result: any;
+      try {
+        result = await googleJson(
+          invocation.url,
+          {
+            method: invocation.method,
+            headers: { authorization: `Bearer ${tokens.access}`, 'content-type': invocation.contentType || 'application/json' },
+            ...(invocation.payload !== undefined
+              ? { body: invocation.payload }
+              : invocation.body
+                ? { body: JSON.stringify(invocation.body) }
+                : {}),
+            signal: context.signal,
+          },
+          this.transport,
+          { response: invocation.response, timeoutMs: invocation.timeoutMs },
+        );
+      } catch (error) {
+        if (
+          invocation.write &&
+          !['GOOGLE_ACCESS_DENIED', 'GOOGLE_REAUTH_REQUIRED', 'GOOGLE_QUOTA_LIMIT'].includes((error as Error).message)
+        )
+          reject('GOOGLE_OUTCOME_UNKNOWN');
+        throw error;
+      }
+      try {
+        await check();
+      } catch {
+        if (invocation.write) reject('GOOGLE_OUTCOME_UNKNOWN');
+        throw new Error('GOOGLE_ACCOUNT_CHANGED');
+      }
+      return { result, tokens };
+    };
+    const response = invocation.preflight
+      ? await this.scriptWrite(JSON.stringify([a.id, request.params!.scriptId]), context.signal, run)
+      : await run();
+    let result = response.result;
+    const tokens = response.tokens;
     if (request.operation === 'gmail.get') result = googleMailContent(result);
     if (request.operation === 'gmail.threads.get')
       result = { id: result.id, messages: Array.isArray(result.messages) ? result.messages.slice(0, 50).map(googleMailContent) : [] };

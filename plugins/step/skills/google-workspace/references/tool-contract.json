@@ -9,7 +9,9 @@
         "operation": "drive.list",
         "params": {
           "query": "trashed = false and name contains 'ประชุม'",
-          "pageToken": "synthetic-page"
+          "pageToken": "synthetic-page",
+          "driveId": "demo_shared_drive",
+          "includeItemsFromAllDrives": true
         }
       }
     },

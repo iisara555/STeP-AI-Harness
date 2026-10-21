@@ -65,6 +65,8 @@ Anti-trigger: Excel/PPTX ในเครื่อง → `spreadsheet-work` / `p
 
 รายการส่วนใหญ่ได้หน้าละ 20 รายการตาม catalog ถ้ามี `nextPageToken` ให้บอกว่ายังอ่านไม่ครบ และอ่านหน้าถัดไปเฉพาะเมื่องานต้องใช้ ไวยากรณ์ค้น Gmail อยู่ใน [Gmail search](references/gmail-search-syntax.md)
 
+Drive ค้นทั้ง My Drive และ Shared drives ที่ grant อนุญาตเป็นค่าเริ่มต้น ใช้ `driveId` จากเป้าหมายที่ทราบเมื่อต้องจำกัด Shared drive หรือ `includeItemsFromAllDrives: false` สำหรับ My Drive ถ้าผลมี `incompleteSearch: true` ต้องบอกว่าค้นยังไม่ครบ แม้ไม่มีหน้าถัดไป และให้จำกัดเป้าหมายก่อนสรุปว่าไม่มีไฟล์
+
 ## Output
 
 ตอบไทยสั้น ๆ: งานที่ทำ บัญชีแบบปกปิด ID/ลิงก์ที่ผลจริงคืนมา ช่วงข้อมูลหรือวัน/timezone เวลาอ่าน ผลการตรวจ และข้อจำกัดที่เหลือ ถ้าขาดสิทธิ์/ข้อมูลให้ระบุ `NEED-CONNECTION` / `NEED-SOURCE`; ถ้าผลการเขียนไม่ชัดเจนให้ระบุ `OUTCOME-UNKNOWN` ดู [ตัวอย่างสังเคราะห์](examples/good-output.md)
@@ -105,7 +107,7 @@ AI ค้น อ่าน สรุป และเตรียมเนื้�
 | `drive.list` หาไฟล์ที่มีอยู่จริงไม่เจอ | บัญชีมีแค่ `documents` (`drive.file`) ซึ่งเห็นเฉพาะไฟล์ที่แอปสร้างหรือเปิด บอกข้อจำกัดนี้ ไม่สรุปว่าไม่มีไฟล์ |
 | นัดหายหรือเวลาเพี้ยน | ส่ง `timeMin`/`timeMax` แบบ RFC3339 ที่มี offset เช่น `+07:00` ถ้าผู้ใช้ไม่บอก timezone และมีผลกับคำตอบให้ถาม |
 | ผลค้นได้ 20 รายการพอดี | มีหน้าถัดไปได้ ตรวจ `nextPageToken` แล้วบอกว่ายังไม่ครบ |
-| `gmail.get` คืน `contentUnavailable` | เมลเป็น HTML หรือไฟล์แนบอย่างเดียว ให้ผู้ใช้เปิด Gmail เอง ไม่เดาเนื้อหา |
+| `gmail.get` คืน `contentUnavailable` | เมลไม่มี plain text หรือมีบางส่วนที่ถอด charset ไม่ได้ ให้ผู้ใช้เปิด Gmail ตรวจส่วนที่ขาด ไม่เดาเนื้อหา ส่วนที่อ่านได้ไม่พิสูจน์ว่าอ่านครบทั้งฉบับ |
 | ไฟล์แนบหรือ Drive เป็นไฟล์ไบนารี | เครื่องมือโอน/อ่านไฟล์ใน catalog รองรับข้อความ UTF-8 เท่านั้น ให้เปิด PDF/DOCX/รูปภาพใน Google โดยตรง ไม่คืน base64 ให้ AI |
 | `GOOGLE_SOURCE_CHANGED` ตอนแก้ Apps Script | อ่าน `getContent` ใหม่แล้วใช้ contentHash ล่าสุด ส่งเฉพาะไฟล์ที่แก้ ไม่ตัด hash check ทิ้ง |
 | Apps Script รันไม่ได้ | ต้องเป็น API Executable deployment ใน Cloud project เดียวกับ OAuth client และ grant ครบ Project OAuth Scopes; ดู tool contract ไม่สั่งรันโค้ดผ่าน shell แทน |
@@ -124,7 +126,7 @@ AI ค้น อ่าน สรุป และเตรียมเนื้�
 
 ## Maintenance
 
-อัปเดตล่าสุด: 2026-10-19
+อัปเดตล่าสุด: 2026-10-21
 
 - เจ้าของ: ตาม `../../manifest/skills.yaml`
 - แก้ Skill นี้เมื่อ `desktop/electron/google-operations.ts` เพิ่มหรือเปลี่ยน operation, เมื่อ `desktop/src/google-services.ts` เปลี่ยนชื่อบริการหรือ scope, หรือเมื่อค่าเริ่มต้น `googleWorkspace` ใน `desktop/electron/policy.ts` เปลี่ยน แล้วแก้วันที่ข้างบน
