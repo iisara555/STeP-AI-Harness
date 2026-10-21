@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'"
+    />
+    <title>ตรวจใบเสร็จ · ต้นแบบ STeP</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="style.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#result">ข้ามไปผลตรวจ</a>
+    <div class="demo-bar">
+      <span class="demo-dot"></span>ต้นแบบกดลองได้ · เอกสารและผลตรวจจำลอง ·
+      ข้อมูลอ้างอิงผู้ซื้อจากผู้ดูแล · ไม่ได้อ่านไฟล์จริงหรือส่งข้อมูลออก
+    </div>
+    <main class="workspace">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">เครื่องมือ / ตรวจเอกสาร</p>
+          <h1>ตรวจใบเสร็จ</h1>
+          <p class="intro">รู้ว่าเป็นใบเสร็จแบบไหน ขาดอะไร และทำอะไรต่อ</p>
+        </div>
+        <button id="theme" class="quiet" type="button" aria-pressed="false">
+          โหมดมืด
+        </button>
+      </header>
+      <div class="demo-controls">
+        <label for="scenario">ลองกรณี</label>
+        <select id="scenario">
+          <option value="missing">ข้อมูลในเอกสารขาด</option>
+          <option value="unclear">ภาพอ่านไม่ชัด</option>
+          <option value="policy">ข้อมูลครบ แต่ยังขาดเกณฑ์เบิก</option>
+          <option value="complete">ครบตามเกณฑ์จำลอง</option>
+          <option value="conflict">ยอดเงินขัดกัน</option>
+          <option value="multiple">หลายใบในภาพเดียว</option>
+          <option value="unsupported">เอกสารนอก 4 ประเภท</option>
+          <option value="signature-present">พบลายเซ็นผู้รับเงิน</option>
+          <option value="signature-absent">ช่องลายเซ็นว่าง</option>
+          <option value="signature-unclear">ลายเซ็นไม่ชัด</option>
+          <option value="signature-buyer-only">มีเฉพาะลายเซ็นผู้ซื้อ</option>
+          <option value="signature-text-only">
+            มีชื่อและตรา แต่ไม่มีลายเซ็น
+          </option>
+          <option value="buyer-match">ข้อมูลผู้ซื้อตรงกับ STeP</option>
+          <option value="buyer-mismatch">ที่อยู่และเลขภาษีผู้ซื้อไม่ตรง</option>
+          <option value="buyer-unclear">เลขภาษีผู้ซื้ออ่านไม่ชัด</option>
+          <option value="buyer-seller-only">เลขภาษีตรงเฉพาะในช่องผู้ขาย</option>
+        </select>
+        <p>เลือกเพื่อดูหน้าจอแต่ละสถานการณ์</p>
+      </div>
+      <div class="review-layout">
+        <section
+          class="result-pane"
+          id="result"
+          aria-label="ผลตรวจใบเสร็จ"
+          tabindex="-1"
+        >
+          <section class="answer" aria-labelledby="kind-title">
+            <div class="answer-heading">
+              <span class="step">1</span>
+              <h2 id="kind-title">ใบเสร็จประเภทไหน</h2>
+            </div>
+            <p class="kind-result" id="kind-result"></p>
+            <div class="kind-meta">
+              <span id="kind-note">จากหัวเอกสาร</span
+              ><button
+                id="change-kind"
+                class="text-button"
+                type="button"
+                aria-expanded="false"
+                aria-controls="kind-editor"
+              >
+                แก้ประเภท
+              </button>
+            </div>
+            <div id="kind-editor" class="kind-editor" hidden>
+              <label for="kind">เลือกประเภทที่ตรงกับต้นฉบับ</label
+              ><select id="kind">
+                <option value="0">ใบเสร็จรับเงิน/ใบกำกับภาษีแบบเต็มรูป</option>
+                <option value="1">ใบเสร็จรับเงิน/ใบกำกับภาษีอย่างย่อ</option>
+                <option value="2">บิลเงินสด</option>
+                <option value="3">ใบเสร็จรับเงินทั่วไป</option>
+              </select>
+              <p class="small">เปลี่ยนประเภทแล้วต้องตรวจองค์ประกอบใหม่</p>
+            </div>
+          </section>
+          <section class="answer" aria-labelledby="completeness-title">
+            <div class="answer-heading">
+              <span class="step">2</span>
+              <h2 id="completeness-title">
+                องค์ประกอบครบตามการเบิกจ่ายหรือไม่
+              </h2>
+            </div>
+            <div class="status-line" id="status-line" role="status">
+              <span id="status-symbol" aria-hidden="true"></span
+              ><strong id="status-title"></strong>
+            </div>
+            <p class="status-description" id="status-description"></p>
+            <div class="signature-summary">
+              <button
+                id="signature-result"
+                class="text-button"
+                type="button"
+              ></button>
+              <p class="small" id="signature-note"></p>
+            </div>
+            <ul id="issues" class="issues"></ul>
+            <div class="buyer-summary">
+              <button
+                id="buyer-result"
+                class="text-button"
+                type="button"
+              ></button>
+              <p class="small" id="buyer-note"></p>
+            </div>
+            <details class="evidence">
+              <summary>ดูองค์ประกอบและที่มาของผลตรวจ</summary>
+              <div id="evidence"></div>
+              <p class="small rule-note">
+                รายการนี้ใช้เกณฑ์สาธิตเพื่อออกแบบ ยังไม่ใช่ checklist AFP
+                ที่ยืนยันใช้จริง
+              </p>
+            </details>
+          </section>
+          <section class="answer next-answer" aria-labelledby="next-title">
+            <div class="answer-heading">
+              <span class="step">3</span>
+              <h2 id="next-title">ต้องทำอะไรต่อ</h2>
+            </div>
+            <ol class="actions" id="actions"></ol>
+            <button class="primary" id="primary" type="button"></button>
+            <p class="small result-note">
+              ผลตรวจเบื้องต้น · AFP เป็นผู้ตรวจและพิจารณาตามเกณฑ์ที่ใช้จริง
+            </p>
+          </section>
+        </section>
+        <section class="source-pane" aria-labelledby="source-title">
+          <header class="source-header">
+            <div>
+              <h2 id="source-title">ใบเสร็จต้นฉบับ</h2>
+              <p id="source-caption">เอกสารจำลอง · 1 หน้า</p>
+            </div>
+            <span class="file-badge">ตัวอย่าง</span>
+          </header>
+          <div
+            id="document-tabs"
+            class="document-tabs"
+            aria-label="ใบเสร็จที่แยกได้"
+            hidden
+          ></div>
+          <div class="source-toolbar">
+            <button
+              id="grouping"
+              class="quiet"
+              type="button"
+              aria-pressed="false"
+            >
+              ดูการจัดกลุ่มข้อมูล</button
+            ><button id="zoom" class="quiet" type="button" aria-pressed="false">
+              ขยายภาพ
+            </button>
+          </div>
+          <p id="source-hint" class="source-hint" aria-live="polite">
+            กดประเด็นในผลตรวจเพื่อดูจุดที่เกี่ยวข้องบนภาพ
+          </p>
+          <div
+            class="paper-viewport"
+            id="paper-viewport"
+            tabindex="0"
+            role="region"
+            aria-label="ภาพเอกสารจำลอง เลื่อนได้เมื่อขยาย"
+          >
+            <article
+              class="paper"
+              id="paper"
+              aria-label="ใบเสร็จสังเคราะห์"
+            ></article>
+          </div>
+          <p class="source-footer">
+            ภาพตัวอย่างสำหรับออกแบบ · ไม่ใช่หลักฐานเบิกจ่าย
+          </p>
+        </section>
+      </div>
+    </main>
+    <dialog id="action-dialog" aria-labelledby="dialog-title">
+      <div class="dialog-head">
+        <h2 id="dialog-title"></h2>
+        <button id="close-dialog" class="quiet" type="button">ปิด</button>
+      </div>
+      <p class="small">ข้อความจำลอง ไม่มีการส่งข้อความหรือยื่นเบิก</p>
+      <pre id="dialog-text"></pre>
+      <button id="copy" class="primary" type="button">
+        คัดลอกข้อความตัวอย่าง
+      </button>
+      <p id="copy-status" class="small" aria-live="polite"></p>
+    </dialog>
+  </body>
+</html>

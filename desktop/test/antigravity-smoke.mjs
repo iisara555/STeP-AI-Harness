@@ -28,6 +28,7 @@ function blankPdf(count) {
   return Buffer.from(out, 'latin1');
 }
 const home = await mkdtemp(join(tmpdir(), 'step-antigravity-smoke-'));
+await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ receiptLocalOnly: false }));
 const executable = join(home, 'agy.mjs');
 const marker = join(home, 'unsafe');
 const calls = join(home, 'calls');

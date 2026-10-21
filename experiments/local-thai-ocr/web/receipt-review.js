@@ -513,7 +513,19 @@
   };
 
   function findAmount(records, key) {
-    return selectCandidate(labeledCandidates(records, key, amountValue, amountWeights[key]));
+    const exact = selectCandidate(labeledCandidates(records, key, amountValue, amountWeights[key]));
+    if (key !== "vat" || exact.mappingStatus !== "unmapped") return exact;
+    // Thai OCR can lose ี in ภาษี or ่ in เพิ่ม. Recover this fixed label only,
+    // with its actual same-line/row amount; never repair names, numbers or rates.
+    const recovered = labeledCandidates(records, /ภาษี?มูลค่าเพิ่?ม/i, amountValue,
+      (text) => notVatAmount.test(text) ? 0 : 0.9,
+    ).filter((item) => item.method === "same-line" || item.method === "same-row");
+    if (!recovered.length) return exact;
+    const selected = selectCandidate(recovered.map((item) => ({ ...item, method: "thai-label-mark-loss" })));
+    for (const record of records) {
+      if (selected.sourceTexts.includes(record.text)) record.needsReview = true;
+    }
+    return selected;
   }
 
   function findTotal(records) {

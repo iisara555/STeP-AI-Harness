@@ -1,3 +1,4 @@
+import { providerSessionKey } from './provider-session-key';
 import { compatibleRun } from '../../src/modules/providers/compatible.js';
 import { providerUsage, type TokenCount } from '../../src/modules/providers/usage.js';
 import { combineUsage } from './usage';
@@ -32,6 +33,8 @@ import type { Connection, ModelOption, VisionInput } from '../src/types';
 
 export type ProviderContext = {
   images?: VisionInput[];
+  /** Host-only receipt extraction: Gemini API image input, no CLI or explicit cache creation. */
+  receiptOcr?: boolean;
   cwd: string;
   env: NodeJS.ProcessEnv;
   /** Loopback API override supplied only by the non-packaged synthetic test host. */
@@ -107,25 +110,7 @@ export class ProviderSession {
     await this.cleanup;
   }
 }
-/** Bound to one account, model, runtime, work directory and instructions; never persisted or logged. */
-export function providerSessionKey(connection: Connection, context: ProviderContext) {
-  return createHash('sha256')
-    .update(
-      JSON.stringify([
-        connection.provider,
-        connection.id,
-        connection.mode,
-        connection.model,
-        connection.executable,
-        connection.googleCloudProject,
-        context.cwd,
-        context.key,
-        context.effort,
-        context.system,
-      ]),
-    )
-    .digest('hex');
-}
+export { providerSessionKey } from './provider-session-key';
 const resettableSessionError = (error: unknown) =>
   error instanceof Error && ['RUNTIME_EXITED', 'PROVIDER_SESSION_INVALID'].includes(error.message);
 /**
@@ -401,11 +386,11 @@ export class GeminiAdapter implements ProviderAdapter {
   async run(prompt: string, connection: Connection, context: ProviderContext) {
     if (
       connection.mode === 'api' &&
-      connection.promptCaching === 'gemini-explicit' &&
+      (connection.promptCaching === 'gemini-explicit' || context.receiptOcr) &&
       !connection.customRuntime &&
       connection.model &&
       !context.webSearch &&
-      !context.images?.length
+      (!context.images?.length || context.receiptOcr)
     ) {
       return this.api.run(prompt, connection, context);
     }

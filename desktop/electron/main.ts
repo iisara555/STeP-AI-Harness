@@ -86,11 +86,14 @@ import { isolatedRuntimeHome } from './runtime-home';
 import { PDF_MARGINS, exportDocument, exportFormats } from './export';
 import { resolveDocumentLayout, probeDocumentFont } from '../src/document-layout';
 import { draftExportAction } from './actions';
-import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython, type OcrStatus } from './ocr';
+import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython, type OcrStatus, readOcrInput } from './ocr';
 import { ReceiptOperations } from './receipt-operations';
 import { receiptVisionImages } from './receipt-image-input';
 import { readReceiptVision } from './receipt-vision-recheck';
-import { receiptReadingMode } from './receipt-status';
+import { isReceiptGeminiApi, receiptReadingMode } from './receipt-status';
+import { combineUsage } from './usage';
+import { ReceiptCloudClient } from './receipt-cloud';
+import type { TokenCount } from './providers';
 import { assertPrivateTrialPath } from './receipt-trial-path';
 import { installOcr, ocrComponentCurrent } from './components';
 import { validateKeybindings } from '../src/commands';
@@ -1607,19 +1610,31 @@ async function main() {
       if (signal.aborted) throw new Error('CANCELLED');
     };
   };
-  async function receiptOcrStatus(input: { connectionId?: unknown }, rawStatus?: OcrStatus) {
-    const status = rawStatus || (await ocr.status());
+  async function receiptOcrStatus(input: { connectionId?: unknown; localOnly?: unknown }, rawStatus?: OcrStatus) {
     const connection =
       typeof input.connectionId === 'string' ? store.get<Connection>('connection', inputText(input.connectionId, 80)) : undefined;
+    const localOnly = policyState.policy.receiptLocalOnly !== false || input.localOnly === true;
+    const cloud = !localOnly && policyState.policy.receiptCloud;
+    const cloudAccounts =
+      cloud && google.state().configured ? google.state().accounts.filter(account => !account.paused && !account.reauth) : [];
+    const geminiApi = !cloud && !localOnly && isReceiptGeminiApi(connection);
+    const status =
+      rawStatus ||
+      (geminiApi || cloud
+        ? { running: false, installed: false, crosscheck: false, handwriting: false, tesseract: false, folder: ocrHome }
+        : await ocr.status());
     const managed = existsSync(ocrPython(ocrHome));
     const current = !managed || (await ocrComponentCurrent(defaultOcrFolder, ocrHome));
     return {
       ...status,
+      localOnly,
+      geminiApi,
+      ...(cloud ? { cloud: { model: cloud.model, accounts: cloudAccounts } } : {}),
       running: status.running && current,
       installed: status.installed && current,
       updateAvailable: managed && status.installed && !current,
       installing,
-      ...receiptReadingMode(policyState.policy, connection?.provider),
+      ...(localOnly ? { vision: false, textOnly: false } : receiptReadingMode(policyState.policy, cloud ? 'gemini' : connection?.provider)),
     };
   }
   /** Retain full-page context and inspect handwriting with source-resolution crops under the same consent. */
@@ -1631,6 +1646,71 @@ async function main() {
           )
         : [nativeImage.createFromBuffer(receipt.bytes)];
     return { ...receiptVisionImages(pages), pages };
+  }
+  async function readCentralReceipt(input: any, signal: AbortSignal, check: () => void) {
+    const config = policyState.policy.receiptCloud;
+    if (!config || !lastReceipt) throw new Error('INVALID_INPUT');
+    if (!receiptVisionAllowed({ provider: 'gemini' } as Connection)) throw new Error('VISION_DISABLED');
+    const account = google.state().accounts.find(account => account.id === input.cloudAccountId && !account.paused && !account.reauth);
+    if (!account) throw new Error('GOOGLE_REAUTH_REQUIRED');
+    const identity = google.consentKey(account.id);
+    const rule = approvals.rule(
+      store.settings().workspace || data,
+      'receipt_cloud_ocr',
+      JSON.stringify([config, identity, policyState.policy]),
+    );
+    const images = await receiptImages(lastReceipt);
+    check();
+    if (
+      !approvals.remembered(rule) &&
+      !(await approvals.request(
+        rule,
+        {
+          title: tm('ส่งใบเสร็จให้บริการ OCR ของ STeP'),
+          body: tm(
+            'ส่ง {0} จำนวน {1} หน้าและภาพขยาย ไปยัง {2} โดยยืนยันสิทธิ์ด้วยบัญชี Google {3} บริการจะอ่านด้วย Gemini {4} ไม่เกินสองครั้ง ค่าบริการเป็นของโครงการองค์กร โปรดเทียบข้อมูลกับต้นฉบับ',
+            lastReceipt.name,
+            images.pages.length,
+            config.url,
+            account.label,
+            config.model,
+          ),
+          privacyClass: 'internal',
+          allowRemember: true,
+        },
+        signal,
+      ))
+    )
+      return { cancelled: true };
+    const verify = () => {
+      check();
+      if (google.consentKey(account.id) !== identity) throw new Error('GOOGLE_ACCOUNT_CHANGED');
+    };
+    verify();
+    const testUrl = !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME ? process.env.STEP_TEST_RECEIPT_CLOUD_URL : undefined;
+    const client = new ReceiptCloudClient(config, fetch, testUrl);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 180_000);
+    const combined = AbortSignal.any([signal, controller.signal]);
+    let requests = 0;
+    let tokens: TokenCount | undefined;
+    try {
+      const reading = await readReceiptVision(async (focus, regions) => {
+        verify();
+        const token = await google.receiptIdentity(account.id, combined);
+        verify();
+        const inspection = regions?.length ? receiptVisionImages(images.pages, regions) : images;
+        requests++;
+        const response = await client.read(inspection.images, inspection.manifest, token, combined, focus);
+        if (response.usage) tokens = tokens ? combineUsage(tokens, response.usage) : response.usage;
+        verify();
+        return response.text;
+      }, combined);
+      verify();
+      return { ...reading, model: config.model, pagePreviews: images.pagePreviews, ocrUsage: { requests, ...(tokens ? { tokens } : {}) } };
+    } finally {
+      clearTimeout(timeout);
+    }
   }
   const previewTypes: Record<string, string> = {
     png: 'image/png',
@@ -1884,6 +1964,17 @@ async function main() {
         agentBrowser.resumeVault(tab, owner);
         vault.endAttempt(JSON.stringify([owner, tab, phase4Identity()]));
         return true;
+      }
+      case 'receiptCloudConnect': {
+        if (
+          policyState.policy.receiptLocalOnly !== false ||
+          !policyState.policy.receiptCloud ||
+          !policyState.policy.features.googleWorkspace ||
+          permissionMode() === 'plan'
+        )
+          throw new Error('FEATURE_DISABLED');
+        const context = googleContext(new AbortController().signal, async () => ensureCredentialStorage());
+        return google.connect([], { ...context, approve: async () => true }, undefined, true);
       }
       case 'googleState':
         return { ...google.state(), enabled: policyState.policy.features.googleWorkspace, pages: GOOGLE_PAGES };
@@ -3149,12 +3240,18 @@ async function main() {
         return receiptOperations.run(async signal => {
           const check = receiptPolicyGuard(signal);
           if (installing) throw new Error('INSTALL_BUSY');
-          const health = await ocr.health();
-          check();
           // Without the local OCR, a receipt can still be read by the vision model alone (one reading, no comparison).
           const connection =
             typeof input.connectionId === 'string' ? store.get<Connection>('connection', inputText(input.connectionId, 80)) : undefined;
-          if (!health.running && (input.localOnly === true || !receiptVisionAllowed(connection))) throw new Error('OCR_UNAVAILABLE');
+          const localOnly = policyState.policy.receiptLocalOnly !== false || input.localOnly === true;
+          const cloud = !localOnly && policyState.policy.receiptCloud;
+          const useGeminiApi = !localOnly && (Boolean(cloud) || isReceiptGeminiApi(connection));
+          if (useGeminiApi && !receiptVisionAllowed(cloud ? ({ provider: 'gemini' } as Connection) : connection))
+            throw new Error('VISION_DISABLED');
+          const health = useGeminiApi ? { running: false, crosscheck: false, tesseract: false, handwriting: false } : await ocr.health();
+          check();
+          if (!health.running && (localOnly || !receiptVisionAllowed(cloud ? ({ provider: 'gemini' } as Connection) : connection)))
+            throw new Error('OCR_UNAVAILABLE');
           const picked = await dialog.showOpenDialog(window, {
             title: tm('เลือกใบเสร็จ'),
             properties: ['openFile'],
@@ -3165,9 +3262,7 @@ async function main() {
           const path = picked.filePaths[0];
           if (input.localOnly === true) await assertPrivateTrialPath(path);
           if (!health.running) {
-            const bytes = await readFile(path);
-            if (bytes.length > 25 * 1024 * 1024) throw new Error('ATTACH_TOO_LARGE');
-            const extension = extname(path).slice(1).toLowerCase();
+            const { bytes, extension } = await readOcrInput(path);
             check();
             lastReceipt = { name: basename(path), path, extension, bytes };
             const type = previewTypes[extension];
@@ -3186,6 +3281,7 @@ async function main() {
         });
       }
       case 'ocrResolve': {
+        if (policyState.policy.receiptLocalOnly !== false) throw new Error('OCR_LOCAL_ONLY');
         return receiptOperations.run(async signal => {
           const check = receiptPolicyGuard(signal);
           if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
@@ -3250,18 +3346,20 @@ async function main() {
         });
       }
       case 'receiptVision': {
+        if (policyState.policy.receiptLocalOnly !== false) throw new Error('OCR_LOCAL_ONLY');
         return receiptOperations.run(async signal => {
           const check = receiptPolicyGuard(signal);
           // A second, independent reading of the receipt by a vision model; the page compares it with the OCR field by field.
           if (!receiptVisionAllowed()) throw new Error('VISION_DISABLED');
           if (!lastReceipt) throw new Error('INVALID_INPUT');
           if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
+          if (policyState.policy.receiptCloud) return readCentralReceipt(input, signal, check);
           const connection = store.get<Connection>('connection', inputText(input.connectionId, 80));
           if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
           if (!receiptVisionAllowed(connection)) throw new Error('VISION_UNAVAILABLE');
           if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
           const settings = store.settings();
-          if (!settings.receiptVisionConsentedAt) {
+          if (!isReceiptGeminiApi(connection) && !settings.receiptVisionConsentedAt) {
             const answer = await dialog.showMessageBox(window, {
               type: 'question',
               title: tm('ให้ AI อ่านภาพใบเสร็จ'),
@@ -3281,21 +3379,72 @@ async function main() {
           const imageInput = await receiptImages(lastReceipt);
           check();
           const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 180_000);
+          let timeout: ReturnType<typeof setTimeout> | undefined;
           try {
             const current = await runtime(connection);
             check();
+            let checkOcrAccount = async () => {};
+            if (isReceiptGeminiApi(connection)) {
+              if (!current.context.key) throw new Error('API_KEY_REQUIRED');
+              const binding = (c: Connection, value: string | undefined) =>
+                createHash('sha256')
+                  .update(JSON.stringify([c.id, c.provider, c.mode, c.model, value || '', policyState.policy]))
+                  .digest('hex');
+              const target = binding(connection, current.context.key);
+              const rule = approvals.rule(store.settings().workspace || data, 'receipt_gemini_ocr', target);
+              if (
+                !approvals.remembered(rule) &&
+                !(await approvals.request(
+                  rule,
+                  {
+                    title: tm('ส่งใบเสร็จให้ Google AI (Gemini API)'),
+                    body: tm(
+                      'ส่ง {0} ให้โมเดล {1} ที่ generativelanguage.googleapis.com ภาพเต็ม {2} หน้า พร้อมภาพขยายเฉพาะจุด อ่านหลักหนึ่งครั้งและอาจตรวจซ้ำหนึ่งครั้ง มีค่าใช้จ่ายตามบัญชี Google ของคุณ ค่าที่อ่านยังต้องเทียบต้นฉบับ',
+                      lastReceipt.name,
+                      connection.model,
+                      imageInput.pages.length,
+                    ),
+                    privacyClass: 'internal',
+                    allowRemember: true,
+                  },
+                  signal,
+                ))
+              )
+                return { cancelled: true };
+              check();
+              checkOcrAccount = async () => {
+                const latest = store.get<Connection>('connection', connection.id);
+                if (!latest || !isReceiptGeminiApi(latest) || binding(latest, await key(latest)) !== target)
+                  throw new Error('CONNECTION_NOT_READY');
+                check();
+              };
+              await checkOcrAccount();
+            }
+            timeout = setTimeout(() => controller.abort(), 180_000);
             const combinedSignal = AbortSignal.any([signal, controller.signal]);
+            let requests = 0;
+            let tokens: TokenCount | undefined;
+            const modelLimits =
+              policyState.policy.modelLimits?.[connection.model] || policyState.policy.modelLimits?.[connection.provider + ':*'] || {};
+            const readingConnection = isReceiptGeminiApi(connection) ? { ...connection, ...modelLimits } : connection;
             const reading = await readReceiptVision(async (focus, regions) => {
               check();
+              await checkOcrAccount();
               const inspection = regions?.length ? receiptVisionImages(imageInput.pages, regions) : imageInput;
               const instruction = focus
                 ? `ตรวจภาพต้นฉบับอีกครั้งเฉพาะช่อง ${focus.join(', ')} และยอดเงินตัวอักษร ค่ารอบก่อนขัดกัน ห้ามคำนวณหรือเดาค่าทดแทน ถ้าอ่านไม่ได้ให้เว้นว่าง ตอบ JSON ครบตามโครงเดิม\n`
                 : 'อ่านใบเสร็จในภาพแล้วตอบเป็น JSON ตามรูปแบบที่กำหนดเท่านั้น\n';
-              const reply = await current.adapter.run(instruction + inspection.description, connection, {
+              requests++;
+              const reply = await current.adapter.run(instruction + inspection.description, readingConnection, {
                 ...current.context,
                 system: RECEIPT_VISION_SYSTEM,
                 jsonSchema: RECEIPT_VISION_SCHEMA,
+                receiptOcr: isReceiptGeminiApi(connection),
+                onUsage: isReceiptGeminiApi(connection)
+                  ? usage => {
+                      tokens = tokens ? combineUsage(tokens, usage) : usage;
+                    }
+                  : undefined,
                 images: inspection.images,
                 signal: combinedSignal,
                 emit: () => {},
@@ -3305,7 +3454,12 @@ async function main() {
             }, combinedSignal);
             check();
             diagnose('receipt-vision', { provider: connection.provider, fields: String(Object.keys(reading.fields).length) });
-            return { ...reading, model: connection.model || '', pagePreviews: imageInput.pagePreviews };
+            return {
+              ...reading,
+              model: connection.model || '',
+              pagePreviews: imageInput.pagePreviews,
+              ...(isReceiptGeminiApi(connection) ? { ocrUsage: { requests, ...(tokens ? { tokens } : {}) } } : {}),
+            };
           } catch (error) {
             diagnose('receipt-vision-failed', { provider: connection.provider, code: errorCode(error) });
             if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');

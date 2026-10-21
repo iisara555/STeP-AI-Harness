@@ -1,6 +1,7 @@
 import { build } from 'esbuild';
 import { build as buildRenderer } from 'vite';
 import { copyFile, cp } from 'node:fs/promises';
+import { parseReceiptCloudConfig } from './electron/receipt-cloud-config.ts';
 import { googleClientBuildConfig } from './electron/google-client.ts';
 // Read only at build time; never write the input JSON to the checkout or pass it to Vite/preload.
 const googleClient = googleClientBuildConfig(
@@ -8,6 +9,10 @@ const googleClient = googleClientBuildConfig(
   process.env.STEP_REQUIRE_GOOGLE_DESKTOP_CLIENT === 'true',
 );
 delete process.env.STEP_GOOGLE_DESKTOP_CLIENT_JSON;
+const receiptCloud = process.env.STEP_RECEIPT_CLOUD_URL
+  ? parseReceiptCloudConfig({ url: process.env.STEP_RECEIPT_CLOUD_URL, model: process.env.STEP_RECEIPT_CLOUD_MODEL })
+  : undefined;
+if (process.env.STEP_RECEIPT_CLOUD_URL && !receiptCloud) throw new Error('INVALID_RECEIPT_CLOUD_CONFIG');
 await buildRenderer();
 await build({
   entryPoints: ['electron/main.ts'],
@@ -16,7 +21,10 @@ await build({
   platform: 'node',
   format: 'cjs',
   target: 'node22',
-  define: { __STEP_GOOGLE_DESKTOP_CLIENT__: JSON.stringify(googleClient) },
+  define: {
+    __STEP_GOOGLE_DESKTOP_CLIENT__: JSON.stringify(googleClient),
+    __STEP_RECEIPT_CLOUD__: receiptCloud ? JSON.stringify(receiptCloud) : 'undefined',
+  },
   external: ['electron', '@anthropic-ai/claude-agent-sdk', '@github/copilot-sdk'],
 });
 await copyFile('electron/sheet-worker.cjs', 'dist/sheet-worker.cjs');

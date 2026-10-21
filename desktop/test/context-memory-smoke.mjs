@@ -325,8 +325,10 @@ try {
   assert.equal(scan.usable, true);
   assert.equal(scan.vision, undefined);
   assert.ok(scan.preview.includes('Synthetic complete OCR source'));
-  const beforeRestart = calls.length;
   await child.close();
+  // A background learning review can finish after the last vision audit read. Capture all calls at the
+  // actual shutdown boundary, so the restart assertion checks replay rather than that earlier race.
+  const beforeRestart = (await readFile(audit, 'utf8')).trim().split('\n').length;
   child = await electron.launch({ args: ['.'], env, timeout: 45000 });
   page = await child.firstWindow();
   page.on('pageerror', e => errors.push(e.message));

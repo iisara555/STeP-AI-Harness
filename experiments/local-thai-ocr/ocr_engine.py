@@ -5,7 +5,7 @@ import math
 import os
 import statistics
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
@@ -35,7 +35,7 @@ class OCRConfig:
     crosscheck: bool = False
     tesseract_crosscheck: bool = False
     native_pdf_min_chars: int = 40
-    render_dpi: int = 200
+    render_dpi: int = 300
 
 
 class LocalThaiOCR:
@@ -204,13 +204,13 @@ class LocalThaiOCR:
                     width, height = page.get_size()
                     scale = config.render_dpi / 72.0
                     if max(width, height) > 0:
-                        scale = min(scale, MAX_OCR_IMAGE_SIDE / max(width, height))
+                        scale = min(scale, DETAIL_OCR_IMAGE_SIDE / max(width, height))
                     bitmap = page.render(scale=scale)
                     try:
                         image = bitmap.to_pil().convert("RGB")
                     finally:
                         bitmap.close()
-                    pages.append(self._ocr_image(image, page_index + 1, config, warnings))
+                    pages.append(self._ocr_image(image, page_index + 1, config, warnings, detail=True))
                 finally:
                     page.close()
         finally:
@@ -251,22 +251,53 @@ class LocalThaiOCR:
                 f"Image resized from {original_width}x{original_height} to "
                 f"{image.width}x{image.height} before OCR; verify small text carefully.",
             )
-        prepared = self._normalize_low_contrast(image, warnings)
-        normalized_contrast = prepared is not image
-        image = prepared
-        lines = self._read_page(image, config, warnings, detail)
-        if self._looks_sideways(lines):
-            # A scan or photo lying on its side: read both quarter turns and keep the clearer reading.
+        # Compare preprocessing with an untouched reading. Optional readers run
+        # only on the chosen page, so discarded trials cannot exhaust their budgets.
+        reading_config = replace(config, crosscheck=False, tesseract_crosscheck=False, handwriting_fallback=False)
+        selected_warnings: list[str] = []
+        lines = self._read_page(image, reading_config, selected_warnings, detail)
+        preprocessing: list[str] = []
+        contrast_warnings: list[str] = []
+        prepared = self._normalize_low_contrast(image, contrast_warnings)
+        if prepared is not image:
+            prepared_lines = self._read_page(prepared, reading_config, contrast_warnings, detail)
+            if self._better_reading(prepared_lines, lines):
+                image, lines, selected_warnings = prepared, prepared_lines, contrast_warnings
+                preprocessing.append("low-contrast-autocontrast")
+        if self._needs_orientation_retry(lines):
+            # Weak/empty readings also need recovery: an upside-down page often
+            # has horizontal boxes, and a sideways page may have no boxes at all.
             best_image, best_lines, best_score = image, lines, self._reading_score(lines)
-            for turn in (Image.Transpose.ROTATE_90, Image.Transpose.ROTATE_270):
+            best_warnings, best_turn = selected_warnings, None
+            for turn in (Image.Transpose.ROTATE_180, Image.Transpose.ROTATE_90, Image.Transpose.ROTATE_270):
                 turned = image.transpose(turn)
-                turned_lines = self._read_page(turned, config, warnings, detail)
+                trial_warnings: list[str] = []
+                turned_lines = self._read_page(turned, reading_config, trial_warnings, detail)
                 score = self._reading_score(turned_lines)
-                if score > best_score:
+                if score > best_score and self._better_reading(turned_lines, lines):
                     best_image, best_lines, best_score = turned, turned_lines, score
+                    best_warnings, best_turn = trial_warnings, turn
             if best_image is not image:
                 image, lines = best_image, best_lines
+                selected_warnings = best_warnings
+                preprocessing.append(f"rotate-{int(best_turn.name.split('_')[-1])}")
                 self._add_warning(warnings, "The page was turned upright before OCR.")
+
+        # Use several agreeing text baselines, not a receipt border or a single
+        # Thai mark. Paddle rectifies line crops, but page skew can still hide lines.
+        angle = self._deskew_angle(lines)
+        if angle is not None:
+            straight = image.rotate(angle, resample=Image.Resampling.BICUBIC, expand=True, fillcolor="white")
+            straight.thumbnail((limit, limit), Image.Resampling.LANCZOS)
+            trial_warnings = []
+            straight_lines = self._read_page(straight, reading_config, trial_warnings, detail)
+            if self._better_reading(straight_lines, lines):
+                image, lines, selected_warnings = straight, straight_lines, trial_warnings
+                preprocessing.append(f"deskew-{angle:.2f}")
+                self._add_warning(warnings, "Page skew corrected before OCR; coordinates refer to the prepared page.")
+        for warning in selected_warnings:
+            self._add_warning(warnings, warning)
+        self._enrich_lines(image, lines, config, warnings)
 
         return {
             "page": page_number,
@@ -275,7 +306,7 @@ class LocalThaiOCR:
             "height": image.height,
             "original_width": original_width,
             "original_height": original_height,
-            "preprocessing": ["low-contrast-autocontrast"] if normalized_contrast else [],
+            "preprocessing": preprocessing,
             "lines": lines,
         }
 
@@ -297,6 +328,43 @@ class LocalThaiOCR:
     @staticmethod
     def _reading_score(lines: list[dict[str, Any]]) -> float:
         return sum((line.get("confidence") or 0) * len(str(line.get("text", "")).strip()) for line in lines)
+
+    @staticmethod
+    def _better_reading(candidate: list[dict[str, Any]], baseline: list[dict[str, Any]]) -> bool:
+        # Confidence ranks trials from the SAME model only; it is not accuracy.
+        # A small score tie must not replace the source reading, nor may a long
+        # low-confidence hallucination beat a shorter, clear reading.
+        count = sum(len(str(line.get("text", "")).strip()) for line in candidate)
+        original_count = sum(len(str(line.get("text", "")).strip()) for line in baseline)
+        score = LocalThaiOCR._reading_score(candidate)
+        original_score = LocalThaiOCR._reading_score(baseline)
+        return bool(count and score > original_score * 1.05 and
+                    score / count >= max(0.65, original_score / max(1, original_count) - 0.02))
+
+    @staticmethod
+    def _needs_orientation_retry(lines: list[dict[str, Any]]) -> bool:
+        count = sum(len(str(line.get("text", "")).strip()) for line in lines)
+        return (LocalThaiOCR._looks_sideways(lines) or not count or
+                LocalThaiOCR._reading_score(lines) / max(1, count) < 0.75)
+
+    @staticmethod
+    def _deskew_angle(lines: list[dict[str, Any]]) -> float | None:
+        angles = []
+        for line in lines:
+            polygon = line.get("polygon")
+            if not polygon or len(polygon) != 4 or len(str(line.get("text", "")).strip()) < 4:
+                continue
+            dx, dy = polygon[1][0] - polygon[0][0], polygon[1][1] - polygon[0][1]
+            height = math.dist(polygon[0], polygon[3])
+            if dx > max(30, height * 3):
+                angles.append(math.degrees(math.atan2(dy, dx)))
+        if len(angles) < 3:
+            return None
+        angle = statistics.median(angles)
+        agreeing = [value for value in angles if abs(value - angle) <= 1.0]
+        if len(agreeing) < max(3, math.ceil(len(angles) * 0.75)) or not 0.6 <= abs(angle) <= 8:
+            return None
+        return angle
 
     @staticmethod
     def _normalize_low_contrast(image: Image.Image, warnings: list[str]) -> Image.Image:
@@ -410,6 +478,10 @@ class LocalThaiOCR:
                 }
 
                 lines.append(item)
+        self._enrich_lines(image, lines, config, warnings)
+        return lines
+
+    def _enrich_lines(self, image: Image.Image, lines: list[dict[str, Any]], config: OCRConfig, warnings: list[str]) -> None:
         if config.crosscheck and lines:
             self._crosscheck_lines(image, lines, warnings)
         if config.tesseract_crosscheck and lines:
@@ -418,7 +490,6 @@ class LocalThaiOCR:
             self._handwriting_candidates(image, lines, warnings)
         if lines:
             self._classify_text_kinds(lines)
-        return lines
 
     def _tesseract_candidates(
         self, image: Image.Image, lines: list[dict[str, Any]], warnings: list[str]

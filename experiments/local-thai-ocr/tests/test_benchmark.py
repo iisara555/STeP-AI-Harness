@@ -5,11 +5,19 @@ import unittest
 from pathlib import Path
 
 from benchmark.generate import generate
-from benchmark.score import score_fields, canonical
+from benchmark.score import score_fields, score_text, canonical
 from benchmark.safety import external_path
 
 
 class BenchmarkTests(unittest.TestCase):
+    def test_character_error_rate_counts_thai_tone_marks_and_numeric_punctuation(self):
+        self.assertEqual(score_text('วันที่ 20/10/2569', 'วันที่\n20/10/2569')['cer'], 0)
+        self.assertEqual(score_text('วันที่', 'วันที')['edits'], 1)
+        self.assertEqual(score_text('ก๋วยเตี๋ยว', 'ก๋วยเตียว')['edits'], 1)
+        self.assertEqual(score_text('107.00', '10700')['edits'], 1)
+        self.assertGreater(score_text('วันที่ ยอดเงิน', 'ยอดเงิน วันที่')['cer'], 0)
+        self.assertIsNone(score_text('', '')['cer'])
+
     def test_metrics_distinguish_missed_errors_false_alerts_and_invented_values(self):
         truth = {'total': '107.00', 'date': '23/09/2569', 'taxId': '', 'receiptNumber': '0001'}
         result = score_fields(truth, {'total': '108', 'date': '23/09/2569', 'taxId': '111', 'receiptNumber': '1'}, {'total', 'date'})

@@ -10,6 +10,25 @@ MONTHS = ('มกราคม', 'กุมภาพันธ์', 'มีนา�
           'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม')
 
 
+def score_text(expected, actual):
+    """Unicode code-point CER; retain Thai vowel/tone marks and punctuation.
+
+    NFC and whitespace removal ignore layout spacing only. Reading-order errors
+    still count. This is not word/grapheme accuracy or a confidence percentage.
+    """
+    reference = ''.join(unicodedata.normalize('NFC', expected).split())
+    reading = ''.join(unicodedata.normalize('NFC', actual).split())
+    previous = list(range(len(reading) + 1))
+    for i, left in enumerate(reference, 1):
+        current = [i]
+        for j, right in enumerate(reading, 1):
+            current.append(min(current[-1] + 1, previous[j] + 1, previous[j - 1] + (left != right)))
+        previous = current
+    edits = previous[-1]
+    return dict(edits=edits, reference_characters=len(reference),
+                cer=edits / len(reference) if reference else None)
+
+
 def canonical(field, value):
     text = unicodedata.normalize('NFC', str(value or '')).translate(str.maketrans('๐๑๒๓๔๕๖๗๘๙', '0123456789')).strip()
     if not text:

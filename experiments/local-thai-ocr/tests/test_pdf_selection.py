@@ -51,6 +51,21 @@ def make_pdf(text: str, *, full_page_image: bool = False) -> bytes:
 
 
 class NativePdfSelectionTests(unittest.TestCase):
+    def test_scanned_pdf_preserves_small_print_at_300dpi_with_detail_tiles(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "small-print.pdf"
+            path.write_bytes(make_pdf("1", full_page_image=True))
+            engine = LocalThaiOCR()
+            with patch.object(engine, "_ocr_image", return_value={"page": 1, "source": "ocr", "lines": []}) as ocr:
+                engine.process(path, OCRConfig())
+            # PDFium rounds floating-point page dimensions up to whole pixels.
+            self.assertAlmostEqual(ocr.call_args.args[0].width, 2550, delta=1)
+            self.assertAlmostEqual(ocr.call_args.args[0].height, 3300, delta=1)
+            self.assertTrue(ocr.call_args.kwargs["detail"])
+            with patch.object(engine, "_ocr_image", return_value={"page": 1, "source": "ocr", "lines": []}) as ocr:
+                engine.process(path, OCRConfig(render_dpi=1200))
+            self.assertLessEqual(max(ocr.call_args.args[0].size), 4800)
+
     def test_short_native_page_without_large_image_skips_ocr(self):
         text = "Short native text"
         with tempfile.TemporaryDirectory() as directory:

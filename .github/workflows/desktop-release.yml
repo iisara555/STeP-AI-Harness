@@ -70,6 +70,9 @@ jobs:
           STEP_GOOGLE_DESKTOP_CLIENT_JSON: ${{ secrets.GOOGLE_DESKTOP_CLIENT_JSON }}
           # A published build must support the default work-account sign-in without employee JSON import.
           STEP_REQUIRE_GOOGLE_DESKTOP_CLIENT: ${{ (startsWith(github.ref, 'refs/tags/') || inputs.publish) && 'true' || 'false' }}
+          # Public routing only. The Gemini key remains in Cloud Secret Manager.
+          STEP_RECEIPT_CLOUD_URL: ${{ vars.STEP_RECEIPT_CLOUD_URL }}
+          STEP_RECEIPT_CLOUD_MODEL: ${{ vars.STEP_RECEIPT_CLOUD_MODEL }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}

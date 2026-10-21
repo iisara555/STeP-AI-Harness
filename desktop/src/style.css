@@ -2497,6 +2497,15 @@ nav button:hover,
   overflow: auto;
   padding: 22px max(24px, calc((100% - 1100px) / 2)) 30px;
 }
+.receipt-ocr-choice label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+.receipt-ocr-choice select {
+  width: 100%;
+  min-width: 0;
+}
 .receipt-service {
   display: flex;
   align-items: center;

@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const home = await mkdtemp(join(tmpdir(), 'step-async-lifecycle-'));
+await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ receiptLocalOnly: false }));
 const receipt = join(home, 'synthetic.png');
 await writeFile(
   receipt,
@@ -259,7 +260,9 @@ try {
         const settings = get('settings');
         delete settings.receiptVisionConsentedAt;
         db.prepare("UPDATE records SET value=? WHERE kind='settings' AND id='main'").run(JSON.stringify(settings));
-        const connection = { ...get('connection'), ready: true };
+        // This stage exercises the generic image-consent dialog, before rendering/runtime lookup.
+        // Native Gemini API uses its separate account/key-bound consent, covered by gemini-api-smoke.
+        const connection = { ...get('connection'), provider: 'openai', ready: true };
         db.prepare("UPDATE records SET value=? WHERE kind='connection' AND id=?").run(JSON.stringify(connection), id);
         db.close();
       },
@@ -296,7 +299,7 @@ try {
   await vision();
   await pending('consent');
   const imageCalls = await app.evaluate(() => globalThis.stepAsyncFixture.imageCalls);
-  await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ checks: { privacy: true } }));
+  await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ receiptLocalOnly: false, checks: { privacy: true } }));
   await expect
     .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).policy.checks.privacy, { timeout: 20_000 })
     .toBe(true);

@@ -7,8 +7,13 @@ import {
   type ReceiptRegion,
 } from '../src/receipt-vision';
 
+import type { TokenCount } from './providers';
+
 type Reading = ReturnType<typeof parseVisionReading>;
-export type ReceiptVisionResult = Reading & { recheck?: { first: Reading; changedFields: ReceiptField[]; failed: boolean } };
+export type ReceiptVisionResult = Reading & {
+  recheck?: { first: Reading; changedFields: ReceiptField[]; failed: boolean };
+  ocrUsage?: { requests: number; tokens?: TokenCount };
+};
 
 /** Independent image re-reading is bounded to one retry. A matching equation is never proof of transcription. */
 export async function readReceiptVision(

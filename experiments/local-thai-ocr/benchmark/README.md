@@ -1,6 +1,8 @@
 # Synthetic receipt benchmark and private pilot
 
 This is development tooling, not an OCR/Router integration or an accuracy certificate.
+See [the 2026-10-20 local Thai/REA study](QUALITY-RESULTS-2026-10-20.md) for the
+latest seven-case exploratory comparison and its remaining Thai-tone errors.
 See [synthetic quality evidence, 2026-10-06](QUALITY-RESULTS-2026-10-06.md) for the
 measured before/after comparisons and remaining errors of the 0.5.21 revision.
 That report is historical evidence, not a score for subsequent OCR changes. See the
@@ -13,6 +15,13 @@ The acceptance gate stays **OPEN** until the repository owner reviews authorized
 real-document pilot evidence. Windows with 2 CPU cores and macOS M1 with 4 GB RAM
 are the target machines; Linux cloud timings do not establish readiness on either.
 Record the Windows RAM, OS versions, CPU model and available RAM with each pilot.
+
+Optional ground truth `expected_lines` must contain **all** page text in reading
+order, including synthetic banners. For OCR/combined modes the runner reports
+Unicode code-point CER separately from field exact match and review recall.
+CER uses NFC and removes whitespace, retains Thai vowels/tone marks and numeric
+punctuation, and penalizes reading-order errors. No reference text means no CER
+sample, not zero errors. Replays retain the `replay-not-model-accuracy` label.
 
 ## Install and generate
 

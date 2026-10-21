@@ -9,6 +9,7 @@ const allowed = new Set([
   'vaultRemove',
   'vaultSuspend',
   'vaultResumeBrowser',
+  'receiptCloudConnect',
   'googleState',
   'googleConnect',
   'googleImportClient',
