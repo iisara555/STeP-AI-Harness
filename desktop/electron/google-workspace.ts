@@ -119,6 +119,7 @@ export class GoogleWorkspace {
       services: this.config()?.services || [],
       connecting: Boolean(this.connecting),
       connectionError: this.connectionError,
+      vaultSuspended: this.vault.state().suspended,
       clientPreconfigured,
       clientSecretConfigured: Boolean(
         clientPreconfigured ||
@@ -245,6 +246,7 @@ export class GoogleWorkspace {
     return this.state();
   }
   catalog(context: string) {
+    if (this.vault.state().suspended) reject('VAULT_SUSPENDED');
     const now = Date.now();
     for (const [id, h] of this.handles) if (h.expires < now) this.handles.delete(id);
     return this.accounts()
@@ -330,6 +332,7 @@ export class GoogleWorkspace {
       epoch = this.epoch;
     const check = async () => {
       await context.check();
+      if (this.vault.state().suspended) reject('VAULT_SUSPENDED');
       if (epoch !== this.epoch || a.revision !== this.account(a.id).revision || JSON.stringify(config) !== JSON.stringify(this.config()))
         reject('GOOGLE_ACCOUNT_CHANGED');
       if (!config || a.clientId !== config.clientId || !config.domains.includes(a.domain) || a.paused || a.reauth)

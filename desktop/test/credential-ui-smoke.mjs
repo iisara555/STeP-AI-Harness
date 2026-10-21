@@ -82,7 +82,10 @@ try {
       await dialog.getByLabel('Username / อีเมล', { exact: true }).fill('synthetic-user');
       await dialog.getByRole('checkbox').check();
     }
-    const field = dialog.getByLabel(kind === 'code' ? 'รหัสยืนยัน' : 'รหัสผ่าน', { exact: true });
+    const field = dialog.getByLabel(
+      kind === 'code' ? 'รหัสยืนยัน' : kind === 'unlock' ? 'รหัสผ่านหลักของตัวจัดการรหัสผ่าน' : 'รหัสผ่านของเว็บไซต์นี้',
+      { exact: true },
+    );
     await field.fill(kind === 'code' ? '123456' : 'synthetic-secret');
     assert.equal(await field.getAttribute('type'), 'password');
     const fieldBox = await field.boundingBox(),

@@ -44,7 +44,8 @@ Apps Script ต้องเปิด API access ใน Apps Script settings ส�
 | `GOOGLE_SCOPE_MISSING` / `GOOGLE_SERVICE_DISABLED` | ตรวจบริการที่อนุญาต แล้วเชื่อมใหม่เฉพาะบริการที่ต้องใช้ |
 | `GOOGLE_REAUTH_REQUIRED` | ผู้ใช้เชื่อมใหม่ใน Settings ไม่ส่ง token เข้า AI |
 | `GOOGLE_ACCOUNT_CHANGED` | โหลด catalog ใหม่และยืนยันบัญชีเดิมกับผู้ใช้; handle หมดอายุหรือ session/นโยบายเปลี่ยน |
-| `VAULT_SUSPENDED` / `GOOGLE_ACCESS_DENIED` | ตรวจ Vault, บัญชี, pause, domain, สิทธิ์ไฟล์ และข้อจำกัดองค์กร; ไม่ย้ายข้อมูลไปบัญชีอื่น |
+| `VAULT_SUSPENDED` | หยุดอ่านข้อมูล ใช้ `nextAction` จาก host: ตั้งค่าพื้นที่ทำงาน → รหัสผ่านและการเชื่อมต่อ → กลับมาใช้งาน ไม่ต้องลงชื่อหรือกรอกรหัสผ่าน Google ใหม่ ไม่เรียก `browser_vault` เพื่อขอรหัสผ่าน และไม่อ้างว่าไม่มีนัดจากการอ่านที่ถูกพัก |
+| `GOOGLE_ACCESS_DENIED` | ตรวจบัญชี, pause, domain, สิทธิ์ไฟล์ และข้อจำกัดองค์กร; ไม่ย้ายข้อมูลไปบัญชีอื่น |
 | `GOOGLE_QUOTA_LIMIT` | หยุดและบอกข้อจำกัด ไม่ rapid-fire retry |
 | `GOOGLE_REQUEST_FAILED` | ตรวจสถานะบริการ/API/เป้าหมาย ไม่อ้างว่าไม่มีไฟล์จาก request ที่ล้มเหลว |
 | `GOOGLE_OUTCOME_UNKNOWN` | อาจเขียนแล้ว ห้ามทำซ้ำทันที ใช้ read ที่รองรับหรือให้ผู้ใช้ตรวจ Google ก่อน |

@@ -42,6 +42,7 @@ createInterface({input:process.stdin}).on('line',line=>{
  const input=JSON.parse(line);fs.appendFileSync(log,JSON.stringify({input})+'\\n');
  const step=(delta,state='ACTIVE')=>({event:'step_update',step_update:{conversation_id:'session',step_type:'agent_response',state,text_delta:delta}});
  const attempt=fs.readFileSync(log,'utf8').trim().split('\\n').map(x=>JSON.parse(x)).filter(x=>x.args?.includes('--input-format')).length;
+ if(kind==='protocol-recover' && attempt===1){send(step('UNVERIFIED PROTOCOL FRAGMENT'));return console.log('not json');}
  if(kind.startsWith('recover-') && attempt===1){
   send(step('UNVERIFIED FRAGMENT'));
   return setTimeout(()=>send({event:'step_update',step_update:{conversation_id:'session',step_type:'tool',tool_name:'read_file'}}),kind==='recover-timeout'?650:0);
@@ -516,4 +517,24 @@ test('the isolated home sees the real sign-in: token file copied, Mac keychain f
   assert.equal(existsSync(join(win.env.HOME!, 'Library')), false, 'only macOS links the keychain folder');
   await win.close();
   await rm(root, { recursive: true, force: true });
+});
+
+test('a transient invalid stream gets one isolated retry and never publishes its unvalidated tool request', async () => {
+  const f = await fixture('protocol-recover');
+  try {
+    assert.equal(await new AntigravityAdapter().run('Synthetic Calendar request', f.connection, f.context), 'สวัสดีครับ');
+    assert.equal((await f.calls()).filter(c => c.input).length, 2);
+    assert.equal(f.deltas.join(''), 'สวัสดีครับ');
+    assert.ok(f.discarded.length);
+  } finally {
+    await f.close();
+  }
+  const bad = await fixture('malformed');
+  try {
+    await assert.rejects(new AntigravityAdapter().run('Synthetic', bad.connection, bad.context), { message: 'PROVIDER_STREAM_INVALID' });
+    assert.equal((await bad.calls()).filter(c => c.input).length, 2);
+    assert.deepEqual(bad.deltas, []);
+  } finally {
+    await bad.close();
+  }
 });

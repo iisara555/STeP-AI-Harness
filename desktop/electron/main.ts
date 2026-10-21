@@ -39,6 +39,8 @@ import type { GoogleRequest } from './google-operations';
 import { googleOperationCatalog } from './google-operations';
 import { BRIEF_OPERATIONS, briefDay, readMorningBrief, type MorningBrief } from './morning-brief';
 import { credentialTitles } from '../src/credential-copy';
+import { credentialErrorsTh, credentialErrorsEn } from '../src/credential-copy';
+import { googleResultConsent } from './google-consent';
 import { Workbench, browserUrl } from './workbench';
 import { AgentBrowser } from './browser-agent';
 import { BrowserDock } from './browser-dock';
@@ -932,6 +934,14 @@ async function main() {
     if (request.tool === 'google_workspace') {
       if (!policyState.policy.features.googleWorkspace) throw new Error('FEATURE_DISABLED');
       const binding = JSON.stringify([scope.sessionId, phase4Identity()]);
+      if (google.state().vaultSuspended)
+        return {
+          accounts: [],
+          operations: [],
+          status: 'NEED-CONNECTION',
+          code: 'VAULT_SUSPENDED',
+          nextAction: (store.settings().language === 'en' ? credentialErrorsEn : credentialErrorsTh).VAULT_SUSPENDED,
+        };
       if (request.args?.action === 'list') return { accounts: google.catalog(binding), operations: googleOperationCatalog };
       if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
       const id = google.resolve(inputText(request.args?.account, 80), binding);
@@ -951,7 +961,12 @@ async function main() {
           ),
           {
             title: credentialTitle('Send this Google result to the selected AI?'),
-            body: `${scope.connection.provider}\n${request.input}\n${report.redactedText.slice(0, 8000)}`,
+            ...googleResultConsent(
+              request.input,
+              report.redactedText,
+              scope.connection.provider,
+              google.state().accounts.find(a => a.id === id)?.label || tm('บัญชีงาน'),
+            ),
             privacyClass: report.classification,
             allowRemember: false,
             sessionId: scope.sessionId,
