@@ -55,7 +55,7 @@ Runner ปัจจุบันต้องผ่านหลังแก้ ไ
 | Optional gws connector suite | 9 passed (รวม 3 tests ใหม่) |
 | Skill examples ผ่าน native execute | 76/76 operations, 11 families |
 | Root `npm test` | 1,063 passed, 4 skipped, 0 failed |
-| Desktop `npm test` | 929 passed, 2 skipped, 0 failed |
+| Desktop `npm test` | 936 passed, 2 skipped, 0 failed |
 | Desktop clean `npm ci` / Electron runtime install / build | passed |
 | Desktop `npm run format:check` | passed |
 | `python3 scripts/validate_repo.py` | passed |
