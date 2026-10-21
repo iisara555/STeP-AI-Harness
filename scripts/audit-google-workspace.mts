@@ -174,6 +174,7 @@ const loader = new URL('../desktop/node_modules/tsx/dist/loader.mjs', import.met
 const run = promisify(execFile);
 for (const [check, file] of [
   ['native-regressions', 'desktop/test/google-workspace-reliability.test.ts'],
+  ['read-request-consent', 'desktop/test/google-read-consent.test.ts'],
   ['optional-gws-regressions', 'test/google-workspace-connector.test.js'],
 ]) {
   const { stdout } = await run(process.execPath, ['--import', loader, '--test', '--test-reporter=tap', file], {

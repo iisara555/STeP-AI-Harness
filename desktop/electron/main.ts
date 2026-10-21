@@ -36,11 +36,12 @@ import { GoogleWorkspace } from './google-workspace';
 import { readGoogleClientFile } from './google-client';
 import { GOOGLE_PAGES, type GoogleService } from '../src/google-services';
 import type { GoogleRequest } from './google-operations';
-import { googleOperationCatalog } from './google-operations';
+import { googleInvocation, googleOperationCatalog } from './google-operations';
 import { BRIEF_OPERATIONS, briefDay, readMorningBrief, type MorningBrief } from './morning-brief';
 import { credentialTitles } from '../src/credential-copy';
 import { credentialErrorsTh, credentialErrorsEn } from '../src/credential-copy';
 import { googleResultConsent } from './google-consent';
+import { executeGoogleRead } from './google-read-tool';
 import { Workbench, browserUrl } from './workbench';
 import { AgentBrowser } from './browser-agent';
 import { BrowserDock } from './browser-dock';
@@ -945,14 +946,35 @@ async function main() {
           code: 'VAULT_SUSPENDED',
           nextAction: (store.settings().language === 'en' ? credentialErrorsEn : credentialErrorsTh).VAULT_SUSPENDED,
         };
-      if (request.args?.action === 'list') return { accounts: google.catalog(binding), operations: googleOperationCatalog };
+      if (request.args?.action === 'list') {
+        const catalog = { accounts: google.catalog(binding), operations: googleOperationCatalog };
+        await scope.googleReads?.recordDiscovery(request, JSON.stringify(catalog));
+        return catalog;
+      }
       if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
       const id = google.resolve(inputText(request.args?.account, 80), binding);
-      const result = await google.execute(
-        id,
-        { operation: request.input as GoogleRequest['operation'], params: request.args?.params as any, body: request.args?.body as any },
-        googleContext(scope.signal, check, scope.sessionId),
-      );
+      const input = structuredClone({
+        operation: request.input as GoogleRequest['operation'],
+        params: request.args?.params as any,
+        body: request.args?.body as any,
+      });
+      if (!googleInvocation(input).write && scope.googleReads)
+        return executeGoogleRead(
+          google,
+          id,
+          input,
+          request,
+          scope.googleReads,
+          googleContext(scope.signal, check, scope.sessionId),
+          privacy.evaluatePrivacyGate,
+          detail =>
+            approvals.request(
+              approvals.rule(store.settings().workspace || data, 'google-read-request', detail.body),
+              { ...detail, sessionId: scope.sessionId },
+              scope.signal,
+            ),
+        );
+      const result = await google.execute(id, input, googleContext(scope.signal, check, scope.sessionId));
       const report = privacy.evaluatePrivacyGate(JSON.stringify(result));
       if (report.action === 'block-external' || !report.redactedText) throw new Error('PRIVACY_REVIEW_REQUIRED');
       if (

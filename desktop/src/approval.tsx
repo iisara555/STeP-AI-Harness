@@ -34,6 +34,7 @@ const toolLabels: Record<string, string> = localized({
   phase4: 'การทำงานที่ต้องยืนยัน',
   google_workspace: 'Google Workspace',
   'google-result': 'ส่งข้อมูลจาก Google ให้ AI',
+  'google-read-request': 'ค้นและอ่าน Google ตามคำขอ',
 });
 const STEP = /^(?:[-*+•]\s*(?:\[[ xX]\]\s*)?|\d{1,2}[.)]\s+)(.+)$/;
 /** A plan's steps as a list: marked lines (1. / - / *) are steps; a plan of one plain line is one step. */
@@ -67,7 +68,8 @@ export function ApprovalDialog({
   const [run, setRun] = useState(Boolean(request.runDefault && request.runScope));
   const isPlan = request.tool === 'plan';
   const plan = isPlan && request.body ? planSteps(t(request.body)) : null;
-  const label = confirmLabel || (isPlan ? t('อนุมัติแผน') : t('อนุญาตครั้งนี้'));
+  const label =
+    confirmLabel || (isPlan ? t('อนุมัติแผน') : request.tool === 'google-read-request' ? t('อนุญาตสำหรับคำขอนี้') : t('อนุญาตครั้งนี้'));
   return (
     <ConfirmDialog
       title={t(request.title)}

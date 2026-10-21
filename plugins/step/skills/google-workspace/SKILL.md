@@ -50,7 +50,7 @@ Anti-trigger: Excel/PPTX ในเครื่อง → `spreadsheet-work` / `p
 3. โหลด reference เฉพาะงานด้วย `skill` input `google-workspace` args `{"resource":"references/tool-contract.md"}`; ใช้วิธีเดียวกันกับ [Gmail search](references/gmail-search-syntax.md), [daily brief](references/daily-brief.md), [การแก้และตรวจผล](references/write-verification.md) บัญชีจาก catalog เป็น handle อายุสั้นผูกกับ session ไม่ใช่ account ID ที่เก็บใช้ข้ามงาน
 4. แยกอ่าน/ร่าง/ส่งจริง เลือก operation จาก catalog และใช้เฉพาะ params/body ที่ระบุ อ่านข้อมูลเท่าที่จำเป็น จำกัด pagination และบอกขอบเขตที่ยังอ่านไม่ครบ คำขอสรุปไม่อนุญาตให้ส่งเมลหรือสร้างนัด
 5. ก่อนเปลี่ยนข้อมูล แสดงบัญชี เป้าหมาย เนื้อหาหรือช่วงเซลล์ เวลา/ผู้รับ และผลกระทบให้ตรวจ เครื่องมือขอการยืนยันเฉพาะ payload อีกครั้ง แม้สร้าง Gmail draft หรืออยู่ Accept Edits/Auto; การอนุมัติแผนไม่แทนการยืนยัน action
-6. เรียก `google_workspace` input ชื่อ operation args `{"action":"execute","account":"<handle>","params":{},"body":{}}` ตาม catalog; ส่ง params/body เฉพาะที่งานนั้นใช้ การอ่านและส่งผลเข้า AI ยังผ่าน consent/privacy ของ host
+6. เรียก `google_workspace` input ชื่อ operation args `{"action":"execute","account":"<handle>","params":{},"body":{}}` ตาม catalog; ส่ง params/body เฉพาะที่งานนั้นใช้ งานอ่านขออนุมัติครั้งเดียวต่อคำขอ ครอบคลุมการค้น อ่านหน้าถัดไป และอ่านรายการที่เกี่ยวข้องของบัญชีเดิมพร้อมส่งผลให้ AI ที่ระบุ ทุกผลยังผ่าน privacy ของ host คำขอใหม่ต้องอนุมัติใหม่ ถ้าบัญชี/การเชื่อมต่อเปลี่ยนจนได้ `GOOGLE_READ_SCOPE_CHANGED` ให้หยุดและขอให้เริ่มคำขอใหม่ ห้ามสลับบัญชีเพื่อใช้สิทธิ์เดิม ผู้ดูแลอาจกำหนดให้ถามทุกครั้งด้วย `transmissionConsent.allowRunScope: false`
 7. ตรวจผลตาม reference; เมื่อ write outcome ไม่ชัดเจน ห้าม retry หรือสลับบัญชีเพื่อทำซ้ำ ตรวจสถานะที่ Google ก่อน รายงาน completed เฉพาะเมื่อเครื่องมือยืนยันพร้อม reference/ID หรือ target สำหรับคำสั่งตอบรับว่าง; แยก completed ออกจาก verified-after-read
 
 ### ตัวอย่างงานอ่านอย่างเดียว
@@ -60,6 +60,7 @@ Anti-trigger: Excel/PPTX ในเครื่อง → `spreadsheet-work` / `p
 | งาน | input (operation) | params | บริการที่ต้องมี |
 | --- | --- | --- | --- |
 | ค้นเมล "ใบเสนอราคา" 7 วันล่าสุด | `gmail.list` แล้ว `gmail.get` ทีละฉบับที่เลือก | `{"query":"ใบเสนอราคา newer_than:7d"}` / `{"messageId":"<id จากผลค้น>"}` | `gmail-read` |
+| ดูอีเมลที่เกี่ยวข้องกับ HR เดือนนี้ | ค้น `gmail.list` แล้วอ่าน `gmail.get`/thread ที่เกี่ยวข้อง ใช้การอนุมัติเดียวในคำขอนี้ | ใช้ขอบเขตเดือน/ปีและ timezone ที่ทราบ เช่น `{"query":"hr after:2026/10/01 before:2026/11/01"}` | `gmail-read` |
 | ดูนัดวันนี้ | `calendar.list` แล้ว `calendar.events` | `{"calendarId":"primary","timeMin":"2026-10-17T00:00:00+07:00","timeMax":"2026-10-18T00:00:00+07:00"}` | `calendar-read` หรือ `calendar` |
 | หาไฟล์ Drive ชื่อมี "TOR" | `drive.list` | `{"query":"name contains 'TOR' and trashed = false"}` | `drive-read` (ทุกไฟล์) หรือ `documents` (เฉพาะไฟล์ที่แอปเปิด/สร้าง) |
 

@@ -1,6 +1,28 @@
 import { consentPreview } from './consent-preview';
 import { tm } from './i18n';
 
+/** Consent precedes access and explicitly covers sending the requested reads to this AI. */
+export function googleReadRequestConsent(request: string, destination: string, account: string, technical: string) {
+  return {
+    title: tm('อนุญาตให้อ่าน Google สำหรับคำขอนี้?'),
+    body: tm(
+      'อนุมัติครั้งเดียวเพื่อค้นและอ่านข้อมูล Google ที่จำเป็นจากบัญชีนี้ แล้วส่งผลที่ผ่านการตรวจข้อมูลให้ AI ที่ระบุ เฉพาะคำขอนี้ เมื่อจบหรือกดยกเลิก สิทธิ์นี้สิ้นสุด คำขอใหม่ต้องอนุมัติใหม่',
+    ),
+    facts: [
+      { label: tm('คำขอของคุณ'), value: request.slice(0, 8000) },
+      { label: tm('บัญชี Google'), value: account },
+      { label: tm('AI ปลายทาง'), value: destination },
+      {
+        label: tm('ขอบเขต'),
+        value: tm('ค้นและอ่านข้อมูล Google ของบัญชีนี้ตามคำขอ รวมหน้าถัดไปและรายการที่เกี่ยวข้อง ไม่รวมส่ง แก้ไข หรือลบข้อมูล'),
+      },
+    ],
+    technical: technical.slice(0, 16000),
+    privacyClass: 'restricted',
+    allowRemember: false,
+  };
+}
+
 /** Presentation uses only the privacy-reviewed payload; the host sends that same payload after consent. */
 export function googleResultConsent(operation: string, reviewed: string, provider: string, account: string) {
   const value = JSON.parse(reviewed);

@@ -20,10 +20,18 @@
 เริ่ม refresh ซ้ำหลัง token ใหม่ถูกบันทึกแล้ว Queue ยังคงลำดับแม้มีงานที่รอถูกยกเลิก และตรวจ context ใหม่เมื่อถึงคิว
 จึงไม่ถือว่าการอนุญาตก่อนรอให้สิทธิ์ใช้บัญชี/นโยบายที่เปลี่ยนไปแล้ว
 
+ตามคำขอเพิ่มเติมของผู้ใช้ งานอ่าน Google ในแชตขออนุมัติครั้งเดียวต่อคำขอ ครอบคลุมการค้น อ่านหน้าถัดไป
+และเปิดรายการที่เกี่ยวข้องของบัญชีเดิมพร้อมส่งผลให้ AI ที่ระบุ Dialog ระบุคำขอปัจจุบัน บัญชี AI/model/endpoint
+และขอบเขตอ่าน ทุกผลยังคงผ่าน privacy gate และข้อมูลที่ถูก block ไม่ออกไป สิทธิ์อยู่เฉพาะ tool loop
+และตรวจซ้ำก่อน AI turn/อ่าน cache คำขอใหม่หรือ context/account/Vault เปลี่ยนใช้สิทธิ์เดิมไม่ได้
+การส่ง แก้ไข ลบ และสร้าง draft ยังคงยืนยัน payload ทุกครั้ง ผู้ดูแลกำหนดให้ถามทุกครั้งได้ด้วย
+`transmissionConsent.allowRunScope: false` ไม่ใช้สิทธิ์ใหม่นี้กับ direct Settings หรือ optional gws
+
 ## การตรวจ
 
 Regression หลักอยู่ใน [google-workspace-reliability.test.ts](../../desktop/test/google-workspace-reliability.test.ts)
 และ [google-workspace-connector.test.js](../../test/google-workspace-connector.test.js)
+รวม [google-read-consent.test.ts](../../desktop/test/google-read-consent.test.ts) สำหรับหนึ่ง approval ต่อคำขอ
 ใช้ barriers และ synthetic transport เพื่อคุมลำดับ race รวมถึง cancellation, rotated tokens, queued writes,
 unknown outcomes, context changes, MIME charsets และ scope ของการค้น Shared drives
 ทดสอบพฤติกรรมเดิมที่ล้มก่อนแก้และพฤติกรรมหลังแก้ โดยไม่ปิดหรือข้าม test เพื่อให้ผ่าน
@@ -43,6 +51,7 @@ Runner ปัจจุบันต้องผ่านหลังแก้ ไ
 | การตรวจ | ผล |
 | --- | --- |
 | Native reliability regressions | 15 passed |
+| Read-request consent regressions | 7 passed |
 | Optional gws connector suite | 9 passed (รวม 3 tests ใหม่) |
 | Skill examples ผ่าน native execute | 76/76 operations, 11 families |
 | Root `npm test` | 1,063 passed, 4 skipped, 0 failed |
@@ -64,7 +73,7 @@ Native smokes ใช้ source ที่ build หลังแก้ ไม่�
   ก่อนทำ write ใหม่ ไม่มีการรับรองว่า remote operation ถูกยกเลิกแล้ว
 - บัญชีที่ถูกตั้ง reauth โดยเวอร์ชันก่อนแก้ไม่สามารถแยกจาก grant ที่ถูกเพิกถอนด้วยข้อมูลเดิม ต้องเชื่อมใหม่หนึ่งครั้ง
 - Sheet edits ยังไม่มี atomic revision guard; Docs หลาย tab และ binary transfers ยังมีข้อจำกัดตาม catalog เดิม
-- ไม่เปลี่ยน OAuth scopes, service intents, policy defaults, Vault protection, exact-action approvals หรือ result privacy gate
+- ไม่เปลี่ยน OAuth scopes, service intents, policy defaults, Vault protection, exact-payload write approvals หรือ result privacy gate
   Desktop ยังคงใช้ REST/OAuth/Vault ส่วน optional connector ใช้ gws; ไม่เพิ่ม gogcli binary bridge
 - Environment ยังไม่มี Google credential bindings และ Google API/OAuth hosts ถูก proxy ปฏิเสธ
   หลักฐานทั้งหมดจึงเป็น synthetic/offline/native UI checks ยังไม่รับรอง live account/API enablement

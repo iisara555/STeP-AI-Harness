@@ -59,6 +59,11 @@ The composer offers four modes, in the same spirit as Claude Code and ChatGPT:
 
 Phase 6 adds optional `transmissionConsent: { "allowRunScope": false }` to force one-time result consent. Omission permits an employee choice for bounded clean-read transmission within one loop (pre-checked in standard consent, see [pilot mode](#pilot-mode)); it never grants execution permission. See [scoped consent](desktop-phase6.md) for source, risk, destination and revocation boundaries.
 
+Native Google chat reads use one explicit approval for access plus AI handoff per employee request/tool loop,
+covering related read-only operations on one account. Every result remains privacy-reviewed, and writes still
+require exact-payload confirmation. `transmissionConsent.allowRunScope: false` retains per-operation/result Google
+consent as well. See [Google Workspace consent](google-workspace-functions.md#connection-and-intent).
+
 ## Organization checks (`checks`)
 
 Both checks are **off by default**: `{ "checks": { "authority": false, "privacy": false } }`.

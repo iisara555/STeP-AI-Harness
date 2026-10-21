@@ -11,6 +11,14 @@ import { skillSuggestEn } from './skill-suggest-en';
 import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 export const en: Record<string, string> = {
+  'ค้นและอ่าน Google ตามคำขอ': 'Search and read Google for your request',
+  อนุญาตสำหรับคำขอนี้: 'Allow for this request',
+  'อนุญาตให้อ่าน Google สำหรับคำขอนี้?': 'Allow Google reads for this request?',
+  'อนุมัติครั้งเดียวเพื่อค้นและอ่านข้อมูล Google ที่จำเป็นจากบัญชีนี้ แล้วส่งผลที่ผ่านการตรวจข้อมูลให้ AI ที่ระบุ เฉพาะคำขอนี้ เมื่อจบหรือกดยกเลิก สิทธิ์นี้สิ้นสุด คำขอใหม่ต้องอนุมัติใหม่':
+    'Approve once to search and read the Google data needed from this account and send privacy-reviewed results to the selected AI for this request. Permission ends when the request finishes or you cancel. A new request needs new approval.',
+  คำขอของคุณ: 'Your request',
+  'ค้นและอ่านข้อมูล Google ของบัญชีนี้ตามคำขอ รวมหน้าถัดไปและรายการที่เกี่ยวข้อง ไม่รวมส่ง แก้ไข หรือลบข้อมูล':
+    'Search and read Google data from this account for your request, including further pages and related items. Excludes sending, editing and deleting data.',
   'ถามเรื่อง Google Workspace ได้โดยไม่ต้องเลือก Skill เอง พร้อมปุ่มกลับมาใช้ข้อมูลบัญชีเมื่อคุณเคยพักไว้':
     'Ask about Google Workspace without choosing a Skill first, and resume account access if you paused it',
   'กล่องยืนยันข้อมูล Google อ่านง่ายขึ้น พร้อมบอกบัญชีและ AI ที่จะได้รับข้อมูล':

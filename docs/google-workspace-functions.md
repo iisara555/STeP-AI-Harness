@@ -40,9 +40,17 @@ reads through Google's accepted Drive scope even if `forms.responses.readonly` w
 combination as body-only access.
 
 Device service lists no longer narrow the offering. Each employee's selected account intent applies
-on every call, followed by actual scope checks. Every read/write asks for the account and exact request. Sending a
-result to AI has its own privacy check. Plan mode, Vault, cancellation, context changes and untrusted-data handling
-keep their existing boundaries.
+on every call, followed by actual scope checks. Chat read requests ask once before accessing Google: the dialog
+names the employee's current request, one account and the selected AI/model/endpoint, and covers both reading
+and sending privacy-reviewed results to that AI. For example, searching HR mail this month, fetching further pages
+and opening related messages/threads share that approval. Local masked account/operation discovery does not ask
+for Google-data approval. Every result is still scanned and blocked data stays withheld. The grant is in memory
+for this tool loop only: another message (even in the same task), cancellation, completion, account connection or
+Vault invalidation, policy/mode, workspace/team or AI destination changes cannot reuse it. Account switching stops
+with `GOOGLE_READ_SCOPE_CHANGED`; start a new request. Checks also precede subsequent AI turns and cached-result
+paging. Managed `transmissionConsent.allowRunScope: false` keeps per-operation/result dialogs. Direct Settings
+operations and the optional gws connector keep their existing consent. Writes, including drafts, still require
+exact-payload confirmation and separate result consent. Plan mode and untrusted-data boundaries remain.
 
 Account discovery returns masked account labels with a distinguishing number. Token refresh is shared across active
 callers, with cancellation isolated per task; account invalidation stops the shared request. A temporary network,

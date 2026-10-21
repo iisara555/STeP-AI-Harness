@@ -131,6 +131,10 @@ const errors: Record<string, readonly [string, string]> = {
     'บัญชีหรือการตั้งค่าเปลี่ยนระหว่างทำงาน กรุณาเลือกบัญชีและยืนยันใหม่',
     'The account or configuration changed. Select the account and confirm again.',
   ],
+  GOOGLE_READ_SCOPE_CHANGED: [
+    'การอนุมัติอ่านข้อมูลใช้กับบัญชีและการเชื่อมต่อเดิมในคำขอนี้เท่านั้น กรุณาเริ่มคำขอใหม่แล้วเลือกบัญชีที่ต้องการ',
+    'Read approval covers only the original account connection for this request. Start a new request and select the account you need.',
+  ],
   GOOGLE_REAUTH_REQUIRED: [
     'สิทธิ์ Google หมดอายุหรือถูกเพิกถอน กรุณาลงชื่อใหม่',
     'Google authorization expired or was revoked. Sign in again.',

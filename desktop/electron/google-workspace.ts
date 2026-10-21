@@ -166,6 +166,10 @@ export class GoogleWorkspace {
     const a = this.account(id);
     return [a.id, a.revision, a.clientId, a.subject].join(':');
   }
+  /** A chat-read grant also expires on global invalidation (including Vault suspension/resume). */
+  requestConsentKey(id: string) {
+    return JSON.stringify([this.epoch, this.consentKey(id)]);
+  }
   invalidate() {
     this.epoch++;
     this.handles.clear();

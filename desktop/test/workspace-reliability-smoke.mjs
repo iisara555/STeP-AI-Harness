@@ -86,6 +86,7 @@ try {
         return true;
       }
       if (method === 'approvalRespond') {
+        (globalThis.googleReadAnswers ||= []).push(input);
         event.sender.send('step:event', { type: 'approval-close', approvalId: input.id });
         return true;
       }
@@ -139,7 +140,7 @@ try {
   // Use the actual host preview builder with the real renderer; raw JSON is folded by default.
   const consentPath = join(home, 'google-consent.cjs');
   await build({ entryPoints: ['electron/google-consent.ts'], outfile: consentPath, bundle: true, platform: 'node', format: 'cjs' });
-  const { googleResultConsent } = createRequire(import.meta.url)(consentPath);
+  const { googleResultConsent, googleReadRequestConsent } = createRequire(import.meta.url)(consentPath);
   const reviewed = JSON.stringify({
     data: { items: [{ summary: 'Synthetic meeting', start: { dateTime: '2026-10-21T10:00:00+07:00' } }], nextSyncToken: 'synthetic-sync' },
   });
@@ -164,9 +165,57 @@ try {
   await expect(consentDialog.locator('.approval-technical pre')).toContainText('synthetic-sync');
   await consentDialog.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
   await expect(consentDialog).toHaveCount(0);
+  console.log('Google UI: one approval for an HR mail read request');
+  const readConsentPath = join(home, 'google-read-consent.cjs');
+  await build({
+    entryPoints: ['electron/google-read-consent.ts'],
+    outfile: readConsentPath,
+    bundle: true,
+    platform: 'node',
+    format: 'cjs',
+  });
+  const { GoogleReadConsent } = createRequire(import.meta.url)(readConsentPath);
+  const requestText = 'ขอดูอีเมลที่เกี่ยวข้องกับ hr เดือนนี้';
+  let prompts = 0;
+  const ask = async () => {
+    prompts++;
+    const detail = googleReadRequestConsent(requestText, 'OpenAI · synthetic-model', 'fi••••@example.test', 'synthetic search parameters');
+    await app.evaluate(({ BrowserWindow }, detail) => {
+      globalThis.googleReadAnswers = [];
+      BrowserWindow.getAllWindows()[0].webContents.send('step:event', {
+        type: 'approval',
+        approval: { ...detail, id: 'synthetic-read-request', tool: 'google-read-request' },
+      });
+    }, detail);
+    await expect.poll(() => app.evaluate(() => globalThis.googleReadAnswers.length)).toBe(1);
+    return (await app.evaluate(() => globalThis.googleReadAnswers[0].answer)) !== 'cancel';
+  };
+  const run = new GoogleReadConsent(requestText, 'OpenAI · synthetic-model', async () => {});
+  const authorized = run.authorize('synthetic-account', ask, async () => {});
+  await expect(consentDialog).toContainText(requestText);
+  await expect(consentDialog).toContainText('OpenAI · synthetic-model');
+  await expect(consentDialog).toContainText('fi••••@example.test');
+  await expect(consentDialog).toContainText('อนุมัติครั้งเดียว');
+  await expect(consentDialog).toContainText('ไม่รวมส่ง แก้ไข หรือลบข้อมูล');
+  await expect(consentDialog.getByRole('checkbox')).toHaveCount(0);
+  await consentDialog.getByRole('button', { name: 'อนุญาตสำหรับคำขอนี้', exact: true }).click();
+  await authorized;
+  await Promise.all([1, 2, 3].map(() => run.authorize('synthetic-account', ask, async () => {})));
+  assert.equal(prompts, 1);
+  await expect(consentDialog).toHaveCount(0);
+  run.close();
+  const next = new GoogleReadConsent(requestText, 'OpenAI · synthetic-model', async () => {});
+  const declined = next.authorize('synthetic-account', ask, async () => {});
+  // Attach the rejection handler before interacting with the renderer.
+  const rejected = assert.rejects(declined, /CANCELLED/);
+  await expect(consentDialog).toContainText(requestText);
+  await consentDialog.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
+  await rejected;
+  next.close();
+  assert.equal(prompts, 2, 'the next request must ask again');
   assert.deepEqual(errors, []);
   console.log(
-    'Workspace UI smoke passed: paused account/resume, three trusted credential prompts and readable Calendar consent with folded JSON. Synthetic IPC only.',
+    'Workspace UI smoke passed: paused account/resume, three trusted credential prompts, readable Calendar consent and one approval per HR mail read request with next-request cancellation. Synthetic IPC only.',
   );
 } finally {
   clearTimeout(deadline);

@@ -1524,6 +1524,7 @@ export class WorkService {
             cancel: () => controller.abort(),
             sessionId: id,
             query: session.originalQuery,
+            request: latest,
             team: session.team,
             contract,
             connection,
