@@ -156,9 +156,7 @@ try {
   assert.ok(!JSON.stringify(snapshot).includes('synthetic.id.token'));
   await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ ...policy, features: { receiptVision: false } }));
   // Policy files are polled every five seconds; allow a complete poll plus renderer/host scheduling.
-  await expect
-    .poll(async () => (await page.evaluate(() => window.step.call('ocrStatus'))).vision, { timeout: 15000 })
-    .toBe(false);
+  await expect.poll(async () => (await page.evaluate(() => window.step.call('ocrStatus'))).vision, { timeout: 15000 }).toBe(false);
   const denied = await page.evaluate(async () => {
     try {
       await window.step.call('receiptVision', { cloudAccountId: 'ocr-account' });
