@@ -1,6 +1,6 @@
 # Google Workspace — การแก้ production code ตาม audit
 
-แก้ต่อจาก [ผล audit ของ main 1272182](google-workspace-2026-10-21.md) ใน branch เดียวกับ PR #229
+แก้ต่อจาก [ผล audit ของ main 1272182](google-workspace-2026-10-21.md) และ audit PR #229
 โดยคง [หลักฐานก่อนแก้](google-workspace-2026-10-21.json) ไว้และเพิ่ม
 [ผลตรวจหลังแก้](google-workspace-2026-10-21-fixes.json) แยกกัน
 
