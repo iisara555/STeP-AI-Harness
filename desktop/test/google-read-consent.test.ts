@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { GoogleReadConsent } from '../electron/google-read-consent';
@@ -264,9 +264,23 @@ test('Ask mode host: local discovery, HR search and multiple reads need exactly 
     approvals,
     async () => ({ blocked: false, reason: '', results: [] }),
   );
+  let skillPath = 'skills/common/google-workspace/SKILL.md';
+  for (const resource of ['SKILL.md', 'references/tool-contract.md', 'examples/good-output.md']) {
+    const file = join(f.dir, 'skills/common/google-workspace', resource);
+    mkdirSync(join(file, '..'), { recursive: true });
+    writeFileSync(file, 'Synthetic bundled Google instructions and public contract.');
+  }
+  mkdirSync(join(f.dir, 'skills/custom'), { recursive: true });
+  writeFileSync(join(f.dir, 'skills/custom/SKILL.md'), 'Synthetic separately installed instructions.');
   const tools = new DesktopTools(
     workbench,
-    { root: f.dir, privacy: privacy.evaluatePrivacyGate } as Harness,
+    {
+      root: f.dir,
+      privacy: privacy.evaluatePrivacyGate,
+      catalog: async () => [{ name: 'google-workspace', path: skillPath, status: 'routed' }],
+      skillMetadata: async () => ({ path: skillPath, mandatoryReferences: [] }),
+      route: async () => ({ routingContract: { mode: 'SKILL', skill: 'google-workspace', authority: { status: 'ALLOW' } } }),
+    } as unknown as Harness,
     gate,
     approvals,
     new Questions(() => {}),
@@ -319,10 +333,14 @@ test('Ask mode host: local discovery, HR search and multiple reads need exactly 
         async prompt => {
           assert.doesNotMatch(prompt, /"ok":false/);
           turn++;
-          if (turn === 1) return '```step-tool\n{"tool":"tool_describe","input":"google_workspace"}\n```';
-          if (turn === 2) return request('', { action: 'list' });
-          if (turn === 3) return request('gmail.list', { action: 'execute', account: 'handle', params: list.params });
-          if (turn === 4)
+          if (turn === 1) return '```step-tool\n{"tool":"skill","input":"google-workspace"}\n```';
+          if (turn === 2)
+            return '```step-tool\n{"tool":"skill","input":"google-workspace","args":{"resource":"references/tool-contract.md"}}\n```';
+          if (turn === 3) return '```step-tool\n{"tool":"tool_search","input":"google_workspace","args":{"scope":"core"}}\n```';
+          if (turn === 4) return '```step-tool\n{"tool":"tool_describe","input":"google_workspace"}\n```';
+          if (turn === 5) return request('', { action: 'list' });
+          if (turn === 6) return request('gmail.list', { action: 'execute', account: 'handle', params: list.params });
+          if (turn === 7)
             return [get(), get('mail_two')]
               .map(r => request(r.operation, { action: 'execute', account: 'handle', params: r.params }))
               .join('\n');
@@ -335,6 +353,13 @@ test('Ask mode host: local discovery, HR search and multiple reads need exactly 
     assert.deepEqual(approvalsSeen, ['google-read-request']);
     assert.equal(await run(), 'Synthetic HR summary');
     assert.deepEqual(approvalsSeen, ['google-read-request', 'google-read-request']);
+    skillPath = 'skills/custom/SKILL.md';
+    const custom = await tools.host(scope);
+    const instruction = { tool: 'skill' as const, input: 'google-workspace' };
+    const customValue = await custom.execute(instruction, f.controller.signal);
+    await custom.outgoing(JSON.stringify(customValue), f.controller.signal, instruction);
+    assert.equal(approvalsSeen.at(-1), 'tool-data', 'an arbitrary installed Skill cannot inherit the bundled-instruction exemption');
+    await custom.dispose!();
     const host = await tools.host(scope);
     scope.connection.model = 'changed';
     await assert.rejects(host.check(), /DESTINATION_CHANGED/);

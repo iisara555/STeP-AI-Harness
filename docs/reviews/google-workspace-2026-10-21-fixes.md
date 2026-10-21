@@ -29,9 +29,14 @@
 
 ## การตรวจ
 
+การตรวจต่อพบ dialog เพิ่ม 3 ครั้งเมื่อเปิด privacy และโหลด Skill/reference/ค้นเครื่องมือก่อนอ่าน Google
+ขยาย regression เดิมให้วิ่งครบเส้นทางแล้วแก้เฉพาะ bundled instructions และ local Google-only discovery
+ยังตรวจ privacy ทุกผล และ custom Skill path ยังขอ consent ตามเดิม ชุด consent + Phase 2 ผ่าน 47 tests
+
+
 Regression หลักอยู่ใน [google-workspace-reliability.test.ts](../../desktop/test/google-workspace-reliability.test.ts)
 และ [google-workspace-connector.test.js](../../test/google-workspace-connector.test.js)
-รวม [google-read-consent.test.ts](../../desktop/test/google-read-consent.test.ts) สำหรับหนึ่ง approval ต่อคำขอ
+รวม [google-read-consent.test.ts](../../desktop/test/google-read-consent.test.ts) สำหรับหนึ่ง approval ต่อคำขอ รวมโหลด Skill/reference และค้นเครื่องมือในเส้นทางเดียวกัน
 ใช้ barriers และ synthetic transport เพื่อคุมลำดับ race รวมถึง cancellation, rotated tokens, queued writes,
 unknown outcomes, context changes, MIME charsets และ scope ของการค้น Shared drives
 ทดสอบพฤติกรรมเดิมที่ล้มก่อนแก้และพฤติกรรมหลังแก้ โดยไม่ปิดหรือข้าม test เพื่อให้ผ่าน

@@ -486,7 +486,15 @@ export class DesktopTools {
       execute: async r => {
         await runCheck();
         const value = await this.execute(r, runScope, check);
-        if (r.tool === 'tool_describe' && r.input === 'google_workspace' && r.args?.server === undefined)
+        const discovery = value as { tools?: { name: string }[]; managedMcp?: { servers?: unknown[] } } | null;
+        const googleSearch =
+          r.tool === 'tool_search' &&
+          r.args?.server === undefined &&
+          Array.isArray(discovery?.tools) &&
+          discovery.tools.length > 0 &&
+          discovery.tools.every(tool => tool.name === 'google_workspace') &&
+          !discovery.managedMcp?.servers?.length;
+        if (googleSearch || (r.tool === 'tool_describe' && r.input === 'google_workspace' && r.args?.server === undefined))
           await googleReads?.recordDiscovery(r, JSON.stringify(value));
         if (r.tool === 'terminal' && value && typeof value === 'object' && 'id' in value) jobs.add(String(value.id));
         return value;
@@ -751,6 +759,19 @@ export class DesktopTools {
             if (blocked(c) || c?.skill !== target) throw new Error('AUTHORITY_REVIEW_REQUIRED');
             const meta = await this.harness.skillMetadata(target);
             if (!meta?.path || meta.path !== entry.path) throw new Error('CONTEXT_UNAVAILABLE');
+            const instruction = async <T>(value: T) => {
+              const bundled = 'skills/common/google-workspace/';
+              const paths = [meta.path, ...(meta.mandatoryReferences || []).map((ref: any) => (typeof ref === 'string' ? ref : ref.path))];
+              // These installed instructions are already eligible for automatic Skill assembly, not Google account
+              // data. Keep progressive loading from adding dialogs; arbitrary Skills/paths retain normal consent.
+              if (
+                target === 'google-workspace' &&
+                meta.path === bundled + 'SKILL.md' &&
+                paths.every(path => typeof path === 'string' && path.startsWith(bundled))
+              )
+                await scope.googleReads?.recordDiscovery(r, JSON.stringify(value));
+              return value;
+            };
             if (a.resource !== undefined) {
               // References remain scoped to the routed Skill, never arbitrary harness files or executable scripts.
               if (typeof a.resource !== 'string' || !/^(references|examples)\/[A-Za-z0-9][A-Za-z0-9_/-]*\.md$/.test(a.resource))
@@ -760,13 +781,13 @@ export class DesktopTools {
               const actual = await realpath(path);
               const within = relative(base, actual);
               if (isAbsolute(within) || within.startsWith('..')) throw new Error('INVALID_SKILL_RESOURCE');
-              return { id: target, resource: a.resource, route: c, text: await this.context(path, base) };
+              return instruction({ id: target, resource: a.resource, route: c, text: await this.context(path, base) });
             }
             const paths = [
               meta.path,
               ...(meta.mandatoryReferences || []).map((ref: any) => (typeof ref === 'string' ? ref : ref.path)).filter(Boolean),
             ];
-            return { id: target, route: c, text: (await Promise.all(paths.map((p: string) => this.context(p)))).join('\n\n') };
+            return instruction({ id: target, route: c, text: (await Promise.all(paths.map((p: string) => this.context(p)))).join('\n\n') });
           }
           case 'session_search': {
             if (!this.history) throw new Error('TOOL_UNAVAILABLE');

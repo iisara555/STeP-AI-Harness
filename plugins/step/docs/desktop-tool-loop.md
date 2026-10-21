@@ -83,7 +83,7 @@ The AI can find this team's earlier tasks on this computer instead of asking the
 
 Native Google chat reads combine access and AI handoff in one approval per employee request/tool loop, bound to
 one account connection and the selected destination. Search/list/get/paging reuse it; every result still passes
-privacy review. Local masked Google discovery and the fixed `tool_describe(google_workspace)` do not add a dialog.
+privacy review. Local masked Google discovery, Google-only core tool search, the fixed `tool_describe(google_workspace)` and bundled Google Skill/progressive instructions do not add a dialog. Unrelated or custom Skills and remote metadata keep ordinary consent; every payload is still privacy-scanned.
 Only an exact reviewed result recorded by the native read host can reuse transmission consent. The next employee
 message starts a new grant, including in the same session. Cancellation, completion, account/Vault invalidation
 and context changes stop reuse, including later AI turns and cached paging. Writes retain exact-payload approval.
