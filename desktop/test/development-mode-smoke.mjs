@@ -75,6 +75,7 @@ try {
 
   await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
   await page.getByRole('tab', { name: 'เชื่อมต่อ AI' }).click();
+  await page.locator('.ai-developer-options > summary').click();
   const toggle = page.locator('.development-mode button');
   await expect(toggle).toBeVisible();
   await expect(toggle).toBeEnabled();
@@ -82,6 +83,7 @@ try {
   await expect(page.getByRole('button', { name: 'เชื่อมบัญชี Google', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'เพิ่มบัญชีเว็บไซต์', exact: true })).toBeEnabled();
   await page.getByRole('tab', { name: 'เชื่อมต่อ AI' }).click();
+  await page.locator('.ai-developer-options > summary').click();
   await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { developmentMode: false } }));
   await expect.poll(async () => (await call('snapshot')).policy.features.developmentMode, { timeout: 15000 }).toBe(false);
   await expect(toggle).toBeDisabled();
