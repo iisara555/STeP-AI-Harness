@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 const exec = promisify(execFile);
 const LIMIT = 1000000;
 const operations = {
-  'drive.list': { argv: ['drive', 'files', 'list'], params: ['q', 'pageSize', 'pageToken', 'fields'] },
+  'drive.list': { argv: ['drive', 'files', 'list'], params: ['q', 'pageSize', 'pageToken', 'fields', 'driveId', 'includeItemsFromAllDrives'], defaults: { supportsAllDrives: true, includeItemsFromAllDrives: true, fields: 'nextPageToken,incompleteSearch,files(id,name,mimeType,webViewLink,capabilities)' } },
   'docs.get': { argv: ['docs', 'documents', 'get'], params: ['documentId'] },
   'sheets.get': { argv: ['sheets', 'spreadsheets', 'get'], params: ['spreadsheetId'], defaults: { includeGridData: false } },
   'sheets.values.get': { argv: ['sheets', 'spreadsheets', 'values', 'get'], params: ['spreadsheetId', 'range'] },
@@ -24,8 +24,11 @@ function validate(request) {
   for (const [key, value] of Object.entries(params)) {
     if (key === 'pageSize') {
       if (!Number.isInteger(value) || value < 1 || value > 100) error('INVALID_WORKSPACE_INPUT');
+    } else if (key === 'includeItemsFromAllDrives') {
+      if (typeof value !== 'boolean') error('INVALID_WORKSPACE_INPUT');
     } else if (typeof value !== 'string' || !value.trim() || value.length > 2000 || /[\x00-\x1f]/.test(value)) error('INVALID_WORKSPACE_INPUT');
   }
+  if (params.driveId !== undefined && (!/^[A-Za-z0-9_-]{1,200}$/.test(params.driveId) || params.includeItemsFromAllDrives === false)) error('INVALID_WORKSPACE_INPUT');
   for (const key of ['documentId', 'spreadsheetId'].filter(k => op.params.includes(k)))
     if (typeof params[key] !== 'string' || !/^[A-Za-z0-9_-]{1,200}$/.test(params[key])) error('INVALID_WORKSPACE_INPUT');
   if (request.operation.startsWith('sheets.values.') && typeof params.range !== 'string') error('INVALID_WORKSPACE_INPUT');
@@ -61,7 +64,10 @@ export class GoogleWorkspaceConnector {
     if (signal?.aborted) error('CANCELLED');
     const op = validate(request);
     const params = { ...(op.defaults || {}), ...(request.params || {}) };
-    if (request.operation === 'drive.list' && !params.pageSize) params.pageSize = 20;
+    if (request.operation === 'drive.list') {
+      if (!params.pageSize) params.pageSize = 20;
+      params.corpora = params.driveId ? 'drive' : params.includeItemsFromAllDrives === false ? 'user' : 'allDrives';
+    }
     const args = [...op.argv, '--params', JSON.stringify(params), '--format', 'json'];
     if (request.body) {
       const body = request.operation === 'docs.appendText'
@@ -74,21 +80,33 @@ export class GoogleWorkspaceConnector {
     const digest = createHash('sha256').update(JSON.stringify(args)).digest('hex');
     const effect = snapshot.operation.endsWith('.create') ? 'create-draft-in-google-account' : op.write ? 'update-existing-content' : 'read';
     if (dryRun) return { status: 'dry-run', operation: snapshot.operation, effect, digest };
-    if (op.write && (typeof authorize !== 'function' || await authorize({ operation: snapshot.operation, request: snapshot, digest, effect }) !== true)) error('WORKSPACE_WRITE_AUTHORIZATION_REQUIRED');
+    if (op.write && (typeof authorize !== 'function' || await authorize({ operation: snapshot.operation, request: JSON.parse(JSON.stringify(snapshot)), digest, effect }) !== true)) error('WORKSPACE_WRITE_AUTHORIZATION_REQUIRED');
     if (signal?.aborted) error('CANCELLED');
+    const unknown = () => {
+      throw Object.assign(new Error('WORKSPACE_OUTCOME_UNKNOWN'), {
+        operation: snapshot.operation, requestDigest: digest,
+        target: JSON.parse(JSON.stringify(snapshot.params || {})),
+      });
+    };
     let raw;
     try { raw = await this.run(args, { timeout: 20000, maxBuffer: LIMIT, signal }); }
     catch (e) {
-      if (signal?.aborted || e.name === 'AbortError') error('CANCELLED');
-      if (e.code === 'ENOENT') error('WORKSPACE_CLI_UNAVAILABLE');
+      if (e?.code === 'ENOENT') error('WORKSPACE_CLI_UNAVAILABLE');
+      if (op.write) unknown();
+      if (signal?.aborted || e?.name === 'AbortError') error('CANCELLED');
       error('WORKSPACE_CLI_FAILED'); // Never expose stderr, tokens or account diagnostics to a model or log.
     }
-    if (typeof raw !== 'string' || raw.length > LIMIT) error('WORKSPACE_RESPONSE_INVALID');
+    if (signal?.aborted) {
+      if (op.write) unknown();
+      error('CANCELLED');
+    }
+    const invalid = () => { if (op.write) unknown(); error('WORKSPACE_RESPONSE_INVALID'); };
+    if (typeof raw !== 'string' || Buffer.byteLength(raw) > LIMIT) invalid();
     let data;
-    try { data = JSON.parse(raw); } catch { error('WORKSPACE_RESPONSE_INVALID'); }
-    if (!object(data) || data.error) error('WORKSPACE_RESPONSE_INVALID');
+    try { data = JSON.parse(raw); } catch { invalid(); }
+    if (!object(data) || data.error) invalid();
     const reference = data.documentId || data.spreadsheetId;
-    if (op.write && (typeof reference !== 'string' || !/^[A-Za-z0-9_-]{1,200}$/.test(reference))) error('WORKSPACE_RESPONSE_INVALID');
+    if (op.write && (typeof reference !== 'string' || !/^[A-Za-z0-9_-]{1,200}$/.test(reference))) unknown();
     return { operation: snapshot.operation, status: 'completed', trust: 'untrusted-data', provenance: 'EXTRACTED_UNVERIFIED',
       retrievedAt: new Date().toISOString(), ...(reference ? { reference } : {}), data };
   }

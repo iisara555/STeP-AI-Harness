@@ -36,7 +36,7 @@ export const GOOGLE_OPERATIONS = [
 export type GoogleOperation = (typeof GOOGLE_OPERATIONS)[number];
 /** Discovery gives models the actual bounded contract instead of asking them to invent API arguments. */
 const legacyGoogleCatalog: [string, string[], string[]][] = [
-  ['drive.list', ['query?', 'pageToken?'], []],
+  ['drive.list', ['query?', 'pageToken?', 'driveId?', 'includeItemsFromAllDrives? (default true)'], []],
   ['docs.get', ['documentId'], []],
   ['docs.create', [], ['title']],
   ['docs.appendText', ['documentId'], ['text', 'requiredRevisionId']],
@@ -124,15 +124,24 @@ export function googleInvocation(request: GoogleRequest) {
   };
   switch (request.operation) {
     case 'drive.list':
-      exact(p, ['query', 'pageToken']);
+      exact(p, ['query', 'pageToken', 'driveId', 'includeItemsFromAllDrives']);
       exact(b, []);
+      if (
+        (p.includeItemsFromAllDrives !== undefined && typeof p.includeItemsFromAllDrives !== 'boolean') ||
+        (p.driveId !== undefined && p.includeItemsFromAllDrives === false)
+      )
+        throw new Error('INVALID_GOOGLE_INPUT');
       url =
         'https://www.googleapis.com/drive/v3/files?' +
         new URLSearchParams({
           pageSize: '20',
-          fields: 'nextPageToken,files(id,name,mimeType,webViewLink,capabilities)',
+          fields: 'nextPageToken,incompleteSearch,files(id,name,mimeType,webViewLink,capabilities)',
           q: p.query ? text(p.query, 500) : 'trashed = false',
           pageToken: page(),
+          supportsAllDrives: 'true',
+          includeItemsFromAllDrives: String(p.includeItemsFromAllDrives !== false),
+          corpora: p.driveId !== undefined ? 'drive' : p.includeItemsFromAllDrives === false ? 'user' : 'allDrives',
+          ...(p.driveId !== undefined ? { driveId: id(p.driveId) } : {}),
         });
       scopes = docRead;
       break;

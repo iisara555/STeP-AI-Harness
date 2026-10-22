@@ -23,7 +23,7 @@ test('writes require explicit host authorization tied to the exact request and n
   assert.equal(calls, 0);
   await assert.rejects(c.execute(request, { authorize: async action => {
     assert.equal(action.operation, 'sheets.create'); assert.ok(action.digest); return true;
-  } }), /WORKSPACE_CLI_FAILED/);
+  } }), /WORKSPACE_OUTCOME_UNKNOWN/);
   assert.equal(calls, 1);
 });
 
@@ -65,6 +65,72 @@ test('caller mutation during host approval cannot change the invocation', async 
   let sent;
   const c = new GoogleWorkspaceConnector({ run: async args => { sent = JSON.parse(args[args.indexOf('--json') + 1]); return JSON.stringify({ documentId: 'new-doc' }); } });
   const req = { operation: 'docs.create', body: { title: 'reviewed title' } };
-  await c.execute(req, { authorize: async () => { req.body.title = 'changed'; return true; } });
+  const result = await c.execute(req, { authorize: async action => {
+    req.body.title = 'changed';
+    action.request.operation = 'sheets.create';
+    action.request.body.title = 'also changed';
+    return true;
+  } });
   assert.equal(sent.title, 'reviewed title');
+  assert.equal(result.operation, 'docs.create');
+});
+
+test('started writes report unknown outcome on process failure, cancellation and invalid acknowledgements', async () => {
+  const request = { operation: 'docs.create', body: { title: 'Synthetic title' } };
+  for (const failure of ['process', 'abort', 'cancel-after-response', 'json', 'missing-reference', 'oversized']) {
+    const controller = new AbortController();
+    let effects = 0;
+    const c = new GoogleWorkspaceConnector({ run: async () => {
+      effects++;
+      if (failure === 'process') throw new Error('synthetic-private-upstream-detail');
+      if (failure === 'abort') { controller.abort(); const e = new Error(); e.name = 'AbortError'; throw e; }
+      if (failure === 'cancel-after-response') { controller.abort(); return '{"documentId":"created"}'; }
+      if (failure === 'missing-reference') return '{}';
+      if (failure === 'oversized') return 'x'.repeat(1000001);
+      return 'invalid-json';
+    } });
+    await assert.rejects(c.execute(request, { authorize: async () => true, signal: controller.signal }), e => {
+      assert.equal(e.message, 'WORKSPACE_OUTCOME_UNKNOWN', failure);
+      assert.equal(e.operation, 'docs.create');
+      assert.match(e.requestDigest, /^[a-f0-9]{64}$/);
+      assert.deepEqual(e.target, {});
+      assert.doesNotMatch(JSON.stringify(e), /synthetic-private-upstream-detail|Synthetic title/);
+      return true;
+    });
+    assert.equal(effects, 1, 'no write is retried');
+  }
+});
+
+test('pre-execution failures are definite and cancellation still stops reads', async () => {
+  const request = { operation: 'docs.create', body: { title: 'Synthetic title' } };
+  let calls = 0;
+  const c = new GoogleWorkspaceConnector({ run: async () => { calls++; return '{"documentId":"created"}'; } });
+  const controller = new AbortController();
+  await assert.rejects(c.execute(request, { signal: controller.signal, authorize: async () => { controller.abort(); return true; } }), /^Error: CANCELLED$/);
+  assert.equal(calls, 0);
+  const missing = new GoogleWorkspaceConnector({ run: async () => { const e = new Error(); e.code = 'ENOENT'; throw e; } });
+  await assert.rejects(missing.execute(request, { authorize: async () => true }), /^Error: WORKSPACE_CLI_UNAVAILABLE$/);
+  const readController = new AbortController();
+  const reader = new GoogleWorkspaceConnector({ run: async () => { readController.abort(); return '{}'; } });
+  await assert.rejects(reader.execute({ operation: 'drive.list' }, { signal: readController.signal }), /^Error: CANCELLED$/);
+});
+
+test('gws Drive search uses shared-drive flags and checked drive-specific or personal search', async () => {
+  const calls = [];
+  const c = new GoogleWorkspaceConnector({ run: async args => {
+    calls.push(JSON.parse(args[args.indexOf('--params') + 1]));
+    return '{"files":[],"incompleteSearch":true}';
+  } });
+  assert.equal((await c.execute({ operation: 'drive.list' })).data.incompleteSearch, true);
+  assert.equal(calls[0].supportsAllDrives, true);
+  assert.equal(calls[0].includeItemsFromAllDrives, true);
+  assert.equal(calls[0].corpora, 'allDrives');
+  assert.match(calls[0].fields, /incompleteSearch/);
+  await c.execute({ operation: 'drive.list', params: { driveId: 'shared_drive' } });
+  assert.equal(calls[1].corpora, 'drive');
+  assert.equal(calls[1].driveId, 'shared_drive');
+  await c.execute({ operation: 'drive.list', params: { includeItemsFromAllDrives: false } });
+  assert.equal(calls[2].corpora, 'user');
+  for (const params of [{ driveId: 'bad/drive' }, { includeItemsFromAllDrives: 'true' }, { driveId: 'shared_drive', includeItemsFromAllDrives: false }])
+    await assert.rejects(c.execute({ operation: 'drive.list', params }), /INVALID_WORKSPACE_INPUT/);
 });

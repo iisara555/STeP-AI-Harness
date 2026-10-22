@@ -81,6 +81,15 @@ The AI can find this team's earlier tasks on this computer instead of asking the
 
 ## Permissions and outgoing data
 
+Native Google chat reads combine access and AI handoff in one approval per employee request/tool loop, bound to
+one account connection and the selected destination. Search/list/get/paging reuse it; every result still passes
+privacy review. Local masked Google discovery, Google-only core tool search, the fixed `tool_describe(google_workspace)` and bundled Google Skill/progressive instructions do not add a dialog. Unrelated or custom Skills and remote metadata keep ordinary consent; every payload is still privacy-scanned.
+Only an exact reviewed result recorded by the native read host can reuse transmission consent. The next employee
+message starts a new grant, including in the same session. Cancellation, completion, account/Vault invalidation
+and context changes stop reuse, including later AI turns and cached paging. Writes retain exact-payload approval.
+Managed `transmissionConsent.allowRunScope: false` keeps per-operation/result dialogs. See
+[Google Workspace functions](google-workspace-functions.md#connection-and-intent).
+
 Model-generated search queries and fetch URLs require their own one-time destination consent before network access. Only pattern-checked public requests qualify; confirming a provider result does not authorize a new web/search destination. Policy/workspace checks repeat after this consent.
 
 Model text-file reads scan the complete bounded source before paging. Known credentials block the entire source; paging offsets refer to masked text so detection cannot be bypassed at a chunk boundary. Manual previews remain local and use the existing attachment consent when sent into Chat.

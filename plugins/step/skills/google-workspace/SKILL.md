@@ -50,7 +50,7 @@ Anti-trigger: Excel/PPTX ในเครื่อง → `spreadsheet-work` / `p
 3. โหลด reference เฉพาะงานด้วย `skill` input `google-workspace` args `{"resource":"references/tool-contract.md"}`; ใช้วิธีเดียวกันกับ [Gmail search](references/gmail-search-syntax.md), [daily brief](references/daily-brief.md), [การแก้และตรวจผล](references/write-verification.md) บัญชีจาก catalog เป็น handle อายุสั้นผูกกับ session ไม่ใช่ account ID ที่เก็บใช้ข้ามงาน
 4. แยกอ่าน/ร่าง/ส่งจริง เลือก operation จาก catalog และใช้เฉพาะ params/body ที่ระบุ อ่านข้อมูลเท่าที่จำเป็น จำกัด pagination และบอกขอบเขตที่ยังอ่านไม่ครบ คำขอสรุปไม่อนุญาตให้ส่งเมลหรือสร้างนัด
 5. ก่อนเปลี่ยนข้อมูล แสดงบัญชี เป้าหมาย เนื้อหาหรือช่วงเซลล์ เวลา/ผู้รับ และผลกระทบให้ตรวจ เครื่องมือขอการยืนยันเฉพาะ payload อีกครั้ง แม้สร้าง Gmail draft หรืออยู่ Accept Edits/Auto; การอนุมัติแผนไม่แทนการยืนยัน action
-6. เรียก `google_workspace` input ชื่อ operation args `{"action":"execute","account":"<handle>","params":{},"body":{}}` ตาม catalog; ส่ง params/body เฉพาะที่งานนั้นใช้ การอ่านและส่งผลเข้า AI ยังผ่าน consent/privacy ของ host
+6. เรียก `google_workspace` input ชื่อ operation args `{"action":"execute","account":"<handle>","params":{},"body":{}}` ตาม catalog; ส่ง params/body เฉพาะที่งานนั้นใช้ งานอ่านขออนุมัติครั้งเดียวต่อคำขอ ครอบคลุมการค้น อ่านหน้าถัดไป และอ่านรายการที่เกี่ยวข้องของบัญชีเดิมพร้อมส่งผลให้ AI ที่ระบุ ทุกผลยังผ่าน privacy ของ host คำขอใหม่ต้องอนุมัติใหม่ ถ้าบัญชี/การเชื่อมต่อเปลี่ยนจนได้ `GOOGLE_READ_SCOPE_CHANGED` ให้หยุดและขอให้เริ่มคำขอใหม่ ห้ามสลับบัญชีเพื่อใช้สิทธิ์เดิม ผู้ดูแลอาจกำหนดให้ถามทุกครั้งด้วย `transmissionConsent.allowRunScope: false`
 7. ตรวจผลตาม reference; เมื่อ write outcome ไม่ชัดเจน ห้าม retry หรือสลับบัญชีเพื่อทำซ้ำ ตรวจสถานะที่ Google ก่อน รายงาน completed เฉพาะเมื่อเครื่องมือยืนยันพร้อม reference/ID หรือ target สำหรับคำสั่งตอบรับว่าง; แยก completed ออกจาก verified-after-read
 
 ### ตัวอย่างงานอ่านอย่างเดียว
@@ -60,10 +60,13 @@ Anti-trigger: Excel/PPTX ในเครื่อง → `spreadsheet-work` / `p
 | งาน | input (operation) | params | บริการที่ต้องมี |
 | --- | --- | --- | --- |
 | ค้นเมล "ใบเสนอราคา" 7 วันล่าสุด | `gmail.list` แล้ว `gmail.get` ทีละฉบับที่เลือก | `{"query":"ใบเสนอราคา newer_than:7d"}` / `{"messageId":"<id จากผลค้น>"}` | `gmail-read` |
+| ดูอีเมลที่เกี่ยวข้องกับ HR เดือนนี้ | ค้น `gmail.list` แล้วอ่าน `gmail.get`/thread ที่เกี่ยวข้อง ใช้การอนุมัติเดียวในคำขอนี้ | ใช้ขอบเขตเดือน/ปีและ timezone ที่ทราบ เช่น `{"query":"hr after:2026/10/01 before:2026/11/01"}` | `gmail-read` |
 | ดูนัดวันนี้ | `calendar.list` แล้ว `calendar.events` | `{"calendarId":"primary","timeMin":"2026-10-17T00:00:00+07:00","timeMax":"2026-10-18T00:00:00+07:00"}` | `calendar-read` หรือ `calendar` |
 | หาไฟล์ Drive ชื่อมี "TOR" | `drive.list` | `{"query":"name contains 'TOR' and trashed = false"}` | `drive-read` (ทุกไฟล์) หรือ `documents` (เฉพาะไฟล์ที่แอปเปิด/สร้าง) |
 
 รายการส่วนใหญ่ได้หน้าละ 20 รายการตาม catalog ถ้ามี `nextPageToken` ให้บอกว่ายังอ่านไม่ครบ และอ่านหน้าถัดไปเฉพาะเมื่องานต้องใช้ ไวยากรณ์ค้น Gmail อยู่ใน [Gmail search](references/gmail-search-syntax.md)
+
+Drive ค้นทั้ง My Drive และ Shared drives ที่ grant อนุญาตเป็นค่าเริ่มต้น ใช้ `driveId` จากเป้าหมายที่ทราบเมื่อต้องจำกัด Shared drive หรือ `includeItemsFromAllDrives: false` สำหรับ My Drive ถ้าผลมี `incompleteSearch: true` ต้องบอกว่าค้นยังไม่ครบ แม้ไม่มีหน้าถัดไป และให้จำกัดเป้าหมายก่อนสรุปว่าไม่มีไฟล์
 
 ## Output
 
@@ -105,7 +108,7 @@ AI ค้น อ่าน สรุป และเตรียมเนื้�
 | `drive.list` หาไฟล์ที่มีอยู่จริงไม่เจอ | บัญชีมีแค่ `documents` (`drive.file`) ซึ่งเห็นเฉพาะไฟล์ที่แอปสร้างหรือเปิด บอกข้อจำกัดนี้ ไม่สรุปว่าไม่มีไฟล์ |
 | นัดหายหรือเวลาเพี้ยน | ส่ง `timeMin`/`timeMax` แบบ RFC3339 ที่มี offset เช่น `+07:00` ถ้าผู้ใช้ไม่บอก timezone และมีผลกับคำตอบให้ถาม |
 | ผลค้นได้ 20 รายการพอดี | มีหน้าถัดไปได้ ตรวจ `nextPageToken` แล้วบอกว่ายังไม่ครบ |
-| `gmail.get` คืน `contentUnavailable` | เมลเป็น HTML หรือไฟล์แนบอย่างเดียว ให้ผู้ใช้เปิด Gmail เอง ไม่เดาเนื้อหา |
+| `gmail.get` คืน `contentUnavailable` | เมลไม่มี plain text หรือมีบางส่วนที่ถอด charset ไม่ได้ ให้ผู้ใช้เปิด Gmail ตรวจส่วนที่ขาด ไม่เดาเนื้อหา ส่วนที่อ่านได้ไม่พิสูจน์ว่าอ่านครบทั้งฉบับ |
 | ไฟล์แนบหรือ Drive เป็นไฟล์ไบนารี | เครื่องมือโอน/อ่านไฟล์ใน catalog รองรับข้อความ UTF-8 เท่านั้น ให้เปิด PDF/DOCX/รูปภาพใน Google โดยตรง ไม่คืน base64 ให้ AI |
 | `GOOGLE_SOURCE_CHANGED` ตอนแก้ Apps Script | อ่าน `getContent` ใหม่แล้วใช้ contentHash ล่าสุด ส่งเฉพาะไฟล์ที่แก้ ไม่ตัด hash check ทิ้ง |
 | Apps Script รันไม่ได้ | ต้องเป็น API Executable deployment ใน Cloud project เดียวกับ OAuth client และ grant ครบ Project OAuth Scopes; ดู tool contract ไม่สั่งรันโค้ดผ่าน shell แทน |
@@ -124,7 +127,7 @@ AI ค้น อ่าน สรุป และเตรียมเนื้�
 
 ## Maintenance
 
-อัปเดตล่าสุด: 2026-10-19
+อัปเดตล่าสุด: 2026-10-21
 
 - เจ้าของ: ตาม `../../manifest/skills.yaml`
 - แก้ Skill นี้เมื่อ `desktop/electron/google-operations.ts` เพิ่มหรือเปลี่ยน operation, เมื่อ `desktop/src/google-services.ts` เปลี่ยนชื่อบริการหรือ scope, หรือเมื่อค่าเริ่มต้น `googleWorkspace` ใน `desktop/electron/policy.ts` เปลี่ยน แล้วแก้วันที่ข้างบน

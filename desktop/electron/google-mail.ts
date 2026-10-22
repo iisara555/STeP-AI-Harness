@@ -52,11 +52,30 @@ export function googleMailMessage(body: Record<string, any>) {
 export function googleMailContent(message: any) {
   const parts: string[] = [],
     attachments: object[] = [];
-  let visited = 0;
+  let visited = 0,
+    undecodable = false;
   const extract = (part: any, depth = 0) => {
     if (!part || depth > 10 || ++visited > 50) return;
-    if (part.mimeType === 'text/plain' && typeof part.body?.data === 'string')
-      parts.push(Buffer.from(part.body.data, 'base64url').toString('utf8'));
+    if (part.mimeType === 'text/plain' && typeof part.body?.data === 'string') {
+      try {
+        const encoded = part.body.data;
+        if (!/^[A-Za-z0-9_-]*={0,2}$/.test(encoded)) throw new Error();
+        const bytes = Buffer.from(encoded, 'base64url');
+        if (bytes.toString('base64url') !== encoded.replace(/=+$/, '')) throw new Error();
+        const contentType = Array.isArray(part.headers)
+          ? part.headers.find((h: any) => String(h?.name).toLowerCase() === 'content-type')?.value
+          : undefined;
+        const charset =
+          typeof contentType === 'string' ? /(?:^|;)\s*charset\s*=\s*(?:"([^"]*)"|'([^']*)'|([^;\s]+))/i.exec(contentType) : null;
+        const encoding = charset ? (charset[1] ?? charset[2] ?? charset[3]) : 'utf-8';
+        if (!encoding || encoding.length > 100) throw new Error();
+        const text = new TextDecoder(encoding, { fatal: true }).decode(bytes);
+        if (text.includes('\0')) throw new Error();
+        parts.push(text);
+      } catch {
+        undecodable = true;
+      }
+    }
     if (typeof part.body?.attachmentId === 'string')
       attachments.push({
         attachmentId: part.body.attachmentId,
@@ -80,6 +99,10 @@ export function googleMailContent(message: any) {
           .map((h: any) => ({ name: String(h.name), value: String(h.value).slice(0, 2000) }))
       : [],
     ...(attachments.length ? { attachments } : {}),
-    ...(parts.length ? {} : { contentUnavailable: 'No plain-text body available; open Gmail to inspect HTML/attachments.' }),
+    ...(undecodable
+      ? { contentUnavailable: 'Some plain-text content could not be decoded; open Gmail to inspect the complete message.' }
+      : parts.length
+        ? {}
+        : { contentUnavailable: 'No plain-text body available; open Gmail to inspect HTML/attachments.' }),
   };
 }

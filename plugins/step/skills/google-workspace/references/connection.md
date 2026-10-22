@@ -5,7 +5,7 @@
 `tool_describe` input `google_workspace` บอกความพร้อมตามนโยบาย; `google_workspace` input ว่าง args `{"action":"list"}` คืน `accounts` และ `operations` เท่านั้น ไม่มี token
 
 - ไม่มีบัญชี: เปิด Settings → ส่วน Google Workspace กดเชื่อมและเลือกบริการที่งานต้องใช้ ผู้ใช้ล็อกอิน/ยินยอมบนหน้า Google ใน browser แล้วกลับเข้าแอป ไม่ส่ง redirect URL หรือ auth code ลงแชต
-- มีหลายบัญชี: ให้เลือกบัญชีแบบปกปิดที่แอปแสดง ถ้าชื่อแยกไม่ได้ให้ตรวจบัญชีใน Settings ไม่ให้ AI ขออีเมลเต็มโดยไม่จำเป็น
+- มีหลายบัญชี: catalog แสดงป้ายบัญชีแบบปกปิดพร้อมลำดับเพื่อแยกชื่อที่ซ้ำกัน ให้ผู้ใช้เลือกจากป้ายที่ได้รับในงานนี้ ไม่ให้ AI ขออีเมลเต็มโดยไม่จำเป็น
 - บัญชี pause/reauth จะไม่อยู่ใน catalog: ให้ผู้ใช้กลับไปเปิดใช้งานหรือเชื่อมใหม่ใน Settings ไม่เปลี่ยนไปใช้อีกบัญชีเงียบ ๆ
 - นโยบายปิดบริการหรือยังไม่มี OAuth client: ผู้ดูแลตั้งค่า OAuth client/API/audience/domain และบริการใน managed policy ครั้งเดียว ไม่ใช่ให้พนักงานสร้าง Cloud project ทุกคน
 
@@ -47,7 +47,7 @@ Apps Script ต้องเปิด API access ใน Apps Script settings ส�
 | `VAULT_SUSPENDED` | หยุดอ่านข้อมูล ใช้ `nextAction` จาก host: ตั้งค่าพื้นที่ทำงาน → รหัสผ่านและการเชื่อมต่อ → กลับมาใช้งาน ไม่ต้องลงชื่อหรือกรอกรหัสผ่าน Google ใหม่ ไม่เรียก `browser_vault` เพื่อขอรหัสผ่าน และไม่อ้างว่าไม่มีนัดจากการอ่านที่ถูกพัก |
 | `GOOGLE_ACCESS_DENIED` | ตรวจบัญชี, pause, domain, สิทธิ์ไฟล์ และข้อจำกัดองค์กร; ไม่ย้ายข้อมูลไปบัญชีอื่น |
 | `GOOGLE_QUOTA_LIMIT` | หยุดและบอกข้อจำกัด ไม่ rapid-fire retry |
-| `GOOGLE_REQUEST_FAILED` | ตรวจสถานะบริการ/API/เป้าหมาย ไม่อ้างว่าไม่มีไฟล์จาก request ที่ล้มเหลว |
+| `GOOGLE_REQUEST_FAILED` | ตรวจเครือข่าย/สถานะบริการ/API/เป้าหมาย ไม่อ้างว่าไม่มีไฟล์จาก request ที่ล้มเหลว การ refresh ล้มชั่วคราวไม่บังคับเชื่อมบัญชีใหม่; งานอ่านครั้งถัดไปลองใหม่ได้เมื่อพร้อม แต่ไม่ retry writes ที่ผลไม่ชัดเจน |
 | `GOOGLE_OUTCOME_UNKNOWN` | อาจเขียนแล้ว ห้ามทำซ้ำทันที ใช้ read ที่รองรับหรือให้ผู้ใช้ตรวจ Google ก่อน |
 | `GOOGLE_SOURCE_CHANGED` | อ่าน Apps Script getContent ใหม่ ตรวจไฟล์ที่แก้/ลบ แล้วใช้ contentHash ล่าสุด |
 | `GOOGLE_REDACTED_SOURCE` | ไฟล์ที่แก้มี credential ถูกปิดบัง ให้แก้ไฟล์นั้นใน Google โดยตรง ไฟล์อื่นที่ไม่ได้แก้ Host เก็บไว้ตามเดิม |

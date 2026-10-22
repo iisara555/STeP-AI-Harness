@@ -160,6 +160,8 @@ export function evaluatePermission(
   // The Vault host owns its masked prompts and exact-origin checks. Saved logins/addresses are automatic;
   // payment data has its own one-shot approval there. Do not add a generic command dialog in front of it.
   if (request.tool === 'browser_vault') return { allowed: true, requiresConfirmation: false, reason: 'vault host consent' };
+  // Native Google owns both read-request consent and exact-payload write confirmation in every mode.
+  if (request.tool === 'google_workspace') return { allowed: true, requiresConfirmation: false, reason: 'Google host consent' };
   // Accept edits: a write to one workspace file goes ahead (its diff is staged and a snapshot can undo it).
   // Commands, the sandbox and external tool calls still ask.
   if (effective === 'acceptEdits' && request.tool === 'write' && request.path && !request.execute)

@@ -24,6 +24,7 @@ import { documentSection, documentHeadings, OrganizationKnowledge } from './know
 import { mainLocale, tm } from './i18n';
 import type { Store } from './store';
 import { readHistory, searchHistory } from './session-history';
+import { GoogleReadConsent } from './google-read-consent';
 
 // What the employee reads on the status line while a tool runs, in plain words instead of the tool's name.
 const TOOL_ACTIVITY: Record<string, string> = {
@@ -48,6 +49,10 @@ export type ToolScope = {
   cancel: () => void;
   sessionId: string;
   query: string;
+  /** Current employee message, distinct from the task's original query on follow-up turns. */
+  request?: string;
+  /** Host-owned, scoped to one tool loop; unavailable to tool arguments. */
+  googleReads?: GoogleReadConsent;
   team: string;
   contract: any;
   connection: Connection;
@@ -205,9 +210,11 @@ export class DesktopTools {
     what?: string,
     own = false,
     credentialMetadata = false,
+    consentedGoogleRead = false,
   ) {
     const review = this.harness.privacy(text, { credentialMetadata });
     if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
+    if (consentedGoogleRead) return review.redactedText;
     // Credential filtering is always on; optional privacy consent still follows policy.
     if (!this.policy().checks.privacy) return review.redactedText;
     const clean =
@@ -327,6 +334,7 @@ export class DesktopTools {
       policy = this.policy(),
       mode = this.mode();
     const connectionIdentity = JSON.stringify(scope.connection),
+      requestIdentity = JSON.stringify([scope.query, scope.request]),
       team = scope.team,
       hostIdentity = this.identity(scope.sessionId);
     const check = async () => {
@@ -335,6 +343,7 @@ export class DesktopTools {
       if (workspace !== (await this.workbench.root().catch(() => ''))) throw new Error('WORKSPACE_CHANGED');
       if (policy !== this.policy() || mode !== this.mode()) throw new Error('POLICY_CHANGED');
       if (connectionIdentity !== JSON.stringify(scope.connection) || team !== scope.team) throw new Error('DESTINATION_CHANGED');
+      if (requestIdentity !== JSON.stringify([scope.query, scope.request])) throw new Error('DESTINATION_CHANGED');
       if (hostIdentity !== this.identity(scope.sessionId)) throw new Error('DESTINATION_CHANGED');
       if (!this.policy().features.toolLoop) throw new Error('TOOL_LOOP_DISABLED');
     };
@@ -346,6 +355,19 @@ export class DesktopTools {
     );
     const consentStop = new AbortController();
     const transmissionScope = { ...scope, signal: AbortSignal.any([scope.signal, consentStop.signal]) };
+    const googleReads =
+      policy.transmissionConsent?.allowRunScope === false
+        ? undefined
+        : new GoogleReadConsent(
+            scope.request || scope.query,
+            `${destinationName(scope.connection)}${scope.connection.baseUrl ? ' · ' + scope.connection.baseUrl : ''}`,
+            check,
+          );
+    const runScope = { ...scope, googleReads };
+    const runCheck = async () => {
+      await check();
+      await googleReads?.validate();
+    };
     this.transmissions.set(transmission, () => {
       consentStop.abort();
       scope.cancel();
@@ -404,7 +426,7 @@ export class DesktopTools {
     return {
       cancel: scope.cancel,
       enabled: () => this.policy().features.toolLoop,
-      check,
+      check: runCheck,
       readOnly: r =>
         !((r.tool === 'browser_vault' && r.args?.action !== 'list') || (r.tool === 'google_workspace' && r.args?.action !== 'list')) &&
         !(['tool_search', 'tool_describe'].includes(r.tool) && r.args?.server !== undefined) &&
@@ -439,7 +461,7 @@ export class DesktopTools {
                 : tm('กำลังใช้เครื่องมือ ') + t,
         ),
       outgoing: async (text, _signal, r) => {
-        await check();
+        await runCheck();
         const approved = await this.outgoing(
           text,
           transmissionScope,
@@ -449,8 +471,9 @@ export class DesktopTools {
           describe(r),
           ownAnswer(r, text),
           r?.tool === 'browser_control' || r?.tool === 'browser_vault',
+          (await googleReads?.covers(r, text)) === true,
         );
-        await check();
+        await runCheck();
         return approved;
       },
       readPage: (r, page, signal) =>
@@ -461,12 +484,23 @@ export class DesktopTools {
           signal,
         ),
       execute: async r => {
-        await check();
-        const value = await this.execute(r, scope, check);
+        await runCheck();
+        const value = await this.execute(r, runScope, check);
+        const discovery = value as { tools?: { name: string }[]; managedMcp?: { servers?: unknown[] } } | null;
+        const googleSearch =
+          r.tool === 'tool_search' &&
+          r.args?.server === undefined &&
+          Array.isArray(discovery?.tools) &&
+          discovery.tools.length > 0 &&
+          discovery.tools.every(tool => tool.name === 'google_workspace') &&
+          !discovery.managedMcp?.servers?.length;
+        if (googleSearch || (r.tool === 'tool_describe' && r.input === 'google_workspace' && r.args?.server === undefined))
+          await googleReads?.recordDiscovery(r, JSON.stringify(value));
         if (r.tool === 'terminal' && value && typeof value === 'object' && 'id' in value) jobs.add(String(value.id));
         return value;
       },
       dispose: async () => {
+        googleReads?.close();
         consentStop.abort();
         transmission.close();
         this.transmissions.delete(transmission);
@@ -725,6 +759,19 @@ export class DesktopTools {
             if (blocked(c) || c?.skill !== target) throw new Error('AUTHORITY_REVIEW_REQUIRED');
             const meta = await this.harness.skillMetadata(target);
             if (!meta?.path || meta.path !== entry.path) throw new Error('CONTEXT_UNAVAILABLE');
+            const instruction = async <T>(value: T) => {
+              const bundled = 'skills/common/google-workspace/';
+              const paths = [meta.path, ...(meta.mandatoryReferences || []).map((ref: any) => (typeof ref === 'string' ? ref : ref.path))];
+              // These installed instructions are already eligible for automatic Skill assembly, not Google account
+              // data. Keep progressive loading from adding dialogs; arbitrary Skills/paths retain normal consent.
+              if (
+                target === 'google-workspace' &&
+                meta.path === bundled + 'SKILL.md' &&
+                paths.every(path => typeof path === 'string' && path.startsWith(bundled))
+              )
+                await scope.googleReads?.recordDiscovery(r, JSON.stringify(value));
+              return value;
+            };
             if (a.resource !== undefined) {
               // References remain scoped to the routed Skill, never arbitrary harness files or executable scripts.
               if (typeof a.resource !== 'string' || !/^(references|examples)\/[A-Za-z0-9][A-Za-z0-9_/-]*\.md$/.test(a.resource))
@@ -734,13 +781,13 @@ export class DesktopTools {
               const actual = await realpath(path);
               const within = relative(base, actual);
               if (isAbsolute(within) || within.startsWith('..')) throw new Error('INVALID_SKILL_RESOURCE');
-              return { id: target, resource: a.resource, route: c, text: await this.context(path, base) };
+              return instruction({ id: target, resource: a.resource, route: c, text: await this.context(path, base) });
             }
             const paths = [
               meta.path,
               ...(meta.mandatoryReferences || []).map((ref: any) => (typeof ref === 'string' ? ref : ref.path)).filter(Boolean),
             ];
-            return { id: target, route: c, text: (await Promise.all(paths.map((p: string) => this.context(p)))).join('\n\n') };
+            return instruction({ id: target, route: c, text: (await Promise.all(paths.map((p: string) => this.context(p)))).join('\n\n') });
           }
           case 'session_search': {
             if (!this.history) throw new Error('TOOL_UNAVAILABLE');

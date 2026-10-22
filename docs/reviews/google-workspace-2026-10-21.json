@@ -1,0 +1,85 @@
+{
+  "baseline": "127218295efbeb8b4b4d9a85b471033011574bbb",
+  "live": false,
+  "evidence": [
+    {
+      "check": "native-synthetic-execution",
+      "operations": 76,
+      "families": {
+        "drive": 11,
+        "docs": 4,
+        "sheets": 9,
+        "slides": 5,
+        "gmail": 16,
+        "calendar": 3,
+        "tasks": 4,
+        "chat": 3,
+        "meet": 1,
+        "forms": 6,
+        "appscript": 14
+      },
+      "live": false
+    },
+    {
+      "finding": "GWA-01",
+      "reproduced": true,
+      "first": "GOOGLE_REQUEST_FAILED",
+      "later": "GOOGLE_ACCESS_DENIED",
+      "reauth": true
+    },
+    {
+      "finding": "GWA-02",
+      "reproduced": true,
+      "refreshCalls": 1,
+      "errors": [
+        "CANCELLED",
+        "CANCELLED"
+      ],
+      "waiterAborted": false
+    },
+    {
+      "finding": "GWA-03",
+      "reproduced": true,
+      "catalogLabels": [
+        "Work Google account",
+        "Work Google account"
+      ]
+    },
+    {
+      "finding": "GWA-04",
+      "reproduced": true,
+      "appliedWrites": 1,
+      "returned": "WORKSPACE_CLI_FAILED"
+    },
+    {
+      "finding": "GWA-05",
+      "reproduced": true,
+      "successfulEdits": 2,
+      "preservedEdits": 1,
+      "alreadyDocumented": true
+    },
+    {
+      "finding": "GWA-06",
+      "contractConfirmed": true,
+      "live": false,
+      "missing": [
+        "supportsAllDrives",
+        "includeItemsFromAllDrives"
+      ]
+    },
+    {
+      "finding": "GWA-07",
+      "reproduced": true,
+      "charset": "windows-874",
+      "expected": "สวัสดี",
+      "actual": "���ʴ�",
+      "contentUnavailable": false
+    },
+    {
+      "limitation": "GWA-L01",
+      "confirmed": true,
+      "operation": "tasks.list",
+      "showCompleted": "API default true; filter completed locally"
+    }
+  ]
+}
