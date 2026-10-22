@@ -111,8 +111,8 @@ export const settingsEn: Record<string, string> = {
     'Additional privacy checks are on. Detected data is masked and blocked content is withheld. You still need to review the data and your right to share it.',
   'ปิดการตรวจข้อมูลส่วนบุคคลเพิ่มเติม: ข้อมูลส่วนบุคคลอาจถูกส่งตามต้นฉบับ แต่ยังกรองรหัสผ่านและข้อมูลรับรองที่ตรวจพบ ตรวจข้อมูลก่อนส่งทุกครั้ง':
     'Additional personal-data checks are off. Personal data may be sent unchanged. Detected passwords and credentials are still filtered. Review data before sending.',
-  'งานอ่าน Google ขออนุมัติครั้งเดียวต่อคำขอ งานส่ง แก้ไข หรือลบยืนยันแต่ละรายการ งานประจำวันใช้สิทธิ์ที่ตั้งไว้ ส่วนเครื่องมืออื่นทำตามนโยบายและโหมดที่เลือก':
-    'Google reads ask once per request. Sending, editing and deleting require individual confirmation. Daily summaries follow saved consent; other tools follow the current policy and mode.',
+  'งานอ่าน Google ขออนุมัติครั้งเดียวต่อคำขอ งานส่ง แก้ไข หรือลบยืนยันแต่ละรายการ งานประจำวันใช้สิทธิ์ที่ตั้งไว้ ส่วนเครื่องมืออื่นทำตามนโยบายและโหมดที่เลือก ผู้ดูแลอาจกำหนดให้ถามทุกครั้ง':
+    'Google reads ask once per request. Sending, editing and deleting require individual confirmation. Daily summaries follow saved consent; other tools follow the current policy and mode. Your administrator may require approval every time.',
   'บทสนทนาและร่างเก็บในเครื่องนี้ แต่ข้อมูลที่ใช้กับ AI ถูกส่งไปบริการที่เลือก ข้อมูลรับรองเก็บแยกตามระบบป้องกันของเครื่อง':
     'Conversations and drafts are stored on this device. Data used by AI is sent to the selected service. Credentials are stored separately using device protection.',
   ขอบเขตการทำงาน: 'What the assistant can do',
