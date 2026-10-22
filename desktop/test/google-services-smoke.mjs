@@ -76,16 +76,19 @@ try {
       return original(event, method, input);
     });
   }, native);
-  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
-  await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
+  await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
+  await page.getByRole('tab', { name: 'บัญชีและบริการ', exact: true }).click();
   const services = page.locator('.google-services');
   const setCard = async (checkbox, checked) => {
     if ((await checkbox.isChecked()) !== checked) await checkbox.locator('xpath=..').click();
     if (checked) await expect(checkbox).toBeChecked();
     else await expect(checkbox).not.toBeChecked();
   };
-  for (const name of ['Google Docs', 'Google Sheets', 'Google Slides'])
-    await expect(services.getByRole('checkbox', { name: new RegExp('^' + name) })).toBeChecked();
+  for (const name of ['Google Docs', 'Google Sheets', 'Google Slides']) {
+    const checkbox = services.getByRole('checkbox', { name: new RegExp('^' + name) });
+    await expect(checkbox).not.toBeChecked();
+    await setCard(checkbox, true);
+  }
   await expect(services.getByText('เอกสาร ชีต และสไลด์', { exact: true })).toHaveCount(0);
   await expect(page.locator('.google-drive')).toHaveCount(1);
   await expect(page.locator('.google-calendar')).toHaveCount(1);
@@ -98,7 +101,7 @@ try {
   await services.scrollIntoViewIfNeeded();
   await mkdir('release/qa/google-services', { recursive: true });
   await services.screenshot({ path: 'release/qa/google-services/seven-services.png' });
-  await page.getByRole('button', { name: 'เชื่อมบัญชีงาน', exact: true }).click();
+  await page.getByRole('button', { name: 'เชื่อมบัญชี Google', exact: true }).click();
   await expect.poll(() => app.evaluate(() => globalThis.googleServiceCalls.length)).toBe(1);
   const first = await app.evaluate(() => globalThis.googleServiceCalls[0]);
   assert.deepEqual(
@@ -109,7 +112,7 @@ try {
   await expect(page.locator('.google-account')).toHaveCount(1);
   await page.getByRole('button', { name: 'ปรับบริการที่อนุญาต', exact: true }).click();
   await setCard(services.getByRole('checkbox', { name: /^ส่งอีเมล/ }), true);
-  await page.getByRole('button', { name: 'เชื่อมบัญชีงาน', exact: true }).click();
+  await page.getByRole('button', { name: 'เชื่อมบัญชี Google', exact: true }).click();
   await expect.poll(() => app.evaluate(() => globalThis.googleServiceCalls.length)).toBe(2);
   const second = await app.evaluate(() => globalThis.googleServiceCalls[1]);
   assert.equal(second.id, 'synthetic-google-account');
@@ -117,8 +120,11 @@ try {
   assert.equal(second.services.includes('drive-read'), false, 'one explicit Drive access choice');
   await expect(page.locator('.google-account')).toHaveCount(1);
   await page.getByRole('button', { name: 'ปรับบริการที่อนุญาต', exact: true }).click();
-  await page.getByRole('button', { name: 'เลือกสิทธิ์เต็มทุกบริการ', exact: true }).click();
-  await page.getByRole('button', { name: 'เชื่อมบัญชีงาน', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'เลือกสิทธิ์เต็มทุกบริการ', exact: true })).toHaveCount(0);
+  for (const checkbox of await services.getByRole('checkbox').all()) await setCard(checkbox, true);
+  await page.locator('.google-calendar').getByRole('radio', { name: 'ดูและสร้างนัด', exact: true }).check();
+  await page.locator('.google-drive').getByRole('radio', { name: 'อ่าน สร้าง และจัดการไฟล์', exact: true }).check();
+  await page.getByRole('button', { name: 'เชื่อมบัญชี Google', exact: true }).click();
   await expect.poll(() => app.evaluate(() => globalThis.googleServiceCalls.length)).toBe(3);
   const full = await app.evaluate(() => globalThis.googleServiceCalls[2]);
   for (const service of [
@@ -142,8 +148,8 @@ try {
     await window.step.call('settings', { ...settings, theme: 'dark', language: 'en' });
   });
   await page.reload();
-  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
-  await page.getByRole('tab', { name: 'Passwords and connections', exact: true }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('tab', { name: 'Accounts and services', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Change allowed services', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Change allowed services', exact: true }).click();
   await page.setViewportSize({ width: 800, height: 650 });
@@ -154,8 +160,8 @@ try {
   await page.screenshot({ path: 'release/qa/google-services/narrow-dark-english.png' });
   await expect(page.locator('.google-admin')).toHaveCount(0);
   await page.reload();
-  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
-  await page.getByRole('tab', { name: 'Passwords and connections', exact: true }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('tab', { name: 'Accounts and services', exact: true }).click();
   await expect(page.locator('.google-admin')).toHaveCount(0);
   for (const name of ['Google Forms', 'Google Apps Script', 'Google Chat', 'Google Meet'])
     await expect(services.getByRole('checkbox', { name: new RegExp('^' + name) })).toBeVisible();

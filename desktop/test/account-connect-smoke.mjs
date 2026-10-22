@@ -14,8 +14,8 @@ try {
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1100, height: 800 });
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
-  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
-  await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
+  await page.getByRole('tab', { name: 'เชื่อมต่อ AI' }).click();
   await expect(page.getByRole('heading', { name: 'เลือก AI และเชื่อมต่อ', exact: true })).toBeVisible();
   // A new user sees only the picker; the account list appears once there is an account.
   await expect(page.getByRole('heading', { name: 'บัญชี AI ของคุณ', exact: true })).toHaveCount(0);
@@ -97,15 +97,15 @@ try {
   await expect(page.getByRole('heading', { name: 'บัญชี AI ของคุณ', exact: true })).toBeVisible();
   await expect(page.locator('.connection-state')).toHaveText('ลงชื่อแล้ว แต่ทดสอบไม่ผ่าน');
   // One footer label on every Settings tab; it becomes the primary button only once an account is ready.
-  await expect(page.getByRole('button', { name: 'กลับไปที่งาน', exact: true })).toHaveClass(/quiet/);
+  await expect(page.getByRole('button', { name: 'กลับไปทำงาน', exact: true })).toHaveClass(/quiet/);
   await page.screenshot({ path: 'release/qa/connect-ai/test-failed.png' });
   await page.getByRole('button', { name: 'ทดสอบใช้งาน', exact: true }).click();
   await expect(page.getByRole('button', { name: 'กำลังเชื่อมต่อและทดสอบ…', exact: true })).toBeDisabled();
   await app.evaluate(() => globalThis.finishConnect());
-  await expect(page.getByText('บัญชีทดสอบพร้อมใช้งาน', { exact: true })).toBeVisible();
-  await expect(page.locator('.connection-state')).toHaveText('พร้อมใช้งาน');
+  await expect(page.getByText('ทดสอบรับคำตอบสำเร็จ', { exact: true })).toBeVisible();
+  await expect(page.locator('.connection-state')).toHaveText('ทดสอบข้อความผ่าน');
   await expect(page.locator('.connection-card')).toHaveAttribute('data-state', 'ready');
-  await expect(page.getByRole('button', { name: 'กลับไปที่งาน', exact: true })).not.toHaveClass(/quiet/);
+  await expect(page.getByRole('button', { name: 'กลับไปทำงาน', exact: true })).toHaveClass(/quiet/);
   await expect(page.getByRole('combobox', { name: 'โมเดลสำหรับงานใหม่' })).toBeHidden();
   await expect(page.getByRole('button', { name: 'ลบบัญชีนี้', exact: true })).toBeHidden();
 
@@ -113,7 +113,7 @@ try {
   await capabilities.locator('summary').focus();
   await page.keyboard.press('Enter');
   await expect(capabilities.locator('[data-capability="chat"]')).toContainText('ผ่านการทดสอบข้อความสั้นแล้ว');
-  await expect(capabilities.locator('[data-capability="web"] .ai-capability-state')).toHaveText('ใช้ได้');
+  await expect(page.locator('.connection-card').locator('[data-capability="web"] .ai-capability-state')).toHaveText('ใช้ได้');
   await expect(capabilities.locator('[data-capability="image"]')).toContainText('OAuth อย่างเดียวใช้ไม่ได้');
   const organization = page.locator('.ai-organization-capabilities');
   await organization.locator('summary').click();
@@ -147,8 +147,8 @@ try {
   });
   await page.getByRole('button', { name: 'ทดสอบอีกครั้ง', exact: true }).click();
   await app.evaluate(() => globalThis.finishConnect());
-  await expect(capabilities.locator('[data-capability="web"] .ai-capability-state')).toHaveText('ยังใช้ไม่ได้');
-  await expect(capabilities.locator('[data-capability="web"]')).toContainText('ติดต่อ IT');
+  await expect(page.locator('.connection-card').locator('[data-capability="web"] .ai-capability-state')).toHaveText('ยังใช้ไม่ได้');
+  await expect(page.locator('.connection-card').locator('[data-capability="web"]')).toContainText('ติดต่อ IT');
   // An expired sign-in shows as one plain status with one button that signs in again from a clean state.
   await app.evaluate(() => {
     globalThis.expireNext = true;
@@ -162,7 +162,7 @@ try {
   await page.getByRole('button', { name: 'ลงชื่อใหม่', exact: true }).click();
   await expect(page.getByRole('button', { name: 'กำลังเชื่อมต่อและทดสอบ…', exact: true })).toBeDisabled();
   await app.evaluate(() => globalThis.finishConnect());
-  await expect(page.locator('.connection-state')).toHaveText('พร้อมใช้งาน');
+  await expect(page.locator('.connection-state')).toHaveText('ทดสอบข้อความผ่าน');
   assert.deepEqual(
     (await app.evaluate(() => globalThis.accountCalls))
       .slice(before)
@@ -170,8 +170,8 @@ try {
       .filter(m => ['disconnect', 'connect'].includes(m)),
     ['disconnect', 'connect'],
   );
-  await page.getByRole('button', { name: 'กลับไปที่งาน', exact: true }).click();
-  await expect(page.getByRole('tab', { name: 'การเชื่อมต่อ AI' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'กลับไปทำงาน', exact: true }).click();
+  await expect(page.getByRole('tab', { name: 'เชื่อมต่อ AI' })).toHaveCount(0);
   console.log(
     'Employee account smoke passed: guided connection, busy state, signed-in/test-failed recovery without duplicate account, expired sign-in with one-click sign-in again, readiness, collapsed management, narrow dark layout; synthetic IPC only.',
   );

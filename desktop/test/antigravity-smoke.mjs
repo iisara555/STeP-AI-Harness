@@ -65,8 +65,8 @@ try {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
-  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
-  await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
+  await page.getByRole('tab', { name: 'เชื่อมต่อ AI' }).click();
   // Employees find Antigravity among the services, not only in the administrators' form.
   await page.getByRole('radio', { name: /Gemini ผ่าน Antigravity/ }).click();
   await page.getByText('ตัวเลือก Antigravity', { exact: true }).click();

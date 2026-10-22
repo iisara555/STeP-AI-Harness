@@ -23,11 +23,11 @@ try {
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง', exact: true }).click();
 
   const open = async () => {
-    await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
+    await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
     await page.getByRole('tab', { name: 'ทั่วไป', exact: true }).click();
     await expect(page.getByRole('radiogroup', { name: 'สไตล์การพูดของผู้ช่วย' })).toHaveCount(1);
     await expect(page.getByLabel('รูปแบบคำตอบ', { exact: true })).toHaveCount(1);
-    await page.getByRole('tab', { name: 'รูปลักษณ์และภาษา' }).click();
+    await page.getByRole('tab', { name: 'การแสดงผลและภาษา' }).click();
     await expect(page.getByRole('radiogroup', { name: 'สไตล์การพูดของผู้ช่วย' })).toHaveCount(0);
     await expect(page.getByRole('radiogroup', { name: 'สำเนียงภาษา' })).toHaveCount(0);
     await expect(page.getByLabel('รูปแบบคำตอบ', { exact: true })).toHaveCount(0);
@@ -35,8 +35,10 @@ try {
     return page.getByRole('radiogroup', { name: 'สไตล์การพูดของผู้ช่วย' });
   };
   const save = async () => {
-    const button = page.getByRole('button', { name: 'บันทึกและไปที่งาน' });
+    const button = page.getByRole('button', { name: 'บันทึกการเปลี่ยนแปลง' });
     await button.click();
+    await expect(button).toBeDisabled();
+    await page.getByRole('button', { name: 'กลับไปทำงาน', exact: true }).click();
     await expect(button).toBeHidden();
   };
   let picker = await open();

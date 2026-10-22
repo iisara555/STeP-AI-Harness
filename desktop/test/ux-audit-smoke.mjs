@@ -77,12 +77,12 @@ try {
   assert.ok(await page.evaluate(() => document.activeElement !== document.body && !document.activeElement.closest('[inert]')));
   assert.equal(await page.locator('[inert]').count(), 0);
   await page.keyboard.press('ControlOrMeta+,');
-  await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  await page.getByRole('tab', { name: 'เชื่อมต่อ AI' }).click();
   // Choosing a service scrolls its card, with the connect button, into view.
   await page.getByRole('radio', { name: /^Gemini(?! ผ่าน)/ }).click();
   await page.getByRole('radio', { name: /^ChatGPT/ }).click();
   await assertVisibleButton(page.getByRole('button', { name: 'เชื่อมต่อ ChatGPT', exact: true }));
-  await expect(page.getByRole('status')).toContainText('ใช้แพ็กเกจบัญชีที่คุณลงชื่อ');
+  await expect(page.locator('.connection-cost')).toContainText('ใช้แพ็กเกจบัญชีที่คุณลงชื่อ');
   // Gemini API key sits on the main page: the connect button waits for a key, cost shows as API budget,
   // and going back to ChatGPT drops the key.
   await page.getByRole('radio', { name: /^Gemini(?! ผ่าน)/ }).click();
@@ -102,7 +102,7 @@ try {
   await page.getByRole('button', { name: 'กลับไปเลือกบริการ' }).click();
   await mkdir('release/qa/ux-fixes', { recursive: true });
   await page.screenshot({ path: 'release/qa/ux-fixes/small-window.png' });
-  await page.getByRole('button', { name: 'กลับไปที่งาน', exact: true }).click();
+  await page.getByRole('button', { name: 'กลับไปทำงาน', exact: true }).click();
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.getByRole('button', { name: 'เปิดร่าง', exact: true }).click();
   await page.getByRole('button', { name: 'เว็บ', exact: true }).click();
@@ -154,6 +154,7 @@ try {
   // Profile pictures: choose a bundled drawing in Settings; the sidebar shows it, and only bundled ids are stored.
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+,' : 'Control+,');
   await page.getByRole('tab', { name: 'ทั่วไป' }).click();
+  await page.getByRole('button', { name: 'เปลี่ยนรูป', exact: true }).click();
   const pictures = page.getByRole('radiogroup', { name: 'รูปโปรไฟล์' });
   await expect(pictures.getByRole('radio')).toHaveCount(54);
   await expect(pictures.getByRole('radio', { name: 'ภาพที่ 5', exact: true }).locator('img')).toHaveAttribute('src', /avatar-05/);
@@ -165,7 +166,9 @@ try {
     'every bundled portrait loads',
   );
   await page.screenshot({ path: 'release/qa/ux-fixes/profile-pictures.png' });
-  await page.getByRole('button', { name: 'บันทึกและไปที่งาน' }).click();
+  await page.getByRole('button', { name: 'บันทึกการเปลี่ยนแปลง' }).click();
+  await expect(page.getByRole('button', { name: 'บันทึกการเปลี่ยนแปลง' })).toBeDisabled();
+  await page.getByRole('button', { name: 'กลับไปทำงาน', exact: true }).click();
   if (!(await page.locator('.profile').count())) await titlebar.getByRole('button', { name: 'ขยายแถบงาน' }).click();
   await expect(page.locator('.profile .avatar-badge img')).toHaveAttribute('src', /avatar-56/);
   await page.locator('.profile').screenshot({ path: 'release/qa/ux-fixes/profile-sidebar.png' });

@@ -19,8 +19,8 @@ try {
   assert.equal(state.teams.length, 22);
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
   // Exercise provider selection through the real preload bridge before any login.
-  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
-  await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
+  await page.getByRole('tab', { name: 'เชื่อมต่อ AI' }).click();
   await page.getByRole('button', { name: 'ตั้งค่าขั้นสูงสำหรับผู้ดูแล' }).click();
   const providerField = page.getByRole('combobox', { name: /ผู้ให้บริการ/ });
   const methodField = page.getByRole('combobox', { name: /วิธีเชื่อมต่อ/ });
@@ -35,7 +35,7 @@ try {
   await page.getByRole('button', { name: 'เพิ่มการเชื่อมต่อ', exact: true }).click();
   const withGoogle = await page.evaluate(() => window.step.call('snapshot'));
   assert.ok(withGoogle.connections.some(c => c.provider === 'gemini' && c.mode === 'subscription' && !c.ready));
-  await page.getByText('เพิ่ม AI อีกบัญชี', { exact: true }).click();
+  await page.getByText('เพิ่มบัญชี AI', { exact: true }).click();
   await providerField.selectOption('claude');
   assert.equal(await methodField.inputValue(), process.env.STEP_CLAUDE_SUBSCRIPTION === '1' ? 'subscription' : 'api');
   await methodField.selectOption('oauth');
@@ -47,12 +47,12 @@ try {
     .getByText(/พร้อมเปิด OAuth|ยังไม่พบ Anthropic|ยังไม่มี ant CLI/)
     .waitFor();
   assert.deepEqual(errors, [], 'selecting Claude must not crash the renderer');
-  await page.getByRole('button', { name: 'กลับไปที่งาน', exact: true }).click();
+  await page.getByRole('button', { name: 'กลับไปทำงาน', exact: true }).click();
   await page.getByRole('heading', { name: 'ให้ AI ร่างงานหนัก', exact: false }).waitFor();
   await page.screenshot({ path: 'release/qa/workspace-light.png', fullPage: true });
   // Claude Pro/Max hands the request to Claude Code; stop at the confirmation so no terminal opens.
   await page.getByRole('button', { name: 'เลือกบริการ โมเดลและระดับการคิด' }).click();
-  await page.getByRole('combobox', { name: 'เลือกการเชื่อมต่อ AI' }).selectOption('claude-code');
+  await page.getByRole('combobox', { name: 'เลือกบัญชี AI' }).selectOption('claude-code');
   await page.locator('.composer textarea').fill('ทดสอบส่งต่อ');
   await page.keyboard.press('Enter');
   const handoff = page.getByRole('alertdialog', { name: /ส่งต่อไปทำใน Claude Code|ยังไม่พบ Claude Code/ });

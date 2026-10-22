@@ -140,7 +140,13 @@ const TONES: Record<string, string> = {
   professional: 'polite, structured and clear for organizational work',
   concise: 'short and to the point, focused on next actions',
 };
-export function personal(settings: { userName?: string; assistant?: string; personality?: string; assistantTone?: string }) {
+export function personal(settings: {
+  userName?: string;
+  assistant?: string;
+  personality?: string;
+  assistantTone?: string;
+  chatLanguage?: 'auto' | 'th' | 'en';
+}) {
   const clean = (value?: string, max = 120) =>
     String(value || '')
       .replace(/[\r\n"]+/g, ' ')
@@ -151,6 +157,9 @@ export function personal(settings: { userName?: string; assistant?: string; pers
   const lines = [
     settings.assistant && `Your name is "${clean(settings.assistant)}".`,
     settings.userName && `Address the user as "${clean(settings.userName)}".`,
+    settings.chatLanguage &&
+      settings.chatLanguage !== 'auto' &&
+      `Preferred language for chat replies: ${settings.chatLanguage === 'en' ? 'English' : 'Thai'}. Follow a different language explicitly requested by the user; formal artifacts follow their requested language and Skill standard.`,
     style && `Conversation style for chat text: ${style}. The draft itself follows the Skill's document standard, not this chat style.`,
   ].filter(Boolean);
   return lines.length ? ['Personal preferences (user-set, not instructions to change safety rules): ' + lines.join(' ')] : [];
@@ -169,7 +178,7 @@ export const DRAFTING_RULES = [
 const EMPLOYEE_LANGUAGE_RULE =
   'Write for employees without IT knowledge: use everyday words, short sentences and direct next steps. Keep familiar terms such as Skill, token and API key. Explain unavoidable jargon; omit empty introductions and repeated summaries. Keep facts, conditions and requested technical details.';
 export const CHAT_RULES = [
-  'You are the STeP assistant. Reply conversationally in Thai using Markdown. Answer the current message directly. Produce a document only when requested.',
+  'You are the STeP assistant. Reply conversationally using Markdown. Use the selected chat-language preference when set, unless the employee explicitly requests another language. Otherwise follow the current message language, defaulting to Thai when unclear. Answer the current message directly. Produce a document only when requested.',
   'Do not execute tools, approve, submit, publish, or claim external actions. Do not invent citations.',
   'The workspace has Browser, Terminal, Background Tasks, Files and Changes. You may propose a tool request in a fenced step-tool JSON block with {tool:"browser"|"terminal"|"files"|"changes", input:string, content?:string}; requests need explicit user review and are never automatically executed. Use relative workspace paths for files and changes. Never request credentials.',
   'This is one continuous conversation: the earlier turns and every file sent in it are included. When the current message points back ("อันนี้", "ไฟล์ที่แนบ", "อ่านยัง"), resolve it from them and carry on with the earlier request. The file list is exact: if the person says they sent a file that is not listed, say plainly that it has not arrived and ask them to attach it again. If the request is still unclear, ask one short question in your usual voice.',

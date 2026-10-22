@@ -173,7 +173,7 @@ export function ScheduledTasks({
         <p className="schedules-empty">
           {t('เชื่อมต่อบัญชี AI ก่อน แล้วจึงสร้างงานตั้งเวลาได้')}{' '}
           <button className="text-link" onClick={onConnections}>
-            {t('ไปที่การเชื่อมต่อ AI')}
+            {t('ไปที่หน้าเชื่อมต่อ AI')}
           </button>
         </p>
       )}
@@ -221,7 +221,7 @@ export function ScheduledTasks({
                             disabled={!!busy || !!job.running}
                             onClick={() => (advice.action === 'edit' ? edit(job) : onConnections())}
                           >
-                            {advice.action === 'edit' ? t('ตรวจและบันทึกใหม่') : t('ไปที่การเชื่อมต่อ AI')}
+                            {advice.action === 'edit' ? t('ตรวจและบันทึกใหม่') : t('ไปที่หน้าเชื่อมต่อ AI')}
                           </button>
                         )}
                       </div>
@@ -453,7 +453,7 @@ function ScheduleEditor({
         <p className="small schedules-error">
           {t('เลือกบัญชี AI ที่พร้อมใช้งานก่อนบันทึก')}{' '}
           <button type="button" className="text-link" onClick={onConnections}>
-            {t('ไปที่การเชื่อมต่อ AI')}
+            {t('ไปที่หน้าเชื่อมต่อ AI')}
           </button>
         </p>
       )}

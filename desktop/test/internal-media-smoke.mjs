@@ -104,8 +104,8 @@ try {
   await page.getByRole('button', { name: 'สื่อภายใน' }).click();
   assert.equal(await page.getByRole('combobox', { name: 'ตำแหน่งที่ต้องการเว้นว่าง' }).inputValue(), 'RIGHT');
 
-  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
-  await page.getByRole('tab', { name: 'รูปลักษณ์และภาษา' }).click();
+  await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
+  await page.getByRole('tab', { name: 'การแสดงผลและภาษา' }).click();
   await page.getByRole('radio', { name: 'English', exact: true }).click();
   await page.getByRole('button', { name: 'Internal media' }).click();
   await page.getByRole('button', { name: 'Copy prompt' }).waitFor();

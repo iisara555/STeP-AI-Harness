@@ -131,8 +131,8 @@ try {
   await palette('ดูทัวร์แนะนำอีกครั้ง');
   await shot('17-tour');
   await escape();
-  await palette('ตั้งค่าพื้นที่ทำงาน');
-  for (const [i, tab] of ['ทั่วไป', 'การเชื่อมต่อ AI', 'รูปลักษณ์และภาษา', 'ความเป็นส่วนตัว', 'นโยบายองค์กร'].entries()) {
+  await palette('การตั้งค่า');
+  for (const [i, tab] of ['ทั่วไป', 'เชื่อมต่อ AI', 'การแสดงผลและภาษา', 'ความเป็นส่วนตัว', 'นโยบายองค์กร'].entries()) {
     await page.getByRole('tab', { name: tab }).click();
     await shot(`18-settings-${i + 1}`);
   }

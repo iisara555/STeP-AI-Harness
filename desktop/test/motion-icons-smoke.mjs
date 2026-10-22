@@ -109,9 +109,9 @@ try {
     false,
   );
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  const settings = sidebar.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true });
+  const settings = sidebar.getByRole('button', { name: 'การตั้งค่า', exact: true });
   await settings.click();
-  const credentials = page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true });
+  const credentials = page.getByRole('tab', { name: 'บัญชีและบริการ', exact: true });
   const key = credentials.locator('svg[data-motion-icon="KeyRound"]');
   await observe(key, () => credentials.hover());
   await credentials.click();

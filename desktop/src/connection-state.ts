@@ -16,7 +16,7 @@ export function connectionState(
   // Connections saved before `problem` existed keep the failure code at the end of their note.
   const problem = c.problem ?? /\(([A-Z_]+)\)$/.exec(c.note || '')?.[1];
   if (c.policyBlocked) return { tone: 'blocked', label: 'ปิดโดยองค์กร', action: 'none' };
-  if (c.ready) return { tone: 'ready', label: 'พร้อมใช้งาน', action: 'retest' };
+  if (c.ready) return { tone: 'ready', label: 'ทดสอบข้อความผ่าน', action: 'retest' };
   if (problem && SIGN_IN_EXPIRED.includes(problem))
     return c.mode === 'api'
       ? { tone: 'attention', label: 'API key ใช้ไม่ได้', action: 'test' }

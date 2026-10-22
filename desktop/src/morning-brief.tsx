@@ -206,7 +206,7 @@ export function MorningBriefCard({
   );
 }
 
-/** In Passwords and connections, under the Google accounts: the switch, the time and the every-day OK with its revoke. */
+/** In Accounts and services, under the Google accounts: the switch, the time and the every-day OK with its revoke. */
 export function MorningBriefSettings({ call, onError }: { call: Call; onError: (error: unknown) => void }) {
   const [state, setState] = useState<BriefState>();
   const [time, setTime] = useState('');

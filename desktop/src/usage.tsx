@@ -13,7 +13,7 @@ function statusText(account: ProviderUsageReport) {
   if (account.status === 'unavailable') return t('ผู้ให้บริการยังไม่รายงานโควตาหรือเครดิตสำหรับบัญชีนี้');
   if (account.status === 'error') {
     if (account.reason === 'FEATURE_DISABLED') return t('ผู้ดูแลปิดการเชื่อมต่อนี้ในนโยบาย');
-    if (account.reason === 'USAGE_AUTH_REQUIRED') return t('ตรวจการลงชื่อเข้าใช้หรือสิทธิ์ API key ที่หน้าการเชื่อมต่อ AI');
+    if (account.reason === 'USAGE_AUTH_REQUIRED') return t('ตรวจการลงชื่อเข้าใช้หรือสิทธิ์ API key ที่หน้าเชื่อมต่อ AI');
     if (account.reason === 'USAGE_TIMEOUT') return t('อ่านการใช้งานไม่ทันเวลา ลองรีเฟรชอีกครั้ง');
     return t('อ่านการใช้งานไม่สำเร็จ ลองรีเฟรชหรือตรวจที่ผู้ให้บริการ');
   }

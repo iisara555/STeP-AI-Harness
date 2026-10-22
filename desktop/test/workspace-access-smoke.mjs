@@ -80,7 +80,7 @@ for (const legacy of [false, true]) {
     }
     await expect(page.locator('.composer textarea')).toBeVisible();
     await expect(page.getByRole('button', { name: 'ลงชื่อเข้าใช้ด้วย Google', exact: true })).toHaveCount(0);
-    await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
+    await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
     await page.getByRole('tab', { name: 'ทั่วไป', exact: true }).click();
     await expect(page.getByRole('button', { name: 'ออกจากบัญชีพนักงาน' })).toHaveCount(0);
     assert.equal((await page.evaluate(() => window.step.call('googleState'))).accounts.length, 0);

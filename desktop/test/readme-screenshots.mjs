@@ -154,9 +154,9 @@ try {
   await page.getByRole('heading', { name: 'ตรวจใบเสร็จ AFP', level: 1 }).waitFor();
   await capture('04-receipt-afp.png');
 
-  await page.getByRole('button', { name: /ตั้งค่าพื้นที่ทำงาน/ }).click();
-  await page.getByRole('tab', { name: /การเชื่อมต่อ AI/ }).click();
-  await page.getByRole('heading', { name: 'การเชื่อมต่อ AI' }).waitFor();
+  await page.getByRole('button', { name: /การตั้งค่า/ }).click();
+  await page.getByRole('tab', { name: /เชื่อมต่อ AI/ }).click();
+  await page.getByRole('heading', { name: 'เชื่อมต่อ AI' }).waitFor();
   await capture('05-ai-connections.png');
 
   console.log('README GUI screenshots created in', out);

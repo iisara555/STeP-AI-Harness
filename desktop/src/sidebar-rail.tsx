@@ -170,7 +170,7 @@ export function SidebarRail({
           size={18}
           className={settings ? 'nav-active' : ''}
           tour="settings"
-          label={t('ตั้งค่าพื้นที่ทำงาน')}
+          label={t('การตั้งค่า')}
           onClick={onSettings}
         />
         <button

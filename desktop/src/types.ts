@@ -33,6 +33,8 @@ export type Connection = {
   /** The account signed in at the last connect, kept apart from the test result in `ready`. */
   signedIn?: boolean;
   ready: boolean;
+  /** Time of the last successful text response test; older connections may not have one. */
+  testedAt?: string;
   /** Snapshot-only: current policy prevents use; the stored test result remains intact. */
   policyBlocked?: boolean;
   note: string;
@@ -324,6 +326,8 @@ export type Settings = {
   theme: 'system' | 'light' | 'dark';
   /** Interface language; Thai when unset. */
   language?: 'th' | 'en';
+  /** Preferred chat reply language; independent of UI language. Explicit requests can override it. */
+  chatLanguage?: 'auto' | 'th' | 'en';
   onboarding: boolean;
   ocrDir?: string;
   userName?: string;

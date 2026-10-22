@@ -94,11 +94,11 @@ try {
     });
   });
   console.log('Workspace UI: paused account and explicit resume');
-  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
-  await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
+  await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
+  await page.getByRole('tab', { name: 'บัญชีและบริการ', exact: true }).click();
   const settings = page.locator('.credential-settings');
   await expect(settings.locator('.google-account .connection-state')).toHaveText('พักอยู่');
-  await expect(settings.getByRole('button', { name: 'กลับมาใช้งาน', exact: true })).toHaveCount(1);
+  await expect(settings.getByRole('button', { name: 'กลับมาใช้ข้อมูลทุกบัญชี', exact: true })).toHaveCount(1);
   const resume = settings.getByRole('button', { name: 'กลับมาใช้ข้อมูลบัญชี', exact: true });
   await resume.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
   await resume.click();

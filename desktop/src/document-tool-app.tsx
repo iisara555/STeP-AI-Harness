@@ -193,9 +193,9 @@ export function DocumentTools({
         </div>
         {!connected && (
           <p className="small">
-            {t('เพิ่มหรือเลือกการเชื่อมต่อ AI เพื่อร่างใน Desktop')}{' '}
+            {t('เพิ่มหรือเลือกบัญชี AI เพื่อร่างใน Desktop')}{' '}
             <button type="button" className="quiet" onClick={openAiSettings}>
-              {t('การเชื่อมต่อ AI')}
+              {t('เชื่อมต่อ AI')}
             </button>
           </p>
         )}
