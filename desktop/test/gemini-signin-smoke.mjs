@@ -69,9 +69,9 @@ try {
   await writeFile(join(home, 'stall'), '1');
   await page.evaluate(() => window.step.call('snapshot'));
   await page.keyboard.press('ControlOrMeta+K');
-  await page.keyboard.type('ตั้งค่าพื้นที่ทำงาน');
+  await page.keyboard.type('การตั้งค่า');
   await page.keyboard.press('Enter');
-  await page.getByRole('tab', { name: /การเชื่อมต่อ AI/ }).click();
+  await page.getByRole('tab', { name: /เชื่อมต่อ AI/ }).click();
   await page.getByRole('button', { name: 'เชื่อมต่อและทดสอบ' }).last().click();
   await page.getByText('ลงชื่อสำเร็จ · กำลังทดสอบส่งข้อความสั้น ๆ').waitFor({ timeout: 20000 });
   await page.getByRole('button', { name: 'ยกเลิก', exact: true }).click();

@@ -39,8 +39,8 @@ try {
       return original(event, method, input);
     });
   });
-  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
-  await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
+  await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
+  await page.getByRole('tab', { name: 'บัญชีและบริการ', exact: true }).click();
   await page.getByRole('button', { name: 'เพิ่มที่อยู่', exact: true }).click();
   const form = page.locator('.vault-items form');
   for (const [label, value] of [

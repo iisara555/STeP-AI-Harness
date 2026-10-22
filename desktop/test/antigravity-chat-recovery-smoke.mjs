@@ -107,7 +107,7 @@ try {
   await expect(status).toContainText('ยังใช้เครื่องมือที่ AI ขอไม่ได้', { timeout: 30000 });
   await expect(status).not.toContainText('TOOL_DENIED');
   await expect(page.locator('.retry-row').getByRole('button', { name: 'ลองอีกครั้ง', exact: true })).toHaveCount(0);
-  await expect(page.locator('.retry-row').getByRole('button', { name: 'ตรวจการเชื่อมต่อ AI', exact: true })).toBeVisible();
+  await expect(page.locator('.retry-row').getByRole('button', { name: 'ตรวจสอบการเชื่อมต่อ AI', exact: true })).toBeVisible();
   const support = page.locator('.retry-code');
   await expect(support.getByText('รหัสสำหรับแจ้งผู้ดูแล: TOOL_DENIED', { exact: true })).not.toBeVisible();
   await support.getByText('ข้อมูลสำหรับแจ้งปัญหา', { exact: true }).click();

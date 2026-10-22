@@ -65,13 +65,13 @@ try {
   await expect(wizard.getByRole('button', { name: 'ทำภายหลัง', exact: true })).toBeDisabled();
   await expect(wizard.getByRole('button', { name: 'ยกเลิก', exact: true })).toBeVisible();
   await app.evaluate(() => globalThis.finishSetupConnect());
-  await expect(wizard.locator('.connection-state')).toHaveText('พร้อมใช้งาน');
+  await expect(wizard.locator('.connection-state')).toHaveText('ทดสอบข้อความผ่าน');
 
   const capabilities = wizard.locator('.ai-connect-step .ai-capabilities');
   await capabilities.locator('summary').click();
-  await expect(capabilities.locator('[data-capability="web"] .ai-capability-state')).toHaveText('ใช้ได้');
+  await expect(wizard.locator('.connection-card').locator('[data-capability="web"] .ai-capability-state')).toHaveText('ใช้ได้');
   await expect(capabilities.locator('[data-capability="image"]')).toContainText('OAuth อย่างเดียวใช้ไม่ได้');
-  await expect(capabilities.locator('[data-capability="vision"] .ai-capability-state')).toHaveText('ยังใช้ไม่ได้');
+  await expect(wizard.locator('.connection-card').locator('[data-capability="vision"] .ai-capability-state')).toHaveText('ยังใช้ไม่ได้');
   await expect(wizard.locator('.ai-organization-capabilities')).toHaveCount(1);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
   await page.screenshot({ path: 'release/qa/connect-ai/wizard-ready.png' });

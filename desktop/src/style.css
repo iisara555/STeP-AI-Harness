@@ -6274,3 +6274,156 @@ summary {
 .morning-brief-time-setting input {
   width: 110px;
 }
+
+/* Settings: expose current choices before decoration and keep permission text readable. */
+.settings-content {
+  scroll-padding-top: 72px;
+  scroll-padding-bottom: var(--settings-footer-height, 116px);
+  max-width: 1120px;
+  padding: 24px 32px 28px;
+}
+.settings-hero {
+  min-height: 60px;
+  gap: 12px;
+}
+.settings-hero .settings-art,
+.settings-hero .settings-illustration {
+  width: 80px;
+  height: 80px;
+  margin: 0;
+}
+.settings-content h1 {
+  font-size: 24px;
+}
+.settings-content label,
+.settings-content .small {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.settings-content .muted {
+  color: var(--muted);
+  opacity: 1;
+}
+.settings-tabs {
+  top: -24px;
+  scroll-padding-top: 12px;
+}
+.settings-content section {
+  scroll-margin-top: 70px;
+}
+.settings-search {
+  max-width: 36rem;
+  margin-top: 14px;
+}
+.settings-search-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.settings-profile-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.settings-profile-summary > .avatar-badge {
+  width: 48px;
+  height: 48px;
+}
+.settings-content .avatar-picker {
+  max-height: 290px;
+  overflow-y: auto;
+  padding: 5px;
+  margin-bottom: 16px;
+}
+.settings-style-example {
+  padding: 14px 16px;
+  margin: 16px 0;
+  background: var(--hover);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.settings-style-example p {
+  margin: 10px 0;
+}
+.settings-save.sticky {
+  bottom: -28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.settings-save .choice-row {
+  margin: 0;
+  flex-wrap: wrap;
+}
+.settings-save p {
+  margin: 0;
+}
+.settings-save-error {
+  flex-basis: 100%;
+  color: var(--danger);
+}
+.shell:has(.settings-content) .toasts {
+  bottom: 128px;
+}
+.connection-card.selected {
+  box-shadow: inset 3px 0 var(--accent-ink);
+  padding-left: 16px;
+}
+.selected-ai {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.credential-settings .google-services {
+  display: block;
+}
+.credential-settings .google-service-group {
+  border: 0;
+  padding: 0;
+  margin: 16px 0 22px;
+  min-width: 0;
+}
+.credential-settings .google-service-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.credential-settings .google-service {
+  margin: 0;
+}
+.credential-settings .google-service-group legend {
+  font-size: 16px;
+}
+.credential-global .credential-note {
+  margin-bottom: 0;
+}
+.google-selected-scope {
+  overflow-wrap: anywhere;
+}
+.password-managers .credential-row {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+@media (max-width: 760px) {
+  .settings-content {
+    padding: 18px 18px 24px;
+  }
+  .settings-tabs {
+    top: -18px;
+  }
+  .settings-save.sticky {
+    bottom: -24px;
+  }
+  .credential-settings .google-service-grid {
+    grid-template-columns: 1fr;
+  }
+  .settings-content .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

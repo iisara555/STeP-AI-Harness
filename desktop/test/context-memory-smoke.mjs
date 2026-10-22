@@ -162,10 +162,12 @@ try {
   await expect(memory.getByRole('button', { name: 'แก้ไข', exact: true })).toHaveCount(1);
   await page.screenshot({ path: 'release/qa/phase3-memory.png' });
   await memory.getByRole('button', { name: 'ปิด', exact: true }).click();
-  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
+  await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
   await page.getByRole('tab', { name: 'ทั่วไป', exact: true }).click();
   await page.getByLabel('รูปแบบคำตอบ', { exact: true }).selectOption('brief.md');
-  await page.getByRole('button', { name: 'บันทึกและไปที่งาน' }).click();
+  await page.getByRole('button', { name: 'บันทึกการเปลี่ยนแปลง' }).click();
+  await expect(page.getByRole('button', { name: 'บันทึกการเปลี่ยนแปลง' })).toBeDisabled();
+  await page.getByRole('button', { name: 'กลับไปทำงาน', exact: true }).click();
   await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).settings.outputStyle).toBe('brief.md');
   const currentSettings = (await page.evaluate(() => window.step.call('snapshot'))).settings;
   assert.equal(

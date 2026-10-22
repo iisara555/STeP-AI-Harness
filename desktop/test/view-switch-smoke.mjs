@@ -32,7 +32,7 @@ try {
   const away = async where => {
     if (where === 'skills') await page.getByRole('button', { name: /ศูนย์รวม Skill/ }).click();
     if (where === 'receipt') await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
-    if (where === 'settings') await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
+    if (where === 'settings') await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
     await page.waitForTimeout(300);
     await page.screenshot({
       path: '/tmp/claude-0/-home-user-STeP-AI-Harness/5387f810-88dd-5491-a436-451cdb55f4d2/scratchpad/probe/' + where + '.png',

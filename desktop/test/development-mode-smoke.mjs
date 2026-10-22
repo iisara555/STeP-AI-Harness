@@ -73,15 +73,17 @@ try {
   await call('removeConnection', { id: apiOnly.id });
   await assert.rejects(call('connection', claudePlan), /INVALID_CONNECTION/);
 
-  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
-  await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
+  await page.getByRole('tab', { name: 'เชื่อมต่อ AI' }).click();
+  await page.locator('.ai-developer-options > summary').click();
   const toggle = page.locator('.development-mode button');
   await expect(toggle).toBeVisible();
   await expect(toggle).toBeEnabled();
-  await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'เชื่อมบัญชีงาน', exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'บัญชีและบริการ', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'เชื่อมบัญชี Google', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'เพิ่มบัญชีเว็บไซต์', exact: true })).toBeEnabled();
-  await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  await page.getByRole('tab', { name: 'เชื่อมต่อ AI' }).click();
+  await page.locator('.ai-developer-options > summary').click();
   await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { developmentMode: false } }));
   await expect.poll(async () => (await call('snapshot')).policy.features.developmentMode, { timeout: 15000 }).toBe(false);
   await expect(toggle).toBeDisabled();
@@ -130,7 +132,7 @@ try {
   await expect(page.locator('.ai-connection-status')).toContainText('ปิดโดยองค์กร');
   await expect(page.getByRole('button', { name: 'ทดสอบใช้งาน', exact: true })).toBeDisabled();
   // One footer label on every Settings tab; it becomes the primary button only once an account is ready.
-  await expect(page.getByRole('button', { name: 'กลับไปที่งาน', exact: true })).toHaveClass(/quiet/);
+  await expect(page.getByRole('button', { name: 'กลับไปทำงาน', exact: true })).toHaveClass(/quiet/);
   await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();
   await expect(page.getByRole('button', { name: 'ออกจากระบบ', exact: true })).toBeEnabled();
 

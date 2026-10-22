@@ -180,11 +180,27 @@ export default function App() {
     [selected, setSelected] = useState('');
   const snapshotVersion = useRef(0),
     navigationVersion = useRef(0);
-  const [settings, setSettings] = useState(false),
+  const [settings, setSettingsState] = useState(false),
     [settingsPage, setSettingsPage] = useState<'general' | 'ai' | 'credentials'>('general'),
     [vaultOrigin, setVaultOrigin] = useState(''),
     [query, setQuery] = useState(''),
     [search, setSearch] = useState('');
+  const [settingsExit, setSettingsExit] = useState(false);
+  const settingsDirty = useRef(false);
+  const settingsNext = useRef<(() => void | Promise<void>) | null>(null);
+  const guardSettingsExit = (next: () => void | Promise<void>) => {
+    if (!settingsDirty.current) return false;
+    settingsNext.current = next;
+    setSettingsExit(true);
+    return true;
+  };
+  const settingsChanged = useCallback((dirty: boolean) => {
+    settingsDirty.current = dirty;
+  }, []);
+  const setSettings = (visible: boolean) => {
+    if (!visible && guardSettingsExit(() => setSettingsState(false))) return;
+    setSettingsState(visible);
+  };
   const [filter, setFilter] = useState<'all' | 'artifacts'>('all');
   const [stream, setStream] = useState(''),
     [progress, setProgress] = useState(''),
@@ -248,6 +264,13 @@ export default function App() {
   const [plan, setPlan] = useState<(PlanStep & { state: string })[]>([]);
   const [view, setView] = useState<'chat' | 'receipt' | 'skills' | 'documents' | 'media' | 'schedules'>('chat');
   const navigate = (next: typeof view) => {
+    if (
+      guardSettingsExit(() => {
+        setSettingsState(false);
+        navigate(next);
+      })
+    )
+      return;
     navigationVersion.current++;
     setView(next);
   };
@@ -612,7 +635,7 @@ export default function App() {
   }, [snapshot?.settings.theme]);
   useEffect(() => {
     const guard = (event: BeforeUnloadEvent) => {
-      if (dirtyRef.current) {
+      if (dirtyRef.current || settingsDirty.current) {
         event.preventDefault();
         event.returnValue = '';
       }
@@ -620,7 +643,7 @@ export default function App() {
     window.addEventListener('beforeunload', guard);
     // Query dirty state without triggering Chromium's native beforeunload dialog.
     const checkDirty = (event: Event) => {
-      if (dirtyRef.current) event.preventDefault();
+      if (dirtyRef.current || settingsDirty.current) event.preventDefault();
     };
     window.addEventListener('step:check-unsaved', checkDirty);
     return () => {
@@ -669,6 +692,7 @@ export default function App() {
   }
   const selectSessionRef = useRef<(id: string) => Promise<void>>(async () => {});
   async function selectSession(id: string) {
+    if (guardSettingsExit(() => selectSession(id))) return;
     const version = ++navigationVersion.current;
     await save();
     if (version !== navigationVersion.current) return;
@@ -696,8 +720,8 @@ export default function App() {
   const openAiSettings = () => openSettings('ai');
   // Without a usable AI the request stays in the box and the person is told why, instead of being moved elsewhere.
   const needAi = () =>
-    notify(t('ยังไม่ได้เลือก AI เลือกในกล่องพิมพ์ หรือเพิ่มการเชื่อมต่อ AI ก่อน'), 'info', {
-      label: t('ไปที่การเชื่อมต่อ AI'),
+    notify(t('ยังไม่ได้เลือก AI เลือกในกล่องพิมพ์ หรือเพิ่มบัญชี AI ก่อน'), 'info', {
+      label: t('ไปที่หน้าเชื่อมต่อ AI'),
       run: openAiSettings,
     });
   async function receiptHandoff(text: string, sourceText: string, allowIds: string[] = []) {
@@ -797,6 +821,7 @@ export default function App() {
     await start(id, t('แก้ร่างเดิมตามคำขอนี้: {0}', changes), [], undefined, undefined, undefined, '', 'draft');
   }
   async function create() {
+    if (guardSettingsExit(create)) return;
     // A new task is only a blank page until the first request or attachment, so no empty tasks pile up.
     const version = ++navigationVersion.current;
     await save();
@@ -1167,6 +1192,7 @@ export default function App() {
         .slice(0, 8)
     : [];
   const useSkill = (name: string) => {
+    if (guardSettingsExit(() => useSkill(name))) return;
     setForcedSkill(name);
     setQuery('');
     setSlashIndex(0);
@@ -1242,6 +1268,16 @@ export default function App() {
       await api!.call('settings', { assistant: snapshot!.settings.assistant, team: snapshot!.settings.team, theme });
       await refresh();
     });
+  const showTour = () => {
+    if (guardSettingsExit(showTour)) return;
+    setSettings(false);
+    navigate('chat');
+    setTour(true);
+  };
+  const showWizard = () => {
+    if (guardSettingsExit(showWizard)) return;
+    setWizard(true);
+  };
   const commands = {
     packs: () => setPacksOpen(true),
     palette: () => setPalette(p => !p),
@@ -1265,12 +1301,8 @@ export default function App() {
             const code = [...(session?.messages || [])].reverse().find(m => m.role === 'status')?.text;
             setReportAsk({ errorCode: code && /^[A-Z][A-Z0-9_]{1,63}$/.test(code) && code !== 'CANCELLED' ? code : undefined });
           },
-    tour: () => {
-      setSettings(false);
-      navigate('chat');
-      setTour(true);
-    },
-    wizard: () => setWizard(true),
+    tour: showTour,
+    wizard: showWizard,
     'whats-new': () => setWhatsNew(RELEASE_NOTES.filter(n => compareVersions(n.version, snapshot?.appVersion || '0') <= 0)),
     left: () => {
       // Folded only because the draft panel needs the room: open the list this time without changing the saved choice.
@@ -1405,7 +1437,7 @@ export default function App() {
       </main>
     );
   const pageTitle = settings
-    ? t('ตั้งค่าพื้นที่ทำงาน')
+    ? t('การตั้งค่า')
     : view === 'documents'
       ? t('เครื่องมือร่างเอกสาร')
       : view === 'media'
@@ -1666,7 +1698,7 @@ export default function App() {
               }}
             >
               <SlidersHorizontal size={18} />
-              <span>{t('ตั้งค่าพื้นที่ทำงาน')}</span>
+              <span>{t('การตั้งค่า')}</span>
             </button>
             <UpdateCard api={api} update={update} />
             <div className="profile" data-tour="version">
@@ -1796,7 +1828,7 @@ export default function App() {
               )}
               <small>
                 {settings
-                  ? t('บัญชี AI และข้อมูลอยู่ในเครื่องนี้')
+                  ? t('จัดการ AI บัญชีที่เชื่อมต่อ และผู้ช่วยของคุณ')
                   : view === 'documents'
                     ? t('ใส่ข้อมูลหรือแนบต้นเรื่อง ให้ AI ช่วยร่าง แล้วตรวจแก้ก่อนส่งออก')
                     : view === 'media'
@@ -1867,22 +1899,49 @@ export default function App() {
             <div style={{ display: settings ? 'contents' : 'none' }}>
               <SettingsPanel
                 onBusy={setSettingsBusy}
-                key={settingsPage}
                 initialPage={settingsPage}
+                onDirtyChange={settingsChanged}
+                selectedConnectionId={session?.connectionId || connectionId}
+                selectionScope={session ? 'task' : 'new'}
+                onSelectConnection={chooseConnection}
+                selectionDisabled={running}
                 vaultOrigin={vaultOrigin}
                 snapshot={snapshot}
                 call={api.call}
                 refresh={refresh}
-                openWizard={() => setWizard(true)}
-                openTour={() => {
-                  setSettings(false);
-                  navigate('chat');
-                  setTour(true);
-                }}
+                openWizard={showWizard}
+                openTour={showTour}
                 close={() => setSettings(false)}
                 onError={e => notify(explainError(e), 'error')}
               />
             </div>
+          )}
+          {settingsExit && (
+            <ConfirmDialog
+              title={t('ออกโดยไม่บันทึกการเปลี่ยนแปลง?')}
+              confirmLabel={t('ไม่บันทึกและออก')}
+              onCancel={() => {
+                settingsNext.current = null;
+                setSettingsExit(false);
+              }}
+              onConfirm={() => {
+                settingsDirty.current = false;
+                const next = settingsNext.current;
+                settingsNext.current = null;
+                setSettingsExit(false);
+                setSettingsState(false);
+                if (next)
+                  void Promise.resolve()
+                    .then(next)
+                    .catch(e => notify(explainError(e), 'error'));
+              }}
+            >
+              <p>
+                {t(
+                  'มีการเปลี่ยนแปลงที่ยังไม่บันทึก กลับไปแก้ไขหรือบันทึกก่อนออกได้ การเชื่อมต่อบัญชีและสิทธิ์ที่ยืนยันไปแล้วมีผลทันทีและจะไม่ถูกย้อนกลับ',
+                )}
+              </p>
+            </ConfirmDialog>
           )}
           {settings ? null : view === 'receipt' || view === 'documents' || view === 'media' ? null : view === 'schedules' ? (
             <ScheduledTasks
@@ -2304,7 +2363,7 @@ export default function App() {
                     >
                       {t(
                         failureCode === 'TOOL_DENIED'
-                          ? 'ตรวจการเชื่อมต่อ AI'
+                          ? 'ตรวจสอบการเชื่อมต่อ AI'
                           : failureCode === 'MODEL_NOT_AVAILABLE'
                             ? 'เปลี่ยนโมเดล'
                             : 'ลองอีกครั้ง',
@@ -2321,7 +2380,7 @@ export default function App() {
                     </button>
                     {/^(PROVIDER_|CONNECTION_|COPILOT_|AUTH_|OAUTH_)/.test(failureCode) && (
                       <button className="quiet" onClick={openAiSettings}>
-                        {t('ตรวจการเชื่อมต่อ AI')}
+                        {t('ตรวจสอบการเชื่อมต่อ AI')}
                       </button>
                     )}
                     {/^[A-Z_]+$/.test(failureCode) && (
@@ -2420,7 +2479,7 @@ export default function App() {
                   <div className="connection-banner" role="status">
                     <strong>{t('เชื่อมต่อ AI เพื่อเริ่มทำงาน')}</strong>
                     <button data-tour="connect" onClick={openAiSettings}>
-                      {t('ไปที่การเชื่อมต่อ AI')}
+                      {t('ไปที่หน้าเชื่อมต่อ AI')}
                     </button>
                   </div>
                 )}
@@ -2486,7 +2545,7 @@ export default function App() {
                         </button>
                       ) : (
                         <button className="quiet" onClick={openAiSettings}>
-                          {t('ไปที่การเชื่อมต่อ AI')}
+                          {t('ไปที่หน้าเชื่อมต่อ AI')}
                         </button>
                       )}
                     </div>
@@ -2834,7 +2893,7 @@ export default function App() {
                           <label>
                             {t('บัญชี AI')}
                             <select
-                              aria-label={t('เลือกการเชื่อมต่อ AI')}
+                              aria-label={t('เลือกบัญชี AI')}
                               value={session ? session.connectionId : connectionId}
                               disabled={running}
                               onChange={e => void action(() => chooseConnection(e.target.value))}

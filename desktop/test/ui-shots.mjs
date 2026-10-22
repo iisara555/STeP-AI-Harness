@@ -111,7 +111,7 @@ try {
   await page.locator('.session-group').first().waitFor();
   await page.waitForTimeout(300);
   await page.screenshot({ path: join(out, 'shell-dark.png') });
-  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน' }).click();
+  await page.getByRole('button', { name: 'การตั้งค่า' }).click();
   await page.getByRole('tab', { name: 'ความเป็นส่วนตัว' }).click();
   await page.waitForTimeout(200);
   await page.screenshot({ path: join(out, 'settings-dark.png') });

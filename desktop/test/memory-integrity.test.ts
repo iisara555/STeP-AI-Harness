@@ -123,3 +123,10 @@ test('a 300-character custom conversation style reaches the prompt whole', () =>
   const [line] = personal({ personality: 'custom', assistantTone: tone });
   assert.ok(line.includes(tone));
 });
+
+test('chat language is independent of UI language and explicit user requests keep precedence', () => {
+  assert.deepEqual(personal({ chatLanguage: 'auto' }), personal({}));
+  assert.match(personal({ chatLanguage: 'en' }).join('\n'), /Preferred language for chat replies: English/);
+  assert.match(personal({ chatLanguage: 'th' }).join('\n'), /Preferred language for chat replies: Thai/);
+  assert.match(personal({ chatLanguage: 'en' }).join('\n'), /different language explicitly requested by the user/);
+});

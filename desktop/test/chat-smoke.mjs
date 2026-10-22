@@ -382,7 +382,7 @@ try {
   const before = (await page.evaluate(() => window.step.call('snapshot'))).sessions[0].messages.length;
   await page.getByRole('button', { name: 'ตรวจและแนบเอกสาร' }).click();
   await page.getByRole('dialog', { name: 'ตรวจข้อความแนบ' }).getByText('เปิดหรืออ่านไฟล์นี้ไม่ได้', { exact: false }).waitFor();
-  await page.getByRole('button', { name: 'กลับไปที่งาน' }).click();
+  await page.getByRole('dialog', { name: 'ตรวจข้อความแนบ' }).getByRole('button', { name: 'กลับไปที่งาน' }).click();
   await page.locator('.attachments .refused').filter({ hasText: 'signed-minutes-broken.pdf' }).waitFor();
   await page.locator('.composer textarea').fill('สรุปไฟล์นี้');
   await page.keyboard.press('Enter');

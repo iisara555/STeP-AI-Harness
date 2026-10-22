@@ -75,7 +75,7 @@ try {
     };
   });
   await page.keyboard.press('ControlOrMeta+,');
-  await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  await page.getByRole('tab', { name: 'เชื่อมต่อ AI' }).click();
 
   // OpenRouter: no key typed, so the button signs in; the key it issues is stored and used, never shown.
   await page.getByRole('button', { name: /ดูบริการอื่นอีก/ }).click();
@@ -99,7 +99,7 @@ try {
   await expect(page.locator('body')).not.toContainText('sk-or-v1-from-signin');
 
   // Groq: an API key is required before the button is enabled; the typed key is what the service receives.
-  await page.getByText('เพิ่ม AI อีกบัญชี', { exact: true }).click();
+  await page.getByText('เพิ่มบัญชี AI', { exact: true }).click();
   await page.getByRole('radio', { name: /^Groq/ }).click();
   const groqConnect = page.getByRole('button', { name: 'เชื่อมต่อ Groq', exact: true });
   await expect(groqConnect).toBeDisabled();
@@ -108,7 +108,7 @@ try {
   await expect.poll(async () => (await connections()).find(c => c.preset === 'groq')?.ready, { timeout: 30000 }).toBe(true);
   assert.equal((await connections()).find(c => c.preset === 'groq').model, 'llama-3.3-70b-versatile');
   assert.ok(seen.chat.some(c => c.auth === 'Bearer gsk-synthetic'));
-  await page.getByRole('heading', { name: 'การเชื่อมต่อ AI' }).scrollIntoViewIfNeeded();
+  await page.getByRole('heading', { name: 'เชื่อมต่อ AI' }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: 'release/qa/ai-connections.png' });
   // A preset cannot be redirected through the IPC to another address.
   const baseUrl = await page.evaluate(() =>

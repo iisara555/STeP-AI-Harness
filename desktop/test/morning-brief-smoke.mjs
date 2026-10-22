@@ -133,8 +133,8 @@ try {
   await card.getByRole('button', { name: 'ไม่ต้องแสดงวันนี้', exact: true }).last().click();
   await expect(card).toHaveCount(0);
   // Settings show the every-day OK and can withdraw it.
-  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
-  await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
+  await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
+  await page.getByRole('tab', { name: 'บัญชีและบริการ', exact: true }).click();
   const settings = page.locator('.morning-brief-settings');
   assert.equal(
     await settings
@@ -158,10 +158,15 @@ try {
   await settings.getByRole('heading', { name: 'สรุปเช้านี้', exact: true }).click();
   await expect.poll(() => app.evaluate(() => globalThis.briefFixture.time)).toBe('08:45');
   const calendar = page.locator('.google-calendar');
-  const connect = page.getByRole('button', { name: 'เชื่อมบัญชีงาน', exact: true });
+  const connect = page.getByRole('button', { name: 'เชื่อมบัญชี Google', exact: true });
   await expect(calendar).toHaveCount(1);
   await expect(page.locator('.google-services .google-service')).toHaveCount(3);
   await expect(page.locator('.google-chips li'), 'legacy calendar read/write grants share one account badge').toHaveCount(2);
+  await page
+    .locator('.google-services')
+    .getByRole('checkbox', { name: /^เอกสาร ชีต และสไลด์/ })
+    .locator('xpath=..')
+    .click();
   await calendar.getByText('ปฏิทิน', { exact: true }).click();
   await expect(calendar.getByRole('radio', { name: 'ดูอย่างเดียว', exact: true })).toBeChecked();
   await connect.click();
@@ -184,9 +189,9 @@ try {
   await app.evaluate(() => {
     globalThis.googleAllowedServices = ['calendar-read', 'tasks'];
   });
-  await page.getByRole('button', { name: 'กลับไปที่งาน', exact: true }).click();
-  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
-  await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
+  await page.getByRole('button', { name: 'กลับไปทำงาน', exact: true }).click();
+  await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
+  await page.getByRole('tab', { name: 'บัญชีและบริการ', exact: true }).click();
   await expect(connect).toBeDisabled();
   await calendar.getByText('ปฏิทิน', { exact: true }).click();
   await expect(calendar.getByRole('radio', { name: 'ดูและสร้างนัด', exact: true })).toHaveCount(0);
@@ -201,8 +206,13 @@ try {
   });
   await page.reload();
   await page.setViewportSize({ width: 1280, height: 1000 });
-  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
-  await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
+  await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
+  await page.getByRole('tab', { name: 'บัญชีและบริการ', exact: true }).click();
+  await page
+    .locator('.google-services')
+    .getByRole('checkbox', { name: /^เอกสาร ชีต และสไลด์/ })
+    .locator('xpath=..')
+    .click();
   await calendar.getByText('ปฏิทิน', { exact: true }).click();
   await expect(calendar.getByRole('radio', { name: 'ดูอย่างเดียว', exact: true })).toBeChecked();
   if (process.env.STEP_SMOKE_SHOTS) {
@@ -214,12 +224,17 @@ try {
     await window.step.call('settings', { ...settings, language: 'en' });
   });
   await page.reload();
-  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
-  await page.getByRole('tab', { name: 'Passwords and connections', exact: true }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('tab', { name: 'Accounts and services', exact: true }).click();
+  await page
+    .locator('.google-services')
+    .getByRole('checkbox', { name: /^Docs, Sheets and Slides/ })
+    .locator('xpath=..')
+    .click();
   await calendar.getByText('Calendar', { exact: true }).click();
   await expect(calendar.getByRole('radio', { name: 'View only', exact: true })).toBeChecked();
   await calendar.getByRole('radio', { name: 'View and create events', exact: true }).check();
-  await page.getByRole('button', { name: 'Connect work account', exact: true }).click();
+  await page.getByRole('button', { name: 'Connect Google account', exact: true }).click();
   await expect.poll(() => app.evaluate(() => globalThis.googleConnectCalls.at(-1))).toEqual(['documents', 'calendar']);
   assert.deepEqual(errors, []);
   console.log(

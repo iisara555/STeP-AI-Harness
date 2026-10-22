@@ -210,8 +210,8 @@ async function makeWindow(splash?: Splash, prepared: Promise<unknown> = Promise.
     // Keep the window open by default when the editor has unsaved content.
     const result = await dialog.showMessageBox(window, {
       type: 'warning',
-      message: tm('มีร่างที่ยังไม่บันทึก'),
-      detail: tm('กลับไปบันทึกร่างก่อนปิด หรือเลือกปิดโดยไม่บันทึก'),
+      message: tm('มีร่างหรือการตั้งค่าที่ยังไม่บันทึก'),
+      detail: tm('กลับไปบันทึกก่อนปิด หรือเลือกปิดโดยไม่บันทึก'),
       buttons: [tm('กลับไปบันทึก'), tm('ปิดโดยไม่บันทึก')],
       defaultId: 0,
       cancelId: 0,
@@ -2700,6 +2700,12 @@ async function main() {
           outputStyle,
           assistantTone: input.assistantTone === undefined ? store.settings().assistantTone : inputText(input.assistantTone, 300).trim(),
           language: input.language === 'en' || input.language === 'th' ? input.language : store.settings().language,
+          chatLanguage:
+            input.chatLanguage === undefined
+              ? store.settings().chatLanguage
+              : styleInput(input.chatLanguage, value =>
+                  typeof value === 'string' && ['auto', 'th', 'en'].includes(value) ? (value as 'auto' | 'th' | 'en') : 'auto',
+                ),
           interactionStyle:
             input.interactionStyle === undefined
               ? store.settings().interactionStyle
@@ -3125,7 +3131,8 @@ async function main() {
           );
           emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text: tm('กำลังโหลดรายชื่อโมเดล') });
           connection.ready = true;
-          connection.note = tm('ผ่านการเชื่อมต่อและรับคำตอบบนเครื่องนี้แล้ว');
+          connection.note = tm('ทดสอบรับคำตอบสำเร็จ');
+          connection.testedAt = new Date().toISOString();
           delete connection.problem;
           try {
             await refreshModels(connection);

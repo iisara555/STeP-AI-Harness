@@ -27,7 +27,7 @@ const errors: Record<string, readonly [string, string]> = {
     'This file belongs to a different OAuth client. Choose the file matching the app’s configured client ID.',
   ],
   GOOGLE_CONNECTION_FAILED: [
-    'เชื่อมบัญชี Google ไม่สำเร็จ กดเชื่อมบัญชีงานเพื่อลองใหม่',
+    'เชื่อมบัญชี Google ไม่สำเร็จ กดเชื่อมบัญชี Google เพื่อลองใหม่',
     'Google account connection failed. Connect your work account to retry.',
   ],
   GOOGLE_CLIENT_CONFIGURATION: [
@@ -39,12 +39,15 @@ const errors: Record<string, readonly [string, string]> = {
     'Google requires a client secret. Choose “Import OAuth client file”, select the administrator’s Desktop app JSON, then reconnect.',
   ],
   GOOGLE_AUTH_CODE_REJECTED: [
-    'รหัสเชื่อมบัญชีหมดอายุหรือใช้ไปแล้ว กดเชื่อมบัญชีงานและลงชื่อใหม่อีกครั้ง',
+    'รหัสเชื่อมบัญชีหมดอายุหรือใช้ไปแล้ว กดเชื่อมบัญชี Google และลงชื่อใหม่อีกครั้ง',
     'The authorization code expired or was already used. Connect your work account and sign in again.',
   ],
-  GOOGLE_AUTH_TIMEOUT: ['หมดเวลารอลงชื่อเข้าใช้ กดเชื่อมบัญชีงานเพื่อลองใหม่', 'Sign-in timed out. Connect your work account to retry.'],
+  GOOGLE_AUTH_TIMEOUT: [
+    'หมดเวลารอลงชื่อเข้าใช้ กดเชื่อมบัญชี Google เพื่อลองใหม่',
+    'Sign-in timed out. Connect your work account to retry.',
+  ],
   GOOGLE_CALLBACK_INVALID: [
-    'ผลลงชื่อเข้าใช้จาก Google ไม่ครบ กดเชื่อมบัญชีงานเพื่อลองใหม่',
+    'ผลลงชื่อเข้าใช้จาก Google ไม่ครบ กดเชื่อมบัญชี Google เพื่อลองใหม่',
     'The Google sign-in response was incomplete. Connect your work account to retry.',
   ],
   GOOGLE_RESPONSE_INVALID: [
@@ -72,8 +75,8 @@ const errors: Record<string, readonly [string, string]> = {
     'The OS key store is unavailable. Encrypted data is preserved.',
   ],
   VAULT_SUSPENDED: [
-    'พักการใช้ข้อมูลบัญชีอยู่ ไปที่ ตั้งค่าพื้นที่ทำงาน → รหัสผ่านและการเชื่อมต่อ แล้วกด กลับมาใช้งาน ไม่ต้องกรอกรหัสผ่าน Google ใหม่',
-    'Credential access is paused. Open Workspace settings → Passwords and connections and select Resume. You do not need to enter your Google password again.',
+    'พักการใช้ข้อมูลบัญชีอยู่ ไปที่ การตั้งค่า → บัญชีและบริการ แล้วกด กลับมาใช้ข้อมูลทุกบัญชี ไม่ต้องกรอกรหัสผ่าน Google ใหม่',
+    'Credential access is paused. Open Settings → Accounts and services and select Resume all account data access. You do not need to enter your Google password again.',
   ],
   VAULT_ACCESS_DENIED: [
     'สิทธิ์ใช้ข้อมูลบัญชีหมดอายุหรือไม่ตรงกับงานนี้ กรุณาเลือกบัญชีใหม่',

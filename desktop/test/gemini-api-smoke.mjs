@@ -144,14 +144,14 @@ try {
   });
   const gemini = async () => (await page.evaluate(() => window.step.call('snapshot'))).connections.filter(c => c.provider === 'gemini');
   const connect = async () => {
-    const add = page.getByText('เพิ่ม AI อีกบัญชี', { exact: true });
+    const add = page.getByText('เพิ่มบัญชี AI', { exact: true });
     if ((await add.count()) && !(await page.getByRole('radio', { name: /^Gemini(?! ผ่าน)/ }).isVisible())) await add.click();
     await page.getByRole('radio', { name: /^Gemini(?! ผ่าน)/ }).click();
     await page.getByLabel('Gemini API key').fill('synthetic-gemini-key-for-smoke');
     await page.getByRole('button', { name: 'เชื่อมต่อ Gemini', exact: true }).click();
   };
   await page.keyboard.press('ControlOrMeta+,');
-  await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  await page.getByRole('tab', { name: 'เชื่อมต่อ AI' }).click();
 
   // An exhausted free-tier key ends with a clear quota message instead of an untested connection.
   await connect();
@@ -165,9 +165,9 @@ try {
   await connect();
   await page.locator('.ai-connection-status').filter({ hasText: 'กำลังเชื่อมต่อและทดสอบ…' }).waitFor();
   await page.getByRole('button', { name: /ศูนย์รวม Skill/ }).click();
-  await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).waitFor({ state: 'hidden' });
+  await page.getByRole('tab', { name: 'เชื่อมต่อ AI' }).waitFor({ state: 'hidden' });
   await page.keyboard.press('ControlOrMeta+,');
-  await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  await page.getByRole('tab', { name: 'เชื่อมต่อ AI' }).click();
   await page.locator('.ai-connection-status').filter({ hasText: 'กำลังเชื่อมต่อและทดสอบ…' }).waitFor();
   await expect.poll(async () => (await gemini()).some(c => c.ready), { timeout: 60000 }).toBe(true);
   slowTest = false;

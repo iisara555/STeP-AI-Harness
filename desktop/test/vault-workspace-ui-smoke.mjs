@@ -59,12 +59,12 @@ try {
   page.on('pageerror', error => errors.push(error.message));
   checkpoint('open credential settings');
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง', exact: true }).click();
-  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
-  await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
+  await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
+  await page.getByRole('tab', { name: 'บัญชีและบริการ', exact: true }).click();
   await expect(
-    page.getByText('รอผู้ดูแลตั้งค่า Google OAuth client ID และโดเมนที่อนุญาต จึงจะเชื่อมบัญชีงานได้', { exact: true }),
+    page.getByText('รอผู้ดูแลตั้งค่า Google OAuth client ID และโดเมนที่อนุญาต จึงจะเชื่อมบัญชี Google ได้', { exact: true }),
   ).toBeVisible();
-  assert.equal(await page.getByRole('button', { name: 'เชื่อมบัญชีงาน', exact: true }).count(), 0);
+  assert.equal(await page.getByRole('button', { name: 'เชื่อมบัญชี Google', exact: true }).count(), 0);
   await expect(page.getByRole('button', { name: 'เพิ่มบัตรชำระเงิน', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'เพิ่มที่อยู่', exact: true })).toBeVisible();
   checkpoint('remember website account');
@@ -127,8 +127,8 @@ try {
   assert.equal(await page.evaluate(() => window.step.call('googleState').then(s => s.clientSecretConfigured)), true);
   checkpoint('pause and deny host execution');
   assert.equal(await page.evaluate(() => window.step.call('vaultState').then(state => state.blockHostExecution)), true);
-  await page.getByRole('button', { name: 'พักการใช้งาน', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'กลับมาใช้งาน', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'หยุดใช้ข้อมูลทุกบัญชีชั่วคราว', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'กลับมาใช้ข้อมูลทุกบัญชี', exact: true })).toBeVisible();
   checkpoint('capture paused Settings');
   await mkdir('release/qa/vault', { recursive: true });
   await page.screenshot({ path: 'release/qa/vault/settings-1280.png', timeout: 15000 });

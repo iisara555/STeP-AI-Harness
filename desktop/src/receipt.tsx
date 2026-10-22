@@ -940,7 +940,7 @@ export function ReceiptApp({
             <p className="small muted">
               {t('เชื่อมต่อ Google AI แบบ API key เพื่อใช้ Gemini อ่านใบเสร็จ แยกจาก AI ที่ใช้แชต')}{' '}
               <button className="text-link" onClick={openAiSettings}>
-                {t('ไปที่การเชื่อมต่อ AI')}
+                {t('ไปที่หน้าเชื่อมต่อ AI')}
               </button>
             </p>
           )}
@@ -1205,7 +1205,7 @@ export function ReceiptApp({
                 {!usableConnectionId && <p className="small muted">{t('เชื่อมต่อและทดสอบ AI ก่อนส่งตรวจทาน ข้อมูลในหน้านี้ยังอยู่')}</p>}
                 {openAiSettings && (
                   <button type="button" className="text-link" onClick={openAiSettings}>
-                    {t('ไปที่การเชื่อมต่อ AI')}
+                    {t('ไปที่หน้าเชื่อมต่อ AI')}
                   </button>
                 )}
               </div>

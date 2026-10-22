@@ -27,7 +27,9 @@ try {
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(page.getByRole('heading', { name: 'เชื่อมต่อ AI', level: 1, exact: true })).toBeVisible();
   const art = await page.locator('.settings-illustration').boundingBox();
-  assert.ok(art && art.width >= 130 && art.height >= 100, JSON.stringify(art));
+  // Keep the illustration visible but compact so it does not displace the primary settings.
+  assert.ok(art && art.width >= 64 && art.width <= 96 && art.height >= 64 && art.height <= 96, JSON.stringify(art));
+  await expect(page.locator('.settings-tabs')).toBeInViewport({ ratio: 1 });
 
   await page.evaluate(async () => {
     const c = await window.step.call('connection', { provider: 'openai', mode: 'subscription' });

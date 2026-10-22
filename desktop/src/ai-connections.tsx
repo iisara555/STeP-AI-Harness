@@ -23,6 +23,10 @@ export function AIConnections({
   onError,
   onBusy,
   headingLevel = 3,
+  selectedConnectionId,
+  selectionScope = 'new',
+  onSelectConnection,
+  selectionDisabled = false,
 }: {
   snapshot: Snapshot;
   call: (method: string, input?: any) => Promise<any>;
@@ -30,6 +34,10 @@ export function AIConnections({
   onError: (error: unknown) => void;
   onBusy: (id: string) => void;
   headingLevel?: 2 | 3;
+  selectedConnectionId?: string;
+  selectionScope?: 'task' | 'new';
+  onSelectConnection?: (id: string) => Promise<void>;
+  selectionDisabled?: boolean;
 }) {
   const StepHeading = headingLevel === 2 ? 'h2' : 'h3';
   const [choice, setChoice] = useState<ProviderChoice>(recommendedChoice);
@@ -69,6 +77,35 @@ export function AIConnections({
   };
   const connections = snapshot.connections;
   const readyCount = connections.filter(c => c.ready).length;
+  const developmentControl = (
+    <div className="development-mode">
+      <small id="dev-mode-help" className="muted">
+        {snapshot.features?.developmentMode ? t('Claude Pro/Max สำหรับทดสอบ') : t('สำหรับนักพัฒนา · ต้องให้ IT อนุญาต')}
+      </small>
+      <button
+        type="button"
+        className="quiet"
+        aria-pressed={Boolean(snapshot.features?.developmentMode && snapshot.settings.developmentMode)}
+        title={
+          snapshot.features?.developmentMode
+            ? t(
+                'สำหรับทดสอบและ demo ด้วยบัญชี Claude Pro/Max ของคุณ การใช้งานต้องเป็นไปตามเงื่อนไขของ Anthropic เปิดแล้วเลือก Claude แบบแพ็กเกจในรายการด้านล่างได้ กดกลับโหมดปกติเพื่อปิด',
+              )
+            : t('ผู้ดูแลยังไม่อนุญาต Dev mode ติดต่อ IT หากต้องใช้ทดสอบ')
+        }
+        aria-describedby="dev-mode-help"
+        disabled={Boolean(busy) || !snapshot.features?.developmentMode}
+        onClick={() =>
+          snapshot.settings.developmentMode !== true && snapshot.features?.developmentPasscode
+            ? setDevPasscode('')
+            : void run('development-mode', () => call('developmentMode', { enabled: snapshot.settings.developmentMode !== true }))
+        }
+      >
+        {busy === 'development-mode' && <LoaderCircle size={14} className="spin" />}
+        {snapshot.features?.developmentMode && snapshot.settings.developmentMode ? t('กลับโหมดปกติ') : t('เปิด Dev mode')}
+      </button>
+    </div>
+  );
   const picker = (
     <fieldset className="connection-form" disabled={Boolean(busy)}>
       <ProviderFields
@@ -113,7 +150,7 @@ export function AIConnections({
         <div className="ai-connect-step ai-readiness" ref={readiness} tabIndex={-1} role="region" aria-labelledby="ai-accounts-heading">
           <StepHeading id="ai-accounts-heading">{t('บัญชี AI ของคุณ')}</StepHeading>
           <p className="muted small">
-            {t('พร้อมใช้งาน {0} จาก {1} บัญชี', readyCount, connections.length)} ·{' '}
+            {t('ทดสอบข้อความผ่าน {0} จาก {1} บัญชี', readyCount, connections.length)} ·{' '}
             {t('ตอนเชื่อมต่อ ระบบทดสอบข้อความสั้น ๆ 1 ครั้งด้วยโควตาของบัญชีนั้น')}
           </p>
           <ul className="connection-list">
@@ -121,6 +158,13 @@ export function AIConnections({
               <ConnectionCard
                 key={c.id}
                 connection={c}
+                developmentControl={
+                  c.id === connections.find(account => account.provider === 'claude')?.id ? developmentControl : undefined
+                }
+                selected={c.id === selectedConnectionId}
+                selectionScope={selectionScope}
+                onSelect={onSelectConnection}
+                selectionDisabled={selectionDisabled}
                 snapshot={snapshot}
                 busy={busy}
                 progress={progress[c.id]}
@@ -144,7 +188,7 @@ export function AIConnections({
         >
           <summary>
             <Plus size={16} aria-hidden="true" />
-            {t('เพิ่ม AI อีกบัญชี')}
+            {t('เพิ่มบัญชี AI')}
           </summary>
           {picker}
         </details>
@@ -154,33 +198,12 @@ export function AIConnections({
         <CapabilityList items={organizationCapabilities(snapshot.policy)} />
       </details>
       {/* For developers only: kept visible so it can be found, but out of the way of everyone else. */}
-      <div className="development-mode">
-        <small id="dev-mode-help" className="muted">
-          {snapshot.features?.developmentMode ? t('Claude Pro/Max สำหรับทดสอบ') : t('สำหรับนักพัฒนา · ต้องให้ IT อนุญาต')}
-        </small>
-        <button
-          type="button"
-          className="quiet"
-          aria-pressed={Boolean(snapshot.features?.developmentMode && snapshot.settings.developmentMode)}
-          title={
-            snapshot.features?.developmentMode
-              ? t(
-                  'สำหรับทดสอบและ demo ด้วยบัญชี Claude Pro/Max ของคุณ การใช้งานต้องเป็นไปตามเงื่อนไขของ Anthropic เปิดแล้วเลือก Claude แบบแพ็กเกจในรายการด้านล่างได้ กดกลับโหมดปกติเพื่อปิด',
-                )
-              : t('ผู้ดูแลยังไม่อนุญาต Dev mode ติดต่อ IT หากต้องใช้ทดสอบ')
-          }
-          aria-describedby="dev-mode-help"
-          disabled={Boolean(busy) || !snapshot.features?.developmentMode}
-          onClick={() =>
-            snapshot.settings.developmentMode !== true && snapshot.features?.developmentPasscode
-              ? setDevPasscode('')
-              : void run('development-mode', () => call('developmentMode', { enabled: snapshot.settings.developmentMode !== true }))
-          }
-        >
-          {busy === 'development-mode' && <LoaderCircle size={14} className="spin" />}
-          {snapshot.features?.developmentMode && snapshot.settings.developmentMode ? t('กลับโหมดปกติ') : t('เปิด Dev mode')}
-        </button>
-      </div>
+      {!connections.some(c => c.provider === 'claude') && (
+        <details className="ai-developer-options">
+          <summary>{t('Claude Pro/Max สำหรับทดสอบ')}</summary>
+          {developmentControl}
+        </details>
+      )}
       {devPasscode !== null && (
         <ConfirmDialog
           title={t('เปิด Dev mode')}
@@ -251,6 +274,11 @@ function ConnectionCard({
   call,
   run,
   onRemove,
+  selected,
+  developmentControl,
+  selectionScope,
+  onSelect,
+  selectionDisabled,
 }: {
   connection: Connection;
   snapshot: Snapshot;
@@ -259,6 +287,11 @@ function ConnectionCard({
   call: (method: string, input?: any) => Promise<any>;
   run: (id: string, fn: () => Promise<unknown>) => Promise<void>;
   onRemove: () => void;
+  selected?: boolean;
+  developmentControl?: import('react').ReactNode;
+  selectionScope: 'task' | 'new';
+  onSelect?: (id: string) => Promise<void>;
+  selectionDisabled?: boolean;
 }) {
   const working = busy === c.id;
   const state = connectionState(c);
@@ -288,7 +321,11 @@ function ConnectionCard({
       await call('connect', { id: c.id });
     });
   return (
-    <li className={`connection-row connection-card ${tone}`} data-state={tone}>
+    <li
+      className={`connection-row connection-card ${tone}${selected ? ' selected' : ''}`}
+      data-state={tone}
+      data-selected={Boolean(selected)}
+    >
       <div className="connection-head">
         <strong className="connection-name">
           {/* The same name as everywhere else (connectionName), split so the kind reads as a subtitle. */}
@@ -307,6 +344,13 @@ function ConnectionCard({
           {working ? t('กำลังเชื่อมต่อและทดสอบ…') : t(state.label)}
         </span>
       </div>
+      {selected && (
+        <p className="selected-ai">
+          <Check size={14} />
+          {selectionScope === 'task' ? t('ใช้กับงานนี้') : t('ใช้สำหรับงานใหม่')}
+        </p>
+      )}
+      {c.testedAt && <p className="small muted">{t('ทดสอบสำเร็จล่าสุด: {0}', shownDate(c.testedAt))}</p>}
       {working && progress ? (
         <p className="connect-progress">
           <LoaderCircle size={13} className="spin" />
@@ -314,11 +358,20 @@ function ConnectionCard({
         </p>
       ) : (
         <p className={c.ready ? 'connection-note connected' : 'connection-note muted'}>
-          {c.policyBlocked ? t('ผู้ดูแลปิดบริการนี้ ผลทดสอบเดิมใช้ไม่ได้จนกว่าจะเปิดอีกครั้ง · ลงชื่อออกหรือลบบัญชีได้') : t(c.note)}
+          {c.policyBlocked
+            ? t('ผู้ดูแลปิดบริการนี้ ผลทดสอบเดิมใช้ไม่ได้จนกว่าจะเปิดอีกครั้ง · ลงชื่อออกหรือลบบัญชีได้')
+            : c.ready
+              ? t('ทดสอบรับคำตอบสำเร็จ')
+              : t(c.note)}
         </p>
       )}
       {c.provider === 'gemini' && c.googleCloudProject && <p className="small muted">Google Cloud Project: {c.googleCloudProject}</p>}
       <div className="connection-actions ai-primary-actions">
+        {onSelect && !selected && c.ready && !c.policyBlocked && (
+          <button disabled={Boolean(busy) || selectionDisabled} onClick={() => void run(c.id + ':select', () => onSelect(c.id))}>
+            {selectionScope === 'task' ? t('ใช้กับงานนี้') : t('ใช้สำหรับงานใหม่')}
+          </button>
+        )}
         <button className={state.action === 'retest' ? 'quiet' : undefined} disabled={Boolean(busy) || c.policyBlocked} onClick={fix}>
           {working ? (
             <LoaderCircle size={15} className="spin" />
@@ -335,10 +388,26 @@ function ConnectionCard({
           </button>
         )}
       </div>
+      {c.ready && (
+        <>
+          <CapabilityList items={connectionCapabilities(c, snapshot.policy).filter(item => ['web', 'vision'].includes(item.id))} />
+          <p className="small muted">
+            {t('ผลทดสอบนี้ยืนยันการตอบข้อความเท่านั้น Google Workspace ต้องเชื่อมบัญชีและเลือกสิทธิ์ในบัญชีและบริการแยกต่างหาก')}
+          </p>
+        </>
+      )}
+      {c.provider === 'claude' && c.mode === 'subscription' && (
+        <p className="credential-note">
+          {t('Claude Pro/Max สำหรับทดสอบ')} · {snapshot.settings.developmentMode ? t('อยู่ในโหมดทดลอง') : t('โหมดปกติ')}
+        </p>
+      )}
+      {developmentControl}
       <div className="connection-more">
         <details className="ai-capabilities">
           <summary>{t('บัญชีนี้ทำอะไรได้บ้าง')}</summary>
-          <CapabilityList items={connectionCapabilities(c, snapshot.policy)} />
+          <CapabilityList
+            items={connectionCapabilities(c, snapshot.policy).filter(item => !c.ready || !['web', 'vision'].includes(item.id))}
+          />
         </details>
         <details className="ai-account-management">
           <summary>{t('โมเดลและการจัดการบัญชี')}</summary>

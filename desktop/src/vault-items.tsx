@@ -15,13 +15,11 @@ const labels: Record<string, string> = {
 type Source = { source: 'onepassword' | 'bitwarden'; enabled: boolean; installed: boolean; unlocked: boolean };
 export function VaultItems({
   entries,
-  sources,
   disabled,
   run,
   call,
 }: {
   entries: VaultMetadata[];
-  sources: Source[];
   disabled: boolean;
   run: (id: string, action: () => Promise<unknown>) => Promise<void>;
   call: (method: string, input?: any) => Promise<any>;
@@ -35,6 +33,8 @@ export function VaultItems({
   }>();
   return (
     <div className="vault-items">
+      <h3>{t('ข้อมูลกรอกฟอร์ม')}</h3>
+      <p className="small muted">{t('ที่อยู่ที่บันทึกใช้กรอกบนเว็บไซต์ที่คุณอนุญาตเท่านั้น')}</p>
       <div className="credential-actions">
         <button disabled={disabled} onClick={() => setForm({ kind: 'address', label: '', destination: '', fields: {}, remember: false })}>
           {t('เพิ่มที่อยู่')}
@@ -128,7 +128,25 @@ export function VaultItems({
             </button>
           </article>
         ))}
-      <h3>{t('ตัวจัดการรหัสผ่าน')}</h3>
+    </div>
+  );
+}
+
+export function PasswordManagers({
+  sources,
+  disabled,
+  run,
+  call,
+}: {
+  sources: Source[];
+  disabled: boolean;
+  run: (id: string, action: () => Promise<unknown>) => Promise<void>;
+  call: (method: string, input?: any) => Promise<any>;
+}) {
+  return (
+    <section className="credential-section password-managers" id="password-managers">
+      <h2>{t('โปรแกรมจัดการรหัสผ่าน')}</h2>
+      <p className="small muted">{t('ตัวเลือกเสริม สถานะเปิดให้ใช้แยกจากการติดตั้งและการปลดล็อก')}</p>
       {sources.map(source => (
         <div className="credential-row" key={source.source}>
           <label className="credential-source">
@@ -140,9 +158,11 @@ export function VaultItems({
                 void run('source', () => call('vaultSource', { source: source.source, action: 'enable', enabled: event.target.checked }))
               }
             />
-            {source.source === 'onepassword' ? '1Password' : 'Bitwarden'} ·{' '}
-            {source.installed ? (source.unlocked ? t('ปลดล็อกแล้ว') : t('พร้อมเชื่อม')) : t('ติดตั้งและลงชื่อใน CLI ของบริการก่อน')}
+            {t('เปิดให้ใช้ {0}', source.source === 'onepassword' ? '1Password' : 'Bitwarden')}
           </label>
+          <span className="small" role="status">
+            {source.installed ? (source.unlocked ? t('ปลดล็อกแล้ว') : t('ติดตั้งแล้ว · ล็อกอยู่')) : t('ยังไม่พบโปรแกรมเชื่อมต่อ')}
+          </span>
           {source.installed && source.enabled && (
             <button
               className="quiet"
@@ -156,6 +176,10 @@ export function VaultItems({
           )}
         </div>
       ))}
-    </div>
+      <details>
+        <summary>{t('ขั้นตอนติดตั้งและรายละเอียดเพิ่มเติม')}</summary>
+        <p className="small muted">{t('ติดตั้งและลงชื่อใน CLI ของบริการก่อน')}</p>
+      </details>
+    </section>
   );
 }

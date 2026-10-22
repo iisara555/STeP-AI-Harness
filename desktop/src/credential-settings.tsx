@@ -25,12 +25,12 @@ import {
 } from './icons';
 import { language, t } from './i18n';
 import { explainError } from './messages';
-import { DEFAULT_GOOGLE_SERVICES, GOOGLE_PAGES, type GoogleService } from './google-services';
+import { GOOGLE_PAGES, type GoogleService } from './google-services';
 import type { VaultMetadata } from '../electron/vault';
 import { MorningBriefSettings } from './morning-brief';
-import { VaultItems } from './vault-items';
+import { PasswordManagers, VaultItems } from './vault-items';
 const words = {
-  title: ['รหัสผ่านและการเชื่อมต่อ', 'Passwords and connections'],
+  title: ['บัญชีเว็บไซต์และข้อมูลกรอกฟอร์ม', 'Website accounts and form details'],
   intro: [
     'บัญชีและที่อยู่ที่จำไว้กรอกอัตโนมัติเฉพาะเว็บไซต์ที่กำหนด รหัสผ่านไม่เข้าแชต',
     'Saved logins and addresses fill automatically on their exact sites. Passwords never enter chat.',
@@ -54,25 +54,25 @@ const words = {
   edit: ['แก้ไข', 'Edit'],
   remove: ['ลบจากเครื่อง', 'Delete locally'],
   empty: ['ยังไม่มีบัญชีเว็บไซต์', 'No website accounts saved'],
-  pause: ['พักการใช้งาน', 'Pause'],
+  pause: ['พักบัญชีนี้', 'Pause this account'],
   resume: ['กลับมาใช้งาน', 'Resume'],
   replace: ['เว้นว่างเพื่อใช้รหัสผ่านเดิม', 'Leave blank to keep the existing password'],
   usernameEdit: [
     'กรอกชื่อผู้ใช้ใหม่หากต้องการแก้ไข แอปไม่แสดงข้อมูลเดิมที่บันทึกไว้',
     'Enter the username to edit. Saved values are not read back into this screen.',
   ],
-  keys: ['จัดการ API key ที่หน้า “การเชื่อมต่อ AI”', 'Manage API keys in AI connections'],
+  keys: ['จัดการ API key ที่หน้า “เชื่อมต่อ AI”', 'Manage API keys in AI connections'],
   googleIntro: [
     'ให้ AI ช่วยค้นเมล ดูนัด และหาไฟล์ในบัญชี Google ของงานคุณ',
     'Let the AI search your mail, check your calendar and find files in your work Google account.',
   ],
-  googleSeparate: ['แยกจากการลงชื่อ Gemini ในหน้าการเชื่อมต่อ AI', 'Separate from the Gemini sign-in under AI connections.'],
+  googleSeparate: ['แยกจากการลงชื่อ Gemini ในหน้าเชื่อมต่อ AI', 'Separate from the Gemini sign-in under AI connections.'],
   step1: ['เลือกบริการ', 'Choose services'],
   step2: ['ลงชื่อด้วยบัญชีงานในเบราว์เซอร์', 'Sign in with your work account in the browser'],
   step3: ['ถามในแชตได้เลย', 'Ask in chat'],
   promise: [
-    'AI ขออนุญาตคุณทุกครั้งก่อนอ่านหรือเปลี่ยนข้อมูล และไม่เห็นรหัสผ่านหรือ token ของคุณ',
-    'The AI asks you every time before it reads or changes anything, and never sees your password or token.',
+    'งานอ่านในแชตขออนุมัติครั้งเดียวต่อคำขอ งานส่ง แก้ไข และลบยืนยันแต่ละรายการ ส่วนสรุปเช้าทำตามสิทธิ์ที่คุณตั้งไว้ ผู้ดูแลอาจกำหนดให้ถามทุกครั้ง AI ไม่เห็นรหัสผ่านหรือ token',
+    'Chat reads ask once per request. Sending, editing and deleting require individual confirmation. Morning summaries follow your saved consent. Your administrator may require a prompt every time. AI never sees passwords or tokens.',
   ],
   readOnly: ['อ่านอย่างเดียว', 'Read only'],
   calendar: ['ปฏิทิน', 'Calendar'],
@@ -80,10 +80,9 @@ const words = {
   calendarRead: ['ดูอย่างเดียว', 'View only'],
   calendarWrite: ['ดูและสร้างนัด', 'View and create events'],
   canChange: ['แก้ไขได้ · ถามก่อนทุกครั้ง', 'Can change · asks first'],
-  fullAccess: ['เลือกสิทธิ์เต็มทุกบริการ', 'Select full access to all services'],
   selfService: [
-    'เลือกใช้บริการทั้งหมดที่แอปรองรับได้เอง ไม่ต้องให้ IT เปิดสิทธิ์รายบริการ Google จะให้คุณตรวจและอนุญาตก่อนเชื่อมบัญชี',
-    'Choose any supported service yourself, without per-service IT setup. Google asks you to review and authorize access before connecting.',
+    'เลือกเฉพาะบริการที่ต้องใช้ ยังไม่เลือกสิทธิ์เขียนให้ล่วงหน้า ตรวจรายการที่เลือกแล้วให้สิทธิ์อีกครั้งในหน้า Google',
+    'Choose only the services you need. Write access is not preselected. Review your choices, then authorize them on Google.',
   ],
   reauthorize: [
     'อัปเดตแอปแล้วสิทธิ์บัญชีเดิมจะไม่เพิ่มเอง กด “ปรับบริการที่อนุญาต” ที่บัญชีเดิม เลือกบริการ แล้วให้สิทธิ์ใน Google',
@@ -102,11 +101,11 @@ const words = {
   ],
   reauthHint: ['สิทธิ์หมดอายุหรือมีการเปลี่ยนแปลง กดลงชื่อเข้าใช้ใหม่', 'Access expired or changed. Sign in again.'],
   notConfigured: [
-    'รอผู้ดูแลตั้งค่า Google OAuth client ID และโดเมนที่อนุญาต จึงจะเชื่อมบัญชีงานได้',
+    'รอผู้ดูแลตั้งค่า Google OAuth client ID และโดเมนที่อนุญาต จึงจะเชื่อมบัญชี Google ได้',
     'An administrator must configure the Google OAuth client ID and allowed domains before work-account connection.',
   ],
   googleDisabled: ['ผู้ดูแลยังไม่ได้เปิดการเชื่อม Google Workspace', 'Google Workspace connections are not enabled by the administrator.'],
-  connect: ['เชื่อมบัญชีงาน', 'Connect work account'],
+  connect: ['เชื่อมบัญชี Google', 'Connect Google account'],
   clientSetup: ['ตั้งค่าการเชื่อม Google ขององค์กร', 'Organization Google connection setup'],
   importClient: ['นำเข้าไฟล์ OAuth client', 'Import OAuth client file'],
   clientHelp: [
@@ -114,7 +113,7 @@ const words = {
     'Choose the organization’s Desktop app JSON downloaded from Google Cloud. The app stores its client secret in this device’s Vault and uses only the configured client ID.',
   ],
   clientReady: [
-    'ตั้งค่า OAuth client บนเครื่องนี้แล้ว กดเชื่อมบัญชีงานเพื่อลองอีกครั้ง',
+    'ตั้งค่า OAuth client บนเครื่องนี้แล้ว กดเชื่อมบัญชี Google เพื่อลองอีกครั้ง',
     'OAuth client configured on this device. Connect your work account to retry.',
   ],
   reconnect: ['ลงชื่อเข้าใช้ใหม่', 'Sign in again'],
@@ -137,7 +136,7 @@ const words = {
   newAccount: ['เชื่อมบัญชีอื่น', 'Connect another account'],
   hideFiles: ['ซ่อนรายการไฟล์', 'Hide files'],
   noFiles: ['ยังไม่มีไฟล์ที่แอปนี้เปิดได้', 'No files this app can open yet'],
-  files: ['เลือกไฟล์ที่บัญชีนี้เข้าถึงได้', 'Select files this account can access'],
+  files: ['ดูรายชื่อไฟล์ที่บัญชีนี้เข้าถึงได้', 'View files this account can access'],
   fileScope: [
     'แสดงเฉพาะไฟล์ที่อนุญาตให้แอปเข้าถึง การวางลิงก์ไม่เพิ่มสิทธิ์เปิดไฟล์อื่น',
     'This list follows actual grants. drive.file does not grant every file from a pasted link.',
@@ -249,18 +248,40 @@ const SERVICES: Record<GoogleService, ServiceInfo> = {
     changes: true,
   },
 };
+const groupForService = (s: GoogleService) =>
+  s.startsWith('gmail')
+    ? 'gmail'
+    : s.startsWith('calendar')
+      ? 'calendar'
+      : ['documents', 'docs', 'sheets', 'slides', 'drive', 'drive-read'].includes(s)
+        ? 'documents'
+        : 'more';
+const serviceImpact = (s: GoogleService) => {
+  if (!SERVICES[s].changes) return w('readOnly');
+  const impacts: Partial<Record<GoogleService, string>> = {
+    'gmail-draft': 'สร้าง แก้ และลบร่าง',
+    'gmail-send': 'ส่งอีเมล',
+    'gmail-manage': 'จัดป้ายกำกับและย้ายเข้า/ออกถังขยะ',
+    calendar: 'ดูและสร้างนัด',
+    drive: 'สร้าง แก้ ย้ายไฟล์และจัดสิทธิ์แชร์',
+    chat: 'อ่านและส่งข้อความ',
+    appscript: 'แก้โค้ด จัด Deployment และเรียกใช้สคริปต์',
+    tasks: 'ดู เพิ่ม และทำรายการงานให้เสร็จ',
+    forms: 'สร้าง แก้ เปิดรับและอ่านคำตอบ',
+  };
+  return t(impacts[s] || 'สร้างและแก้ไข') + ' · ' + t('ยืนยันก่อนเปลี่ยนข้อมูล');
+};
 const lang = () => (language() === 'en' ? 1 : 0);
 const serviceName = (s: string) => SERVICES[s as GoogleService]?.name[lang()] || s;
-const visibleGoogleServices = (allowed: GoogleService[]) =>
-  allowed.filter(s => s !== 'documents' || !(['docs', 'sheets', 'slides'] as GoogleService[]).every(v => allowed.includes(v)));
-const selectedGoogleServices = (selected: GoogleService[], allowed: GoogleService[]) => {
-  const visible = visibleGoogleServices(allowed);
-  return [
-    ...new Set(
-      selected.flatMap(s => (s === 'documents' && !visible.includes(s) ? (['docs', 'sheets', 'slides'] as GoogleService[]) : [s])),
-    ),
-  ].filter(s => visible.includes(s));
-};
+const visibleGoogleServices = (allowed: GoogleService[], selected: GoogleService[] = []) =>
+  allowed.filter(
+    s =>
+      s !== 'documents' ||
+      selected.includes('documents') ||
+      !(['docs', 'sheets', 'slides'] as GoogleService[]).every(v => allowed.includes(v)),
+  );
+const selectedGoogleServices = (selected: GoogleService[], allowed: GoogleService[]) =>
+  [...new Set(selected)].filter(s => allowed.includes(s));
 function WorkspaceAccessService({
   family,
   allowed,
@@ -296,7 +317,7 @@ function WorkspaceAccessService({
         <span className="google-service-text">
           <strong>{w(family)}</strong>
           <span className="muted small">{info.detail[lang()]}</span>
-          <span className={`google-kind ${info.changes ? 'changes' : 'read'}`}>{info.changes ? w('canChange') : w('readOnly')}</span>
+          <span className={`google-kind ${info.changes ? 'changes' : 'read'}`}>{serviceImpact(access || options[0])}</span>
         </span>
         <span className="google-service-tick" aria-hidden="true">
           {access && <Check size={14} />}
@@ -375,7 +396,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
     remember: boolean;
     otpSecret?: string;
   }>();
-  const [services, setServices] = useState<GoogleService[]>(['documents']);
+  const [services, setServices] = useState<GoogleService[]>([]);
   const [editingGoogle, setEditingGoogle] = useState<string>();
   const [busy, setBusy] = useState('');
   const [connectionError, setConnectionError] = useState<unknown>();
@@ -428,6 +449,360 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
     vault?.entries.filter(v => v.kind === 'website' && (v.label + ' ' + v.destination).toLowerCase().includes(query.toLowerCase())) || [];
   return (
     <div className="credential-settings">
+      <section className="credential-section credential-global">
+        <h2>{t('การใช้ข้อมูลบัญชีในแอป')}</h2>
+        <p className="small muted">
+          {t(
+            'พักหรือกลับมาใช้ข้อมูล Google บัญชีเว็บไซต์ และโปรแกรมจัดการรหัสผ่านทุกบัญชีในแอปนี้ ไม่ออกจากระบบ AI และไม่เปลี่ยนสิทธิ์ที่ Google',
+          )}
+        </p>
+        {vault?.protected && (
+          <button
+            className="quiet"
+            disabled={Boolean(busy)}
+            onClick={() => void run('pause', () => call('vaultSuspend', { enabled: !vault.suspended }))}
+          >
+            {vault.suspended ? <Play size={15} /> : <Pause size={15} />}
+            {vault.suspended ? t('กลับมาใช้ข้อมูลทุกบัญชี') : t('หยุดใช้ข้อมูลทุกบัญชีชั่วคราว')}
+          </button>
+        )}
+        {vault?.protected && (
+          <p className="credential-note">
+            {vault.blockHostExecution
+              ? w('conflict')
+              : t('เครื่องมือเขียนโค้ดใช้สิทธิ์ตามปกติ คำสั่งในเครื่องอาจเข้าถึงข้อมูลของผู้ใช้ระบบปฏิบัติการนี้ได้')}{' '}
+            <a href="#password-managers">{t('ดูโปรแกรมจัดการรหัสผ่าน')}</a>
+          </p>
+        )}
+      </section>
+      <section className="credential-section google-workspace">
+        <div className="google-hero">
+          <span className="google-hero-icon" aria-hidden="true">
+            <Globe size={22} />
+          </span>
+          <div>
+            <h2>Google Workspace</h2>
+            <p>{w('googleIntro')}</p>
+            <p className="muted small">{w('googleSeparate')}</p>
+            <p className="small muted">{t('การเชื่อมบัญชีและการเปลี่ยนสิทธิ์ที่ยืนยันแล้วมีผลทันที ไม่ต้องกดบันทึกท้ายหน้า')}</p>
+          </div>
+        </div>
+        {!google?.enabled ? (
+          <p className="credential-note" role="status">
+            {w('googleDisabled')}
+          </p>
+        ) : !google.configured ? (
+          <p className="credential-note" role="status">
+            {w('notConfigured')}
+          </p>
+        ) : (
+          <>
+            {!google.accounts.length && (
+              <ol className="google-steps">
+                <li>{w('step1')}</li>
+                <li>{w('step2')}</li>
+                <li>{w('step3')}</li>
+              </ol>
+            )}
+            {google.vaultSuspended && (
+              <div className="credential-note" role="status">
+                <p>{t('พักการใช้ข้อมูลบัญชีอยู่ จึงยังใช้ Google Workspace ไม่ได้ เปิดใช้ข้อมูลบัญชีเพื่อใช้บัญชีที่เชื่อมไว้')}</p>
+                <button disabled={Boolean(busy)} onClick={() => void run('pause', () => call('vaultSuspend', { enabled: false }))}>
+                  <Play size={15} />
+                  {t('กลับมาใช้ข้อมูลบัญชี')}
+                </button>
+              </div>
+            )}
+            {Boolean(google.accounts.length) && <h3 className="google-subhead">{w('yourAccounts')}</h3>}
+            {google.accounts.map(account => {
+              const state = account.reauth ? 'attention' : account.paused || google.vaultSuspended ? 'paused' : 'ready';
+              return (
+                <article className={`google-account ${state}`} key={account.id}>
+                  <div className="google-account-head">
+                    <span className="google-avatar" aria-hidden="true">
+                      {(account.label.trim()[0] || 'G').toUpperCase()}
+                    </span>
+                    <div className="google-account-name">
+                      <strong>{account.label}</strong>
+                      <span className="muted small">{account.domain}</span>
+                    </div>
+                    <span className={`connection-state ${state === 'paused' ? '' : state}`}>
+                      <span className="connection-dot" aria-hidden="true" />
+                      {account.reauth ? w('reconnect') : account.paused || google.vaultSuspended ? w('paused') : w('connected')}
+                    </span>
+                  </div>
+                  {account.reauth && <p className="muted small">{w('reauthHint')}</p>}
+                  {google.vaultSuspended && <p className="credential-note">{t('พักจากปุ่มหยุดใช้ข้อมูลทุกบัญชีชั่วคราว')}</p>}
+                  <ul className="google-chips" aria-label={w('selectServices')}>
+                    {account.services
+                      .filter(s => s !== 'calendar-read' || !account.services.includes('calendar'))
+                      .filter(s => s !== 'drive-read' || !account.services.includes('drive'))
+                      .map(s => {
+                        const Icon = SERVICES[s as GoogleService]?.icon || Globe;
+                        return (
+                          <li key={s}>
+                            <Icon size={13} aria-hidden="true" />
+                            {serviceName(s)}
+                          </li>
+                        );
+                      })}
+                  </ul>
+                  <div className="credential-actions">
+                    <button
+                      className="quiet"
+                      disabled={Boolean(busy)}
+                      onClick={() => {
+                        setEditingGoogle(account.id);
+                        setServices(selectedGoogleServices(account.services as GoogleService[], google.services));
+                        document.querySelector('.google-services')?.scrollIntoView({ block: 'center', behavior: 'instant' });
+                      }}
+                    >
+                      <ShieldCheck size={14} />
+                      {w('editServices')}
+                    </button>
+                    {account.reauth && (
+                      <button
+                        disabled={Boolean(busy)}
+                        onClick={() =>
+                          void run('google-connect', () =>
+                            call('googleConnect', {
+                              id: account.id,
+                              services: account.services.filter(s => google.services.includes(s as GoogleService)),
+                            }),
+                          )
+                        }
+                      >
+                        <RefreshCw size={14} />
+                        {w('reconnect')}
+                      </button>
+                    )}
+                    {account.services.some(s => s === 'documents' || s === 'drive-read' || s === 'drive') && (
+                      <button
+                        className="quiet"
+                        disabled={Boolean(busy) || google.vaultSuspended || account.paused || account.reauth}
+                        onClick={() =>
+                          void run('files', async () => {
+                            const result = await call('googleExecute', { id: account.id, request: { operation: 'drive.list' } });
+                            setFiles(result.data?.files || []);
+                          })
+                        }
+                      >
+                        <FolderOpen size={14} />
+                        {w('files')}
+                      </button>
+                    )}
+                    <button
+                      className="quiet"
+                      disabled={Boolean(busy)}
+                      onClick={() => void run('google-pause', () => call('googlePause', { id: account.id, paused: !account.paused }))}
+                    >
+                      {account.paused ? <Play size={14} /> : <Pause size={14} />}
+                      {account.paused ? t('กลับมาใช้บัญชีนี้') : w('pause')}
+                    </button>
+                  </div>
+                  <details className="google-more">
+                    <summary>{w('moreActions')}</summary>
+                    <p className="muted small">{w('revokeHint')}</p>
+                    <div className="credential-actions">
+                      <button
+                        className="quiet"
+                        disabled={Boolean(busy)}
+                        onClick={() => void run('disconnect', () => call('googleDisconnect', { id: account.id, revoke: false }))}
+                      >
+                        {w('disconnect')}
+                      </button>
+                      <button
+                        className="quiet danger-text"
+                        disabled={Boolean(busy)}
+                        onClick={() => void run('revoke', () => call('googleDisconnect', { id: account.id, revoke: true }))}
+                      >
+                        <Trash2 size={14} />
+                        {w('revoke')}
+                      </button>
+                    </div>
+                  </details>
+                </article>
+              );
+            })}
+            {Boolean(google.accounts.length) && <MorningBriefSettings call={call} onError={onError} />}
+            {files && (
+              <div className="credential-files">
+                <div className="credential-heading">
+                  <p className="muted small">{w('fileScope')}</p>
+                  <button className="quiet" onClick={() => setFiles(undefined)}>
+                    {w('hideFiles')}
+                  </button>
+                </div>
+                {!files.length && <p className="muted">{w('noFiles')}</p>}
+                {files.map(file => (
+                  <p key={file.id}>
+                    <FileText size={14} aria-hidden="true" /> <strong>{file.name}</strong>
+                  </p>
+                ))}
+              </div>
+            )}
+            <div className="google-service-actions">
+              <p className="small muted">{w('selfService')}</p>
+            </div>
+            <fieldset className="google-services">
+              <legend>{t('เลือกบริการที่จะให้ AI ใช้')}</legend>
+              {(['gmail', 'calendar', 'documents', 'more'] as const).map(group => (
+                <fieldset className="google-service-group" key={group}>
+                  <legend>
+                    {group === 'gmail'
+                      ? 'Gmail'
+                      : group === 'calendar'
+                        ? 'Google Calendar'
+                        : group === 'documents'
+                          ? t('เอกสารและไฟล์')
+                          : t('บริการเพิ่มเติม')}
+                  </legend>
+                  <div className="google-service-grid">
+                    {visibleGoogleServices(google.services, services)
+                      .filter(s => groupForService(s) === group)
+                      .filter((s, index, all) =>
+                        s !== 'calendar-read' && s !== 'calendar'
+                          ? (s !== 'drive-read' && s !== 'drive') || index === all.findIndex(v => v === 'drive-read' || v === 'drive')
+                          : index === all.findIndex(v => v === 'calendar-read' || v === 'calendar'),
+                      )
+                      .map(s => {
+                        if (s === 'calendar-read' || s === 'calendar' || s === 'drive-read' || s === 'drive')
+                          return (
+                            <WorkspaceAccessService
+                              key={s.startsWith('drive') ? 'drive' : 'calendar'}
+                              family={s.startsWith('drive') ? 'drive' : 'calendar'}
+                              allowed={google.services}
+                              selected={services}
+                              busy={Boolean(busy)}
+                              onChange={setServices}
+                            />
+                          );
+                        const info = SERVICES[s];
+                        const Icon = info.icon;
+                        const on = services.includes(s);
+                        return (
+                          <label className={`google-service${on ? ' selected' : ''}`} key={s}>
+                            <input
+                              type="checkbox"
+                              checked={on}
+                              disabled={Boolean(busy)}
+                              onChange={e => setServices(old => (e.target.checked ? [...old, s] : old.filter(v => v !== s)))}
+                            />
+                            <span className="google-service-icon" aria-hidden="true">
+                              <Icon size={18} />
+                            </span>
+                            <span className="google-service-text">
+                              <strong>{info.name[lang()]}</strong>
+                              <span className="muted small">{info.detail[lang()]}</span>
+                              <span className={`google-kind ${info.changes ? 'changes' : 'read'}`}>{serviceImpact(s)}</span>
+                            </span>
+                            <span className="google-service-tick" aria-hidden="true">
+                              {on && <Check size={14} />}
+                            </span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </fieldset>
+              ))}
+            </fieldset>
+            {google.accounts.length > 0 && <p className="muted small">{w('reauthorize')}</p>}
+            {connectionError !== undefined && (
+              <p className="credential-note" role="alert">
+                {explainError(connectionError)}
+              </p>
+            )}
+            {!google.clientPreconfigured && (
+              <details className="google-more" open={String(connectionError).includes('GOOGLE_CLIENT_SECRET_REQUIRED') || undefined}>
+                <summary>{w('clientSetup')}</summary>
+                <p className="muted small">{w('clientHelp')}</p>
+                <button
+                  className="quiet"
+                  disabled={Boolean(busy)}
+                  onClick={() => void run('google-client-import', () => call('googleImportClient'))}
+                >
+                  <FolderOpen size={14} /> {w('importClient')}
+                </button>
+              </details>
+            )}
+            {google.clientSecretConfigured && !google.clientPreconfigured && (
+              <p className="credential-note" role="status">
+                {w('clientReady')}
+              </p>
+            )}
+            <div className="credential-note google-selected-scope" role="status">
+              <p>{t('การเลือกในแบบฟอร์มยังไม่เปลี่ยนสิทธิ์บัญชี กดเชื่อมบัญชี Google เพื่อยืนยัน')}</p>
+              <strong>
+                {t('บริการที่เลือก: {0}', services.length ? services.map(serviceName).join(', ') : t('ยังไม่ได้เลือกบริการ'))}
+              </strong>
+              <p>
+                {t(
+                  'สิทธิ์ที่ Google ให้กับบัญชีอาจกว้างกว่าคำสั่งของแอป เช่นสิทธิ์ร่างหรือจัดการ Gmail อาจส่งเมลได้ที่ Google แต่แอปจะส่งได้เมื่อเลือกส่งอีเมลและคุณยืนยันข้อความเท่านั้น',
+                )}
+              </p>
+            </div>
+            <div className="google-connect-row">
+              {editingGoogle && (
+                <>
+                  <p className="muted small">
+                    {w('updatingServices')} {google.accounts.find(a => a.id === editingGoogle)?.label}
+                  </p>
+                  <button
+                    className="quiet"
+                    disabled={Boolean(busy)}
+                    onClick={() => {
+                      setEditingGoogle(undefined);
+                      setServices([]);
+                    }}
+                  >
+                    {w('newAccount')}
+                  </button>
+                </>
+              )}
+              <button
+                disabled={Boolean(busy) || !services.some(s => google.services.includes(s))}
+                onClick={() =>
+                  void run('google-connect', async () => {
+                    await call('googleConnect', {
+                      services: services.filter(s => google.services.includes(s)),
+                      ...(editingGoogle ? { id: editingGoogle } : {}),
+                    });
+                    setEditingGoogle(undefined);
+                  })
+                }
+              >
+                {w('connect')}
+              </button>
+              {busy === 'google-connect' && (
+                <>
+                  <span className="muted small" role="status">
+                    {w('waiting')}
+                  </span>
+                  <button className="quiet" onClick={() => void call('googleCancel').catch(onError)}>
+                    {w('cancel')}
+                  </button>
+                </>
+              )}
+            </div>
+            <p className="google-promise">
+              <ShieldCheck size={16} aria-hidden="true" />
+              {w('promise')}
+            </p>
+          </>
+        )}
+        <details className="google-open">
+          <summary>{w('open')}</summary>
+          <p className="muted small">{w('verifyBrowser')}</p>
+          <div className="google-launches">
+            {Object.keys(GOOGLE_PAGES).map(service => (
+              <button key={service} className="quiet" onClick={() => void call('googleOpen', { service }).catch(onError)}>
+                <ExternalLink size={13} />
+                {LAUNCH_NAMES[service] || service}
+              </button>
+            ))}
+          </div>
+        </details>
+      </section>
       <section className="credential-section">
         <div className="credential-heading">
           <div>
@@ -446,22 +821,6 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
           </button>
         </div>
         {!vault?.enabled && <p role="status">{w('disabled')}</p>}
-        {vault?.protected && vault.blockHostExecution && <p className="credential-note">{w('conflict')}</p>}
-        {vault?.protected && !vault.blockHostExecution && (
-          <p className="credential-note">
-            {t('เครื่องมือเขียนโค้ดใช้สิทธิ์ตามปกติ คำสั่งในเครื่องอาจเข้าถึงข้อมูลของผู้ใช้ระบบปฏิบัติการนี้ได้')}
-          </p>
-        )}
-        {vault?.protected && (
-          <button
-            className="quiet"
-            disabled={Boolean(busy)}
-            onClick={() => void run('pause', () => call('vaultSuspend', { enabled: !vault.suspended }))}
-          >
-            {vault.suspended ? <Play size={15} /> : <Pause size={15} />}
-            {vault.suspended ? w('resume') : w('pause')}
-          </button>
-        )}
         {form && (
           <form
             className="credential-form"
@@ -601,13 +960,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
             </div>
           </article>
         ))}
-        <VaultItems
-          entries={vault?.entries || []}
-          sources={vault?.sources || []}
-          disabled={!vault?.enabled || Boolean(busy)}
-          run={run}
-          call={call}
-        />
+        <VaultItems entries={vault?.entries || []} disabled={!vault?.enabled || Boolean(busy)} run={run} call={call} />
         {vault?.entries.some(v => v.kind === 'api-key') && <p className="muted small">{w('keys')}</p>}
         {vault?.browsers.map(tab => (
           <button
@@ -620,314 +973,8 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
           </button>
         ))}
       </section>
-      <section className="credential-section google-workspace">
-        <div className="google-hero">
-          <span className="google-hero-icon" aria-hidden="true">
-            <Globe size={22} />
-          </span>
-          <div>
-            <h2>Google Workspace</h2>
-            <p>{w('googleIntro')}</p>
-            <p className="muted small">{w('googleSeparate')}</p>
-          </div>
-        </div>
-        {!google?.enabled ? (
-          <p className="credential-note" role="status">
-            {w('googleDisabled')}
-          </p>
-        ) : !google.configured ? (
-          <p className="credential-note" role="status">
-            {w('notConfigured')}
-          </p>
-        ) : (
-          <>
-            {!google.accounts.length && (
-              <ol className="google-steps">
-                <li>{w('step1')}</li>
-                <li>{w('step2')}</li>
-                <li>{w('step3')}</li>
-              </ol>
-            )}
-            {google.vaultSuspended && (
-              <div className="credential-note" role="status">
-                <p>{t('พักการใช้ข้อมูลบัญชีอยู่ จึงยังใช้ Google Workspace ไม่ได้ เปิดใช้ข้อมูลบัญชีเพื่อใช้บัญชีที่เชื่อมไว้')}</p>
-                <button disabled={Boolean(busy)} onClick={() => void run('pause', () => call('vaultSuspend', { enabled: false }))}>
-                  <Play size={15} />
-                  {t('กลับมาใช้ข้อมูลบัญชี')}
-                </button>
-              </div>
-            )}
-            {Boolean(google.accounts.length) && <h3 className="google-subhead">{w('yourAccounts')}</h3>}
-            {google.accounts.map(account => {
-              const state = account.reauth ? 'attention' : account.paused || google.vaultSuspended ? 'paused' : 'ready';
-              return (
-                <article className={`google-account ${state}`} key={account.id}>
-                  <div className="google-account-head">
-                    <span className="google-avatar" aria-hidden="true">
-                      {(account.label.trim()[0] || 'G').toUpperCase()}
-                    </span>
-                    <div className="google-account-name">
-                      <strong>{account.label}</strong>
-                      <span className="muted small">{account.domain}</span>
-                    </div>
-                    <span className={`connection-state ${state === 'paused' ? '' : state}`}>
-                      <span className="connection-dot" aria-hidden="true" />
-                      {account.reauth ? w('reconnect') : account.paused || google.vaultSuspended ? w('paused') : w('connected')}
-                    </span>
-                  </div>
-                  {account.reauth && <p className="muted small">{w('reauthHint')}</p>}
-                  <ul className="google-chips" aria-label={w('selectServices')}>
-                    {account.services
-                      .filter(s => s !== 'calendar-read' || !account.services.includes('calendar'))
-                      .filter(s => s !== 'drive-read' || !account.services.includes('drive'))
-                      .map(s => {
-                        const Icon = SERVICES[s as GoogleService]?.icon || Globe;
-                        return (
-                          <li key={s}>
-                            <Icon size={13} aria-hidden="true" />
-                            {serviceName(s)}
-                          </li>
-                        );
-                      })}
-                  </ul>
-                  <div className="credential-actions">
-                    <button
-                      className="quiet"
-                      disabled={Boolean(busy)}
-                      onClick={() => {
-                        setEditingGoogle(account.id);
-                        setServices(selectedGoogleServices(account.services as GoogleService[], google.services));
-                        document.querySelector('.google-services')?.scrollIntoView({ block: 'center', behavior: 'instant' });
-                      }}
-                    >
-                      <ShieldCheck size={14} />
-                      {w('editServices')}
-                    </button>
-                    {account.reauth && (
-                      <button
-                        disabled={Boolean(busy)}
-                        onClick={() =>
-                          void run('google-connect', () =>
-                            call('googleConnect', {
-                              id: account.id,
-                              services: account.services.filter(s => google.services.includes(s as GoogleService)),
-                            }),
-                          )
-                        }
-                      >
-                        <RefreshCw size={14} />
-                        {w('reconnect')}
-                      </button>
-                    )}
-                    {account.services.some(s => s === 'documents' || s === 'drive-read' || s === 'drive') && (
-                      <button
-                        className="quiet"
-                        disabled={Boolean(busy) || google.vaultSuspended || account.paused || account.reauth}
-                        onClick={() =>
-                          void run('files', async () => {
-                            const result = await call('googleExecute', { id: account.id, request: { operation: 'drive.list' } });
-                            setFiles(result.data?.files || []);
-                          })
-                        }
-                      >
-                        <FolderOpen size={14} />
-                        {w('files')}
-                      </button>
-                    )}
-                    <button
-                      className="quiet"
-                      disabled={Boolean(busy)}
-                      onClick={() => void run('google-pause', () => call('googlePause', { id: account.id, paused: !account.paused }))}
-                    >
-                      {account.paused ? <Play size={14} /> : <Pause size={14} />}
-                      {account.paused ? w('resume') : w('pause')}
-                    </button>
-                  </div>
-                  <details className="google-more">
-                    <summary>{w('moreActions')}</summary>
-                    <p className="muted small">{w('revokeHint')}</p>
-                    <div className="credential-actions">
-                      <button
-                        className="quiet"
-                        disabled={Boolean(busy)}
-                        onClick={() => void run('disconnect', () => call('googleDisconnect', { id: account.id, revoke: false }))}
-                      >
-                        {w('disconnect')}
-                      </button>
-                      <button
-                        className="quiet danger-text"
-                        disabled={Boolean(busy)}
-                        onClick={() => void run('revoke', () => call('googleDisconnect', { id: account.id, revoke: true }))}
-                      >
-                        <Trash2 size={14} />
-                        {w('revoke')}
-                      </button>
-                    </div>
-                  </details>
-                </article>
-              );
-            })}
-            {Boolean(google.accounts.length) && <MorningBriefSettings call={call} onError={onError} />}
-            {files && (
-              <div className="credential-files">
-                <div className="credential-heading">
-                  <p className="muted small">{w('fileScope')}</p>
-                  <button className="quiet" onClick={() => setFiles(undefined)}>
-                    {w('hideFiles')}
-                  </button>
-                </div>
-                {!files.length && <p className="muted">{w('noFiles')}</p>}
-                {files.map(file => (
-                  <p key={file.id}>
-                    <FileText size={14} aria-hidden="true" /> <strong>{file.name}</strong>
-                  </p>
-                ))}
-              </div>
-            )}
-            <div className="google-service-actions">
-              <p className="small muted">{w('selfService')}</p>
-              <button
-                className="quiet"
-                disabled={Boolean(busy)}
-                onClick={() =>
-                  setServices(
-                    DEFAULT_GOOGLE_SERVICES.filter(
-                      s => google.services.includes(s) && !['documents', 'drive-read', 'calendar-read'].includes(s),
-                    ),
-                  )
-                }
-              >
-                <Check size={15} />
-                {w('fullAccess')}
-              </button>
-            </div>
-            <fieldset className="google-services">
-              <legend>{editingGoogle ? w('editServices') : google.accounts.length ? w('addAccount') : w('selectServices')}</legend>
-              {visibleGoogleServices(google.services)
-                .filter((s, index, all) =>
-                  s !== 'calendar-read' && s !== 'calendar'
-                    ? (s !== 'drive-read' && s !== 'drive') || index === all.findIndex(v => v === 'drive-read' || v === 'drive')
-                    : index === all.findIndex(v => v === 'calendar-read' || v === 'calendar'),
-                )
-                .map(s => {
-                  if (s === 'calendar-read' || s === 'calendar' || s === 'drive-read' || s === 'drive')
-                    return (
-                      <WorkspaceAccessService
-                        key={s.startsWith('drive') ? 'drive' : 'calendar'}
-                        family={s.startsWith('drive') ? 'drive' : 'calendar'}
-                        allowed={google.services}
-                        selected={services}
-                        busy={Boolean(busy)}
-                        onChange={setServices}
-                      />
-                    );
-                  const info = SERVICES[s];
-                  const Icon = info.icon;
-                  const on = services.includes(s);
-                  return (
-                    <label className={`google-service${on ? ' selected' : ''}`} key={s}>
-                      <input
-                        type="checkbox"
-                        checked={on}
-                        disabled={Boolean(busy)}
-                        onChange={e => setServices(old => (e.target.checked ? [...old, s] : old.filter(v => v !== s)))}
-                      />
-                      <span className="google-service-icon" aria-hidden="true">
-                        <Icon size={18} />
-                      </span>
-                      <span className="google-service-text">
-                        <strong>{info.name[lang()]}</strong>
-                        <span className="muted small">{info.detail[lang()]}</span>
-                        <span className={`google-kind ${info.changes ? 'changes' : 'read'}`}>
-                          {info.changes ? w('canChange') : w('readOnly')}
-                        </span>
-                      </span>
-                      <span className="google-service-tick" aria-hidden="true">
-                        {on && <Check size={14} />}
-                      </span>
-                    </label>
-                  );
-                })}
-            </fieldset>
-            {google.accounts.length > 0 && <p className="muted small">{w('reauthorize')}</p>}
-            {connectionError !== undefined && (
-              <p className="credential-note" role="alert">
-                {explainError(connectionError)}
-              </p>
-            )}
-            {!google.clientPreconfigured && (
-              <details className="google-more" open={String(connectionError).includes('GOOGLE_CLIENT_SECRET_REQUIRED') || undefined}>
-                <summary>{w('clientSetup')}</summary>
-                <p className="muted small">{w('clientHelp')}</p>
-                <button
-                  className="quiet"
-                  disabled={Boolean(busy)}
-                  onClick={() => void run('google-client-import', () => call('googleImportClient'))}
-                >
-                  <FolderOpen size={14} /> {w('importClient')}
-                </button>
-              </details>
-            )}
-            {google.clientSecretConfigured && !google.clientPreconfigured && (
-              <p className="credential-note" role="status">
-                {w('clientReady')}
-              </p>
-            )}
-            <div className="google-connect-row">
-              {editingGoogle && (
-                <>
-                  <p className="muted small">
-                    {w('updatingServices')} {google.accounts.find(a => a.id === editingGoogle)?.label}
-                  </p>
-                  <button className="quiet" disabled={Boolean(busy)} onClick={() => setEditingGoogle(undefined)}>
-                    {w('newAccount')}
-                  </button>
-                </>
-              )}
-              <button
-                disabled={Boolean(busy) || !services.some(s => google.services.includes(s))}
-                onClick={() =>
-                  void run('google-connect', async () => {
-                    await call('googleConnect', {
-                      services: services.filter(s => google.services.includes(s)),
-                      ...(editingGoogle ? { id: editingGoogle } : {}),
-                    });
-                    setEditingGoogle(undefined);
-                  })
-                }
-              >
-                {w('connect')}
-              </button>
-              {busy === 'google-connect' && (
-                <>
-                  <span className="muted small" role="status">
-                    {w('waiting')}
-                  </span>
-                  <button className="quiet" onClick={() => void call('googleCancel').catch(onError)}>
-                    {w('cancel')}
-                  </button>
-                </>
-              )}
-            </div>
-            <p className="google-promise">
-              <ShieldCheck size={16} aria-hidden="true" />
-              {w('promise')}
-            </p>
-          </>
-        )}
-        <details className="google-open">
-          <summary>{w('open')}</summary>
-          <p className="muted small">{w('verifyBrowser')}</p>
-          <div className="google-launches">
-            {Object.keys(GOOGLE_PAGES).map(service => (
-              <button key={service} className="quiet" onClick={() => void call('googleOpen', { service }).catch(onError)}>
-                <ExternalLink size={13} />
-                {LAUNCH_NAMES[service] || service}
-              </button>
-            ))}
-          </div>
-        </details>
-      </section>
+
+      <PasswordManagers sources={vault?.sources || []} disabled={!vault?.enabled || Boolean(busy)} run={run} call={call} />
     </div>
   );
 }

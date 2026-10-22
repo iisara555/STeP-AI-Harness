@@ -121,7 +121,7 @@ export function TitleBar({
     {
       label: t('ช่วยเหลือ'),
       items: [
-        command('settings', t('ตั้งค่าพื้นที่ทำงาน')),
+        command('settings', t('การตั้งค่า')),
         command('keyboard', t('คีย์ลัดแป้นพิมพ์')),
         command('tour', t('ดูทัวร์แนะนำอีกครั้ง')),
         ...(feedback ? [command('feedback', t('แจ้งปัญหา / เสนอแนะ'))] : []),

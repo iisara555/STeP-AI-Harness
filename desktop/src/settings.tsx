@@ -1,8 +1,8 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Building2, Check, FolderOpen, KeyRound, Minus, Monitor, Moon, Settings2, ShieldCheck, Sparkles, Sun } from './icons';
 import { AIConnections } from './ai-connections';
 import { CredentialSettings } from './credential-settings';
-import { shortcut } from './messages';
+import { shortcut, explainError } from './messages';
 import teamworkArt from './assets/illustrations/teamwork.png';
 import { SectionArt } from './illustration';
 import { Avatar, pickableAvatars } from './avatars';
@@ -109,8 +109,18 @@ export function SettingsPanel({
   openWizard,
   openTour,
   onBusy,
+  onDirtyChange,
+  selectedConnectionId,
+  selectionScope,
+  onSelectConnection,
+  selectionDisabled,
 }: {
   initialPage: 'general' | 'ai' | 'credentials';
+  onDirtyChange?: (dirty: boolean) => void;
+  selectedConnectionId?: string;
+  selectionScope?: 'task' | 'new';
+  onSelectConnection?: (id: string) => Promise<void>;
+  selectionDisabled?: boolean;
   vaultOrigin?: string;
   /** Whether an operation (connecting an account, testing a key) is running, so the app keeps the panel while it does. */
   onBusy?: (busy: boolean) => void;
@@ -131,9 +141,26 @@ export function SettingsPanel({
     [avatar, setAvatar] = useState(snapshot.settings.avatar || '');
   const [interactionStyle, setInteractionStyle] = useState(interactionStyleId(snapshot.settings.interactionStyle)),
     [languageStyle, setLanguageStyle] = useState(languageStyleId(snapshot.settings.languageStyle));
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const [settingsSearch, setSettingsSearch] = useState('');
+  const [chatLanguage, setChatLanguage] = useState(snapshot.settings.chatLanguage || 'auto');
+  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<unknown>();
   const [outputStyle, setOutputStyle] = useState(snapshot.settings.outputStyle || '');
   const [outputStyles, setOutputStyles] = useState<string[] | null>(null);
   const [busy, setBusy] = useState('');
+  const panelRef = useRef<HTMLDivElement>(null),
+    footerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const panel = panelRef.current,
+      footer = footerRef.current;
+    if (!panel || !footer) return;
+    const resize = () => panel.style.setProperty('--settings-footer-height', `${Math.max(80, footer.offsetHeight) + 16}px`);
+    const observer = new ResizeObserver(resize);
+    observer.observe(footer);
+    resize();
+    return () => observer.disconnect();
+  }, []);
   const credentialBusy = useCallback((active: boolean) => setBusy(active ? 'credentials' : ''), []);
   // New users land on AI connections when none exist; otherwise on general settings.
   const [page, setPage] = useState<'general' | 'ai' | 'credentials' | 'appearance' | 'privacy' | 'policy'>(
@@ -143,8 +170,10 @@ export function SettingsPanel({
         ? 'ai'
         : 'general',
   );
+  const initialPageRef = useRef(initialPage);
   useEffect(() => {
-    if (initialPage === 'credentials') setPage('credentials');
+    if (initialPageRef.current !== initialPage || initialPage === 'credentials') setPage(initialPage);
+    initialPageRef.current = initialPage;
   }, [initialPage, vaultOrigin]);
   useEffect(() => {
     if (page !== 'general') return;
@@ -174,20 +203,68 @@ export function SettingsPanel({
       setBusy('');
     }
   };
+  const values = {
+    assistant,
+    team,
+    theme,
+    userName,
+    personality,
+    assistantTone,
+    avatar,
+    interactionStyle,
+    languageStyle,
+    outputStyle,
+    chatLanguage,
+  };
+  const [savedValues, setSavedValues] = useState(() => JSON.stringify(values));
+  const dirty = JSON.stringify(values) !== savedValues;
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
+  const saveSettings = async () => {
+    setSaved(false);
+    setSaveError(undefined);
+    setBusy('settings');
+    let persisted = false;
+    try {
+      await call('settings', values);
+      setSavedValues(JSON.stringify(values));
+      setSaved(true);
+      persisted = true;
+    } catch (error) {
+      setSaveError(error);
+    } finally {
+      // A failed refresh cannot turn an acknowledged settings write into a failed save.
+      if (persisted) await refresh().catch(onError);
+      setBusy('');
+    }
+  };
   const pages = [
     ['general', t('ทั่วไป'), Settings2],
-    ['ai', t('การเชื่อมต่อ AI'), Sparkles],
-    ['credentials', t('รหัสผ่านและการเชื่อมต่อ'), KeyRound],
-    ['appearance', t('รูปลักษณ์และภาษา'), Sun],
+    ['ai', t('เชื่อมต่อ AI'), Sparkles],
+    ['credentials', t('บัญชีและบริการ'), KeyRound],
+    ['appearance', t('การแสดงผลและภาษา'), Sun],
     ['privacy', t('ความเป็นส่วนตัว'), ShieldCheck],
     ['policy', t('นโยบายองค์กร'), Building2],
   ] as const;
+  const keywords = {
+    general: 'ชื่อ ทีม ผู้ช่วย รูป โปรไฟล์ สไตล์ โฟลเดอร์ chat language profile team style folder',
+    ai: 'AI บัญชี โมเดล ทดสอบ account model test',
+    credentials: 'Google ปฏิทิน Gmail รหัสผ่าน ที่อยู่ พัก บัญชี password address pause calendar',
+    appearance: 'ภาษา ธีม language theme display',
+    privacy: 'ข้อมูล privacy data',
+    policy: 'สิทธิ์ policy permissions',
+  };
+  const matchingPages = pages.filter(([id, label]) =>
+    (label + ' ' + keywords[id]).toLowerCase().includes(settingsSearch.trim().toLowerCase()),
+  );
   return (
-    <div className="settings-content">
+    <div className="settings-content" ref={panelRef}>
       <div className={page === 'ai' ? 'settings-hero settings-hero-ai' : 'settings-hero'}>
         <div>
           <h1>{page === 'ai' ? t('เชื่อมต่อ AI') : pages.find(entry => entry[0] === page)?.[1]}</h1>
-          {page === 'general' && <p className="muted">{t('ตั้งค่าเพียงครั้งแรก แล้วเริ่มงานได้จากบทสนทนา')}</p>}
+          {page === 'general' && <p className="muted">{t('ดูและปรับโปรไฟล์ ผู้ช่วย และโฟลเดอร์ของคุณ')}</p>}
         </div>
         {page === 'ai' ? (
           <SectionArt scene="connections" className="settings-illustration" />
@@ -195,6 +272,35 @@ export function SettingsPanel({
           <img className="illustration settings-art" src={teamworkArt} alt="" />
         )}
       </div>
+      <label className="settings-search">
+        {t('ค้นหาการตั้งค่า')}
+        <input
+          type="search"
+          value={settingsSearch}
+          placeholder={t('เช่น ภาษา บัญชี Google หรือโฟลเดอร์')}
+          onChange={e => setSettingsSearch(e.target.value)}
+        />
+      </label>
+      {settingsSearch.trim() && (
+        <div className="settings-search-results" role="region" aria-label={t('ผลค้นหาการตั้งค่า')}>
+          {matchingPages.length ? (
+            matchingPages.map(([id, label]) => (
+              <button
+                className="quiet"
+                key={id}
+                onClick={() => {
+                  setPage(id);
+                  setSettingsSearch('');
+                }}
+              >
+                {label}
+              </button>
+            ))
+          ) : (
+            <p className="small">{t('ไม่พบหมวดที่ตรงกับคำค้น')}</p>
+          )}
+        </div>
+      )}
       <div className="settings-tabs" role="tablist" aria-label={t('หมวดการตั้งค่า')}>
         {pages.map(([id, label, Icon]) => (
           <button
@@ -213,49 +319,52 @@ export function SettingsPanel({
       </div>
       {page === 'credentials' && <CredentialSettings call={call} onError={onError} onBusy={credentialBusy} requestedOrigin={vaultOrigin} />}
       {page === 'general' && (
-        <section className="avatar-section">
-          <h2>{t('รูปโปรไฟล์')}</h2>
-          <p className="muted small">{t('เลือกภาพวาดที่ชอบ ภาพเป็นลายเส้นประกอบ ไม่ใช่รูปถ่ายของใคร และเก็บไว้ในเครื่องนี้เท่านั้น')}</p>
-          <div className="avatar-picker" role="radiogroup" aria-label={t('รูปโปรไฟล์')}>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={!avatar}
-              aria-label={t('ใช้ตัวอักษรแรกของชื่อ')}
-              title={t('ใช้ตัวอักษรแรกของชื่อ')}
-              className="avatar-option"
-              onClick={() => setAvatar('')}
-            >
-              <Avatar fallback={initial(userName) || 'ST'} />
+        <section className="settings-profile">
+          <h2>{t('โปรไฟล์และทีม')}</h2>
+          <div className="settings-profile-summary">
+            <Avatar id={avatar} fallback={initial(userName) || 'ST'} />
+            <button className="quiet" aria-expanded={avatarOpen} onClick={() => setAvatarOpen(!avatarOpen)}>
+              {t('เปลี่ยนรูป')}
             </button>
-            {pickableAvatars(avatar).map((a, i) => (
-              <button
-                key={a.id}
-                type="button"
-                role="radio"
-                aria-checked={avatar === a.id}
-                aria-label={t('ภาพที่ {0}', i + 1)}
-                title={t('ภาพที่ {0}', i + 1)}
-                className="avatar-option"
-                onClick={() => setAvatar(a.id)}
-              >
-                <Avatar id={a.id} fallback="" />
-              </button>
-            ))}
           </div>
-        </section>
-      )}
-      {page === 'general' && (
-        <section>
-          <h2>{t('ผู้ช่วยและทีม')}</h2>
+          {avatarOpen && (
+            <div className="avatar-section">
+              <p className="muted small">
+                {t('เลือกภาพวาดที่ชอบ ภาพเป็นลายเส้นประกอบ ไม่ใช่รูปถ่ายของใคร และเก็บไว้ในเครื่องนี้เท่านั้น')}
+              </p>
+              <div className="avatar-picker" role="radiogroup" aria-label={t('รูปโปรไฟล์')}>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={!avatar}
+                  aria-label={t('ใช้ตัวอักษรแรกของชื่อ')}
+                  title={t('ใช้ตัวอักษรแรกของชื่อ')}
+                  className="avatar-option"
+                  onClick={() => setAvatar('')}
+                >
+                  <Avatar fallback={initial(userName) || 'ST'} />
+                </button>
+                {pickableAvatars(avatar).map((a, i) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={avatar === a.id}
+                    aria-label={t('ภาพที่ {0}', i + 1)}
+                    title={t('ภาพที่ {0}', i + 1)}
+                    className="avatar-option"
+                    onClick={() => setAvatar(a.id)}
+                  >
+                    <Avatar id={a.id} fallback="" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="form-grid">
             <label>
               {t('ชื่อเรียกของคุณ')}
               <input value={userName} maxLength={60} placeholder={t('เช่น ต้น')} onChange={e => setUserName(e.target.value)} />
-            </label>
-            <label>
-              {t('ชื่อผู้ช่วย')}
-              <input value={assistant} onChange={e => setAssistant(e.target.value)} />
             </label>
             <label>
               {t('ทีมหลัก')}
@@ -269,43 +378,31 @@ export function SettingsPanel({
               </select>
             </label>
           </div>
-          <label>{t('โฟลเดอร์เก็บผลงาน')}</label>
-          <div className="folder-row">
-            <span>{snapshot.settings.workspace || t('ยังไม่เลือกโฟลเดอร์')}</span>
-            <button className="quiet" onClick={() => void run('workspace', () => call('workspace'))}>
-              <FolderOpen size={16} />
-              {t('เลือกโฟลเดอร์')}
-            </button>
-          </div>
-          <p className="small muted">
-            {t('ไฟล์ที่ส่งออกจะตั้งชื่อตามทีมและวันที่ในโฟลเดอร์นี้ ชื่อเรียก ผู้ช่วย และวิธีพูดคุยที่ตั้งไว้ก็เก็บในโฟลเดอร์นี้ด้วย')}
-          </p>
-          {/* The settings file and its path matter only to people who also use STeP AI from the command line. */}
-          <details className="settings-admin">
-            <summary>{t('ขั้นสูง')}</summary>
-            <p className="small muted">{t('การตั้งค่าเก็บเป็นไฟล์ USER.md เพื่อใช้ร่วมกับ STeP AI บน CLI')}</p>
-            <div className="folder-row">
-              <span>{snapshot.userFile || t('USER.md จะถูกสร้างเมื่อบันทึกการตั้งค่า')}</span>
-              {snapshot.userFile && (
-                <button className="quiet" onClick={() => void run('user', () => call('reveal', { path: snapshot.userFile }))}>
-                  {t('เปิดตำแหน่งไฟล์')}
-                </button>
-              )}
-            </div>
-          </details>
-          <div className="choice-row" style={{ marginTop: 14 }}>
-            <button className="quiet" onClick={openWizard}>
-              {t('เปิดตัวช่วยตั้งค่าเริ่มต้น')}
-            </button>
-            <button className="quiet" onClick={openTour}>
-              {t('ดูทัวร์แนะนำอีกครั้ง')}
-            </button>
-          </div>
         </section>
       )}
       {page === 'general' && (
         <section>
-          <h2>{t('สไตล์การพูดของผู้ช่วย')}</h2>
+          <h2>{t('ผู้ช่วยของคุณ')}</h2>
+          <div className="form-grid">
+            <label>
+              {t('ชื่อผู้ช่วย')}
+              <input maxLength={60} value={assistant} onChange={e => setAssistant(e.target.value)} />
+            </label>
+            <label>
+              {t('ภาษาในแชต')}
+              <select
+                aria-label={t('ภาษาในแชต')}
+                value={chatLanguage}
+                onChange={e => setChatLanguage(e.target.value as typeof chatLanguage)}
+              >
+                <option value="auto">{t('ตามภาษาที่พิมพ์')}</option>
+                <option value="th">ไทย</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+          </div>
+          <p className="small muted">{t('ภาษาในแชตแยกจากภาษาของแอป และคุณระบุภาษาอื่นในแต่ละคำขอได้')}</p>
+          <h3>{t('สไตล์การพูดของผู้ช่วย')}</h3>
           <p className="muted small">
             {t('เปลี่ยนเฉพาะวิธีพูดในแชท ข้อเท็จจริง แหล่งอ้างอิง สิทธิ์ และมาตรฐานเอกสารยังเหมือนเดิม และไม่ได้สวมบทเป็นบุคคลจริง')}
           </p>
@@ -349,6 +446,25 @@ export function SettingsPanel({
               );
             })}
           </div>
+          <div className="settings-style-example" aria-live="polite">
+            <strong>{t('ตัวอย่างจากโจทย์เดียวกัน: ช่วยเตือนให้ตรวจเอกสารก่อนส่ง')}</strong>
+            <p>
+              {t(
+                interactionStyle === 'witty'
+                  ? 'ก่อนส่ง ตรวจให้ครบสามจุด: เนื้อหา ผู้รับ และไฟล์แนบ แล้วค่อยกดส่ง'
+                  : interactionStyle === 'ob-oon'
+                    ? 'ถ้าผู้รับเปิดอ่านตอนนี้ เขาจะมีข้อมูลครบไหม? ลองตรวจเนื้อหา ผู้รับ และไฟล์แนบอีกครั้งก่อนส่ง'
+                    : personality === 'professional'
+                      ? 'กรุณาตรวจสอบความถูกต้องของเนื้อหา รายชื่อผู้รับ และไฟล์แนบให้ครบถ้วนก่อนส่งเอกสาร'
+                      : personality === 'concise'
+                        ? 'ตรวจเนื้อหา ผู้รับ และไฟล์แนบก่อนส่ง'
+                        : personality === 'custom'
+                          ? 'ตัวอย่างสไตล์กำหนดเองขึ้นอยู่กับคำอธิบายที่คุณใส่'
+                          : 'ก่อนส่ง ลองเช็กเนื้อหา ผู้รับ และไฟล์แนบอีกครั้งให้ครบครับ',
+              )}
+            </p>
+            <small>{t('ตัวอย่างที่เตรียมไว้ ไม่มีการเรียก AI')}</small>
+          </div>
           {interactionStyle === 'standard' && personality === 'custom' && (
             <label className="speaking-style-custom">
               {t('สไตล์ที่ต้องการ')}
@@ -384,6 +500,7 @@ export function SettingsPanel({
           </div>
           <label>
             {t('รูปแบบคำตอบ')}
+            <small className="muted">{t('กำหนดโครงสร้างคำตอบจากรูปแบบที่ติดตั้งไว้ แยกจากน้ำเสียงด้านบน ไม่ใช่ตัวปรับความยาว')}</small>
             <select
               aria-label={t('รูปแบบคำตอบ')}
               value={outputStyle}
@@ -401,10 +518,44 @@ export function SettingsPanel({
           </label>
         </section>
       )}
+      {page === 'general' && (
+        <section>
+          <h2>{t('ไฟล์และโฟลเดอร์')}</h2>
+          <label>{t('โฟลเดอร์เก็บผลงาน')}</label>
+          <div className="folder-row">
+            <span>{snapshot.settings.workspace || t('ยังไม่เลือกโฟลเดอร์')}</span>
+            <button className="quiet" disabled={Boolean(busy)} onClick={() => void run('workspace', () => call('workspace'))}>
+              <FolderOpen size={16} />
+              {t('เลือกโฟลเดอร์')}
+            </button>
+          </div>
+          <p className="small muted">{t('การเปลี่ยนโฟลเดอร์มีผลทันที ส่วนค่าที่คุณแก้ในหน้านี้ต้องกดบันทึกการเปลี่ยนแปลง')}</p>
+          <details className="settings-admin">
+            <summary>{t('ตัวเลือกเพิ่มเติม')}</summary>
+            <p className="small muted">{t('การตั้งค่าเก็บเป็นไฟล์ USER.md เพื่อใช้ร่วมกับ STeP AI บน CLI')}</p>
+            <div className="folder-row">
+              <span>{snapshot.userFile || t('USER.md จะถูกสร้างเมื่อบันทึกการตั้งค่า')}</span>
+              {snapshot.userFile && (
+                <button className="quiet" onClick={() => void run('user', () => call('reveal', { path: snapshot.userFile }))}>
+                  {t('เปิดตำแหน่งไฟล์')}
+                </button>
+              )}
+            </div>
+            <div className="choice-row">
+              <button className="quiet" onClick={openWizard}>
+                {t('เปิดตัวช่วยตั้งค่าเริ่มต้น')}
+              </button>
+              <button className="quiet" onClick={openTour}>
+                {t('ดูทัวร์แนะนำอีกครั้ง')}
+              </button>
+            </div>
+          </details>
+        </section>
+      )}
       {page === 'appearance' && (
         <section>
-          <h2>{language() === 'en' ? 'Language · ภาษา' : 'ภาษา · Language'}</h2>
-          <p className="muted small">{t('เปลี่ยนภาษาของเมนูและปุ่มทั้งหมด ผู้ช่วยยังตอบตามภาษาที่คุณพิมพ์')}</p>
+          <h2>{t('ภาษาของแอป')}</h2>
+          <p className="muted small">{t('เปลี่ยนเฉพาะเมนูและปุ่ม มีผลทันที ภาษาในแชตตั้งแยกได้ในทั่วไป')}</p>
           <div className="theme-options" role="radiogroup" aria-label="Language">
             {(
               [
@@ -545,72 +696,76 @@ export function SettingsPanel({
         <section className="privacy-info">
           <h2>{t('ข้อมูลของคุณ')}</h2>
           <h3>{t('อะไรถูกส่งให้ AI')}</h3>
-          <p>{t('เฉพาะคำขอ ร่างของงานนั้น บทสนทนาล่าสุด และข้อความที่ตรวจแล้วจากไฟล์แนบ ไม่ส่งไฟล์ต้นฉบับ')}</p>
-          <h3>{t('ก่อนส่ง ระบบตรวจอะไร')}</h3>
           <p>
             {t(
-              'ปิดบังเลขบัตรประชาชน เบอร์โทร อีเมล และเลขบัญชีที่ตรวจพบ ถ้าพบรหัสผ่านหรือ API key หรือข้อมูลอ่อนไหวคู่กับตัวบุคคล ระบบจะไม่ส่งเลย ถ้าพบสัญญาณข้อมูลบุคคล เช่น รายชื่อ จะถามยืนยันก่อน',
+              'คำขอ บทสนทนา ร่าง และข้อมูลจากไฟล์หรือเครื่องมือที่ใช้ตอบ อาจถูกส่งไปยังบริการ AI ที่เลือก การอ่านภาพขึ้นอยู่กับบัญชี นโยบาย และการยินยอม',
             )}
+          </p>
+          <h3>{t('ก่อนส่ง ระบบตรวจอะไร')}</h3>
+          <p>
+            {snapshot.policy?.checks?.privacy
+              ? t(
+                  'เปิดการตรวจข้อมูลเพิ่มเติม: ระบบตรวจและปิดบังข้อมูลที่พบ และบล็อกข้อมูลที่ส่งไม่ได้ ผลตรวจเป็นตัวช่วย คุณยังต้องตรวจสิทธิ์และข้อมูลก่อนส่ง',
+                )
+              : t(
+                  'ปิดการตรวจข้อมูลส่วนบุคคลเพิ่มเติม: ข้อมูลส่วนบุคคลอาจถูกส่งตามต้นฉบับ แต่ยังกรองรหัสผ่านและข้อมูลรับรองที่ตรวจพบ ตรวจข้อมูลก่อนส่งทุกครั้ง',
+                )}
           </p>
           <h3>{t('เมื่อไรจะถามยืนยัน')}</h3>
           <p>
             {t(
-              'ครั้งแรกที่ใช้บนเครื่องนี้ เมื่อแนบไฟล์ และเมื่อพบข้อมูลที่ควรตรวจ ส่วนข้อมูลที่ปิดบังให้อัตโนมัติจะแจ้งทุกครั้ง ผลสแกนเป็นตัวช่วย ไม่ใช่การอนุญาตจากองค์กร',
+              'งานอ่าน Google ขออนุมัติครั้งเดียวต่อคำขอ งานส่ง แก้ไข หรือลบยืนยันแต่ละรายการ งานประจำวันใช้สิทธิ์ที่ตั้งไว้ ส่วนเครื่องมืออื่นทำตามนโยบายและโหมดที่เลือก ผู้ดูแลอาจกำหนดให้ถามทุกครั้ง',
             )}
           </p>
           <h3>{t('เก็บข้อมูลที่ไหน')}</h3>
-          <p>{t('บทสนทนาและร่างอยู่ในเครื่องนี้เท่านั้น API key เข้ารหัสด้วยระบบของ Windows/macOS การลบงานจะลบออกจากเครื่องถาวร')}</p>
-          <h3>{t('สิ่งที่ AI ทำไม่ได้')}</h3>
+          <p>
+            {t('บทสนทนาและร่างเก็บในเครื่องนี้ แต่ข้อมูลที่ใช้กับ AI ถูกส่งไปบริการที่เลือก ข้อมูลรับรองเก็บแยกตามระบบป้องกันของเครื่อง')}
+          </p>
+          <h3>{t('ขอบเขตการทำงาน')}</h3>
           <p>
             {t(
-              'AI ในแอปนี้จัดทำร่างเท่านั้น ไม่มีสิทธิ์รันคำสั่ง เปิดไฟล์ในเครื่อง หรือส่ง อนุมัติ และเบิกจ่ายแทนคุณ ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ',
+              'ผู้ช่วยใช้เครื่องมือ อ่านไฟล์ และทำงานกับบริการที่เชื่อมได้ตามสิทธิ์และโหมดปัจจุบัน การลงนาม อนุมัติเงิน และรับรองข้อมูลยังเป็นหน้าที่ของผู้มีอำนาจ',
             )}
           </p>
         </section>
       )}
       {page === 'ai' && (
         <section>
-          {/* The page title above already says this; keep the heading for screen readers and in-page links. */}
-          <h2 className="sr-only">{t('การเชื่อมต่อ AI')}</h2>
-          <AIConnections snapshot={snapshot} call={call} refresh={refresh} onError={onError} onBusy={setBusy} />
+          <AIConnections
+            headingLevel={2}
+            snapshot={snapshot}
+            call={call}
+            refresh={refresh}
+            onError={onError}
+            onBusy={setBusy}
+            selectedConnectionId={selectedConnectionId}
+            selectionScope={selectionScope}
+            onSelectConnection={onSelectConnection}
+            selectionDisabled={selectionDisabled}
+          />
         </section>
       )}
-      {/* One footer on every tab: save where this panel has fields to save, otherwise just go back. Only the save
-          stays pinned to the bottom, so it never covers a tab's own buttons (such as connecting an AI account). */}
-      <div className={page === 'general' || page === 'appearance' ? 'settings-save sticky' : 'settings-save'}>
-        {page === 'general' || page === 'appearance' ? (
-          <button
-            disabled={Boolean(busy)}
-            onClick={() =>
-              void run('settings', async () => {
-                await call('settings', {
-                  assistant,
-                  team,
-                  theme,
-                  userName,
-                  personality,
-                  assistantTone,
-                  avatar,
-                  interactionStyle,
-                  languageStyle,
-                  outputStyle,
-                });
-                close();
-              })
-            }
-          >
-            <Check size={17} />
-            {t('บันทึกและไปที่งาน')}
-          </button>
-        ) : (
-          <button
-            className={page === 'ai' && snapshot.connections.some(c => c.ready) ? undefined : 'quiet'}
-            disabled={Boolean(busy)}
-            onClick={close}
-          >
-            {t('กลับไปที่งาน')}
-          </button>
+      <div className="settings-save sticky" ref={footerRef}>
+        <p className="small" role="status">
+          <span className="muted">{t('ทั่วไปและการแสดงผล')} · </span>
+          <span>
+            {dirty ? t('มีการเปลี่ยนแปลงที่ยังไม่บันทึก') : saved ? t('บันทึกการเปลี่ยนแปลงแล้ว') : t('ไม่มีการเปลี่ยนแปลงที่ยังไม่บันทึก')}
+          </span>
+        </p>
+        {saveError !== undefined && (
+          <p className="settings-save-error" role="alert">
+            {explainError(saveError)}
+          </p>
         )}
+        <div className="choice-row">
+          <button disabled={!dirty || Boolean(busy)} onClick={() => void saveSettings()}>
+            <Check size={17} />
+            {t('บันทึกการเปลี่ยนแปลง')}
+          </button>
+          <button className="quiet" disabled={Boolean(busy)} onClick={close}>
+            {t('กลับไปทำงาน')}
+          </button>
+        </div>
       </div>
     </div>
   );

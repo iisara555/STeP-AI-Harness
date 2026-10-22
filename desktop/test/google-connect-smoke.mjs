@@ -67,10 +67,12 @@ try {
       return original(event, method, input);
     });
   });
-  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
-  await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
+  await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
+  await page.getByRole('tab', { name: 'บัญชีและบริการ', exact: true }).click();
   const settings = page.locator('.credential-settings');
-  const connect = settings.getByRole('button', { name: 'เชื่อมบัญชีงาน', exact: true });
+  const connect = settings.getByRole('button', { name: 'เชื่อมบัญชี Google', exact: true });
+  if (!(await settings.locator('.google-calendar input[type=checkbox]').isChecked()))
+    await settings.locator('.google-calendar .google-access-toggle').click();
   await connect.click();
   await expect(connect).toBeDisabled();
   await expect.poll(() => app.evaluate(() => globalThis.googleFixture.connecting)).toBe(true);
@@ -84,24 +86,32 @@ try {
   if (await notification.count()) await notification.getByRole('button').first().click();
   await expect(settings.getByRole('alert')).toBeVisible();
   // The account error must survive unmounting Settings after the notification has gone.
-  await page.getByRole('button', { name: 'กลับไปที่งาน', exact: true }).click();
+  await page.getByRole('button', { name: 'กลับไปทำงาน', exact: true }).click();
   await expect(settings).toHaveCount(0);
-  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
-  await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
+  await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
+  await page.getByRole('tab', { name: 'บัญชีและบริการ', exact: true }).click();
   await expect(settings.getByRole('alert')).toContainText('การตั้งค่า OAuth ของ Google ไม่ตรงกับแอป');
+  if (!(await settings.locator('.google-calendar input[type=checkbox]').isChecked()))
+    await settings.locator('.google-calendar .google-access-toggle').click();
   await connect.click();
   await expect.poll(() => app.evaluate(() => globalThis.googleFixture.connecting)).toBe(true);
   await app.evaluate(() => globalThis.googleReject(new Error('GOOGLE_CLIENT_SECRET_REQUIRED')));
   await expect(settings.getByRole('alert')).toContainText('Google ต้องใช้ client secret');
   await settings.getByRole('button', { name: 'นำเข้าไฟล์ OAuth client', exact: true }).click();
   await expect(settings.getByRole('alert')).toHaveCount(0);
-  await expect(settings.getByText('ตั้งค่า OAuth client บนเครื่องนี้แล้ว กดเชื่อมบัญชีงานเพื่อลองอีกครั้ง', { exact: true })).toBeVisible();
+  await expect(
+    settings.getByText('ตั้งค่า OAuth client บนเครื่องนี้แล้ว กดเชื่อมบัญชี Google เพื่อลองอีกครั้ง', { exact: true }),
+  ).toBeVisible();
+  if (!(await settings.locator('.google-calendar input[type=checkbox]').isChecked()))
+    await settings.locator('.google-calendar .google-access-toggle').click();
   await connect.click();
   await expect(settings.getByRole('alert')).toHaveCount(0);
   await expect(connect).toBeDisabled();
   await settings.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
   await expect(connect).toBeEnabled();
   await expect(settings.locator('.google-account')).toHaveCount(0);
+  if (!(await settings.locator('.google-calendar input[type=checkbox]').isChecked()))
+    await settings.locator('.google-calendar .google-access-toggle').click();
   await connect.click();
   await expect(connect).toBeDisabled();
   await expect.poll(() => app.evaluate(() => globalThis.googleFixture.connecting)).toBe(true);
@@ -116,11 +126,13 @@ try {
     globalThis.googleFixture.clientSecretConfigured = true;
     globalThis.googleFixture.accounts = [];
   });
-  await page.getByRole('button', { name: 'กลับไปที่งาน', exact: true }).click();
-  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
-  await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
+  await page.getByRole('button', { name: 'กลับไปทำงาน', exact: true }).click();
+  await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
+  await page.getByRole('tab', { name: 'บัญชีและบริการ', exact: true }).click();
   await expect(settings.getByText('ตั้งค่าการเชื่อม Google ขององค์กร', { exact: true })).toHaveCount(0);
   await expect(settings.getByRole('button', { name: 'นำเข้าไฟล์ OAuth client', exact: true })).toHaveCount(0);
+  if (!(await settings.locator('.google-calendar input[type=checkbox]').isChecked()))
+    await settings.locator('.google-calendar .google-access-toggle').click();
   await connect.click();
   await expect.poll(() => app.evaluate(() => globalThis.googleFixture.connecting)).toBe(true);
   await app.evaluate(() => globalThis.googleResolve());

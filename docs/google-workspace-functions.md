@@ -27,7 +27,7 @@ Employees can choose full access in Settings without a per-device IT service all
 lists upgrade to the complete catalog; account grants only expand after the employee selects services and consents
 in Google. Explicit feature disables, domain/client configuration and shared-device or invalid-policy protections remain.
 
-Settings → Passwords and connections → Google Workspace offers the service choices allowed by policy. Drive and
+Settings → Accounts and services → Google Workspace offers the service choices allowed by policy. Drive and
 Calendar each have one card with an access selector. Separate Docs/Sheets/Slides choices replace the legacy combined
 card when all three are available; existing app-managed `documents` grants remain valid.
 

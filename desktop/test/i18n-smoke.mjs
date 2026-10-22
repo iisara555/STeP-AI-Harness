@@ -53,16 +53,16 @@ try {
   await expect(page.locator('.suggestions')).toContainText('ISO 9001 internal audit checklist');
   await shot(page, 'en-welcome-qs.png');
 
-  await page.getByRole('button', { name: 'Workspace settings' }).click();
-  await page.getByRole('tab', { name: /^AI connections/ }).click();
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: /^Connect AI/ }).click();
   await page.locator('.ai-organization-capabilities summary').click();
   await expect(page.locator('[data-capability="routing"] .ai-capability-state')).toHaveText('Available');
   const policyCapabilities = await page.locator('.ai-organization-capabilities').innerText();
   assert.doesNotMatch(policyCapabilities, /[฀-๿]/, policyCapabilities);
-  await page.getByRole('tab', { name: 'Appearance & language' }).click();
+  await page.getByRole('tab', { name: 'Display and language' }).click();
   await shot(page, 'en-settings.png');
   await page.getByRole('radio', { name: 'ไทย', exact: true }).click();
-  await expect(page.getByRole('tab', { name: 'รูปลักษณ์และภาษา' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'การแสดงผลและภาษา' })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'th');
   const saved = await page.evaluate(() => window.step.call('snapshot'));
   assert.equal(saved.settings.language, 'th');

@@ -1,3 +1,4 @@
+import { settingsEn } from './settings-en';
 // English UI text keyed by the Thai source text (see src/i18n.ts). Generated once from the UI and then
 // maintained by hand: add an entry whenever new Thai text is wrapped in t() or tm().
 import { documentToolsEn } from './document-tools-en';
@@ -3077,4 +3078,5 @@ export const en: Record<string, string> = {
   'งานดูแลข้อมูลที่จำและ Skill: ไม่มีงานค้าง': 'Saved information and Skill maintenance: nothing pending',
   'แอปตรวจข้อมูลที่จำ บทเรียน และ Skill Pack บนเครื่องนี้วันละครั้ง ไม่ส่งข้อมูลออกและไม่แก้หรือลบเอง เมื่อคุณแก้แล้ว ย้ายงานเป็น "เสร็จแล้ว" เพื่อให้แอปตรวจซ้ำ':
     'The app checks saved information, lessons and Skill packs on this device daily. It sends nothing out and makes no changes or deletions. After fixing an item, move it to "Done" to check it again.',
+  ...settingsEn,
 };
