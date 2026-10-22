@@ -63,6 +63,10 @@ try {
   const newWork = sidebar.getByRole('button', { name: 'เริ่มงานใหม่', exact: true });
   const plus = newWork.locator('svg[data-motion-icon="Plus"]');
   await expect(plus).toBeVisible();
+  // A previous cursor/focus position may have already consumed the bounded startup animation.
+  await page.mouse.move(1300, 900);
+  await newWork.evaluate(el => el.blur());
+  await settled(plus);
   const before = await newWork.boundingBox();
   await observe(plus, () => newWork.hover());
   const during = await newWork.boundingBox();
