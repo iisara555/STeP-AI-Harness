@@ -8,7 +8,7 @@ _Last updated: 2026-10-22_
 
 ## Latest release
 
-- **Desktop v0.6.20 prepared (2026-10-22, owner authorised merging both Google/Settings PRs and publishing)**: combines the Google reliability/once-per-request read fixes and the seven Settings work sets. Version/lockfile, Thai/English in-app notes, both README baselines and CHANGELOG are aligned; Harness remains 0.7.7. #230 merged as `abde925` after all four exact-head jobs passed; #231 awaits its final checks. Publish `desktop-release.yml` from validated main with `publish: true`, then verify versioned/rolling files and feed digests. This entry records preparation, not published installers. Live Google account/API acceptance remains unverified.
+- **Desktop v0.6.20 prepared (2026-10-22, owner authorised merging both Google/Settings PRs and publishing)**: combines the Google reliability/once-per-request read fixes and the seven Settings work sets. Version/lockfile, Thai/English in-app notes, both README baselines, the developer guide and CHANGELOG are aligned; Harness remains 0.7.7. #230 merged as `abde925` after all four exact-head jobs passed; #231 awaits its final checks. Publish `desktop-release.yml` from validated main with `publish: true`, then verify versioned/rolling files and feed digests. This entry records preparation, not published installers. Live Google account/API acceptance remains unverified.
 
 - **Desktop v0.6.19 published (2026-10-21)**: release `desktop-v0.6.19` targets `aacabd5e64238601ede961c0da26cf9d036bccd6` and was published at 04:55:49 UTC. It includes the merged Workspace routing/recovery, readable Google consent, employee language and local receipt OCR changes. Real employee-account/device acceptance and real-receipt accuracy remain separate from installer publication.
 
