@@ -731,9 +731,8 @@ export function SettingsPanel({
       )}
       {page === 'ai' && (
         <section>
-          {/* The page title above already says this; keep the heading for screen readers and in-page links. */}
-          <h2 className="sr-only">{t('เชื่อมต่อ AI')}</h2>
           <AIConnections
+            headingLevel={2}
             snapshot={snapshot}
             call={call}
             refresh={refresh}

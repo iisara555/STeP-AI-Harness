@@ -1,4 +1,12 @@
 export const settingsEn: Record<string, string> = {
+  'อ่าน Google ในแชต อนุมัติครั้งเดียวต่อคำขอสำหรับบัญชีเดิม งานส่ง แก้ไข และลบยังยืนยันแต่ละรายการตามนโยบายองค์กร':
+    'Approve Google chat reads once per request for the same account. Sending, editing and deleting still require individual confirmation under organisation policy.',
+  'แก้การต่ออายุสิทธิ์ Google การยกเลิกงานที่ทำพร้อมกัน การแก้ Apps Script ซ้อนกัน การค้น Shared drives และการอ่านอีเมลไทย':
+    'Fix Google token renewal, cancellation of concurrent tasks, overlapping Apps Script changes, Shared drive search and Thai email decoding.',
+  'การตั้งค่าแยกบันทึกกับกลับไปทำงาน เตือนก่อนทิ้งค่าค้าง แสดงบัญชี AI ที่เลือกใช้ และแยกภาษาแอปกับภาษาในแชต':
+    'Settings separates saving from returning to work, warns before discarding changes, shows the selected AI account, and separates app and chat language.',
+  'จัด Google Workspace บัญชีเว็บ และโปรแกรมจัดการรหัสผ่านเป็นกลุ่ม ระบุขอบเขตพักบัญชีและให้เลือกสิทธิ์ Google โดยไม่เลือกเขียนล่วงหน้า':
+    'Group Google Workspace, website accounts and password managers, clarify pause scope, and choose Google permissions without preselected write access.',
   'เพิ่มหรือเลือกบัญชี AI เพื่อร่างใน Desktop': 'Add or select an AI account to draft in Desktop',
   'ตรวจการลงชื่อเข้าใช้หรือสิทธิ์ API key ที่หน้าเชื่อมต่อ AI': 'Check sign-in or API key access under Connect AI',
   การตั้งค่า: 'Settings',

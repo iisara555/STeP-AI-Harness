@@ -145,6 +145,8 @@ try {
   await expect(panel.getByText('มีการเปลี่ยนแปลงที่ยังไม่บันทึก', { exact: true })).toBeVisible();
   console.log('Settings clarity: selected AI and capabilities');
   await tab('เชื่อมต่อ AI');
+  await expect(panel.getByRole('heading', { name: 'เชื่อมต่อ AI', exact: true })).toHaveCount(1);
+  await expect(panel.getByRole('heading', { name: 'บัญชี AI ของคุณ', level: 2, exact: true })).toBeVisible();
   await expect(panel.locator('.connection-card[data-selected=true]')).toHaveCount(1);
   await expect(panel.locator('.selected-ai')).toHaveText('ใช้สำหรับงานใหม่');
   const antigravity = panel.locator('.connection-card').filter({ has: page.locator('.connection-name', { hasText: 'Antigravity' }) });
