@@ -45,6 +45,7 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
       thaiLayout,
       'skills/pm/tor-government-writing/references/tor-drafting-guide.md',
       'skills/pm/tor-government-writing/references/procurement-source-map.md',
+      'skills/pm/tor-government-writing/references/tor-content-by-type.md',
       'skills/pm/tor-government-writing/examples/task-adaptations.md',
     ],
     variants: [

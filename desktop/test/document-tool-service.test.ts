@@ -63,7 +63,7 @@ test('both TOR variants load task adaptation, acceptance and source guidance wit
       const done = store.session(session.id);
       assert.equal(done.status, 'review', JSON.stringify(done.runs?.at(-1)));
       assert.equal(calls, 1);
-      for (const suffix of ['tor-drafting-guide.md', 'procurement-source-map.md', 'task-adaptations.md'])
+      for (const suffix of ['tor-drafting-guide.md', 'procurement-source-map.md', 'tor-content-by-type.md', 'task-adaptations.md'])
         assert.ok(done.proposals[0].sources.some(path => path.endsWith(suffix)));
     } finally {
       store.close();
