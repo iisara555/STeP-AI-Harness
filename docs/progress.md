@@ -47,6 +47,19 @@ _Last updated: 2026-10-25_
 
 ## In progress
 
+- **บันทึกข้อความจากคู่มือการเขียนหนังสือราชการเบื้องต้น (2026-10-25, owner supplied a university staff manual)**: extends `saraban-writing-guide.md` with these items:
+  - หนังสือภายใน vs บันทึก
+  - wording by recipient rank and sender–recipient direction
+  - ใคร่/เช่น/ได้แก่/อาทิ
+  - pronoun variants
+  - a printing section covering 16 pt type, 3/2 cm margins, Garuda only on page one, about 24–25 lines per page, centred "- ๒ -" page numbers, the continuation word with "...", at least two lines carried before the closing, and red speed/secrecy stamps
+
+  The memo template gains the phone on the ส่วนงาน line, a classification line, labelled ภาคเหตุ/"ในการนี้"/ภาคประสงค์ paragraphs and memo-specific notes. The Desktop memo and letter tools now load the writing guide, which #233 linked but did not load.
+
+  Limitations:
+  - The Desktop DOCX exporter still prints "หน้า N" or "N / M" footers, not the official continuation format, so the guide asks for that to be checked in Word.
+  - Harness tests, validation, the plugin mirror check and the Desktop document-tool tests pass. Electron smoke tests were not run locally.
+
 - **TOR content by procurement type (2026-10-25, owner supplied a TOR manual with seven templates and a university procurement training deck)**: adds `tor-government-writing/references/tor-content-by-type.md`, which restates the minimum headings, type-specific clauses (goods, computer systems, general hire, construction, consultant, design, supervision), bidder-qualification thresholds, non-restrictive specification rules, domestic-content and SME preferences, penalty/security/advance values and selection criteria. Each item is labelled regulation or convention. Values stay `[รอยืนยัน: …]` with the suggested value until AFP confirms an active source, because STeP follows the CMU procurement regulation and the documents date from 2560–2566. Links from the Skill, drafting guide, source map, 16-section template and `tor-review`; the Desktop TOR tool now loads the file. The source files are not committed. Harness tests, validation, the plugin mirror check and the Desktop document-tool test pass; the full Desktop suite has three process-wait timing failures that also fail on unmodified main on this Windows machine. AFP confirmation of the values and a web vendor/import update remain open.
 
 - **หลักการเขียนเนื้อหาหนังสือราชการใน `thai-official-documents` (2026-10-25, owner supplied training slides)**: adds `references/saraban-writing-guide.md`, summarised in the Skill's own words from the owner's "การร่างหนังสือราชการ" training deck (ระเบียบงานสารบรรณ พ.ศ. ๒๕๒๖ and appendices, นร ๐๑๐๖/ว๒๐๑๙): subject lines, salutations/closings by Appendix 2, อ้างถึง/สิ่งที่ส่งมาด้วย, cause/purpose paragraphs and closing phrases by purpose, modal strength, conjunctions, and tone for reprimand, refusal and request letters. Each item is marked regulation or convention; the current regulation still has to be checked. The letter template gains classification/speed lines and the owning-unit, phone, fax and copy footer; the memo template points to "เอกสารแนบ" and "เห็นควร" proposals. No example letters or real names were copied. Not yet measured with a live model or reviewed by GA.
