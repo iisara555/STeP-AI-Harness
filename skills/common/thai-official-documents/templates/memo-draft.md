@@ -1,6 +1,6 @@
 # Working template — บันทึกข้อความ
 
-Apply the [draft assistance guidance](../references/drafting-checks.md#draft-assistance-and-revision) to blank prose fields. Draft the rationale and requested consideration from the supplied purpose; keep unknown facts pending. The paragraph placeholders below describe content roles rather than text to copy verbatim.
+Apply the [draft assistance guidance](../references/drafting-checks.md#draft-assistance-and-revision) to blank prose fields. Draft the rationale and requested consideration from the supplied purpose; keep unknown facts pending. The paragraph placeholders below describe content roles rather than text to copy verbatim. เขียนเรื่อง ภาคเหตุ ภาคประสงค์ และข้อเสนอ "เห็นควร" ตาม [หลักการเขียนเนื้อหาหนังสือราชการ](../references/saraban-writing-guide.md)
 
 แม่แบบเพื่อร่างเท่านั้น ไม่ใช่แบบหน่วยงานฉบับปัจจุบันที่รับรองแล้ว ใช้แบบหน่วยงานที่ได้รับก่อนแม่แบบนี้ ใช้ชื่อช่องส่วนงาน/ส่วนราชการตามแบบ ข้อมูลที่ขาดคง `[รอยืนยัน: ชื่อช่อง]` ไม่ออกเลขหนังสือหรือเลือกผู้ลงนามแทนเจ้าของเรื่อง
 
@@ -13,11 +13,11 @@ Apply the [draft assistance guidance](../references/drafting-checks.md#draft-ass
 เรื่อง [รอยืนยัน: เรื่อง]
 เรียน [รอยืนยัน: ผู้รับ]
 
-[รอยืนยัน: ข้อเท็จจริงและความเป็นมาจากต้นเรื่อง เขียนเป็นย่อหน้าต่อเนื่อง]
+[รอยืนยัน: ข้อเท็จจริงและความเป็นมาจากต้นเรื่อง เขียนเป็นย่อหน้าต่อเนื่อง ขึ้นต้น "ด้วย" / "เนื่องจาก" หรือ "ตามที่ ... นั้น" ตามกรณี]
 
-[รอยืนยัน: สาระที่ขอให้พิจารณา เหตุผล งบและแหล่งเกณฑ์เฉพาะที่มีข้อมูล ไม่เพิ่มการอ้างกฎหมายหรือการอนุมัติเดิมเอง]
+[รอยืนยัน: สาระที่ขอให้พิจารณา เหตุผล งบและแหล่งเกณฑ์เฉพาะที่มีข้อมูล ไม่เพิ่มการอ้างกฎหมายหรือการอนุมัติเดิมเอง เอกสารประกอบอ้างว่า "รายละเอียดปรากฏตามเอกสารแนบ"]
 
-[รอยืนยัน: ข้อเสนอปิดท้ายตามชนิดขออนุมัติ ขอความเห็นชอบ หรือรายงานเพื่อทราบที่เลือก]
+[รอยืนยัน: ข้อเสนอปิดท้ายขึ้นต้น "จึงเรียนมาเพื่อ..." ตามชนิดขออนุมัติ ขอความเห็นชอบ หรือรายงานเพื่อทราบ ถ้าเสนอหลายข้อใช้ "เห็นควร..." เป็นข้อเสนอ ไม่ใช่ผลการอนุมัติ]
 
 (ลงชื่อ) ................................
 ([รอยืนยัน: ผู้ลงนาม])

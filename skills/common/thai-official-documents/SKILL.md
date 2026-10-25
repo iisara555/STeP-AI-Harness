@@ -58,7 +58,7 @@ Use the [drafting checks](references/drafting-checks.md) for approval/endorsemen
 
 Use the relevant working template when a current agency template is unavailable: [memo](templates/memo-draft.md), [letter](templates/letter-draft.md), or [minutes](templates/minutes-draft.md). These are drafting structures, not approved agency forms. Document numbers, budgets, legal conditions and other unknown facts retain `[รอยืนยัน: ชื่อช่อง]`; draftable narrative follows the drafting checks. For minutes, use `meeting-summary` to distinguish source-backed decisions, proposals and actions before formatting. Text drafting does not establish DOCX/PDF layout verification.
 
-- **หนังสือราชการมาตรฐาน** มีส่วนราชการ เลขที่ วันที่ เรื่อง เรียน ข้อความ คำลงท้าย ลายมือชื่อ ตำแหน่ง และสิ่งที่ส่งมาด้วยตามกรณี
+- **หนังสือราชการมาตรฐาน** มีส่วนราชการ เลขที่ วันที่ เรื่อง เรียน ข้อความ คำลงท้าย ลายมือชื่อ ตำแหน่ง และสิ่งที่ส่งมาด้วยตามกรณี หนังสือภายนอกแบ่งเป็นหัวหนังสือ ภาคเหตุ ภาคประสงค์ และท้ายหนังสือ (ส่วนราชการเจ้าของเรื่อง โทร โทรสาร สำเนาส่ง) ตาม [หลักการเขียน](references/saraban-writing-guide.md)
 - **TOR** มีชื่อโครงการ หน่วยงาน ประเภทงาน ความเป็นมา วัตถุประสงค์ ขอบเขต ผลส่งมอบ กำหนดส่งมอบ เกณฑ์ตรวจรับ งบประมาณ การจ่ายเงิน ค่าปรับ การรับประกัน และผู้รับผิดชอบ
 - **รายงานการประชุม** มีชื่อการประชุม ครั้งที่ วันเวลา สถานที่ ผู้มาประชุม ผู้ไม่มาประชุม ระเบียบวาระ มติ ผู้จด และการรับรองตามแบบหน่วยงาน
 - **เอกสารแนบท้าย** ต้องมีชื่ออ้างอิงตรงกับเอกสารหลัก เลขข้อ ตาราง ภาคผนวก และเลขหน้าไม่ขัดกัน
@@ -81,6 +81,10 @@ Use the relevant working template when a current agency template is unavailable:
 
 ### 4. ตรวจภาษาและสาระ
 
+- เขียนและตรวจหนังสือภายนอกกับบันทึกข้อความตาม [หลักการเขียนเนื้อหาหนังสือราชการ](references/saraban-writing-guide.md):
+  - การตั้งเรื่อง คำขึ้นต้นและคำลงท้ายตามภาคผนวก ๒ อ้างถึงและสิ่งที่ส่งมาด้วย
+  - ภาคเหตุ ("ด้วย" / "เนื่องจาก" / "ตามที่ ... นั้น") และภาคประสงค์ ("จึง..." ตามจุดประสงค์)
+  - ระดับคำบังคับ คำเชื่อม และน้ำเสียงของหนังสือตักเตือน ปฏิเสธ และขอความร่วมมือ
 - ใช้ภาษาราชการที่ชัดเจน ตรงประเด็น สุภาพ ไม่ใช้ถ้อยคำโฆษณาหรือคำกำกวมเป็นเกณฑ์บังคับ
 - รักษาชื่อหน่วยงาน ตำแหน่ง ชื่อโครงการ วัน เดือน ปี เลขข้อ จำนวน และหน่วยนับให้ตรงกันทุกหน้า
 - ตรวจคำขึ้นต้น คำลงท้าย สรรพนาม และการลงชื่อให้ตรงกับผู้รับและประเภทหนังสือ
