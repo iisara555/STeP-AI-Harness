@@ -2,13 +2,19 @@
   "version": 1,
   "notes": [
     "Synthetic staff-style requests written 2026-10-26: four per routed Skill, phrased the way employees type them, with and without trigger words.",
-    "Measures the local Router top pick (ranked[0] with score > 0), the pick the Webapp uses directly and Desktop offers as a Skill suggestion. AI skill selection is not measured here.",
+    "Measures two Router views: the confident pick (routingConfidence HIGH, what Desktop offers as a Skill suggestion and autoRouting selects) and the evidence pick (the top candidate with trigger-keyword or path evidence, what a host without AI skill selection such as the Webapp should use). AI (hybrid) skill selection is not measured.",
     "Limits only tighten: a change that improves routing tightens them in the same pull request."
   ],
   "limits": {
-    "minCorrect": 136,
-    "maxWrongSkill": 43,
-    "maxGeneralMatched": 3,
+    "confident": {
+      "minCorrect": 86,
+      "maxWrongSkill": 6
+    },
+    "evidence": {
+      "minCorrect": 134,
+      "maxWrongSkill": 16
+    },
+    "maxGeneralMatched": 1,
     "minAuthorityHeld": 3
   },
   "skills": {
