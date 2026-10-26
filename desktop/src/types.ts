@@ -418,6 +418,38 @@ export type PolicySnapshot = {
   pilot?: boolean;
   checks?: { authority: boolean; privacy: boolean };
 };
+export type DiagnosticLevel = 'error' | 'warning' | 'info';
+/** A sanitized diagnostic event; request, draft, credential and file contents never belong here. */
+export type DiagnosticEntry = {
+  at: string;
+  event: string;
+  level: DiagnosticLevel;
+  code?: string;
+  provider?: string;
+  model?: string;
+  outcome?: string;
+  detail?: string;
+  ms?: number;
+};
+export type DiagnosticsSnapshot = {
+  generatedAt: string;
+  path: string;
+  sizeBytes: number;
+  entries: DiagnosticEntry[];
+  counts: { error: number; warning: number; info: number };
+  system: { appVersion: string; platform: string; arch: string; node: string; electron: string; packaged: boolean };
+  policy: { source: PolicySnapshot['source']; path: string; problems: string[]; enabledFeatures: string[] };
+  connections: {
+    provider: Provider;
+    label: string;
+    model: string;
+    baseUrl?: string;
+    ready: boolean;
+    policyBlocked?: boolean;
+    problem?: string;
+    testedAt?: string;
+  }[];
+};
 export type ConsentSummary = {
   prompts: number;
   confirmed: number;

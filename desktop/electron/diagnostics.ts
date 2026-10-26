@@ -1,3 +1,5 @@
+import type { DiagnosticEntry, DiagnosticLevel } from '../src/types';
+
 // Runtime stderr is kept only to explain connection failures. Lines are scrubbed of anything that
 // could identify the user or authenticate as them before they are held, shown or logged.
 export function scrub(line: string) {
@@ -52,3 +54,50 @@ export function explainRuntimeFailure(lines: string[]) {
 
 // A thrown error's code (UPPER_SNAKE message) or UNEXPECTED; only codes reach logs and the interface.
 export const errorCode = (error: unknown) => (error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'UNEXPECTED');
+
+const ERROR_EVENTS = /(?:failed|rejected|blocked|startup-failed|run-failed)/i;
+const WARNING_EVENTS = /(?:policy-reloaded|policy-problems|handoff|attach-refused)/i;
+
+function diagnosticLevel(event: string, value: Record<string, unknown>): DiagnosticLevel {
+  if (value.outcome === 'error' || value.outcome === 'failed' || value.ok === 0 || value.ok === false || ERROR_EVENTS.test(event))
+    return 'error';
+  if (WARNING_EVENTS.test(event) || value.outcome === 'warning') return 'warning';
+  return 'info';
+}
+
+/** Parse the append-only JSONL log into a bounded, renderer-safe diagnostic list. */
+export function readDiagnosticLog(text: string, limit = 200): DiagnosticEntry[] {
+  const bounded = Number.isSafeInteger(limit) ? Math.max(1, Math.min(limit, 500)) : 200;
+  const entries: DiagnosticEntry[] = [];
+  for (const line of text.split('\n').slice(-bounded * 2)) {
+    if (!line.trim()) continue;
+    let value: Record<string, unknown>;
+    try {
+      const parsed = JSON.parse(line);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) continue;
+      value = parsed as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+    if (typeof value.at !== 'string' || typeof value.event !== 'string') continue;
+    const entry: DiagnosticEntry = {
+      at: value.at,
+      event: value.event.slice(0, 80),
+      level: diagnosticLevel(value.event, value),
+    };
+    for (const key of ['code', 'provider', 'model', 'outcome'] as const)
+      if (typeof value[key] === 'string' && value[key]) entry[key] = scrub(value[key]);
+    const detail =
+      typeof value.detail === 'string'
+        ? value.detail
+        : typeof value.message === 'string'
+          ? value.message
+          : typeof value.problems === 'string'
+            ? value.problems
+            : '';
+    if (detail) entry.detail = scrub(detail).slice(0, 1200);
+    if (typeof value.ms === 'number' && Number.isFinite(value.ms)) entry.ms = Math.max(0, Math.round(value.ms));
+    entries.push(entry);
+  }
+  return entries.slice(-bounded);
+}

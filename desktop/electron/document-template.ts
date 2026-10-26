@@ -395,6 +395,7 @@ export async function renderDocumentTemplate(bytes: Uint8Array, id: unknown, inp
           p.appendChild(language);
         }
         language.setAttributeNS(W, 'w:val', 'th-TH');
+        language.setAttributeNS(W, 'w:eastAsia', 'th-TH');
         let fonts = children(p).find(n => n.localName === 'rFonts');
         if (!fonts) {
           fonts = create('rFonts');

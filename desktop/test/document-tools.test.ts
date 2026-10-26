@@ -74,6 +74,19 @@ test('form facts travel as USER_INPUT source data; blanks stay explicit, amounts
   assert.equal(source.variant, 'ขออนุมัติ');
 });
 
+test('document requests carry the source-backed STeP agency reference for responsible-agency fields', () => {
+  const source = JSON.parse(documentRequest('tor', {}).sourceText);
+  assert.deepEqual(source.organizationReference, {
+    nameTh: 'อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่',
+    addressTh:
+      'อาคาร A ชั้น 2 อาคารอำนวยการอุทยานวิทยาศาสตร์ภูมิภาค ภาคเหนือ (จังหวัดเชียงใหม่) 155 หมู่ 2 ตำบลแม่เหียะ อำเภอเมือง จังหวัดเชียงใหม่ 50100',
+    provenance: 'SOURCE_FACT',
+    sourceRef: 'step-contact',
+    sourcePath: 'docs/knowledge/step-public-profile.md',
+    lastChecked: '2026-09-20',
+  });
+});
+
 test('invalid profiles, subtypes, fields and oversized form input fail before sending', () => {
   assert.equal(documentTool('../../private'), undefined);
   assert.equal(documentTool('__proto__'), undefined);
