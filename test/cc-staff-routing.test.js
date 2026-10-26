@@ -16,6 +16,8 @@ const DIRECT = [
   ['คิดธีมงาน Innovation Day', 'event-concept'],
   ['ช่วยคิด signature moment สำหรับพิธีเปิดงาน Innovation Day', 'event-concept'],
   ['Brainstorm big idea for STeP Innovation Day', 'event-concept'],
+  ['อยากได้ธีมงานสัมมนาประจำปีที่คนจำได้', 'event-concept'],
+  ['คิด Big idea สำหรับงาน STeP Innovation Day 3 แนวทาง พร้อมชื่องาน key message และ signature moment ที่คนจะจำได้', 'event-concept'],
   // A deck that presents a big idea is still a deck.
   ['ทำสไลด์นำเสนอ big idea ให้ผู้บริหาร', 'presentation-design'],
 ];
