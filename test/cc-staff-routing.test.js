@@ -9,6 +9,15 @@ const DIRECT = [
   ['ช่วยจัดโครง Presentation นี้ให้ message ชัด', 'presentation-design'],
   ['ช่วยร่างโพสต์ประชาสัมพันธ์งาน Open House ของ STeP สำหรับ Facebook', 'step-writing'],
   ['ช่วยทำ Designer Brief สำหรับงาน Open House', 'designer-brief'],
+  // "Big idea" / "Signature Moment" phrasings for an event (2026-10-26): Desktop found the Skill only by AI selection.
+  ['คิด Big idea สำหรับงาน STeP Innovation Day', 'event-concept'],
+  ['คิดบิ๊กไอเดียงานเปิดตัว', 'event-concept'],
+  ['ขอไอเดียหลักของงาน Innovation Day', 'event-concept'],
+  ['คิดธีมงาน Innovation Day', 'event-concept'],
+  ['ช่วยคิด signature moment สำหรับพิธีเปิดงาน Innovation Day', 'event-concept'],
+  ['Brainstorm big idea for STeP Innovation Day', 'event-concept'],
+  // A deck that presents a big idea is still a deck.
+  ['ทำสไลด์นำเสนอ big idea ให้ผู้บริหาร', 'presentation-design'],
 ];
 
 for (const [prompt, skill] of DIRECT) {
