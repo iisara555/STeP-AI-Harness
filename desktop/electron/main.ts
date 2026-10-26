@@ -17,7 +17,7 @@ import {
   net,
   session as electronSession,
 } from 'electron';
-import { mkdir, writeFile, appendFile, rm, readFile } from 'node:fs/promises';
+import { mkdir, writeFile, appendFile, rm, readFile, open, stat } from 'node:fs/promises';
 import { ExportWorkspace } from './export-workspace';
 import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -70,7 +70,7 @@ import { adapter, closeClaudeSpares, listModels } from './providers';
 import { compatibleEndpoint, presetBaseUrl } from './preset-endpoint';
 import { openRouterSignIn } from './openrouter-auth';
 import { PROVIDER_PRESETS, pickModel, presetFor } from '../src/provider-presets';
-import { errorCode } from './diagnostics';
+import { errorCode, readDiagnosticLog, scrub } from './diagnostics';
 import { connectFailure, signInAndTest, signInExpired, signOutManagedProvider, SIGN_IN_EXPIRED } from './connect';
 import { checkRuntime, resolveRuntime } from './runtimes';
 import {
@@ -146,7 +146,17 @@ import { ocrAttachmentReport, ocrAttachmentSource } from './ocr-attachment';
 import { pdfPageImages } from './pdf-pages';
 import { isWorkflow } from './workflows';
 import { RECEIPT_VISION_SCHEMA, RECEIPT_VISION_SYSTEM } from '../src/receipt-vision';
-import type { Attachment, Connection, MaintenanceBoard, MaintenanceStatus, Provider, Session, Settings, VisionInput } from '../src/types';
+import type {
+  Attachment,
+  Connection,
+  DiagnosticsSnapshot,
+  MaintenanceBoard,
+  MaintenanceStatus,
+  Provider,
+  Session,
+  Settings,
+  VisionInput,
+} from '../src/types';
 import { tm, useLanguage } from './i18n';
 import { readSharedProfile, sharedProfilePath, writeSharedProfile } from './shared-profile';
 
@@ -1806,6 +1816,19 @@ async function main() {
     exportPaths.add(file);
     return file;
   };
+  const connectionPolicyBlocked = (connection: Connection) => {
+    let policyBlocked =
+      (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscriptionOn()) ||
+      (connection.provider === 'copilot' && !policyState.policy.features.copilot);
+    if (connection.provider === 'compatible') {
+      try {
+        compatibleEndpoint(connection, policyState.policy, testPresetBaseUrl());
+      } catch {
+        policyBlocked = true;
+      }
+    }
+    return policyBlocked;
+  };
   const snapshot = async () => ({
     appVersion: app.getVersion(),
     usage: ledger.report(),
@@ -1835,22 +1858,91 @@ async function main() {
     userFile: knownUserFile(),
     settings: store.settings(),
     connections: store.connections().map(connection => {
-      let policyBlocked =
-        (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscriptionOn()) ||
-        (connection.provider === 'copilot' && !policyState.policy.features.copilot);
-      if (connection.provider === 'compatible') {
-        try {
-          compatibleEndpoint(connection, policyState.policy, testPresetBaseUrl());
-        } catch {
-          policyBlocked = true;
-        }
-      }
+      const policyBlocked = connectionPolicyBlocked(connection);
       // Project current usability without erasing the historical test result in private storage.
       return { ...connection, ready: connection.ready && !policyBlocked, policyBlocked };
     }),
     sessions: store.list<any>('session').sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     teams: Object.values(await routing.loadTeamsDictionary()),
   });
+  const diagnosticBaseUrl = (value: unknown) => {
+    if (typeof value !== 'string' || !value) return undefined;
+    try {
+      const url = new URL(value);
+      url.username = '';
+      url.password = '';
+      url.search = '';
+      url.hash = '';
+      return url.toString().replace(/\/$/, '');
+    } catch {
+      return scrub(value);
+    }
+  };
+  const diagnosticsSnapshot = async (limit = 250): Promise<DiagnosticsSnapshot> => {
+    const sizeBytes = await stat(logFile)
+      .then(info => info.size)
+      .catch(() => 0);
+    let text = '';
+    if (sizeBytes) {
+      try {
+        const file = await open(logFile, 'r');
+        try {
+          const offset = Math.max(0, sizeBytes - 512 * 1024);
+          const buffer = Buffer.alloc(sizeBytes - offset);
+          const result = await file.read(buffer, 0, buffer.length, offset);
+          text = buffer.subarray(0, result.bytesRead).toString('utf8');
+        } finally {
+          await file.close();
+        }
+      } catch {
+        // Keep the report useful when the log is rotated or removed between stat and read.
+        text = '';
+      }
+    }
+    const entries = readDiagnosticLog(text, limit);
+    const counts = entries.reduce((summary, entry) => ({ ...summary, [entry.level]: summary[entry.level] + 1 }), {
+      error: 0,
+      warning: 0,
+      info: 0,
+    });
+    return {
+      generatedAt: new Date().toISOString(),
+      path: logFile,
+      sizeBytes,
+      entries,
+      counts,
+      system: {
+        appVersion: app.getVersion(),
+        platform: process.platform,
+        arch: process.arch,
+        node: process.versions.node,
+        electron: process.versions.electron || '',
+        packaged: app.isPackaged,
+      },
+      policy: {
+        source: policyState.policy.source,
+        path: policyState.path,
+        problems: policyState.problems.map(problem => scrub(problem)),
+        enabledFeatures: Object.entries(policyState.policy.features)
+          .filter(([, enabled]) => enabled)
+          .map(([name]) => name),
+      },
+      connections: store.connections().map(connection => {
+        const policyBlocked = connectionPolicyBlocked(connection);
+        const baseUrl = diagnosticBaseUrl(connection.baseUrl);
+        return {
+          provider: connection.provider,
+          label: scrub(connection.label || connection.id),
+          model: scrub(connection.model || ''),
+          ...(baseUrl ? { baseUrl } : {}),
+          ready: connection.ready && !policyBlocked,
+          ...(policyBlocked ? { policyBlocked: true } : {}),
+          ...(connection.problem ? { problem: scrub(connection.problem) } : {}),
+          ...(connection.testedAt ? { testedAt: connection.testedAt } : {}),
+        };
+      }),
+    };
+  };
 
   // A web page the employee (or a link in a preview) opens, in its own sandboxed Web tab.
   const openBrowserTab = (input: { url: string }) => {
@@ -2559,6 +2651,22 @@ async function main() {
         return true;
       case 'snapshot':
         return snapshot();
+      case 'diagnostics':
+        if (!policyState.policy.features.developmentMode || store.settings().developmentMode !== true) throw new Error('FEATURE_DISABLED');
+        return diagnosticsSnapshot(typeof input.limit === 'number' ? input.limit : 250);
+      case 'diagnosticsExport': {
+        if (!policyState.policy.features.developmentMode || store.settings().developmentMode !== true) throw new Error('FEATURE_DISABLED');
+        const report = await diagnosticsSnapshot(500);
+        const result = await dialog.showSaveDialog(window, {
+          title: tm('ส่งออกข้อมูลตรวจระบบ'),
+          defaultPath: join(data, 'step-diagnostics.json'),
+          filters: [{ name: 'JSON', extensions: ['json'] }],
+        });
+        if (result.canceled || !result.filePath) return { cancelled: true };
+        await writeFile(result.filePath, JSON.stringify(report, null, 2) + '\n', { encoding: 'utf8', mode: 0o600 });
+        diagnose('diagnostics-exported');
+        return { cancelled: false, path: result.filePath };
+      }
       case 'skillSuggest': {
         // The Skill that clearly fits the text being typed, for the "ลองใช้ Skill" button. Local Router scoring only; with
         // autoRouting on the Router already picks Skills itself, so nothing is suggested.

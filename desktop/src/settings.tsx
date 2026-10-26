@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Building2, Check, FolderOpen, KeyRound, Minus, Monitor, Moon, Settings2, ShieldCheck, Sparkles, Sun } from './icons';
+import { Building2, Check, FileSearch, FolderOpen, KeyRound, Minus, Monitor, Moon, Settings2, ShieldCheck, Sparkles, Sun } from './icons';
 import { AIConnections } from './ai-connections';
 import { CredentialSettings } from './credential-settings';
+import { DeveloperDiagnostics } from './developer-diagnostics';
 import { shortcut, explainError } from './messages';
 import teamworkArt from './assets/illustrations/teamwork.png';
 import { SectionArt } from './illustration';
@@ -162,8 +163,9 @@ export function SettingsPanel({
     return () => observer.disconnect();
   }, []);
   const credentialBusy = useCallback((active: boolean) => setBusy(active ? 'credentials' : ''), []);
+  const developerAccess = Boolean(snapshot.features?.developmentMode && snapshot.settings.developmentMode);
   // New users land on AI connections when none exist; otherwise on general settings.
-  const [page, setPage] = useState<'general' | 'ai' | 'credentials' | 'appearance' | 'privacy' | 'policy'>(
+  const [page, setPage] = useState<'general' | 'ai' | 'credentials' | 'appearance' | 'privacy' | 'policy' | 'developer'>(
     initialPage === 'credentials'
       ? 'credentials'
       : initialPage === 'ai' || (snapshot.settings.onboarding && !snapshot.connections.length)
@@ -175,6 +177,9 @@ export function SettingsPanel({
     if (initialPageRef.current !== initialPage || initialPage === 'credentials') setPage(initialPage);
     initialPageRef.current = initialPage;
   }, [initialPage, vaultOrigin]);
+  useEffect(() => {
+    if (!developerAccess && page === 'developer') setPage('ai');
+  }, [developerAccess, page]);
   useEffect(() => {
     if (page !== 'general') return;
     let active = true;
@@ -247,6 +252,7 @@ export function SettingsPanel({
     ['appearance', t('การแสดงผลและภาษา'), Sun],
     ['privacy', t('ความเป็นส่วนตัว'), ShieldCheck],
     ['policy', t('นโยบายองค์กร'), Building2],
+    ...(developerAccess ? ([['developer', t('นักพัฒนา / แอดมิน'), FileSearch]] as const) : []),
   ] as const;
   const keywords = {
     general: 'ชื่อ ทีม ผู้ช่วย รูป โปรไฟล์ สไตล์ โฟลเดอร์ chat language profile team style folder',
@@ -255,6 +261,7 @@ export function SettingsPanel({
     appearance: 'ภาษา ธีม language theme display',
     privacy: 'ข้อมูล privacy data',
     policy: 'สิทธิ์ policy permissions',
+    developer: 'นักพัฒนา แอดมิน diagnostics error log ระบบ debug admin',
   };
   const matchingPages = pages.filter(([id, label]) =>
     (label + ' ' + keywords[id]).toLowerCase().includes(settingsSearch.trim().toLowerCase()),
@@ -265,6 +272,7 @@ export function SettingsPanel({
         <div>
           <h1>{page === 'ai' ? t('เชื่อมต่อ AI') : pages.find(entry => entry[0] === page)?.[1]}</h1>
           {page === 'general' && <p className="muted">{t('ดูและปรับโปรไฟล์ ผู้ช่วย และโฟลเดอร์ของคุณ')}</p>}
+          {page === 'developer' && <p className="muted">{t('เครื่องมือดูแลระบบสำหรับนักพัฒนาและผู้ดูแล')}</p>}
         </div>
         {page === 'ai' ? (
           <SectionArt scene="connections" className="settings-illustration" />
@@ -318,6 +326,7 @@ export function SettingsPanel({
         ))}
       </div>
       {page === 'credentials' && <CredentialSettings call={call} onError={onError} onBusy={credentialBusy} requestedOrigin={vaultOrigin} />}
+      {page === 'developer' && developerAccess && <DeveloperDiagnostics call={call} onError={onError} />}
       {page === 'general' && (
         <section className="settings-profile">
           <h2>{t('โปรไฟล์และทีม')}</h2>

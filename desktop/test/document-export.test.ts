@@ -31,6 +31,7 @@ test('Thai document styles and emphasis retain language, complex-script size and
   const styles = new DOMParser().parseFromString(await doc.zip.file('word/styles.xml')!.async('string'), 'application/xml');
   const defaults = styles.getElementsByTagNameNS(W, 'rPrDefault')[0];
   assert.equal(attr(defaults, 'lang', 'val'), 'th-TH');
+  assert.equal(attr(defaults, 'lang', 'eastAsia'), 'th-TH');
   assert.equal(attr(defaults, 'szCs', 'val'), '32');
   const italic = Array.from(doc.paragraphs[0].getElementsByTagNameNS(W, 'r')).find(run => doc.text(run) === 'ข้อความตัวเอียง')!;
   assert.ok(italic.getElementsByTagNameNS(W, 'i').length);
@@ -195,10 +196,14 @@ test('memo fields, letter sender/date and signatures receive distinct layouts wi
   for (const doc of [memo, letter]) assert.equal(doc.paragraphs.map(doc.text).join('').replace(/\s/g, ''), expected);
 });
 
-test('TOR front matter and minutes title fields are centered while source labels remain editable', async () => {
+test('TOR title is centered while agency front matter and body stay left-aligned', async () => {
   const tor = await word('# ร่าง TOR\n\nหน่วยงานสังเคราะห์\n\n## ๑. วัตถุประสงค์\n\nสาระจากต้นทาง', { documentTool: 'tor' });
-  assert.equal(attr(tor.paragraph('หน่วยงานสังเคราะห์'), 'jc', 'val'), 'center');
+  assert.equal(attr(tor.paragraph('ร่าง TOR'), 'jc', 'val'), 'center');
+  assert.equal(attr(tor.paragraph('หน่วยงานสังเคราะห์'), 'jc', 'val'), 'left');
   assert.equal(attr(tor.paragraph('สาระจากต้นทาง'), 'jc', 'val'), 'left');
+});
+
+test('minutes front fields remain centered while source labels remain editable', async () => {
   const minutes = await word(
     '# รายงานการประชุม\n\nชื่อการประชุม สังเคราะห์\n\nครั้งที่ [รอยืนยัน: ครั้งที่]\n\nวัน เวลา สถานที่ [รอยืนยัน: วัน เวลา สถานที่]\n\nผู้มาประชุม [รอยืนยัน: รายชื่อ]\n\n## ระเบียบวาระที่ ๑\n\nมติ [รอยืนยัน: มติ]',
     { documentTool: 'minutes' },

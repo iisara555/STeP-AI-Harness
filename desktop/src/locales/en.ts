@@ -12,6 +12,14 @@ import { skillSuggestEn } from './skill-suggest-en';
 import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 export const en: Record<string, string> = {
+  'ส่งออก TOR เป็น Word โดยกึ่งกลางเฉพาะชื่อเรื่อง และจัดข้อมูลหน่วยงานกับเนื้อหาให้อ่านตามแนวเอกสารราชการ':
+    'Export TOR to Word with only the title centered, keeping agency details and body content aligned for official documents',
+  'ปรับการตัดบรรทัดภาษาไทยใน Word และแม่แบบ DOCX ให้สม่ำเสมอขึ้น โดยไม่เปลี่ยนข้อความร่างต้นฉบับ':
+    'Improve Thai line wrapping in Word and DOCX templates without changing the saved draft text',
+  'เมื่อเอกสารมีช่องหน่วยงานที่เกี่ยวข้อง ระบบอ้างอิงชื่อเต็มและที่อยู่สาธารณะของอุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ หากไม่ได้ระบุหน่วยงานอื่น':
+    'When a document has an agency field, use the full public name and address of Science and Technology Park, Chiang Mai University unless another agency is supplied',
+  'เพิ่มหน้า นักพัฒนา / แอดมินใน Settings สำหรับดูสถานะระบบ นโยบาย การเชื่อมต่อ และ log ข้อผิดพลาดแบบไม่เปิดเผยร่างหรือข้อมูลลับ':
+    'Add a Developer / Admin Settings page for system, policy and connection status plus sanitized error logs without exposing drafts or secrets',
   'ค้นและอ่าน Google ตามคำขอ': 'Search and read Google for your request',
   อนุญาตสำหรับคำขอนี้: 'Allow for this request',
   'อนุญาตให้อ่าน Google สำหรับคำขอนี้?': 'Allow Google reads for this request?',
@@ -3078,5 +3086,47 @@ export const en: Record<string, string> = {
   'งานดูแลข้อมูลที่จำและ Skill: ไม่มีงานค้าง': 'Saved information and Skill maintenance: nothing pending',
   'แอปตรวจข้อมูลที่จำ บทเรียน และ Skill Pack บนเครื่องนี้วันละครั้ง ไม่ส่งข้อมูลออกและไม่แก้หรือลบเอง เมื่อคุณแก้แล้ว ย้ายงานเป็น "เสร็จแล้ว" เพื่อให้แอปตรวจซ้ำ':
     'The app checks saved information, lessons and Skill packs on this device daily. It sends nothing out and makes no changes or deletions. After fixing an item, move it to "Done" to check it again.',
+  'นักพัฒนา / แอดมิน': 'Developer / administrator',
+  เครื่องมือดูแลระบบสำหรับนักพัฒนาและผู้ดูแล: 'System tools for developers and administrators',
+  ข้อผิดพลาด: 'Errors',
+  คำเตือน: 'Warnings',
+  ข้อมูล: 'Information',
+  ภาพรวมระบบสำหรับนักพัฒนา: 'Developer system overview',
+  'ดูสถานะการเชื่อมต่อ นโยบาย ระบบ และ Error ล่าสุดได้จากที่เดียว': 'View connection, policy, system and latest error status in one place',
+  'ข้อมูลหน้านี้ผ่านการปิดบังแล้ว ไม่เก็บ prompt ร่าง เนื้อหาไฟล์ หรือ API key':
+    'This page shows masked information only. It does not store prompts, drafts, file contents or API keys.',
+  ผลลัพธ์: 'Outcome',
+  รีเฟรชข้อมูล: 'Refresh data',
+  'ส่งออก JSON': 'Export JSON',
+  ส่งออกข้อมูลตรวจระบบ: 'Export system diagnostics',
+  'ส่งออกไฟล์แล้ว: {0}': 'Exported file: {0}',
+  'สรุปเหตุการณ์ใน log': 'Log event summary',
+  ต้องตรวจสอบ: 'Needs review',
+  ควรติดตาม: 'Monitor',
+  เหตุการณ์ล่าสุด: 'Recent events',
+  การเชื่อมต่อพร้อมใช้: 'Ready connections',
+  รายละเอียดระบบ: 'System details',
+  รุ่นแอป: 'App version',
+  ระบบปฏิบัติการ: 'Operating system',
+  รูปแบบการรัน: 'Run mode',
+  รุ่นติดตั้ง: 'Packaged build',
+  โหมดพัฒนา: 'Development mode',
+  'ไฟล์ log': 'Log file',
+  อ่านข้อมูลเมื่อ: 'Read at',
+  นโยบายและฟีเจอร์: 'Policy and features',
+  พบปัญหาในการอ่านนโยบาย: 'The policy could not be read cleanly',
+  ไม่พบปัญหานโยบาย: 'No policy problems found',
+  ยังไม่มีฟีเจอร์ที่เปิดใช้: 'No features are enabled',
+  ใช้โมเดลเริ่มต้น: 'Default model',
+  ปลายทาง: 'Endpoint',
+  พร้อมใช้: 'Ready',
+  ถูกบล็อกโดยนโยบาย: 'Blocked by policy',
+  'ยังไม่มีการเชื่อมต่อ AI': 'No AI connections',
+  'เหตุการณ์จาก log': 'Log events',
+  'แสดงเหตุการณ์ล่าสุดสูงสุด 250 รายการ และเรียงจากใหม่ไปเก่า': 'Showing up to 250 recent events, newest first',
+  กรองระดับเหตุการณ์: 'Filter event level',
+  ยังไม่มีเหตุการณ์ในระดับที่เลือก: 'No events at the selected level',
+  ยังโหลดข้อมูลตรวจระบบไม่ได้: 'System diagnostics could not be loaded',
+  'กำลังโหลดข้อมูลตรวจระบบ…': 'Loading system diagnostics…',
   ...settingsEn,
 };

@@ -49,6 +49,8 @@ test('both TOR variants load task adaptation, acceptance and source guidance wit
             assert.ok(context.system?.includes('Procurement source map: discovery is not approval'));
             assert.ok(context.system?.includes('TOR adaptation examples: goods and services'));
             assert.ok(context.system?.includes('Do not transfer example-specific'));
+            assert.ok(context.system?.includes('อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่'));
+            assert.ok(context.system?.includes('อาคาร A ชั้น 2 อาคารอำนวยการอุทยานวิทยาศาสตร์ภูมิภาค'));
             assert.ok(!context.system?.includes('ภายใต้โครงการสนับสนุนและยกระดับระบบนิเวศนวัตกรรมปัญญาประดิษฐ์ภาคเหนือ'));
             assert.ok(prompt.includes('SYNTHETIC-USE-001'));
             return envelope('# ร่างเพื่อพิจารณา\n\nงานสังเคราะห์ [รอยืนยัน: งบประมาณ]');
