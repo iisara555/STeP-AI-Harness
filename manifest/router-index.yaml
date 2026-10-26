@@ -25,7 +25,7 @@ skills:
       consumers: []
     description: ใช้เมื่อจะสร้างหรือปรับ Skill ของ STeP AI Harness; ตรวจก่อนว่าโจทย์ควรเป็น Skill, Playbook, Rule, Registry หรือ Action และออกแบบ Trigger/Anti-trigger, Source, Authority, Handoff และ Eval ก่อน Pilot
     intent: [create, improve]
-    triggers: [สร้าง skill, สร้างสกิล, create skill, add skill, เพิ่ม skill, เพิ่มสกิล, ปรับ skill, แก้ skill, skill ใหม่, skill authoring, skill contract, skill eval, ทำ skill ให้พร้อม pilot]
+    triggers: [สร้าง skill, สร้างสกิล, create skill, add skill, เพิ่ม skill, เพิ่มสกิล, ปรับ skill, แก้ skill, skill ใหม่, skill authoring, skill contract, skill eval, ทำ skill ให้พร้อม pilot, ออกแบบ skill, ทำเป็น skill, skill หรือ playbook, trigger ของ skill, eval ของ skill, สกิลใหม่, ออกแบบ trigger]
     paths: ["**/skills/**", "**/manifest/**", "**/router-index.yaml", "**/skill-*"]
     fileTypes: [md, yaml, yml, json]
     requires: [skill_need]
@@ -107,7 +107,7 @@ skills:
     wildcardReason: "all teams create general documents that need a pre-send completeness check"
     description: ตรวจเอกสารทั่วไปก่อนส่งด้านความครบถ้วน ความสอดคล้องภายใน placeholder owner/deadline และสิ่งที่เจ้าของงานต้องแก้เอง
     intent: [review, check, summarize]
-    triggers: [ช่วยตรวจเอกสารนี้ก่อนส่ง, ตรวจเอกสารนี้ก่อนส่ง, ตรวจเอกสารก่อนส่ง, เอกสารก่อนส่ง, pre-send review, ตรวจความครบถ้วนเอกสาร, สิ่งที่ฉันต้องแก้เอง, เช็คเอกสาร, ร่างเอกสารทั่วไป, ช่องไหนยังเว้นว่าง]
+    triggers: [ช่วยตรวจเอกสารนี้ก่อนส่ง, ตรวจเอกสารนี้ก่อนส่ง, ตรวจเอกสารก่อนส่ง, เอกสารก่อนส่ง, pre-send review, ตรวจความครบถ้วนเอกสาร, สิ่งที่ฉันต้องแก้เอง, เช็คเอกสาร, ร่างเอกสารทั่วไป, ช่องไหนยังเว้นว่าง, ขาดอะไร, ความครบถ้วนของเอกสาร, อ่านทวน, ตรวจรายงาน, ยังไม่ได้ระบุเจ้าของงาน, ก่อนส่งหัวหน้า]
     paths: ["**/draft/**", "**/documents/**", "**/review/**"]
     fileTypes: [docx, pdf, txt, md, xlsx]
     requires: [target_document]
@@ -238,7 +238,7 @@ skills:
       consumers: [pubsec, tech-up, tech-spin, foodfabr]
     description: วิเคราะห์และดักจับความเสี่ยงล่วงหน้าก่อนเริ่มสัญญาหรือโครงการ จำแนกความเสี่ยงแบบ Tiger, Paper Tiger และ Elephant in the room
     intent: [analyze, review, plan]
-    triggers: [pre-mortem, ความเสี่ยงล่วงหน้า, premortem, tiger paper tiger, elephant in the room, ดักจับความเสี่ยง, จำลองความล้มเหลว, โครงการนี้อาจพัง, โครงการล้มเหลวล่วงหน้า]
+    triggers: [pre-mortem, ความเสี่ยงล่วงหน้า, premortem, tiger paper tiger, elephant in the room, ดักจับความเสี่ยง, จำลองความล้มเหลว, โครงการนี้อาจพัง, โครงการล้มเหลวล่วงหน้า, ถ้าโครงการนี้ล้ม, ถ้าโครงการนี้พัง, จะล้มเพราะ, โอกาสล้ม, ไม่กล้าพูด]
     paths: ["**/risk/**", "**/premortem/**", "**/pre-mortem/**", "**/PM/**"]
     fileTypes: [md, docx, xlsx]
     requires: [project_scope]
@@ -288,7 +288,7 @@ skills:
       consumers: [isi, eic, mi]
     description: โค้ชเป้ารายได้ธุรกิจ 1 ปีโดยเริ่มจากฐานจริง ย้อนยอดขาย ลูกค้า funnel กำลังผลิต คนและเงินสด ก่อนลงแผนรายเดือน
     intent: [plan, calculate, review]
-    triggers: [ตั้งเป้ารายได้ธุรกิจ 1 ปี, ตั้งเป้ารายได้ธุรกิจปีหน้า, ทำเป้ารายได้ธุรกิจปีหน้า, เป้ารายได้ธุรกิจ 1 ปี, เป้ารายได้ปีหน้า, ตั้งเป้าหมายธุรกิจ 1 ปี, เป้าหมายธุรกิจรายปี, แผนรายได้ธุรกิจ 12 เดือน, ต้องขายกี่ชิ้น, ลูกค้าใหม่กี่ราย, ลูกค้ากี่ราย, ต้องขายเพิ่มกี่ชุด, รายได้เพิ่มจาก subscription, แผนรายได้ปีหน้า, ยอดขายปีหน้า, แผนยอดขายทั้งปี, 1-year business goal, annual business revenue goal, re-forecast ยอดขายปี, re-forecast ที่เหลือทั้งปี, ยอดขายไม่ถึงเป้ารายเดือน, ยังไม่รู้เป้ารายได้, ทำแผน 12 เดือนพร้อมคนขาย]
+    triggers: [ตั้งเป้ารายได้ธุรกิจ 1 ปี, ตั้งเป้ารายได้ธุรกิจปีหน้า, ทำเป้ารายได้ธุรกิจปีหน้า, เป้ารายได้ธุรกิจ 1 ปี, เป้ารายได้ปีหน้า, ตั้งเป้าหมายธุรกิจ 1 ปี, เป้าหมายธุรกิจรายปี, แผนรายได้ธุรกิจ 12 เดือน, ต้องขายกี่ชิ้น, ลูกค้าใหม่กี่ราย, ลูกค้ากี่ราย, ต้องขายเพิ่มกี่ชุด, รายได้เพิ่มจาก subscription, แผนรายได้ปีหน้า, ยอดขายปีหน้า, แผนยอดขายทั้งปี, 1-year business goal, annual business revenue goal, re-forecast ยอดขายปี, re-forecast ที่เหลือทั้งปี, ยอดขายไม่ถึงเป้ารายเดือน, ยังไม่รู้เป้ารายได้, ทำแผน 12 เดือนพร้อมคนขาย, เป้ายอดขายทั้งปี, เป้ารายได้, รายได้ปีละ, ขายเดือนละเท่าไหร่, เป้ารายได้ 1 ปี]
     paths: ["**/business-goal/**", "**/sales-forecast/**", "**/growth-plan/**"]
     fileTypes: [md, xlsx, csv, txt]
     requires: [target_or_baseline]
@@ -320,7 +320,7 @@ skills:
       consumers: [imo, pm, pubsec, nmco]
     description: รายงานสถานะโครงการพอร์ตโฟลิโอสำหรับผู้บริหารและบอร์ด ด้วย SBNR Framework และไฟจราจร Traffic-Light
     intent: [summarize, report, review]
-    triggers: [status update, sbnr, traffic light, รายงานผู้บริหาร, สรุปสถานะโครงการ, ไฟจราจร, exec update, รายงานบอร์ด, ส่งผู้บริหาร, รายงานสถานะโครงการ, รายงานผลการดำเนินงานโครงการ]
+    triggers: [status update, sbnr, traffic light, รายงานผู้บริหาร, สรุปสถานะโครงการ, ไฟจราจร, exec update, รายงานบอร์ด, ส่งผู้บริหาร, รายงานสถานะโครงการ, รายงานผลการดำเนินงานโครงการ, สถานะพอร์ต, ความคืบหน้าโครงการ, สรุปสถานะ, เสนอบอร์ด, ส่งผู้อำนวยการ, ให้ผู้อำนวยการ]
     paths: ["**/status/**", "**/executive/**", "**/portfolio/**", "**/SIT/**"]
     fileTypes: [md, xlsx, docx, pdf]
     requires: [project_list, progress_data]
@@ -345,7 +345,7 @@ skills:
       consumers: [qs, imo, piti, crm]
     description: ถ่ายทอดเป้าหมายยุทธศาสตร์ อว./มช. สู่ OKRs รายไตรมาสของทีม พร้อมตัวชี้วัดนำและตัวชี้วัดตาม (North Star & Input Metrics)
     intent: [plan, align, review]
-    triggers: [okr, okrs, north star, เป้าหมายไตรมาส, ตัวชี้วัด อว, key results, ถ่ายทอดยุทธศาสตร์, input metrics, แปลงเป้าหมายองค์กร, เป้าทีมไตรมาส]
+    triggers: [okr, okrs, north star, เป้าหมายไตรมาส, ตัวชี้วัด อว, key results, ถ่ายทอดยุทธศาสตร์, input metrics, แปลงเป้าหมายองค์กร, เป้าทีมไตรมาส, key result, ผลลัพธ์หลัก, ยุทธศาสตร์ อว, ยุทธศาสตร์มหาวิทยาลัย, เป้าทีม, เป้าหมายทีม]
     paths: ["**/okr/**", "**/strategy/**", "**/SIT/**"]
     fileTypes: [md, xlsx, docx]
     requires: [strategic_goals]
@@ -855,7 +855,7 @@ skills:
       consumers: [mi, eic, piti, imo]
     description: กำหนด Creative Direction จาก Intent, Audience, Feeling, Visual Hammer และ Anti-AI-Slop ก่อนส่งต่อไปยัง Skill ผลิตงาน
     intent: [create, review, plan]
-    triggers: [creative direction, design direction, visual hammer, anti-ai-slop, ai slop, งานดู ai, หา visual hammer, ควรไปทางไหนดี, ทิศทางงานออกแบบ, critique direction, art direction ก่อนทำ, ทิศทางภาพรวมงานออกแบบ, concept ภาพ, ภาพให้มีเอกลักษณ์]
+    triggers: [creative direction, design direction, visual hammer, anti-ai-slop, ai slop, งานดู ai, หา visual hammer, ควรไปทางไหนดี, ทิศทางงานออกแบบ, critique direction, art direction ก่อนทำ, ทิศทางภาพรวมงานออกแบบ, concept ภาพ, ภาพให้มีเอกลักษณ์, art director, คุมโทน, ทิศทางภาพรวม, ไม่ดูเหมือน ai, ดูเป็นงาน ai, วางทิศทาง]
     paths: ["**/Creative/**", "**/branding/**", "**/campaign/**", "**/exhibition/**"]
     fileTypes: [pdf, pptx, png, jpg, md]
     requires: [creative_objective, audience]
@@ -882,7 +882,7 @@ skills:
     wildcardReason: "evidence-before-claim discipline applies across all teams"
     description: ตรวจหลักฐานก่อนกล่าวว่างานเสร็จ ถูกต้อง พร้อมส่ง หรือพร้อมอนุมัติ
     intent: [review, check]
-    triggers: [พร้อมส่งไหม, พร้อมส่ง, ก่อนส่งงาน, ก่อนปิดงาน, ตรวจหลักฐานก่อนปิดงาน, evidence check, verification before completion, ยืนยันว่าครบ, พร้อมใช้งานหรือยัง, หลักฐานรองรับครบ, ก่อนบอกว่างานเสร็จ]
+    triggers: [พร้อมส่งไหม, พร้อมส่ง, ก่อนส่งงาน, ก่อนปิดงาน, ตรวจหลักฐานก่อนปิดงาน, evidence check, verification before completion, ยืนยันว่าครบ, พร้อมใช้งานหรือยัง, หลักฐานรองรับครบ, ก่อนบอกว่างานเสร็จ, มีหลักฐานพอ, พร้อมอนุมัติ, เสร็จจริง, แก้แล้วจริง, ว่างานนี้เสร็จ]
     paths: ["**/review/**", "**/final/**", "**/handoff/**"]
     fileTypes: [md, docx, pdf, xlsx, pptx]
     requires: [claim_or_output]
@@ -991,7 +991,7 @@ skills:
       consumers: [isi, eic, mi, tech-spin, tech-up]
     description: ท้าทายสมมติฐาน แยก Fact / Assumption / Decision / Unknown และออกแบบการทดสอบที่ประหยัดที่สุด
     intent: [review, evaluate, plan]
-    triggers: [ท้าทายสมมติฐาน, challenge assumption, stress test idea, grill idea, assumption map, สมมติฐานธุรกิจ, ถามให้ครบก่อนทำ, what are we assuming, critical assumption, คิดไปเอง, เชื่อแต่ยังไม่มีหลักฐาน, ยังไม่ได้พิสูจน์]
+    triggers: [ท้าทายสมมติฐาน, challenge assumption, stress test idea, grill idea, assumption map, สมมติฐานธุรกิจ, ถามให้ครบก่อนทำ, what are we assuming, critical assumption, คิดไปเอง, เชื่อแต่ยังไม่มีหลักฐาน, ยังไม่ได้พิสูจน์, สมมติฐานอะไร, ตั้งอยู่บนสมมติฐาน, ข้อเท็จจริงอะไรเป็นการเดา, เป็นการเดา, จุดอ่อน, ช่วยจับผิด, ทดสอบไอเดีย]
     paths: ["**/startup/**", "**/discovery/**", "**/innovation/**"]
     fileTypes: [md, docx, pdf]
     requires: [idea_or_plan]
@@ -1012,7 +1012,7 @@ skills:
       consumers: [sit, pm, pubsec, nmco, tech-spin]
     description: สร้าง Decision Memo ที่แยกข้อเท็จจริง ทางเลือก Trade-off ความไม่แน่นอน และ Working Recommendation
     intent: [create, review, evaluate, plan]
-    triggers: [decision memo, บันทึกเพื่อการตัดสินใจ, ทางเลือกเพื่อผู้บริหาร, options tradeoffs, option trade-off, ข้อดีข้อเสียเพื่อเลือก, recommendation memo, ต้องตัดสินใจอะไร, เปรียบเทียบทางเลือก, ข้อมูลประกอบการตัดสินใจ]
+    triggers: [decision memo, บันทึกเพื่อการตัดสินใจ, ทางเลือกเพื่อผู้บริหาร, options tradeoffs, option trade-off, ข้อดีข้อเสียเพื่อเลือก, recommendation memo, ต้องตัดสินใจอะไร, เปรียบเทียบทางเลือก, ข้อมูลประกอบการตัดสินใจ, ให้ผู้บริหารตัดสินใจ, ประกอบการตัดสินใจ, trade-off, tradeoff, เปรียบเทียบตัวเลือก, เลือกระหว่าง, ให้หัวหน้าตัดสินใจ, สรุปข้อดีข้อเสียให้ผู้บริหาร]
     paths: ["**/decision/**", "**/portfolio/**", "**/executive/**"]
     fileTypes: [md, docx, pdf, pptx, xlsx]
     requires: [decision_question]
@@ -1037,7 +1037,7 @@ skills:
       consumers: [tech-up, tech-spin, pubsec, mi]
     description: ถอดโจทย์โรงงาน/ชุมชนก่อนเสนอเทคโนโลยี แยกอาการ หลักฐาน กระบวนการ ข้อจำกัด และ Desired Outcome
     intent: [create, review, plan, summarize]
-    triggers: [ถอดโจทย์โรงงาน, โจทย์อุตสาหกรรม, problem discovery, pain point โรงงาน, จับโจทย์อุตสาหกรรม, constraint discovery, industry problem brief, โจทย์ชุมชน, current workaround, โจทย์จากที่คุยกับโรงงาน, ปัญหาหน้างานโรงงาน]
+    triggers: [ถอดโจทย์โรงงาน, โจทย์อุตสาหกรรม, problem discovery, pain point โรงงาน, จับโจทย์อุตสาหกรรม, constraint discovery, industry problem brief, โจทย์ชุมชน, current workaround, โจทย์จากที่คุยกับโรงงาน, ปัญหาหน้างานโรงงาน, ปัญหาจริงของผู้ประกอบการ, ปัญหาจริงคืออะไร, แยกอาการกับต้นเหตุ, ไลน์ผลิต, ผลผลิตเสีย, ของเสียเยอะ, ถอดปัญหา, วิสาหกิจชุมชน]
     paths: ["**/LINC/**", "**/Industry/**", "**/Local/**", "**/discovery/**"]
     fileTypes: [md, docx, pdf, xlsx]
     requires: [reported_problem]
@@ -1059,7 +1059,7 @@ skills:
       consumers: [tech-up, tech-spin, les, foodfabr, piti, crm, mi, pubsec]
     description: จับคู่โจทย์ที่ชัดแล้วกับบริการ ผู้เชี่ยวชาญ Lab เครื่องมือ หรือ Pilot Plant จาก Service Registry/NSP/NSTIS โดยให้เจ้าของบริการยืนยันก่อนส่งต่อจริง
     intent: [search, recommend, plan]
-    triggers: [หา expert, หาอาจารย์, หานักวิจัย, ผู้เชี่ยวชาญ, expert matching, resource matching, หา lab, หาแล็บ, ห้องปฏิบัติการที่เหมาะ, หาเครื่องมือ, หาเครื่อง, มีเครื่อง, เครื่องมืออะไรบ้าง, รายการเครื่องมือ, scientific equipment, pilot plant, โรงงานต้นแบบ, freeze dryer, spray dryer, HPLC, GC-MS, AFM, เครื่องพลาสมา, 3D printer, laser cutter, NSTIS, หาคนช่วยแก้ปัญหาโรงงาน, ต้องใช้อาจารย์ด้านไหน]
+    triggers: [หา expert, หาอาจารย์, หานักวิจัย, ผู้เชี่ยวชาญ, expert matching, resource matching, หา lab, หาแล็บ, ห้องปฏิบัติการที่เหมาะ, หาเครื่องมือ, หาเครื่อง, มีเครื่อง, เครื่องมืออะไรบ้าง, รายการเครื่องมือ, scientific equipment, pilot plant, โรงงานต้นแบบ, freeze dryer, spray dryer, HPLC, GC-MS, AFM, เครื่องพลาสมา, 3D printer, laser cutter, NSTIS, หาคนช่วยแก้ปัญหาโรงงาน, ต้องใช้อาจารย์ด้านไหน, แล็บไหน, ใครในมหาวิทยาลัย, ทำวิจัยเรื่อง, นักวิจัยด้าน, วิเคราะห์สาร, ทดสอบสาร]
     paths: ["**/LINC/**", "**/Industry/**", "**/Expert/**", "**/Resource/**", "**/Lab/**"]
     fileTypes: [md, docx, pdf, xlsx, csv]
     requires: [problem_or_capability_need]
@@ -1080,7 +1080,7 @@ skills:
       consumers: [piti, isi, eic, tech-spin, linc, crm, cc]
     description: สแกนสัญญาณตลาดล่าสุดจากหลายแหล่ง แยก Trend, Anecdote, Competitor Signal และระดับความแข็งแรงของ evidence
     intent: [market-test, review, plan, competitor-comparison]
-    triggers: [สัญญาณตลาด, market signal, trend ล่าสุด, เทรนด์ล่าสุด, กระแสตลาด, social listening, recent market, คู่แข่งล่าสุด, เทียบคู่แข่ง, เปรียบเทียบคู่แข่ง, competitor comparison, trend radar, ตลาดพูดถึงอะไร, ทดสอบตลาด, ทดลองตลาด, ขายได้ไหม, สินค้าจะขายได้ไหม, market test]
+    triggers: [สัญญาณตลาด, market signal, trend ล่าสุด, เทรนด์ล่าสุด, กระแสตลาด, social listening, recent market, คู่แข่งล่าสุด, เทียบคู่แข่ง, เปรียบเทียบคู่แข่ง, competitor comparison, trend radar, ตลาดพูดถึงอะไร, ทดสอบตลาด, ทดลองตลาด, ขายได้ไหม, สินค้าจะขายได้ไหม, market test, เทรนด์ตลาด, เทรนด์, ความเคลื่อนไหวคู่แข่ง, คู่แข่งในตลาด, ตลาดตอนนี้, สถานการณ์ตลาด, สแกนตลาด]
     paths: ["**/MI/**", "**/Market/**", "**/research/**", "**/insight/**"]
     fileTypes: [md, docx, xlsx, csv]
     requires: [market_question]
@@ -1101,7 +1101,7 @@ skills:
       consumers: [mi, ifu, les, foodfabr, cc, piti]
     description: สังเคราะห์ Survey, Complaint, Inquiry และ Feedback เป็น Pain, Need, Expectation และ Opportunity โดยระวัง sample bias/PII
     intent: [summarize, review, customer-feedback-synthesis]
-    triggers: [voice of customer, voc, เสียงลูกค้า, จัดกลุ่ม feedback, customer feedback, complaint themes, คำร้องเรียนลูกค้า, survey feedback, customer pain, ความเห็นลูกค้า, ลูกค้าบ่น, จัดกลุ่มความเห็นลูกค้า]
+    triggers: [voice of customer, voc, เสียงลูกค้า, จัดกลุ่ม feedback, customer feedback, complaint themes, คำร้องเรียนลูกค้า, survey feedback, customer pain, ความเห็นลูกค้า, ลูกค้าบ่น, จัดกลุ่มความเห็นลูกค้า, แบบสอบถามความพึงพอใจ, ผลแบบสอบถาม, ผลสำรวจ, ความพึงพอใจ, ข้อร้องเรียนลูกค้า, ลูกค้าต้องการอะไร, ลูกค้าติ, ความเห็นผู้เข้า, แบบประเมินหลัง, สังเคราะห์ความเห็น]
     paths: ["**/CRM/**", "**/Customer/**", "**/survey/**", "**/feedback/**"]
     fileTypes: [xlsx, csv, md, docx, txt]
     requires: [customer_feedback]
@@ -1151,7 +1151,7 @@ skills:
       consumers: []
     description: เตรียม External/Internal Audit ISO 9001 แบบ process-based สำหรับทีมและทั้งองค์กร
     intent: [review, plan, evaluate]
-    triggers: [external audit iso 9001, เตรียม external audit, เตรียม audit iso, เตรียมเอกสาร audit iso, เตรียมเอกสารสำหรับ audit iso, เอกสาร audit iso, เอกสารสำหรับ audit iso, audit iso, iso audit, iso 9001 audit, surveillance audit, recertification audit, audit readiness, ทีมพร้อม audit, เตรียม iso]
+    triggers: [external audit iso 9001, เตรียม external audit, เตรียม audit iso, เตรียมเอกสาร audit iso, เตรียมเอกสารสำหรับ audit iso, เอกสาร audit iso, เอกสารสำหรับ audit iso, audit iso, iso audit, iso 9001 audit, surveillance audit, recertification audit, audit readiness, ทีมพร้อม audit, เตรียม iso, ผู้ตรวจ iso, ตรวจ iso, internal audit, external audit, ตรวจระบบคุณภาพ, รับการตรวจ, เตรียมรับ audit]
     paths: ["**/ISO/**", "**/Audit/**", "**/Quality/**"]
     fileTypes: [md, docx, pdf, xlsx]
     requires: [audit_scope_or_plan]
@@ -1175,7 +1175,7 @@ skills:
       consumers: []
     description: ทำ Evidence Matrix/PBC list เชื่อม requirement กับหลักฐาน period source owner และ gap
     intent: [create, review, summarize]
-    triggers: [audit evidence matrix, evidence matrix, pbc list, รายการหลักฐาน audit, หลักฐาน audit อยู่ไหน, audit evidence, evidence request, หลักฐาน iso, ผู้ตรวจจะขอหลักฐาน, รายการหลักฐานให้ผู้ตรวจ]
+    triggers: [audit evidence matrix, evidence matrix, pbc list, รายการหลักฐาน audit, หลักฐาน audit อยู่ไหน, audit evidence, evidence request, หลักฐาน iso, ผู้ตรวจจะขอหลักฐาน, รายการหลักฐานให้ผู้ตรวจ, ข้อกำหนดกับหลักฐาน, หลักฐานที่ต้องเตรียม, หลักฐานข้อไหน, หลักฐานให้ผู้ตรวจ]
     paths: ["**/Audit/**", "**/Evidence/**", "**/ISO/**"]
     fileTypes: [xlsx, csv, md, docx, pdf]
     requires: [audit_scope_or_evidence_request]
@@ -1198,7 +1198,7 @@ skills:
       consumers: []
     description: ตรวจ Controlled Document และ Record เรื่อง owner revision approval current/obsolete retention และ traceability
     intent: [review, check]
-    triggers: [document control, record control, ควบคุมเอกสาร, ควบคุมบันทึก, master document list, master list, obsolete document, revision control, retention, เอกสารล้าสมัย, เอกสารในระบบคุณภาพ, ทะเบียนเอกสาร, ฉบับไหนเลิกใช้]
+    triggers: [document control, record control, ควบคุมเอกสาร, ควบคุมบันทึก, master document list, master list, obsolete document, revision control, retention, เอกสารล้าสมัย, เอกสารในระบบคุณภาพ, ทะเบียนเอกสาร, ฉบับไหนเลิกใช้, revision, ฉบับปัจจุบัน, ฉบับเก่า, ฉบับล่าสุด, ยกเลิกแล้ว, บันทึกคุณภาพ, การควบคุมเอกสาร]
     paths: ["**/ISO/**", "**/SOP/**", "**/records/**", "**/documents/**"]
     fileTypes: [docx, pdf, xlsx, md]
     requires: [document_or_record]
@@ -1225,7 +1225,7 @@ skills:
       consumers: []
     description: ซ้อม Auditor Interview ให้พนักงานอธิบาย process จริงและเปิด evidence ได้โดยไม่แต่งคำตอบ
     intent: [review, interview]
-    triggers: [mock audit interview, audit interview, ซ้อม audit, ซ้อมตอบ auditor, ซ้อมสัมภาษณ์ audit, auditor interview, interview coach, mock audit, ซ้อมตอบผู้ตรวจ, ซ้อมสัมภาษณ์ตอนตรวจระบบคุณภาพ, สัมภาษณ์ตรวจ, สัมภาษณ์ตรวจ iso, ตอบผู้ตรวจ]
+    triggers: [mock audit interview, audit interview, ซ้อม audit, ซ้อมตอบ auditor, ซ้อมสัมภาษณ์ audit, auditor interview, interview coach, mock audit, ซ้อมตอบผู้ตรวจ, ซ้อมสัมภาษณ์ตอนตรวจระบบคุณภาพ, สัมภาษณ์ตรวจ, สัมภาษณ์ตรวจ iso, ตอบผู้ตรวจ, ผู้ตรวจจะถาม, ตอบคำถามผู้ตรวจ, ซ้อมตอบคำถามผู้ตรวจ, auditor ถาม, อธิบายขั้นตอนงานให้ auditor, จำลองการสัมภาษณ์ audit, ผู้ตรวจ iso สัมภาษณ์, ตอบตอนผู้ตรวจ]
     paths: ["**/Audit/**", "**/ISO/**", "**/Training/**"]
     fileTypes: [md, docx, pdf]
     requires: [team_or_process_context]
@@ -1272,7 +1272,7 @@ skills:
       consumers: []
     description: ทบทวน QMS Risks/Opportunities ของ process และ evidence ของ current controls/actions
     intent: [review, evaluate]
-    triggers: [qms risk opportunity, risk opportunity iso, risk and opportunity, ความเสี่ยงและโอกาส qms, qms risk, risk register iso, ทบทวนความเสี่ยง iso, โอกาสปรับปรุง qms, ความเสี่ยงของระบบคุณภาพ, ความเสี่ยงระบบคุณภาพ, ความเสี่ยงของกระบวนการ, ประเมินความเสี่ยงกระบวนการ]
+    triggers: [qms risk opportunity, risk opportunity iso, risk and opportunity, ความเสี่ยงและโอกาส qms, qms risk, risk register iso, ทบทวนความเสี่ยง iso, โอกาสปรับปรุง qms, ความเสี่ยงของระบบคุณภาพ, ความเสี่ยงระบบคุณภาพ, ความเสี่ยงของกระบวนการ, ประเมินความเสี่ยงกระบวนการ, ความเสี่ยงและโอกาส, risk register, การควบคุมความเสี่ยง, ทะเบียนความเสี่ยง]
     paths: ["**/Risk/**", "**/ISO/**", "**/Quality/**"]
     fileTypes: [xlsx, md, docx]
     requires: [process_or_qms_context]
@@ -1299,7 +1299,7 @@ skills:
       consumers: []
     description: ทบทวน Quality Objective/KPI ให้ measurable, traceable และเชื่อม result กับ action
     intent: [review, evaluate, report]
-    triggers: [quality objective kpi, quality objective, kpi iso, ตัวชี้วัดคุณภาพ, ทบทวน kpi iso, เป้าหมายคุณภาพ, objective measurable, quality metrics, เป้าด้านคุณภาพ, รายงานผล kpi, รายงาน kpi, ผล kpi, kpi ประจำเดือน, kpi ประจำไตรมาส, รีวิว kpi, ทบทวน kpi]
+    triggers: [quality objective kpi, quality objective, kpi iso, ตัวชี้วัดคุณภาพ, ทบทวน kpi iso, เป้าหมายคุณภาพ, objective measurable, quality metrics, เป้าด้านคุณภาพ, รายงานผล kpi, รายงาน kpi, ผล kpi, kpi ประจำเดือน, kpi ประจำไตรมาส, รีวิว kpi, ทบทวน kpi, kpi, ตัวชี้วัดนี้, วัดผลได้จริง, วัดได้จริง, ไม่ถึงเป้า]
     paths: ["**/KPI/**", "**/Quality/**", "**/ISO/**"]
     fileTypes: [xlsx, csv, md, docx, pptx]
     requires: [objective_or_kpi]
@@ -1326,7 +1326,7 @@ skills:
       consumers: []
     description: เตรียม Management Review Pack จาก KPI, customer feedback, audit, CAPA, risk, resources และ prior actions
     intent: [create, summarize, review]
-    triggers: [management review iso, management review, ทบทวนฝ่ายบริหาร, เตรียม management review, qmr meeting, ประชุม qmr, management review pack, input management review, ผู้บริหารทบทวนระบบคุณภาพ]
+    triggers: [management review iso, management review, ทบทวนฝ่ายบริหาร, เตรียม management review, qmr meeting, ประชุม qmr, management review pack, input management review, ผู้บริหารทบทวนระบบคุณภาพ, ประชุม mr]
     paths: ["**/ManagementReview/**", "**/ISO/**", "**/Quality/**", "**/QMR/**"]
     fileTypes: [pptx, xlsx, md, docx, pdf]
     requires: [management_review_period]
@@ -1373,7 +1373,7 @@ skills:
       consumers: [cc, afp, imo, sit, mi, piti]
     description: สร้างไฟล์ Excel อ่านและแก้เซลล์ workbook หรือทบทวนสูตร โดยไม่วางแผนโครงการหรืออนุมัติงบแทนเจ้าของ
     intent: [create, review, check, spreadsheet-edit]
-    triggers: [สร้างไฟล์ Excel, แก้ไฟล์ Excel, อ่านไฟล์ Excel, ตรวจสูตร Excel, แก้เซลล์ Excel, create xlsx, edit workbook, review spreadsheet formulas]
+    triggers: [สร้างไฟล์ Excel, แก้ไฟล์ Excel, อ่านไฟล์ Excel, ตรวจสูตร Excel, แก้เซลล์ Excel, create xlsx, edit workbook, review spreadsheet formulas, ตาราง Excel, xlsx, workbook, spreadsheet, สูตรใน]
     paths: ["**/spreadsheets/**"]
     fileTypes: [xlsx]
     requires: [source_table_or_workbook]
