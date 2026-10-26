@@ -47,6 +47,8 @@ _Last updated: 2026-10-26_
 
 ## In progress
 
+- **event-concept routing for "Big idea" phrasings (2026-10-26)**: router-index triggers (big idea, บิ๊กไอเดีย, ไอเดียหลักของงาน, key idea, signature moment, ธีมงาน…) and create-intent ideation verbs (คิดไอเดีย, ขอไอเดีย, คิดธีม, brainstorm) added, with regressions in `test/cc-staff-routing.test.js`. Event names (Innovation Day, Open House, Demo Day) are deliberately not triggers: they collided with designer-brief and event-run-of-show. Left: the very short "ออกแบบ signature moment ของงาน" still asks once, with event-concept as option 1. Waits on owner review and merge.
+
 - **บันทึกข้อความจากคู่มือการเขียนหนังสือราชการเบื้องต้น (2026-10-25, owner supplied a university staff manual)**: extends `saraban-writing-guide.md` with these items:
   - หนังสือภายใน vs บันทึก
   - wording by recipient rank and sender–recipient direction
