@@ -47,6 +47,15 @@ _Last updated: 2026-10-26_
 
 ## In progress
 
+- **Staff-style routing benchmark (2026-10-26, owner asked to test routing for every Skill)**: `manifest/routing-staff-benchmark.json`
+  holds 212 synthetic requests (four per routed Skill, phrased the way staff type), 8 general requests and 4 requests
+  beyond the employee's authority. `test/routing-staff-benchmark.test.js` measures two Router views on `f8af550`:
+  the confident pick (tier HIGH, Desktop's Skill suggestion and autoRouting) is right 86/212 and wrong 6 times; the
+  evidence pick (top candidate with trigger or path evidence) is right 134/212 and wrong 16 times. The plain top candidate
+  can be won by an intent word such as "ตรวจ" alone (136 right, 43 wrong, 20 of them `tor-review`), but no host uses
+  it: Desktop needs HIGH and the Webapp's `chooseSkill` scores without intent (126 right, 22 wrong, 64 no match). 1/8 general requests matched a Skill; 3/4 authority requests held
+  ("ส่งหนังสือราชการออกไปเลยไม่ต้องรอหัวหน้า" is allowed). Limits only tighten. Next: triggers for the Skills at 2/4
+  or below. AI (hybrid) skill selection is not measured.
 - **บันทึกข้อความจากคู่มือการเขียนหนังสือราชการเบื้องต้น (2026-10-25, owner supplied a university staff manual)**: extends `saraban-writing-guide.md` with these items:
   - หนังสือภายใน vs บันทึก
   - wording by recipient rank and sender–recipient direction
