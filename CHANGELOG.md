@@ -6,6 +6,11 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.6.22 (2026-10-27)
+
+- Add a general document drafting tool and bounded Google reads with explicit coverage for pagination and unread content, retaining account-scoped consent and write approval.
+- Stabilize the native Google services policy-watcher smoke by allowing the watcher to observe its fixture; production policy behavior is unchanged.
+
 - Add an AFP disbursement-voucher working draft alongside FM-AF-014, with explicit checked-data reuse, source-change review, evidenced deductions and net totals, blank signature areas, editable Word and inclusion in the indexed PDF packet. Unknown deductions remain pending, and no tax rate, controlled form number or payment approval is inferred.
 
 - คำถามวันลาที่พนักงานพิมพ์ว่า "ลางาน" เช่น "ปีหน้าลางานได้กี่วัน" ค้นเจอประกาศงานบุคคล 2569 แล้ว (เดิมการค้นเอกสารไม่เจอ Webapp จึงตอบว่ายังไม่พบข้อมูล) เพิ่มคำค้น `ลางาน` ในทะเบียนเอกสารและ test คำถามวันลาแบบที่พนักงานพิมพ์
