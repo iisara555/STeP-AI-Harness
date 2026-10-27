@@ -24,6 +24,15 @@ test('team-duty questions retrieve the role description instead of form register
   }
 });
 
+// Staff say "ลางาน" rather than the document's "การลา"; a time word such as "ปีหน้า" must not hide the topic.
+test('everyday leave questions retrieve the personnel rules', async () => {
+  const knowledge = registered();
+  for (const q of ['ปีหน้าลางานได้กี่วัน', 'ลางานได้กี่วัน', 'ปีนี้ลางานได้กี่วัน']) {
+    const found = await knowledge.search(q);
+    assert.equal(found[0]?.id, 'hr-personnel-welfare-2569', q);
+  }
+});
+
 test('a shared province name does not make unrelated public questions organization knowledge', async () => {
   const knowledge = registered();
   for (const q of ['แนะนำร้านกาแฟในเชียงใหม่', 'แนะนำร้านอาหารในเชียงใหม่', 'ร้านกาแฟเชียงใหม่เปิดกี่โมง']) {
