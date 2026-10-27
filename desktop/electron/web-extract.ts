@@ -2,7 +2,7 @@ import { DOMParser } from '@xmldom/xmldom';
 import { publicUrl } from './web-fetch';
 
 /** Inert, bounded HTML extraction. Page content is evidence, never instructions or executable code. */
-export function extractWeb(html: string, source: string) {
+export function extractWeb(html: string, source: string, options: { preserveDocumentContent?: boolean } = {}) {
   if (html.length > 2_000_000) throw new Error('TOOL_OUTPUT_LIMIT');
   if (/<!ENTITY\b|<!DOCTYPE[^>]*\[/i.test(html)) throw new Error('WEB_EXTRACT_INVALID');
   // Bound depth before xmldom's recursive traversal, including deliberately malformed HTML.
@@ -38,18 +38,21 @@ export function extractWeb(html: string, source: string) {
   );
   const elements = Array.from(doc.getElementsByTagName('*'));
   if (elements.length > 50000) throw new Error('TOOL_OUTPUT_LIMIT');
-  for (const el of elements)
-    if (['nav', 'footer', 'header', 'script', 'style', 'noscript', 'iframe', 'svg', 'template'].includes(el.tagName.toLowerCase()))
-      el.parentNode?.removeChild(el);
-  const root =
-    doc.getElementsByTagName('main')[0] ||
-    doc.getElementsByTagName('article')[0] ||
-    doc.getElementsByTagName('body')[0] ||
-    doc.documentElement;
+  const excluded = options.preserveDocumentContent
+    ? ['script', 'style', 'noscript', 'iframe', 'svg', 'template']
+    : ['nav', 'footer', 'header', 'script', 'style', 'noscript', 'iframe', 'svg', 'template'];
+  for (const el of elements) if (excluded.includes(el.tagName.toLowerCase())) el.parentNode?.removeChild(el);
+  const root = options.preserveDocumentContent
+    ? doc.getElementsByTagName('body')[0] || doc.documentElement
+    : doc.getElementsByTagName('main')[0] ||
+      doc.getElementsByTagName('article')[0] ||
+      doc.getElementsByTagName('body')[0] ||
+      doc.documentElement;
   if (!root) throw new Error('WEB_EXTRACT_INVALID');
   const clean = (text: string | null) => (text || '').replace(/\s+/g, ' ').trim();
   for (const el of Array.from(root.getElementsByTagName('*')))
     if (/^(p|div|section|article|h[1-6]|li|tr|br)$/i.test(el.tagName)) el.appendChild(doc.createTextNode('\n'));
+    else if (options.preserveDocumentContent && /^(td|th)$/i.test(el.tagName)) el.appendChild(doc.createTextNode(' '));
   const full = (root.textContent || '')
     .replace(/[^\S\r\n]+/g, ' ')
     .replace(/ *\r?\n */g, '\n')

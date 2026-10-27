@@ -250,6 +250,59 @@ test('thread/draft and attachment reads decode before privacy review and remove 
   }
 });
 
+test('native read results retain child-tab text, mark partial messages and link Sheets ranges', async () => {
+  const f = fixture();
+  try {
+    await f.google.connect(['docs', 'sheets', 'gmail-read'], context);
+    const id = f.google.state().accounts[0].id;
+    const doc = {
+      documentId: 'synthetic-doc',
+      title: 'Synthetic document',
+      revisionId: 'revision-7',
+      tabs: [
+        {
+          documentTab: { body: { content: [{ paragraph: { elements: [{ textRun: { content: 'SYNTHETIC FIRST TAB' } }] } }] } },
+          childTabs: [
+            { documentTab: { body: { content: [{ paragraph: { elements: [{ textRun: { content: 'SYNTHETIC SECOND TAB' } }] } }] } } },
+          ],
+        },
+      ],
+    };
+    f.respond(async url => {
+      assert.equal(new URL(url).searchParams.get('includeTabsContent'), 'true');
+      return json(doc);
+    });
+    const result = await f.google.execute(id, { operation: 'docs.get', params: { documentId: doc.documentId } }, context);
+    assert.deepEqual(result.data, doc);
+    assert.equal(result.readCoverage?.tabsRead, 2);
+    assert.equal(result.readCoverage?.complete, true);
+    f.respond(async () => json({ range: 'Sheet1!A1:B2', values: [['00123', '1200.50']] }));
+    const sheet = await f.google.execute(
+      id,
+      { operation: 'sheets.values.get', params: { spreadsheetId: 'synthetic-sheet', range: 'Sheet1!A1:B2' } },
+      context,
+    );
+    assert.equal(sheet.resourceUrl, 'https://docs.google.com/spreadsheets/d/synthetic-sheet/edit');
+    assert.equal(sheet.data.values[0][0], '00123');
+    f.respond(async () =>
+      json({
+        id: 'synthetic-thread',
+        messages: Array.from({ length: 51 }, (_, n) => ({
+          id: String(n),
+          payload: { mimeType: 'text/plain', body: { data: Buffer.from('synthetic-access').toString('base64url') } },
+        })),
+      }),
+    );
+    const thread = await f.google.execute(id, { operation: 'gmail.threads.get', params: { threadId: 'synthetic-thread' } }, context);
+    assert.equal(thread.data.messages.length, 50);
+    assert.equal(thread.data.totalMessages, 51);
+    assert.ok(thread.readCoverage?.reasons.includes('MESSAGES_TRUNCATED'));
+    assert.doesNotMatch(JSON.stringify(thread), /synthetic-access/);
+  } finally {
+    f.clean();
+  }
+});
+
 test('Apps Script edits preserve unmodified files and reject changes since the reviewed content hash', async () => {
   const f = fixture();
   try {

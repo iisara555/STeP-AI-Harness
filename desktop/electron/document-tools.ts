@@ -73,6 +73,9 @@ export function documentToolRule(id: unknown, agencyTemplate = false) {
         'Use the project-plan proposal workflow: rationale, objectives, target, activities, timeline, source-backed budget, indicators and expected outcomes. Follow the agency DOCX outline when supplied; otherwise use project-proposal-template. Do not substitute a WBS/Gantt-only operational plan.',
       p.id === 'minutes' &&
         'First classify source notes as Decision/Action/Information/Proposal/Open Issue/Risk using meeting-summary. Then organize the minutes by agenda using thai-official-documents; preserve undecided proposals and missing owners/due dates.',
+      p.id === 'other' &&
+        "Choose the outline for the selected document type from other-document-draft and the current agency sources. Do not force memo, letter or TOR headings on every document. A certificate can state only supplied source facts; an order or announcement must leave unsupported authority, effective dates and signatures pending. Agreement terms are proposals for the responsible reviewer, never executed commitments or legal certification; do not invent parties, rates, penalties or authority. For a custom type, follow the owner's named format and flag any unresolved classification in document_review. Keep the document editable and the review separate.",
+      'Google Workspace links or IDs in a source field are pointers, not evidence of their content. Read the relevant resource with the approved google_workspace tool before citing facts from it. Inspect readCoverage and contentUnavailable/contentTruncated, follow result pages when needed and disclose unread parts; never turn an incomplete search into a claim that no record exists. If access or tools are unavailable, draft from the supplied facts and list the unread source and next step in document_review. Do not claim to have opened a URL merely because it appears in the form.',
     ]
       .filter(Boolean)
       .join('\n') +

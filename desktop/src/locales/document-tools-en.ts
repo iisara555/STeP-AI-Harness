@@ -1,4 +1,32 @@
 export const documentToolsEn: Record<string, string> = {
+  ร่างเอกสารอื่น: 'Draft another document',
+  'ประกาศ คำสั่ง หนังสือรับรอง รายงาน ข้อตกลง หรือระบุแบบที่ต้องการ':
+    'Announcements, orders, certificates, reports, draft agreements or your own format',
+  'เลือกประเภทงานให้ตรงต้นเรื่อง หากไม่มีแบบหน่วยงานจะใช้โครงร่าง TOR และแยกข้อมูลที่ต้องยืนยัน':
+    'Choose the procurement type. Without an agency form, use a working TOR outline and list facts that need confirmation.',
+  'ระบุประเภทและผลลัพธ์ที่ต้องการ แนบต้นเรื่องได้ ส่งออกเป็น Word/PDF แล้วให้เจ้าของเรื่องตรวจ ก่อนออกเลขหรือลงนาม':
+    'Describe the document and outcome, and attach source material. Export to Word/PDF for owner review before numbering or signing.',
+  งานก่อสร้าง: 'Construction',
+  งานจ้างที่ปรึกษา: 'Consulting',
+  งานจ้างออกแบบ: 'Design services',
+  งานจ้างควบคุมงาน: 'Construction supervision',
+  'ซื้อคอมพิวเตอร์ / ระบบ': 'Computer / system procurement',
+  รายงาน: 'Report',
+  ประกาศ: 'Announcement',
+  คำสั่งหน่วยงาน: 'Official order',
+  หนังสือรับรอง: 'Certificate',
+  'ข้อตกลง / สัญญาฉบับร่าง': 'Draft agreement / contract',
+  ระบุประเภทเอง: 'Custom document type',
+  ประเภทหรือชื่อแบบที่ต้องการ: 'Document type or form name',
+  'กรอกเมื่อเลือก “ระบุประเภทเอง” เช่น รายงานสรุปผลหรือแบบเสนองาน':
+    'For a custom type, name the document, such as a results report or work proposal.',
+  'เอกสารนี้ใช้ทำอะไร / ใครเป็นผู้อ่าน': 'Purpose / audience',
+  ข้อเท็จจริงที่ยืนยันแล้ว: 'Confirmed facts',
+  'ระบุชื่อ วันที่ ตัวเลข และเงื่อนไขจากต้นเรื่อง ไม่ใช้ข้อมูลตัวอย่างแทนข้อมูลจริง':
+    'Use names, dates, figures and terms from the source. Sample data is not evidence for this task.',
+  สาระที่ต้องการให้ร่าง: 'Content to draft',
+  'หัวข้อ / รูปแบบ / ข้อจำกัดที่ต้องใช้': 'Required sections / format / constraints',
+  'แบบหน่วยงาน / ระเบียบ / แหล่งอ้างอิง': 'Agency form / regulations / references',
   'เว้นช่องเนื้อหาได้ AI จะช่วยขึ้นร่างจากต้นเรื่อง ส่วนข้อเท็จจริงและเงื่อนไขที่ต้องมีหลักฐานจะคงรอยืนยัน':
     'Leave prose fields blank for an AI first draft from your context. Facts and evidence-dependent conditions stay pending.',
   'เว้นได้ AI ช่วยเสนอร่างให้พิจารณา': 'Optional: AI can propose wording for your review',

@@ -147,8 +147,8 @@ test('a manually wrapped memo date is not moved to a generated reference tab', a
   assert.ok(doc.text(reference).includes(' วันที่ [รอยืนยัน]'));
 });
 
-test('five document profiles export native editable content with their selected font and live page numbers', async () => {
-  for (const documentTool of ['tor', 'memo', 'letter', 'project', 'minutes']) {
+test('all document profiles export native editable content with their selected font and live page numbers', async () => {
+  for (const documentTool of ['tor', 'memo', 'letter', 'project', 'minutes', 'other']) {
     const doc = await word(
       '# ร่างสังเคราะห์\n\n## ๑. หัวข้อ\n\nรหัส **00123**\n\n[รอยืนยัน: งบประมาณ]\n\n| รายการ | สถานะ |\n|---|---|\n| ทดสอบ | รอยืนยัน |',
       { documentTool },

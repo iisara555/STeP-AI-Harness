@@ -1,4 +1,5 @@
 import { googleExact, googleId, googleText } from './google-validation';
+import { extractWeb } from './web-extract';
 
 export function googleMailMessage(body: Record<string, any>) {
   googleExact(body, ['to', 'cc', 'bcc', 'subject', 'text', 'threadId', 'inReplyTo']);
@@ -51,12 +52,19 @@ export function googleMailMessage(body: Record<string, any>) {
 /** Decode content before the existing privacy scan; raw MIME and attachment base64 never reach the model. */
 export function googleMailContent(message: any) {
   const parts: string[] = [],
+    htmlParts: string[] = [],
     attachments: object[] = [];
   let visited = 0,
-    undecodable = false;
+    undecodable = false,
+    truncated = false;
   const extract = (part: any, depth = 0) => {
-    if (!part || depth > 10 || ++visited > 50) return;
-    if (part.mimeType === 'text/plain' && typeof part.body?.data === 'string') {
+    if (!part) return;
+    if (depth > 10 || visited >= 50) {
+      truncated = true;
+      return;
+    }
+    visited++;
+    if (['text/plain', 'text/html'].includes(part.mimeType) && typeof part.body?.data === 'string' && !part.filename) {
       try {
         const encoded = part.body.data;
         if (!/^[A-Za-z0-9_-]*={0,2}$/.test(encoded)) throw new Error();
@@ -71,12 +79,12 @@ export function googleMailContent(message: any) {
         if (!encoding || encoding.length > 100) throw new Error();
         const text = new TextDecoder(encoding, { fatal: true }).decode(bytes);
         if (text.includes('\0')) throw new Error();
-        parts.push(text);
+        (part.mimeType === 'text/html' ? htmlParts : parts).push(text);
       } catch {
         undecodable = true;
       }
     }
-    if (typeof part.body?.attachmentId === 'string')
+    if (typeof part.body?.attachmentId === 'string' || (typeof part.filename === 'string' && part.filename.trim()))
       attachments.push({
         attachmentId: part.body.attachmentId,
         filename: String(part.filename || '').slice(0, 300),
@@ -86,11 +94,30 @@ export function googleMailContent(message: any) {
     if (Array.isArray(part.parts)) for (const child of part.parts) extract(child, depth + 1);
   };
   extract(message.payload);
+  let htmlFallback = false,
+    inlineImagesNotRead = htmlParts.some(html => /<(?:img|svg|object)\b/i.test(html));
+  if (!parts.some(part => part.trim()) && htmlParts.length) {
+    try {
+      const html = htmlParts.join('\n');
+      const extracted = extractWeb(html, 'https://mail.google.com/', { preserveDocumentContent: true });
+      parts.length = 0;
+      if (extracted.text) parts.push(extracted.text);
+      if (extracted.truncated) truncated = true;
+      htmlFallback = true;
+    } catch {
+      undecodable = true;
+    }
+  }
+  const text = parts.join('\n');
+  if (text.length > 80000) truncated = true;
   return {
     id: message.id,
     threadId: message.threadId,
     labelIds: message.labelIds,
-    text: parts.join('\n').slice(0, 80000),
+    text: text.slice(0, 80000),
+    ...(truncated ? { contentTruncated: true } : {}),
+    ...(htmlFallback ? { contentFormat: 'html-text' } : {}),
+    ...(inlineImagesNotRead ? { inlineImagesNotRead: true } : {}),
     headers: Array.isArray(message.payload?.headers)
       ? message.payload.headers
           .filter((h: any) =>
@@ -100,9 +127,9 @@ export function googleMailContent(message: any) {
       : [],
     ...(attachments.length ? { attachments } : {}),
     ...(undecodable
-      ? { contentUnavailable: 'Some plain-text content could not be decoded; open Gmail to inspect the complete message.' }
-      : parts.length
+      ? { contentUnavailable: 'Some message content could not be decoded; open Gmail to inspect the complete message.' }
+      : text.trim()
         ? {}
-        : { contentUnavailable: 'No plain-text body available; open Gmail to inspect HTML/attachments.' }),
+        : { contentUnavailable: 'No readable text body available; open Gmail to inspect the message and attachments.' }),
   };
 }
