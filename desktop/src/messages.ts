@@ -4,6 +4,21 @@ import { formatLocalDate, formatLocalMonth } from './thai-date';
 import { credentialErrorsTh } from './credential-copy';
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = localized({
+  PACKET_CONFLICT: 'ชุดนี้มีข้อมูลใหม่ที่บันทึกแล้ว โปรดโหลดชุดล่าสุดก่อนแก้ต่อ',
+  PACKET_NOT_FOUND: 'ไม่พบชุดเอกสารนี้ โปรดเลือกชุดงานใหม่',
+  PACKET_SOURCE_NOT_FOUND: 'ไม่พบหลักฐานนี้ในชุดงาน โปรดโหลดชุดล่าสุด',
+  PACKET_SOURCE_CHANGED: 'สำเนาหลักฐานในเครื่องเปลี่ยนไป โปรดเอาออกจากชุดและเลือกต้นฉบับใหม่',
+  PACKET_SOURCE_OPEN_FAILED: 'เปิดต้นฉบับไม่ได้ โปรดตรวจแอปสำหรับเปิด PDF หรือรูปภาพในเครื่อง',
+  PACKET_REVIEW_STALE: 'ใบเสร็จที่เลือกเปลี่ยนไป โปรดเปิดและตรวจใบเสร็จนั้นใหม่ก่อนเพิ่มเข้าชุด',
+  PACKET_DUPLICATE_SOURCE: 'มีไฟล์เนื้อหาเดียวกันในชุดแล้ว โปรดเลือกเฉพาะหลักฐานที่ยังไม่ได้เพิ่ม',
+  PACKET_SOURCE_LIMIT: 'รองรับ PDF, PNG และ JPG ไม่เกินไฟล์ละ 25 MB และรวมไม่เกิน 100 MB ต่อชุด',
+  PACKET_DOCUMENT_LIMIT: 'ชุดหนึ่งเพิ่มได้ไม่เกิน 40 ไฟล์ โปรดแยกเป็นชุดงานย่อย',
+  PACKET_PAGE_LIMIT: 'ชุดหนึ่งเก็บได้ไม่เกิน 250 หน้า โปรดแยกเป็นชุดงานย่อย',
+  PACKET_PDF_LIMIT: 'PDF นี้มีจำนวนหน้าหรือโครงสร้างเกินขอบเขตที่รองรับ โปรดแบ่งไฟล์ก่อนเพิ่ม',
+  PACKET_PDF_UNREADABLE: 'อ่าน PDF นี้ไม่ได้ อาจติดรหัสผ่านหรือไฟล์ไม่สมบูรณ์ โปรดบันทึกสำเนา PDF ที่เปิดได้แล้วเลือกใหม่',
+  PACKET_EXPORT_SOURCE: 'กรุณาบันทึกเป็นไฟล์ใหม่ เพื่อเก็บต้นฉบับและสำเนาหลักฐานไว้ครบ',
+  PACKET_EXPORT_LAYOUT: 'จัดเลขหน้าสรุปชุดไม่ได้ โปรดลดความยาวหน้าสรุปแล้วลองส่งออกใหม่',
+  PACKET_EMPTY: 'ยังไม่มีหน้าหลักฐานหรือร่าง FM-AF-014 ที่เลือกไว้สำหรับส่งออก',
   OCR_LOCAL_ONLY: 'โหมด OCR ในเครื่องไม่เรียกบริการ AI ภายนอก',
   DOCX_PRESENTATION_ONLY: 'สารบัญและหัวท้ายกระดาษที่ตั้งไว้ใช้กับ DOCX กรุณาส่งออก DOCX หรือปิดตัวเลือกเหล่านี้ก่อนส่งออกรูปแบบอื่น',
   ...credentialErrorsTh,

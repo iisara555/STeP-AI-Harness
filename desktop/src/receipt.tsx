@@ -32,6 +32,7 @@ import type { ReceiptVisionResult } from '../electron/receipt-vision-recheck';
 import { isReceiptGeminiApi, receiptGeminiConnection } from '../electron/receipt-status';
 import { explainError, connectionName } from './messages';
 import type { Connection } from './types';
+import { ReceiptPacketApp } from './receipt-packet-app';
 
 type MappingCandidate = {
   value: string;
@@ -139,7 +140,7 @@ type AiDecision = {
   token?: string;
   reason: string;
 };
-type Doc = { name: string; preview: string; result: any; visionOnly?: boolean; sourceId?: string };
+type Doc = { name: string; preview: string; result: any; visionOnly?: boolean; sourceId?: string; sourceToken?: string };
 
 const labels: Record<string, string> = localized({
   merchant: 'ผู้ออกใบเสร็จ / ร้านค้า',
@@ -214,6 +215,7 @@ export function ReceiptApp({
   openAiSettings?: () => void;
 }) {
   const [preferredOcrId, setPreferredOcrId] = useState('');
+  const [receiptMode, setReceiptMode] = useState<'review' | 'packet'>('review');
   const geminiOcr = receiptGeminiConnection(connections, preferredOcrId || connectionId);
   const readingConnectionId = geminiOcr?.id || connectionId;
   const [preferredCloudAccount, setPreferredCloudAccount] = useState('');
@@ -724,8 +726,34 @@ export function ReceiptApp({
       <header className="receipt-heading">
         <h1>{t('ตรวจใบเสร็จ AFP')}</h1>
         <p className="muted">{t('ดูต้นฉบับ แก้ข้อมูลที่อ่านผิด แล้วตรวจยืนยันก่อนส่งต่อ')}</p>
+        <nav className="receipt-modes" aria-label={t('งานใบเสร็จและชุดเอกสาร')}>
+          <button aria-pressed={receiptMode === 'review'} onClick={() => setReceiptMode('review')}>
+            {t('ตรวจใบเสร็จ')}
+          </button>
+          <button aria-pressed={receiptMode === 'packet'} onClick={() => setReceiptMode('packet')}>
+            {t('ชุดเอกสารและ FM-AF-014')}
+          </button>
+        </nav>
       </header>
-      <div className="receipt-grid">
+      <ReceiptPacketApp
+        active={receiptMode === 'packet'}
+        call={call}
+        notify={notify}
+        review={
+          doc?.sourceToken
+            ? {
+                sourceToken: doc.sourceToken,
+                checked: requiredChecked,
+                recipient: values.merchant || '',
+                date: values.date || '',
+                description: expenseDescription,
+                total: values.total || '',
+                kind: docType,
+              }
+            : undefined
+        }
+      />
+      <div className="receipt-grid" style={receiptMode === 'packet' ? { display: 'none' } : undefined}>
         <section className="receipt-source" aria-label={t('ใบเสร็จต้นฉบับ')}>
           <header>
             <ScanText size={16} aria-hidden="true" />
