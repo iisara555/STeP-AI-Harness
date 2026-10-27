@@ -7,12 +7,12 @@
   ],
   "limits": {
     "confident": {
-      "minCorrect": 88,
-      "maxWrongSkill": 6
+      "minCorrect": 107,
+      "maxWrongSkill": 3
     },
     "evidence": {
-      "minCorrect": 136,
-      "maxWrongSkill": 16
+      "minCorrect": 190,
+      "maxWrongSkill": 8
     },
     "maxGeneralMatched": 1,
     "minAuthorityHeld": 3

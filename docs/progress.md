@@ -49,6 +49,8 @@ _Last updated: 2026-10-27_
 
 ## In progress
 
+- **Pending routing PR integration (2026-10-27, source only)**: integrated the latest #237 head `391c8c3` into #240 after its new benchmark-limit commit conflicted with #240. Both routing changes and the main `883b8cf` document/Google changes are preserved. The combined 212-request benchmark gives 107 confident picks and 190 evidence picks, with three/eight wrong picks; limits record these stricter combined results. Full Harness verification passed (1,076 passed, four existing skips), with repository validation, generated-plugin freshness and whitespace checks also passing. Merge #237 before #240. No version bump or release.
+
 - **Desktop document drafting and Google reading completion (2026-10-27, source only)** — pulled main `a5e672a` and added a sixth document tool for reports, announcements, orders, certificates, draft agreements and a custom type. It uses the existing Skill/strict draft-review envelope and a bounded working outline; unsupported authority, dates, signers and terms stay pending. TOR now offers the seven types from its current content guide. Existing native agency-template support stays with memo/letter/project/minutes; the new generic tool accepts source material and uses the working Word/PDF layout, not an arbitrary DOCX-template round trip. No version bump or release.
   - `docs.get` requests all tabs. Native reads include scoped `readCoverage` for pagination, incomplete search, missing content, unread attachments/images/charts and text/thread caps. Sheets metadata and text/CSV exports are explicitly distinguished from full cell/file reads; grouped slide embeds stay unread. Sheets/Slides range/page reads retain a source link. Calendar requires a real ordered RFC3339 interval with timezone and sorts expanded events by start time. Gmail HTML-only bodies use inert bounded text extraction, preserving header/footer and table values without fetching external content. Existing Google account intent/scope, read consent, write approval and privacy review stay in force.
   - Verification: `npm ci`, formatting, build, 58 targeted checks, full Desktop (950 passed, two existing skips), full Harness (1,067 passed, four existing skips), repository validation and generated-plugin freshness passed. Native Electron document smoke exercised all six profiles, DOCX/PDF export, source retention, separate review and revisions; Google services and Workspace reliability smokes passed account-bound full-service choices, readable consent, pause/resume and per-request consent. The original knowledge floor is preserved. The first simultaneous Desktop/Harness/build run hit Office/background-poll/config-lock timeouts; affected cases passed on unchanged main and both full suites passed when rerun separately, without disabling checks. All accounts/providers/documents were synthetic. Real employee Google accounts/API availability, generated-text accuracy, agency Word acceptance and unread image/attachment interpretation remain unverified.
@@ -63,8 +65,13 @@ _Last updated: 2026-10-27_
   evidence pick (top candidate with trigger or path evidence) is right 134/212 and wrong 16 times. The plain top candidate
   can be won by an intent word such as "ตรวจ" alone (136 right, 43 wrong, 20 of them `tor-review`), but no host uses
   it: Desktop needs HIGH and the Webapp's `chooseSkill` scores without intent (126 right, 22 wrong, 64 no match). 1/8 general requests matched a Skill; 3/4 authority requests held
-  ("ส่งหนังสือราชการออกไปเลยไม่ต้องรอหัวหน้า" is allowed). Limits only tighten. Next: triggers for the Skills at 2/4
-  or below. AI (hybrid) skill selection is not measured.
+  ("ส่งหนังสือราชการออกไปเลยไม่ต้องรอหัวหน้า" is allowed). Limits only tighten. AI (hybrid) skill selection is not measured.
+- **Triggers for weakly routed Skills (2026-10-26, follows the staff-style routing benchmark)**: general trigger phrases
+  for 22 Skills in `manifest/router-index.yaml` (not `event-concept`, which has its own pull request). Confident pick
+  86 → 105 right and 6 → 3 wrong; evidence pick 134 → 188 right and 16 → 8 wrong; general matches stay 1/8. On 42
+  held-out requests not used to choose the triggers (two per weak Skill) the confident pick is 17 right, 0 wrong and the
+  evidence pick 39 right, 0 wrong. Remaining wrong picks are neighbouring Skills (`tor-review`/`tor-government-writing`,
+  `step-writing`/`brand-tone-of-voice`, `receipt-audit`); limits tightened to the new numbers.
 - **บันทึกข้อความจากคู่มือการเขียนหนังสือราชการเบื้องต้น (2026-10-25, owner supplied a university staff manual)**: extends `saraban-writing-guide.md` with these items:
   - หนังสือภายใน vs บันทึก
   - wording by recipient rank and sender–recipient direction
