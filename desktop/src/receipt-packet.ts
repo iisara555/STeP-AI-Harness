@@ -1,4 +1,11 @@
 import { DOCUMENT_TYPE_LABELS, parseDocumentType, parseReceiptDate, type DocumentType } from './receipt-compliance';
+import {
+  blankPaymentVoucher,
+  editPaymentVoucher,
+  paymentVoucherAssessment,
+  paymentVoucherSourceStale,
+  type PaymentVoucher,
+} from './afp-payment-voucher';
 
 export const FM014_REFERENCE = {
   code: 'FM-AF-014',
@@ -38,6 +45,8 @@ export type ReceiptPacket = {
   mode: 'paid' | 'awaiting-payment';
   voucher: ReceiptVoucher;
   includeVoucher: boolean;
+  disbursement: PaymentVoucher;
+  includeDisbursement: boolean;
   documents: PacketSource[];
   createdAt: string;
   updatedAt: string;
@@ -75,6 +84,8 @@ export function createReceiptPacket(id: string, now: string): ReceiptPacket {
     mode: 'paid',
     voucher: blankReceiptVoucher(),
     includeVoucher: false,
+    disbursement: blankPaymentVoucher(),
+    includeDisbursement: false,
     documents: [],
     createdAt: now,
     updatedAt: now,
@@ -106,7 +117,8 @@ export function editReceiptPacket(current: ReceiptPacket, raw: unknown, now: str
     !Array.isArray(input.voucher.items) ||
     input.voucher.items.length < 1 ||
     input.voucher.items.length > 30 ||
-    typeof input.includeVoucher !== 'boolean'
+    typeof input.includeVoucher !== 'boolean' ||
+    (input.includeDisbursement !== undefined && typeof input.includeDisbursement !== 'boolean')
   )
     throw new Error('INVALID_INPUT');
   const voucher: ReceiptVoucher = {
@@ -138,6 +150,15 @@ export function editReceiptPacket(current: ReceiptPacket, raw: unknown, now: str
       }),
     };
   });
+  const disbursement = editPaymentVoucher(
+    current.disbursement || blankPaymentVoucher(),
+    input.disbursement || current.disbursement || blankPaymentVoucher(),
+  );
+  if (
+    ['title', 'project', 'purpose', 'mode'].some(key => input[key as keyof ReceiptPacket] !== current[key as keyof ReceiptPacket]) ||
+    paymentVoucherSourceStale(disbursement, voucher)
+  )
+    disbursement.checked = false;
   return {
     ...current,
     title: packetText(input.title, 200),
@@ -146,6 +167,8 @@ export function editReceiptPacket(current: ReceiptPacket, raw: unknown, now: str
     mode: input.mode,
     voucher,
     includeVoucher: input.includeVoucher,
+    disbursement,
+    includeDisbursement: input.includeDisbursement === undefined ? Boolean(current.includeDisbursement) : input.includeDisbursement,
     documents,
     revision: current.revision + 1,
     updatedAt: now,
@@ -216,6 +239,11 @@ export function packetAssessment(packet: ReceiptPacket) {
       voucherTotal(packet.voucher) === 0)
   )
     missing.push('voucher-review');
+  if (
+    packet.includeDisbursement &&
+    paymentVoucherAssessment(packet.disbursement || blankPaymentVoucher(), packet.voucher).status === 'needs-review'
+  )
+    missing.push('disbursement-review');
   return {
     status: missing.length ? ('needs-review' as const) : ('prepared-for-afp' as const),
     missing,

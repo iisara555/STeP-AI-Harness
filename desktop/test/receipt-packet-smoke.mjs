@@ -105,7 +105,7 @@ async function launch() {
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1500, height: 1050 });
   await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
-  await page.getByRole('button', { name: 'ชุดเอกสารและ FM-AF-014', exact: true }).click();
+  await page.getByRole('button', { name: 'ชุดเอกสารเบิกจ่าย', exact: true }).click();
   return page;
 }
 let packetId;
@@ -225,7 +225,7 @@ try {
   await pick([receipt]);
   await page.getByRole('button', { name: 'เลือกใบเสร็จ', exact: true }).click();
   await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
-  await page.getByRole('button', { name: 'ชุดเอกสารและ FM-AF-014', exact: true }).click();
+  await page.getByRole('button', { name: 'ชุดเอกสารเบิกจ่าย', exact: true }).click();
   await page.getByRole('button', { name: 'สร้างชุดใหม่', exact: true }).click();
   await page.getByRole('button', { name: 'เพิ่มใบเสร็จที่ตรวจแล้ว', exact: true }).click();
   await expect(page.getByLabel('จำนวนเงินรายการ 1', { exact: true })).toHaveValue('107.00');

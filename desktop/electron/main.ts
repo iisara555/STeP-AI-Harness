@@ -3,6 +3,8 @@ import { unscanned, credentialsOnly } from './checks';
 import { TERMS_VERSION } from '../src/terms-version';
 import { ReceiptPackets, receiptSourceToken, mergePacketPdf, loadPacketPdf } from './receipt-packets';
 import { receiptVoucherDocx, receiptVoucherHtml, receiptPacketCoverHtml } from './receipt-voucher';
+import { paymentVoucherDocx, paymentVoucherHtml } from './afp-payment-voucher';
+import { blankPaymentVoucher } from '../src/afp-payment-voucher';
 import { documentPrintFontCss } from './document-fonts';
 import { PACKET_LIMITS, blankReceiptVoucher, type ReviewedReceipt } from '../src/receipt-packet';
 import { takesImages } from '../src/vision-transport';
@@ -3619,6 +3621,8 @@ async function main() {
         return receiptPackets.get(input.id);
       case 'receiptPacketSave':
         return receiptPackets.save(input.packet);
+      case 'receiptPacketImportDisbursement':
+        return receiptPackets.importDisbursement(input.id, input.revision);
       case 'receiptPacketRemoveSource':
         return receiptPackets.remove(input.id, input.revision, input.sourceId);
       case 'receiptPacketOpenSource': {
@@ -3678,7 +3682,8 @@ async function main() {
       }
       case 'receiptPacketExport': {
         const packet = receiptPackets.get(input.id, input.revision);
-        if (!['packet-pdf', 'voucher-docx', 'blank-docx'].includes(input.format)) throw new Error('INVALID_EXPORT');
+        if (!['packet-pdf', 'voucher-docx', 'blank-docx', 'disbursement-docx', 'blank-disbursement-docx'].includes(input.format))
+          throw new Error('INVALID_EXPORT');
         const key = 'receipt-packet:' + packet.id;
         if (exporting.has(key)) throw new Error('EXPORT_BUSY');
         exporting.add(key);
@@ -3688,9 +3693,11 @@ async function main() {
             title: tm('ส่งออกชุดเอกสารหรือแม่แบบ'),
             defaultPath: join(
               store.settings().workspace || app.getPath('documents'),
-              (input.format === 'packet-pdf'
-                ? 'receipt-packet-' + packet.id.slice(0, 8)
-                : 'FM-AF-014-' + (input.format === 'blank-docx' ? 'template' : 'draft')) +
+              (input.format === 'disbursement-docx' || input.format === 'blank-disbursement-docx'
+                ? 'AFP-payment-voucher-' + (input.format === 'blank-disbursement-docx' ? 'template' : 'draft')
+                : input.format === 'packet-pdf'
+                  ? 'receipt-packet-' + packet.id.slice(0, 8)
+                  : 'FM-AF-014-' + (input.format === 'blank-docx' ? 'template' : 'draft')) +
                 '.' +
                 extension,
             ),
@@ -3700,7 +3707,12 @@ async function main() {
           receiptPackets.get(packet.id, packet.revision);
           await receiptPackets.assertDestination(packet, saved.filePath);
           let bytes: Buffer;
-          if (extension === 'docx')
+          if (input.format === 'disbursement-docx' || input.format === 'blank-disbursement-docx')
+            bytes = await paymentVoucherDocx(
+              input.format === 'blank-disbursement-docx' ? { ...packet, title: '', project: '', purpose: '' } : packet,
+              input.format === 'blank-disbursement-docx' ? blankPaymentVoucher() : packet.disbursement,
+            );
+          else if (extension === 'docx')
             bytes = await receiptVoucherDocx(input.format === 'blank-docx' ? blankReceiptVoucher() : packet.voucher);
           else {
             const fontCss = await documentPrintFontCss();
@@ -3728,10 +3740,12 @@ async function main() {
             };
             const voucher = packet.includeVoucher ? await printHtml(receiptVoucherHtml(packet.voucher, fontCss)) : undefined;
             const voucherPages = voucher ? (await loadPacketPdf(voucher)).getPageCount() : 0;
+            const disbursement = packet.includeDisbursement ? await printHtml(paymentVoucherHtml(packet, fontCss)) : undefined;
+            const disbursementPages = disbursement ? (await loadPacketPdf(disbursement)).getPageCount() : 0;
             let coverPages = 1,
               cover: Buffer | undefined;
             for (let attempt = 0; attempt < 3; attempt++) {
-              cover = await printHtml(receiptPacketCoverHtml(packet, coverPages, voucherPages, fontCss));
+              cover = await printHtml(receiptPacketCoverHtml(packet, coverPages, voucherPages, fontCss, disbursementPages));
               const measured = (await loadPacketPdf(cover)).getPageCount();
               if (measured === coverPages) break;
               coverPages = measured;
@@ -3750,8 +3764,8 @@ async function main() {
                 sources.push({ source: { ...source, extension: 'png' as const }, bytes: image.toPNG() });
               }
             }
-            if (!sources.length && !voucher) throw new Error('PACKET_EMPTY');
-            bytes = await mergePacketPdf(cover, voucher, sources);
+            if (!sources.length && !voucher && !disbursement) throw new Error('PACKET_EMPTY');
+            bytes = await mergePacketPdf(cover, voucher, sources, disbursement);
           }
           await writeFile(saved.filePath, bytes);
           exportPaths.add(saved.filePath);

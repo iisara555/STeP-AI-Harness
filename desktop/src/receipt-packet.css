@@ -10,10 +10,57 @@
   flex: 0 1 auto;
   width: auto;
 }
-.receipt-modes button[aria-pressed='true'] {
+.receipt-modes button[aria-pressed='true'],
+.packet-form-modes button[aria-pressed='true'] {
   background: var(--accent-soft);
   color: var(--text);
   border-color: var(--accent-ink);
+}
+.packet-drafts {
+  padding-top: 24px;
+}
+.packet-form-modes {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.packet-form-modes button {
+  flex: 0 1 auto;
+  width: auto;
+  font-size: 13px;
+}
+.payment-voucher-form h3 {
+  font-size: 14px;
+  margin: 24px 0 8px;
+}
+.payment-items-editor {
+  padding-inline-start: 22px;
+}
+.payment-items-editor > li {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.payment-money-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.payment-money-fields input {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.payment-money-fields label {
+  font-size: 12px;
+}
+.payment-signers {
+  padding-top: 14px;
+}
+.payment-review-reasons {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+  padding-inline-start: 20px;
 }
 .receipt-packets {
   margin-top: 20px;

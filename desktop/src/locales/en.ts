@@ -12,6 +12,7 @@ import { skillSuggestEn } from './skill-suggest-en';
 import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 import { receiptPacketEn } from './receipt-packet-en';
+import { afpPaymentVoucherEn } from './afp-payment-voucher-en';
 export const en: Record<string, string> = {
   'ส่งออก TOR เป็น Word โดยกึ่งกลางเฉพาะชื่อเรื่อง และจัดข้อมูลหน่วยงานกับเนื้อหาให้อ่านตามแนวเอกสารราชการ':
     'Export TOR to Word with only the title centered, keeping agency details and body content aligned for official documents',
@@ -3131,4 +3132,5 @@ export const en: Record<string, string> = {
   'กำลังโหลดข้อมูลตรวจระบบ…': 'Loading system diagnostics…',
   ...settingsEn,
   ...receiptPacketEn,
+  ...afpPaymentVoucherEn,
 };
