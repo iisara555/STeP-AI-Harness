@@ -18,7 +18,7 @@ export function resolveDocumentLayout(id?: unknown, font?: unknown, garuda?: unk
   };
 }
 
-export type LayoutRole = 'title' | 'front' | 'sender' | 'date' | 'memo-reference' | 'signature' | 'field' | 'body';
+export type LayoutRole = 'title' | 'subject' | 'front' | 'sender' | 'date' | 'memo-reference' | 'signature' | 'field' | 'body';
 export function documentLayoutRoles(document: DraftNode, id?: DocumentToolId): LayoutRole[] {
   const blocks = document.content || [];
   const section = blocks.findIndex((node, index) => index > 0 && node.type === 'heading');
@@ -29,6 +29,8 @@ export function documentLayoutRoles(document: DraftNode, id?: DocumentToolId): L
     const text = documentText(node).trim();
     if (index === 0 && ['heading', 'title'].includes(node.type)) return 'title';
     if (node.type !== 'paragraph') return 'body';
+    if (id === 'tor' && section > 0 && index < section && /^(?:ชื่อ(?:งาน|โครงการ)|(?:งาน)?(?:จัดซื้อ|ซื้อ|จ้าง|เช่า)|โครงการ)/.test(text))
+      return 'subject';
     if (['tor', 'project'].includes(id) && section > 0 && index < section) return 'front';
     if (id === 'minutes' && index < (section >= 0 ? section : 12) && /^(?:ชื่อการประชุม|ครั้งที่|วัน เวลา สถานที่)/.test(text))
       return 'front';
@@ -38,10 +40,10 @@ export function documentLayoutRoles(document: DraftNode, id?: DocumentToolId): L
       if (/^(?:วันที่|\[รอยืนยัน: วันที่)/.test(text)) return 'date';
     }
     if (
-      ['memo', 'letter', 'minutes'].includes(id) &&
+      ['tor', 'memo', 'letter', 'minutes'].includes(id) &&
       (/^(?:\(ลงชื่อ\)|ตำแหน่ง|ขอแสดงความนับถือ|ผู้จดรายงาน|ผู้ตรวจรายงาน|\[รอยืนยัน: (?:ผู้ลงนาม|ชื่อและตำแหน่ง|คำลงท้าย))/.test(text) ||
         /^\([^\n]{1,160}\)$/.test(text) ||
-        /^(?:ผู้ดูแลโครงการ|ผู้จัดทำ|ผู้เสนอเรื่อง|หัวหน้าทีม|ผู้อำนวยการ)(?:\s|$)/.test(text))
+        /^(?:ผู้ดูแลโครงการ|ผู้จัดทำ|ผู้ตรวจทาน|ผู้กำหนดขอบเขตงาน|ผู้เสนอเรื่อง|หัวหน้าทีม|ผู้อำนวยการ)(?:\s|$)/.test(text))
     )
       return 'signature';
     if (

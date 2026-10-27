@@ -31,7 +31,10 @@ try {
       },
     }),
   );
-  await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).policy.source).toBe('managed');
+  // The managed policy watcher polls every five seconds; allow it to observe the newly created file.
+  await expect
+    .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).policy.source, { timeout: 15000 })
+    .toBe('managed');
   const native = await page.evaluate(() => window.step.call('googleState'));
   for (const service of [
     'gmail-read',

@@ -215,9 +215,9 @@ export class Store {
         if (this.get<{ sessionId: string }>('document-asset', key)?.sessionId !== id) throw new Error('DOCUMENT_IMAGE_NOT_FOUND');
       }
     const appearanceInput = presentation === undefined ? session.presentation : presentation;
-    const appearance = appearanceInput === undefined ? undefined : resolvePresentation(appearanceInput, Boolean(session.documentTool));
+    const appearance = appearanceInput === undefined ? undefined : resolvePresentation(appearanceInput, session.documentTool || false);
     if (session.documentTemplate && appearance) {
-      const original = resolvePresentation(session.presentation, true);
+      const original = resolvePresentation(session.presentation, session.documentTool || true);
       if (
         (['preset', 'toc', 'headerText', 'footerText', 'pageNumber', 'pageNumberPosition'] as const).some(
           key => appearance[key] !== original[key],

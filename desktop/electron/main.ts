@@ -4387,7 +4387,7 @@ async function main() {
             result.path,
             format,
             s.draft,
-            async html => {
+            async (html, pageSettings) => {
               const print = new BrowserWindow({
                 show: false,
                 webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, javascript: false },
@@ -4399,6 +4399,7 @@ async function main() {
                   pageSize: 'A4',
                   margins: PDF_MARGINS,
                   preferCSSPageSize: true,
+                  ...pageSettings,
                 });
               } finally {
                 print.destroy();
