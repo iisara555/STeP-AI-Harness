@@ -23,7 +23,7 @@ test('new model output requires both document and review envelopes; saved legacy
   );
 });
 
-test('all five document tools separate editable body from Skill checks and conversation', () => {
+test('all document tools separate editable body from Skill checks and conversation', () => {
   for (const tool of DOCUMENT_TOOLS) {
     const body =
       tool.id === 'memo'

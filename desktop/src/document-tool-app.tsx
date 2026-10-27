@@ -112,7 +112,7 @@ export function DocumentTools({
         className="document-form"
         onSubmit={e => {
           e.preventDefault();
-          if (!disabled && connected && hasInput && !form.source?.file.reason) void run(() => draft(selected, form));
+          if (!disabled && connected && hasInput && !sourceBlocked) void run(() => draft(selected, form));
         }}
       >
         <header>
@@ -122,8 +122,10 @@ export function DocumentTools({
           </p>
           <p className="small muted">
             {selected === 'tor'
-              ? t('TOR ใช้แม่แบบ 16 หัวข้อเดิม')
-              : t('แนบไฟล์ Word จาก MIS เป็นแม่แบบได้ เพื่อรักษารูปแบบต้นฉบับ หากไม่แนบจะใช้แบบร่างทั่วไป')}
+              ? t('เลือกประเภทงานให้ตรงต้นเรื่อง หากไม่มีแบบหน่วยงานจะใช้โครงร่าง TOR และแยกข้อมูลที่ต้องยืนยัน')
+              : selected === 'other'
+                ? t('ระบุประเภทและผลลัพธ์ที่ต้องการ แนบต้นเรื่องได้ ส่งออกเป็น Word/PDF แล้วให้เจ้าของเรื่องตรวจ ก่อนออกเลขหรือลงนาม')
+                : t('แนบไฟล์ Word จาก MIS เป็นแม่แบบได้ เพื่อรักษารูปแบบต้นฉบับ หากไม่แนบจะใช้แบบร่างทั่วไป')}
           </p>
         </header>
         {existingDraft?.tool === selected && (

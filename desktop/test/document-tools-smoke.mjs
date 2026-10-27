@@ -30,6 +30,7 @@ const server = createServer(async (req, res) => {
     ร่างหนังสือราชการ: 'letter',
     ร่างโครงการ: 'project',
     ร่างรายงานการประชุม: 'minutes',
+    ร่างเอกสารอื่น: 'other',
   }[type];
   const current = /<current_draft>\n([\s\S]*?)\n<\/current_draft>/.exec(prompt)?.[1];
   let draftedBody = fixtures.documents[id];
@@ -133,9 +134,10 @@ try {
   };
   await open();
   const form = page.locator('.document-form');
-  await expect(page.locator('.document-tool-picker button')).toHaveCount(5);
+  await expect(page.locator('.document-tool-picker button')).toHaveCount(6);
   await expect(form.getByRole('button', { name: 'ให้ AI ร่างเอกสาร' })).toBeDisabled();
   const profiles = [
+    ['other', 'ร่างเอกสารอื่น', 'สาระที่ต้องการให้ร่าง', 'thai-official-documents', 'other-document-draft.md'],
     ['tor', 'ร่าง TOR', 'วัตถุประสงค์', 'tor-government-writing', 'tor-16-sections-template.md'],
     ['memo', 'ร่างบันทึกข้อความ', 'เรื่อง', 'thai-official-documents', 'memo-draft.md'],
     ['letter', 'ร่างหนังสือราชการ', 'สาระ / สิ่งที่ขอประสาน', 'thai-official-documents', 'letter-draft.md'],
@@ -496,7 +498,7 @@ try {
   assert.doesNotMatch(await page.locator('.document-export-info').innerText(), /[ก-๙]/);
   assert.deepEqual(errors, []);
   console.log(
-    'PASS: five Skill-backed forms, separate review, native DOCX/PDF export, folder creation/cancellation and exclusive export (synthetic fake AI).',
+    'PASS: six Skill-backed forms, separate review, native DOCX/PDF export, folder creation/cancellation and exclusive export (synthetic fake AI).',
   );
 } catch (error) {
   console.error('Document tools smoke failed:', error);

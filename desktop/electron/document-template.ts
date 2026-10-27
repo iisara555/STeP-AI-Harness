@@ -163,7 +163,7 @@ function role(value: string, first = false): string {
 }
 function describe(body: Element, doc: Document, id: unknown) {
   const profile = documentTool(id);
-  if (!profile || profile.id === 'tor') fail('DOCUMENT_TEMPLATE_UNSUPPORTED');
+  if (!profile || profile.id === 'tor' || profile.id === 'other') fail('DOCUMENT_TEMPLATE_UNSUPPORTED');
   const paragraphs = children(body).filter(n => n.localName === 'p');
   const all = paragraphs.map(text).join('\n');
   const match = {
@@ -171,7 +171,7 @@ function describe(body: Element, doc: Document, id: unknown) {
     letter: /เรื่อง[\s\S]*เรียน/,
     project: /หลักการและเหตุผล[\s\S]*วัตถุประสงค์[\s\S]*งบประมาณ/,
     minutes: /รายงานการประชุม/,
-  }[profile.id as Exclude<DocumentToolId, 'tor'>];
+  }[profile.id as Exclude<DocumentToolId, 'tor' | 'other'>];
   if (!match.test(all)) fail('DOCUMENT_TEMPLATE_MISMATCH');
   const nativeTables = children(body).filter(n => n.localName === 'tbl');
   const headers = nativeTables.map(tbl => {

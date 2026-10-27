@@ -2,7 +2,7 @@ import { parseThaiDate, formatThaiDate } from './thai-date';
 import { stepOrganizationReference } from './organization-profile';
 
 /** Fixed document profiles: the host selects actual Skills and working templates from this allowlist. */
-export type DocumentToolId = 'tor' | 'memo' | 'letter' | 'project' | 'minutes';
+export type DocumentToolId = 'tor' | 'memo' | 'letter' | 'project' | 'minutes' | 'other';
 export type DocumentAttachmentRole = 'source' | 'template';
 export type DocumentField = { key: string; label: string; hint?: string; multiline?: boolean; missingAction?: 'draft-proposal' | 'omit' };
 export type DocumentTool = {
@@ -53,6 +53,11 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     variants: [
       { id: 'service', label: 'จ้างงาน / บริการ' },
       { id: 'goods', label: 'ซื้อพัสดุ / ครุภัณฑ์' },
+      { id: 'construction', label: 'งานก่อสร้าง' },
+      { id: 'consulting', label: 'งานจ้างที่ปรึกษา' },
+      { id: 'design', label: 'งานจ้างออกแบบ' },
+      { id: 'supervision', label: 'งานจ้างควบคุมงาน' },
+      { id: 'computer', label: 'ซื้อคอมพิวเตอร์ / ระบบ' },
     ],
     fields: [
       ...common,
@@ -185,6 +190,36 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
       field('sources', 'แบบหน่วยงาน / แหล่งมติหรือเอกสารอ้างอิง', true),
     ],
   },
+  {
+    id: 'other',
+    title: 'ร่างเอกสารอื่น',
+    description: 'ประกาศ คำสั่ง หนังสือรับรอง รายงาน ข้อตกลง หรือระบุแบบที่ต้องการ',
+    skill: 'thai-official-documents',
+    supportSkills: [],
+    template: 'skills/common/thai-official-documents/templates/other-document-draft.md',
+    references: [dateGuide, draftingChecks, sarabanGuide, thaiLayout],
+    variants: [
+      { id: 'report', label: 'รายงาน' },
+      { id: 'announcement', label: 'ประกาศ' },
+      { id: 'order', label: 'คำสั่งหน่วยงาน' },
+      { id: 'certificate', label: 'หนังสือรับรอง' },
+      { id: 'agreement', label: 'ข้อตกลง / สัญญาฉบับร่าง' },
+      { id: 'custom', label: 'ระบุประเภทเอง' },
+    ],
+    fields: [
+      ...common,
+      {
+        ...field('kind', 'ประเภทหรือชื่อแบบที่ต้องการ', false, 'กรอกเมื่อเลือก “ระบุประเภทเอง” เช่น รายงานสรุปผลหรือแบบเสนองาน'),
+        missingAction: 'omit',
+      },
+      field('purpose', 'เอกสารนี้ใช้ทำอะไร / ใครเป็นผู้อ่าน', true),
+      ...official,
+      field('facts', 'ข้อเท็จจริงที่ยืนยันแล้ว', true, 'ระบุชื่อ วันที่ ตัวเลข และเงื่อนไขจากต้นเรื่อง ไม่ใช้ข้อมูลตัวอย่างแทนข้อมูลจริง'),
+      draftable('content', 'สาระที่ต้องการให้ร่าง', true),
+      field('requirements', 'หัวข้อ / รูปแบบ / ข้อจำกัดที่ต้องใช้', true),
+      field('sources', 'แบบหน่วยงาน / ระเบียบ / แหล่งอ้างอิง', true),
+    ],
+  },
 ];
 export const documentTool = (id: unknown) => DOCUMENT_TOOLS.find(p => p.id === id);
 export function documentRequest(
@@ -206,7 +241,7 @@ export function documentRequest(
       if ((raw?.length || 0) > 6000) throw new Error('INPUT_LIMIT');
       const value = raw?.trim() || null;
       // Keep the source string. Formatting is a presentation aid, not source verification.
-      const isDate = value && f.key === 'date' && ['memo', 'letter'].includes(profile.id);
+      const isDate = value && f.key === 'date' && ['memo', 'letter', 'other'].includes(profile.id);
       const date = isDate ? parseThaiDate(value) : null;
       return [
         f.key,
