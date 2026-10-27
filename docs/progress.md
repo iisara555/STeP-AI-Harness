@@ -4,9 +4,11 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-10-26_
+_Last updated: 2026-10-27_
 
 ## Latest release
+
+- **Desktop v0.6.21 published (2026-10-26)**: release `desktop-v0.6.21` points to `f8af550a7c01a603b1436989a29df07f54cecf85`, published at 15:50:44 UTC. It includes the merged TOR/saraban guide and document export/diagnostics work through #236. This entry records GitHub release/tag metadata only; it does not claim a new installer-digest or real-account acceptance check.
 
 - **Desktop v0.6.20 published (2026-10-22)**: release `desktop-v0.6.20` targets `90ee71ca667c63284afe4996eddc7e8095b9a059` and was published at 01:25:32 UTC, combining merged #230 (Google reliability/once-per-request reads) and #231 (the seven Settings work sets). PR source `048152a` and merged main `90ee71c` passed all four validation jobs, including full macOS Electron; their Git trees match. Installer run `39703671812` passed Windows native checks, both builds, packaged Mac signature/launch checks and publication. All eight immutable/rolling asset digests and sizes match; both update feeds are 0.6.20. Downloaded public Windows EXE and Mac ZIP match their SHA-256 asset metadata and SHA-512 update feeds. Harness remains 0.7.7. Live Google account/API enablement and employee-device acceptance remain unverified.
 
@@ -47,8 +49,22 @@ _Last updated: 2026-10-26_
 
 ## In progress
 
-- **event-concept routing for "Big idea" phrasings (2026-10-26)**: router-index triggers (big idea, บิ๊กไอเดีย, ไอเดียหลักของงาน, key idea, signature moment, ธีมงาน…) and create-intent ideation verbs (คิดไอเดีย, ขอไอเดีย, คิดธีม, อยากได้ธีม, brainstorm) added, with regressions in `test/cc-staff-routing.test.js`. Event names (Innovation Day, Open House, Demo Day) are deliberately not triggers: they collided with designer-brief and event-run-of-show. Left: the very short "ออกแบบ signature moment ของงาน" still asks once, with event-concept as option 1. Waits on owner review and merge.
+- **Desktop document drafting and Google reading completion (2026-10-27, source only)** — pulled main `a5e672a` and added a sixth document tool for reports, announcements, orders, certificates, draft agreements and a custom type. It uses the existing Skill/strict draft-review envelope and a bounded working outline; unsupported authority, dates, signers and terms stay pending. TOR now offers the seven types from its current content guide. Existing native agency-template support stays with memo/letter/project/minutes; the new generic tool accepts source material and uses the working Word/PDF layout, not an arbitrary DOCX-template round trip. No version bump or release.
+  - `docs.get` requests all tabs. Native reads include scoped `readCoverage` for pagination, incomplete search, missing content, unread attachments/images/charts and text/thread caps. Sheets metadata and text/CSV exports are explicitly distinguished from full cell/file reads; grouped slide embeds stay unread. Sheets/Slides range/page reads retain a source link. Calendar requires a real ordered RFC3339 interval with timezone and sorts expanded events by start time. Gmail HTML-only bodies use inert bounded text extraction, preserving header/footer and table values without fetching external content. Existing Google account intent/scope, read consent, write approval and privacy review stay in force.
+  - Verification: `npm ci`, formatting, build, 58 targeted checks, full Desktop (950 passed, two existing skips), full Harness (1,067 passed, four existing skips), repository validation and generated-plugin freshness passed. Native Electron document smoke exercised all six profiles, DOCX/PDF export, source retention, separate review and revisions; Google services and Workspace reliability smokes passed account-bound full-service choices, readable consent, pause/resume and per-request consent. The original knowledge floor is preserved. The first simultaneous Desktop/Harness/build run hit Office/background-poll/config-lock timeouts; affected cases passed on unchanged main and both full suites passed when rerun separately, without disabling checks. All accounts/providers/documents were synthetic. Real employee Google accounts/API availability, generated-text accuracy, agency Word acceptance and unread image/attachment interpretation remain unverified.
 
+- **event-concept routing for "Big idea" phrasings (2026-10-26)**: router-index triggers (big idea, บิ๊กไอเดีย, ไอเดียหลักของงาน, key idea, signature moment, ธีมงาน…) and create-intent ideation verbs (คิดไอเดีย, ขอไอเดีย, คิดธีม, อยากได้ธีม, brainstorm) added, with regressions in `test/cc-staff-routing.test.js`. Event names (Innovation Day, Open House, Demo Day) are deliberately not triggers: they collided with designer-brief and event-run-of-show. Left: the very short "ออกแบบ signature moment ของงาน" still asks once, with event-concept as option 1. Waits on owner review and merge.
+  - Conflict resolution (2026-10-27): integrated main `883b8cf`, retaining the document/Google Workspace changes and staff-routing benchmark. Event routing implementation and regressions are preserved. Full Harness tests passed (1,076 passed, four existing skips), as did 15 routing regressions, repository validation and plugin freshness. A merge rehearsal with #240 is conflict-free.
+
+- **Staff-style routing benchmark (2026-10-26, owner asked to test routing for every Skill)**: `manifest/routing-staff-benchmark.json`
+  holds 212 synthetic requests (four per routed Skill, phrased the way staff type), 8 general requests and 4 requests
+  beyond the employee's authority. `test/routing-staff-benchmark.test.js` measures two Router views on `f8af550`:
+  the confident pick (tier HIGH, Desktop's Skill suggestion and autoRouting) is right 86/212 and wrong 6 times; the
+  evidence pick (top candidate with trigger or path evidence) is right 134/212 and wrong 16 times. The plain top candidate
+  can be won by an intent word such as "ตรวจ" alone (136 right, 43 wrong, 20 of them `tor-review`), but no host uses
+  it: Desktop needs HIGH and the Webapp's `chooseSkill` scores without intent (126 right, 22 wrong, 64 no match). 1/8 general requests matched a Skill; 3/4 authority requests held
+  ("ส่งหนังสือราชการออกไปเลยไม่ต้องรอหัวหน้า" is allowed). Limits only tighten. Next: triggers for the Skills at 2/4
+  or below. AI (hybrid) skill selection is not measured.
 - **บันทึกข้อความจากคู่มือการเขียนหนังสือราชการเบื้องต้น (2026-10-25, owner supplied a university staff manual)**: extends `saraban-writing-guide.md` with these items:
   - หนังสือภายใน vs บันทึก
   - wording by recipient rank and sender–recipient direction
