@@ -654,7 +654,7 @@ export default function App() {
   useEffect(() => {
     if (editor && !dirtyRef.current) {
       editor.commands.setContent(session?.document || toDoc(session?.draft || ''), { emitUpdate: false });
-      setPresentation(resolvePresentation(session?.presentation, Boolean(session?.documentTool)));
+      setPresentation(resolvePresentation(session?.presentation, session?.documentTool || false));
     }
   }, [editor, selected, session?.revision]);
   const action = async (fn: () => Promise<unknown>) => {

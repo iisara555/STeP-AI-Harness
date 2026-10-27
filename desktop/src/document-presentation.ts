@@ -16,7 +16,7 @@ export type DocumentPresentation = {
 };
 
 /** Presentation is local draft metadata. No generated characters are saved in the draft. */
-export function resolvePresentation(value: unknown = {}, official = false): DocumentPresentation {
+export function resolvePresentation(value: unknown = {}, official: boolean | string = false): DocumentPresentation {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('INVALID_DOCUMENT_PRESENTATION');
   const input = value as Partial<DocumentPresentation>;
   if (
@@ -45,7 +45,7 @@ export function resolvePresentation(value: unknown = {}, official = false): Docu
     toc: input.toc ?? false,
     headerText: input.headerText ?? '',
     footerText: input.footerText ?? '',
-    pageNumber: input.pageNumber ?? (official ? 'thai' : 'none'),
-    pageNumberPosition: input.pageNumberPosition ?? 'footer-center',
+    pageNumber: input.pageNumber ?? (official === 'tor' ? 'arabic-total' : official ? 'thai' : 'none'),
+    pageNumberPosition: input.pageNumberPosition ?? (official === 'tor' ? 'footer-right' : 'footer-center'),
   };
 }

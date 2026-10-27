@@ -22,6 +22,7 @@ import {
   Tab,
   TabStopType,
   WidthType,
+  BorderStyle,
   type ParagraphChild,
   type INumberingOptions,
 } from 'docx';
@@ -35,6 +36,8 @@ import { renderDocumentTemplate } from './document-template';
 import { longestWordUnits, textUnits, THAI_DOCUMENT_CSS, THAI_DOCUMENT_LANGUAGE, withThaiBreaks } from '../src/thai-typography';
 import { DOCUMENT_PRESETS, resolvePresentation, type DocumentPresentation } from '../src/document-presentation';
 import { embedDocumentFonts } from './document-fonts';
+import { TOR_LAYOUT, torFooterText, torNumberedBlock, torPreset } from './tor-layout';
+import { torPdfFurniture, torWordHeader } from './tor-furniture';
 
 export const exportFormats = ['md', 'docx', 'pdf', 'xlsx', 'pptx'] as const;
 
@@ -185,7 +188,12 @@ function memoReferenceHtml(node: DraftNode) {
   return `<p class="memo-reference-row"><span class="memo-number">${number.map(node => richHtml(node)).join('')}</span><span class="memo-date">${value.map(node => richHtml(node)).join('')}</span></p>`;
 }
 
-export function pdfHtml(document: DraftNode, layout = resolveDocumentLayout(), images: ReadonlyMap<string, DocumentImage> = new Map()) {
+export function pdfHtml(
+  document: DraftNode,
+  layout = resolveDocumentLayout(),
+  images: ReadonlyMap<string, DocumentImage> = new Map(),
+  presentation = resolvePresentation({}, layout.id || false),
+) {
   // TH Sarabun New when installed (the family brings its real bold); otherwise a common Thai font scaled down to the
   // same visual size, since TH Sarabun is drawn much smaller than other fonts at the same point size.
   const face = (weight: number, names: string[]) =>
@@ -237,26 +245,52 @@ export function pdfHtml(document: DraftNode, layout = resolveDocumentLayout(), i
   const title =
     layout.id === 'memo' && layout.garudaHeightCm && ['heading', 'title'].includes(blocks[0]?.type || '') ? blocks[0] : undefined;
   const roles = documentLayoutRoles(document, layout.id);
+  const tor = layout.id === 'tor' ? torPdfFurniture(document, layout.font, presentation) : undefined;
+  const torStyle = tor ? torPreset(presentation) : undefined;
   const content = layout.id
     ? blocks
         .map((node, index) => {
           if (node === title) return '';
           const role = roles[index];
           const css =
-            ['title', 'signature', 'date'].includes(role) || centerFrontMatter(layout, role) ? 'text-align:center;' : 'text-align:left;';
+            ['title', 'subject', 'signature', 'date'].includes(role) || centerFrontMatter(layout, role)
+              ? 'text-align:center;'
+              : 'text-align:left;';
           const indent = ['sender', 'signature'].includes(role)
             ? 'margin-left:8cm;'
             : role === 'body' && node.type === 'paragraph'
-              ? 'text-indent:2.5cm;text-align:justify;'
+              ? `text-indent:${torStyle ? torStyle.indent : 2.5}cm;text-align:justify;`
               : '';
-          return `<div class="block ${role}" style="${css}${indent}">${role === 'memo-reference' ? memoReferenceHtml(node) : richHtml(node, images)}</div>`;
+          const numbered = tor && torNumberedBlock(node);
+          const inner = numbered
+            ? `<div class="tor-numbered" style="margin-left:${numbered.leftCm}cm;grid-template-columns:${numbered.widthCm}cm minmax(0,1fr)"><span>${richHtml(numbered.prefix, images)}</span><span>${richHtml(numbered.body, images)}</span></div>`
+            : role === 'memo-reference'
+              ? memoReferenceHtml(node)
+              : richHtml(node, images);
+          return `<div class="block ${role}${tor && node.type === 'heading' && role !== 'title' ? ' section-heading' : ''}" style="${css}${numbered ? '' : indent}">${inner}</div>`;
         })
         .join('')
     : richHtml(document, images);
   const letterhead = layout.garudaHeightCm
     ? `<div class="letterhead ${layout.id}"><img alt="ตราครุฑ" src="${GARUDA_DATA_URI}" style="height:${layout.garudaHeightCm}cm;width:${layout.garudaHeightCm}cm">${title ? richHtml(title) : ''}</div>`
     : '';
-  return `<!doctype html><html lang="th"><meta charset="utf-8"><style>${style}</style><body>${letterhead}${content}</body></html>`;
+  const torCss = torStyle
+    ? `${tor!.css}
+    @page{margin:${torStyle.margins.top}cm ${torStyle.margins.right}cm ${torStyle.margins.bottom}cm ${torStyle.margins.left}cm}
+    body{font-size:${torStyle.points}pt;line-height:${torStyle.line}}
+    .block.title :is(h1,h2,h3){font-size:${torStyle.points + TOR_LAYOUT.titleExtra}pt;margin:0 0 6pt}
+    .block.subject{font-weight:bold;margin-bottom:3pt}
+    .block :is(h1,h2,h3){font-size:${torStyle.points}pt}
+    .tor-numbered{display:grid;text-align:justify;break-inside:auto}
+    .tor-numbered :is(p,h1,h2,h3){margin:0;text-indent:0;font-size:inherit}
+    .section-heading{font-weight:bold;margin:8pt 0 3pt;break-after:avoid}
+    .section-heading .tor-numbered{text-align:left}
+    .tor-numbered span{min-width:0}
+    .block.signature{text-indent:0;break-inside:avoid}
+    th{background:#f2f2f2}th,td{border-color:#777}
+  `
+    : '';
+  return `<!doctype html><html lang="th"><meta charset="utf-8"><style>${style}${torCss}</style><body>${letterhead}${content}</body></html>`;
 }
 
 function runs(node: DraftNode, size: number, bold = false, font = OFFICIAL_FONT, dateTab = false, thaiBreaks = false): ParagraphChild[] {
@@ -311,7 +345,8 @@ type WordLayout = DocumentLayout & {
   images: ReadonlyMap<string, DocumentImage>;
   lists: Map<DraftNode, string>;
 };
-const wordPreset = (layout: WordLayout) => DOCUMENT_PRESETS[layout.presentation.preset];
+const wordPreset = (layout: WordLayout) =>
+  layout.id === 'tor' ? torPreset(layout.presentation) : DOCUMENT_PRESETS[layout.presentation.preset];
 const wordWidth = (layout: WordLayout) => 11906 - Math.round((wordPreset(layout).margins.left + wordPreset(layout).margins.right) * CM);
 
 function docxTable(table: DraftNode, layout: WordLayout) {
@@ -338,7 +373,7 @@ function docxTable(table: DraftNode, layout: WordLayout) {
             return new TableCell({
               width: { size: columns[column], type: WidthType.DXA },
               shading: header ? { type: ShadingType.CLEAR, color: 'auto', fill: 'EEEEEE' } : undefined,
-              margins: { left: 100, right: 100 },
+              margins: { left: 100, right: 100, ...(layout.id === 'tor' ? { top: 60, bottom: 60 } : {}) },
               children: (cell?.content?.length ? cell.content : [{ type: 'paragraph' }]).map(
                 p =>
                   new Paragraph({
@@ -412,15 +447,18 @@ function docxBlocks(
     const size = title
       ? layout.id === 'memo'
         ? 60
-        : 44
+        : layout.id === 'tor'
+          ? (points + TOR_LAYOUT.titleExtra) * 2
+          : 44
       : caption
         ? (points - 2) * 2
         : node.type === 'heading'
-          ? (points + [4, 2, 0][level - 1]) * 2
+          ? (layout.id === 'tor' ? points : points + [4, 2, 0][level - 1]) * 2
           : points * 2;
     const band = Math.floor(wordWidth(layout) / 2);
-    const centered = title || caption || ['signature', 'date'].includes(role);
+    const centered = title || caption || ['subject', 'signature', 'date'].includes(role);
     const body = role === 'body' && node.type === 'paragraph' && !depth;
+    const numbered = layout.id === 'tor' ? torNumberedBlock(node) : undefined;
     return [
       new Paragraph({
         pageBreakBefore: breakBefore,
@@ -432,38 +470,72 @@ function docxBlocks(
               ? { style: 'Caption' }
               : {}),
         numbering,
-        alignment: centered || centerFrontMatter(layout, role) ? AlignmentType.CENTER : AlignmentType.LEFT,
+        alignment:
+          centered || centerFrontMatter(layout, role)
+            ? AlignmentType.CENTER
+            : layout.id === 'tor' && body
+              ? AlignmentType.JUSTIFIED
+              : AlignmentType.LEFT,
         indent: numbering
           ? undefined
-          : role === 'quote'
-            ? { left: 720, right: 720 }
-            : depth
-              ? { left: 360 * depth }
-              : ['signature', 'sender'].includes(role)
-                ? { left: band }
-                : body
-                  ? { firstLine: Math.round(wordPreset(layout).indent * CM) }
-                  : undefined,
-        tabStops: role === 'memo-reference' ? [{ type: TabStopType.LEFT, position: band }] : undefined,
+          : numbered
+            ? { left: Math.round((numbered.leftCm + numbered.widthCm) * CM), hanging: Math.round(numbered.widthCm * CM) }
+            : role === 'quote'
+              ? { left: 720, right: 720 }
+              : depth
+                ? { left: 360 * depth }
+                : ['signature', 'sender'].includes(role)
+                  ? { left: band }
+                  : body
+                    ? { firstLine: Math.round(wordPreset(layout).indent * CM) }
+                    : undefined,
+        tabStops: numbered
+          ? [{ type: TabStopType.LEFT, position: Math.round((numbered.leftCm + numbered.widthCm) * CM) }]
+          : role === 'memo-reference'
+            ? [{ type: TabStopType.LEFT, position: band }]
+            : undefined,
         keepNext:
           title ||
           node.type === 'heading' ||
-          ['front', 'sender', 'date', 'memo-reference'].includes(role) ||
+          ['subject', 'front', 'sender', 'date', 'memo-reference'].includes(role) ||
           (role === 'signature' && /^(?:\(|ขอแสดงความนับถือ)/.test(documentText(node))),
         keepLines: title || caption || node.type === 'heading' || role === 'signature',
         widowControl: true,
         spacing: {
-          before: firstPageSpace ? Math.round(0.5 * CM) : title || node.type === 'heading' ? 120 : 0,
-          after: node.type === 'paragraph' ? (role === 'body' && documentText(node).trim() ? wordPreset(layout).after * 20 : 0) : 60,
+          before: firstPageSpace
+            ? Math.round(0.5 * CM)
+            : layout.id === 'tor' && title
+              ? 0
+              : node.type === 'heading' && layout.id === 'tor'
+                ? 160
+                : title || node.type === 'heading'
+                  ? 120
+                  : 0,
+          after:
+            layout.id === 'tor' && title
+              ? 120
+              : role === 'subject'
+                ? 60
+                : node.type === 'paragraph'
+                  ? role === 'body' && documentText(node).trim()
+                    ? wordPreset(layout).after * 20
+                    : 0
+                  : 60,
         },
-        children: runs(
-          node,
-          size,
-          title || node.type === 'heading',
-          layout.font,
-          role === 'memo-reference',
-          layout.presentation.thaiBreaks,
-        ),
+        children: numbered
+          ? [
+              ...runs(numbered.prefix, size, node.type === 'heading', layout.font, false, layout.presentation.thaiBreaks),
+              new TextRun({ children: [new Tab()] }),
+              ...runs(numbered.body, size, node.type === 'heading', layout.font, false, layout.presentation.thaiBreaks),
+            ]
+          : runs(
+              node,
+              size,
+              title || node.type === 'heading' || role === 'subject',
+              layout.font,
+              role === 'memo-reference',
+              layout.presentation.thaiBreaks,
+            ),
       }),
     ];
   }
@@ -529,7 +601,14 @@ function docx(document: DraftNode, layout: WordLayout) {
   const textLine = (text: string) =>
     new Paragraph({
       spacing: { before: 0, after: 0 },
-      children: runs({ type: 'paragraph', content: [{ type: 'text', text }] }, 28, false, layout.font, false, appearance.thaiBreaks),
+      children: runs(
+        { type: 'paragraph', content: [{ type: 'text', text }] },
+        layout.id === 'tor' ? 24 : 28,
+        false,
+        layout.font,
+        false,
+        appearance.thaiBreaks,
+      ),
     });
   const numberLine = () =>
     new Paragraph({
@@ -538,8 +617,8 @@ function docx(document: DraftNode, layout: WordLayout) {
       children: [
         new TextRun({
           font: layout.font,
-          size: 28,
-          sizeComplexScript: 28,
+          size: layout.id === 'tor' ? 24 : 28,
+          sizeComplexScript: layout.id === 'tor' ? 24 : 28,
           language: THAI_DOCUMENT_LANGUAGE,
           bold: false,
           boldComplexScript: false,
@@ -555,10 +634,30 @@ function docx(document: DraftNode, layout: WordLayout) {
   ];
   const footer = () =>
     new Footer({
-      children: [...(appearance.footerText ? [textLine(appearance.footerText)] : []), ...(pageAt('footer') ? [numberLine()] : [])],
+      children: [
+        ...(layout.id === 'tor'
+          ? [
+              new Paragraph({
+                border: { top: { style: BorderStyle.SINGLE, size: 4, color: 'CCCCCC', space: 2 } },
+                spacing: { before: 0, after: 0 },
+                children: runs(
+                  { type: 'paragraph', content: [{ type: 'text', text: torFooterText(document, appearance) }] },
+                  24,
+                  false,
+                  layout.font,
+                  false,
+                  appearance.thaiBreaks,
+                ),
+              }),
+            ]
+          : appearance.footerText
+            ? [textLine(appearance.footerText)]
+            : []),
+        ...(pageAt('footer') ? [numberLine()] : []),
+      ],
     });
-  const hasHeader = Boolean(appearance.headerText || pageAt('header'));
-  const hasFooter = Boolean(appearance.footerText || pageAt('footer'));
+  const hasHeader = layout.id === 'tor' || Boolean(appearance.headerText || pageAt('header'));
+  const hasFooter = layout.id === 'tor' || Boolean(appearance.footerText || pageAt('footer'));
   const firstHeader = layout.garudaHeightCm
     ? new Header({
         children: [
@@ -645,10 +744,13 @@ function docx(document: DraftNode, layout: WordLayout) {
           run: { font: layout.font, size: preset.points * 2, sizeComplexScript: preset.points * 2, language: THAI_DOCUMENT_LANGUAGE },
           paragraph: { spacing: { before: 0, after: 0, line: Math.round(preset.line * 240), lineRule: LineRuleType.AUTO } },
         },
-        heading1: heading((preset.points + 4) * 2),
-        heading2: heading((preset.points + 2) * 2),
+        heading1: heading((preset.points + (layout.id === 'tor' ? 0 : 4)) * 2),
+        heading2: heading((preset.points + (layout.id === 'tor' ? 0 : 2)) * 2),
         heading3: heading(preset.points * 2),
-        title: { ...heading(44), paragraph: { ...heading(44).paragraph, outlineLevel: 9 } },
+        title: {
+          ...heading(layout.id === 'tor' ? (preset.points + TOR_LAYOUT.titleExtra) * 2 : 44),
+          paragraph: { ...heading(44).paragraph, outlineLevel: 9 },
+        },
       },
     },
     sections: [
@@ -663,6 +765,9 @@ function docx(document: DraftNode, layout: WordLayout) {
               left: Math.round(preset.margins.left * CM),
               right: Math.round(preset.margins.right * CM),
               ...(firstHeader || hasHeader ? { header: Math.round((firstHeader ? 1.5 : 1) * CM) } : {}),
+              ...(layout.id === 'tor'
+                ? { header: Math.round(TOR_LAYOUT.headerCm * CM), footer: Math.round(TOR_LAYOUT.footerCm * CM) }
+                : {}),
             },
             pageNumbers: { formatType: appearance.pageNumber === 'thai' ? NumberFormat.THAI_NUMBERS : NumberFormat.DECIMAL },
           },
@@ -670,7 +775,14 @@ function docx(document: DraftNode, layout: WordLayout) {
         ...(firstHeader || hasHeader
           ? {
               headers: {
-                ...(hasHeader ? { default: new Header({ children: headerLines() }) } : {}),
+                ...(hasHeader
+                  ? {
+                      default:
+                        layout.id === 'tor'
+                          ? torWordHeader(layout.font, wordWidth(layout), headerLines())
+                          : new Header({ children: headerLines() }),
+                    }
+                  : {}),
                 ...(firstHeader ? { first: firstHeader } : {}),
               },
             }
@@ -862,11 +974,13 @@ export type ExportDocumentOptions = {
   images?: ReadonlyMap<string, DocumentImage>;
 };
 
+export type PdfPageSettings = { displayHeaderFooter: boolean; headerTemplate: string; footerTemplate: string };
+
 export async function exportDocument(
   path: string,
   format: string,
   text: string,
-  pdf: (html: string) => Promise<Uint8Array>,
+  pdf: (html: string, settings?: PdfPageSettings) => Promise<Uint8Array>,
   document?: DraftNode,
   options: ExportDocumentOptions = {},
 ) {
@@ -875,12 +989,15 @@ export async function exportDocument(
   if (rich && documentImageIds(rich).length && !['docx', 'pdf'].includes(format)) throw new Error('UNSUPPORTED_EXPORT_ELEMENT');
   if (rich && hasPageBreak(rich) && ['xlsx', 'pptx'].includes(format)) throw new Error('UNSUPPORTED_EXPORT_ELEMENT');
   if (format !== 'docx' && options.presentation) {
-    const p = resolvePresentation(options.presentation, Boolean(options.documentTool));
+    const p = resolvePresentation(options.presentation, typeof options.documentTool === 'string' ? options.documentTool : false);
+    const defaults = resolvePresentation({}, typeof options.documentTool === 'string' ? options.documentTool : false);
+    const torPdf = format === 'pdf' && options.documentTool === 'tor';
     if (
       p.toc ||
-      p.headerText ||
-      p.footerText ||
-      (p.pageNumber !== 'none' && (p.pageNumber !== (options.documentTool ? 'thai' : 'none') || p.pageNumberPosition !== 'footer-center'))
+      (!torPdf &&
+        (p.headerText ||
+          p.footerText ||
+          (p.pageNumber !== 'none' && (p.pageNumber !== defaults.pageNumber || p.pageNumberPosition !== defaults.pageNumberPosition))))
     )
       throw new Error('DOCX_PRESENTATION_ONLY');
   }
@@ -888,7 +1005,7 @@ export async function exportDocument(
   // A draft without structure is plain text: one paragraph per line, nothing read as Markdown.
   const content = rich || plainDocument(text);
   if (format === 'docx') {
-    const presentation = resolvePresentation(options.presentation, Boolean(options.documentTool));
+    const presentation = resolvePresentation(options.presentation, typeof options.documentTool === 'string' ? options.documentTool : false);
     if (
       options.template &&
       (presentation.toc ||
@@ -917,11 +1034,24 @@ export async function exportDocument(
       fieldsNeedUpdate: !options.template && (presentation.toc || presentation.pageNumber !== 'none'),
     };
   }
-  if (format === 'pdf')
+  if (format === 'pdf') {
+    const layout = resolveDocumentLayout(options.documentTool, options.font, options.garuda);
+    const presentation = resolvePresentation(options.presentation, typeof options.documentTool === 'string' ? options.documentTool : false);
+    const furniture = layout.id === 'tor' ? torPdfFurniture(content, layout.font, presentation) : undefined;
     return writeFile(
       path,
-      await pdf(pdfHtml(content, resolveDocumentLayout(options.documentTool, options.font, options.garuda), options.images)),
+      await pdf(
+        pdfHtml(content, layout, options.images, presentation),
+        furniture
+          ? {
+              displayHeaderFooter: true,
+              headerTemplate: furniture.headerTemplate,
+              footerTemplate: furniture.footerTemplate,
+            }
+          : undefined,
+      ),
     );
+  }
   if (format === 'xlsx') return xlsx(path, content);
   return pptx(path, content);
 }

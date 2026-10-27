@@ -8,7 +8,7 @@
 
 ## การจัดหน้าเป็นร่าง
 
-A4 ขอบซ้าย ๓ ซม. ขวา ๒ ซม. บน ๒.๕ ซม. ล่าง ๒ ซม.; ฟอนต์ทำงาน `TH Sarabun PSK` ๑๖ pt ชื่อร่าง ๑๘ pt กึ่งกลาง หัวข้อหลัก ๑๖ pt ตัวหนาและอยู่กับเนื้อหาถัดไป เนื้อความย่อหน้า ๒.๕ ซม. ตารางคงโครงสร้างแก้ไขได้และหัวตารางต่อเนื่อง มีเลขหน้า ตรวจฟอนต์จริงและภาพทุกหน้าก่อนให้สถานะผ่านด้านรูปแบบ `TH Sarabun New` เป็นอีก family หากแบบหน่วยงานกำหนดต้องเลือกอย่างชัดเจน ไม่ถือว่าเทียบเท่ากันโดยอัตโนมัติ ไม่เติมตราครุฑหรือผู้ลงนามให้ TOR โดยอัตโนมัติ
+Desktop TOR exports use the built-in STeP working letterhead derived from the owner-supplied service and purchase examples: A4 with 3 cm left, 2 cm right, 2.5 cm top and 2 cm bottom margins; selected Sarabun family at 16 pt; centered 18 pt title and bold 16 pt procurement subject; bold 16 pt section headings; 1.25 cm narrative first-line indent and 1.15 line spacing. Keep numbered clauses as real text with hanging continuation lines. Repeat table headers, the STeP letterhead and live page numbers. New TOR drafts default to Arabic current/total pages at the bottom right; saved explicit presentation choices take precedence. Add signing blocks only from supplied draft content. Review the rendered Word and PDF pages; their pagination can differ between engines. Other document profiles retain their own layouts. This is a working layout, not an approved procurement form.
 
 ## โครงร่าง — คงหัวข้อที่ข้อมูลยังขาด
 

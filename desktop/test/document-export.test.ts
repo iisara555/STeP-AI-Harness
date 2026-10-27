@@ -155,8 +155,8 @@ test('all document profiles export native editable content with their selected f
     );
     assert.ok(doc.xml.includes(`w:cs="${documentTool === 'memo' ? 'TH Sarabun New' : 'TH SarabunPSK'}"`));
     assert.equal(attr(doc.paragraph('ร่างสังเคราะห์'), 'jc', 'val'), documentTool === 'memo' ? 'left' : 'center', documentTool);
-    assert.equal(attr(doc.paragraph('๑. หัวข้อ'), 'sz', 'val'), '36');
-    assert.match(doc.xml, /<w:pgNumType[^>]*w:fmt="thaiNumbers"/);
+    assert.equal(attr(doc.paragraph('๑. หัวข้อ'), 'sz', 'val'), documentTool === 'tor' ? '32' : '36');
+    assert.match(doc.xml, new RegExp('<w:pgNumType[^>]*w:fmt="' + (documentTool === 'tor' ? 'decimal' : 'thaiNumbers') + '"'));
     assert.match(doc.xml, /<w:footerReference/);
     const footer = await doc.zip.file('word/footer1.xml')!.async('string');
     assert.match(footer, /PAGE/);
@@ -196,11 +196,11 @@ test('memo fields, letter sender/date and signatures receive distinct layouts wi
   for (const doc of [memo, letter]) assert.equal(doc.paragraphs.map(doc.text).join('').replace(/\s/g, ''), expected);
 });
 
-test('TOR title is centered while agency front matter and body stay left-aligned', async () => {
+test('TOR title is centered, agency front matter stays left-aligned and narrative is justified', async () => {
   const tor = await word('# ร่าง TOR\n\nหน่วยงานสังเคราะห์\n\n## ๑. วัตถุประสงค์\n\nสาระจากต้นทาง', { documentTool: 'tor' });
   assert.equal(attr(tor.paragraph('ร่าง TOR'), 'jc', 'val'), 'center');
   assert.equal(attr(tor.paragraph('หน่วยงานสังเคราะห์'), 'jc', 'val'), 'left');
-  assert.equal(attr(tor.paragraph('สาระจากต้นทาง'), 'jc', 'val'), 'left');
+  assert.equal(attr(tor.paragraph('สาระจากต้นทาง'), 'jc', 'val'), 'both');
 });
 
 test('minutes front fields remain centered while source labels remain editable', async () => {

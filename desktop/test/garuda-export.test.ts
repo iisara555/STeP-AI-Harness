@@ -93,11 +93,17 @@ test('memo header keeps the source title editable and gives Thai and Latin the s
   assert.equal(texts(body).replace(/\s/g, ''), documentText(plain).replace(/\s/g, ''));
 });
 
-test('opt-out and unrelated DOCX exports have no emblem and retain native source text', async () => {
+test('opt-out and unrelated DOCX exports have no Garuda; TOR retains only its STeP wordmark and native source text', async () => {
   for (const id of [undefined, 'memo', 'letter', 'tor', 'project', 'minutes']) {
     const { zip, body, headers } = await word(id, id === 'memo' || id === 'letter' ? 'none' : 'auto');
-    assert.equal(headers.length, 0);
-    assert.ok(!Object.keys(zip.files).some(p => p.startsWith('word/media/')));
+    assert.equal(headers.length, id === 'tor' ? 1 : 0);
+    const media = Object.keys(zip.files).filter(p => p.startsWith('word/media/') && !zip.files[p].dir);
+    assert.equal(media.length, id === 'tor' ? 1 : 0);
+    if (id === 'tor') {
+      const image = await zip.file(media[0])!.async('nodebuffer');
+      assert.equal(createHash('sha256').update(image).digest('hex'), '57b33da19b017832ea93e405bd364645ca6acc49528496fded4a7607edad28fd');
+      assert.notEqual(createHash('sha256').update(image).digest('hex'), sourceHash);
+    }
     assert.equal(texts(body).replace(/\s/g, ''), documentText(draft).replace(/\s/g, ''));
   }
   await assert.rejects(word('memo', '../../private.png'), /INVALID_EXPORT_GARUDA/);
