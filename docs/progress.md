@@ -8,7 +8,7 @@ _Last updated: 2026-10-27_
 
 ## Latest release
 
-- **Desktop v0.6.22 prepared (2026-10-27, not published)**: release metadata combines merged staff routing, document/Google coverage, STeP TOR and FM-AF-014 packets with the AFP draft PR. Harness remains 0.7.7. The owner authorized publication; merge and installer publication wait for completed CI on the final source. AFP controlled-form acceptance, real employee data and native macOS Word remain separate acceptance work.
+- **Desktop v0.6.22 prepared (2026-10-27, not published)**: release metadata combines merged staff routing, document/Google coverage, STeP TOR and FM-AF-014 packets with the AFP draft PR. Harness remains 0.7.7. Release formatting/build, eight release-note/localization tests and native What's New smoke pass; the dialog was visually inspected. CI caught the developer guide's previous version reference, now aligned with both READMEs and package metadata. The owner authorized publication; merge and installer publication wait for completed CI on the final source. AFP controlled-form acceptance, real employee data and native macOS Word remain separate acceptance work.
 
 - **Desktop v0.6.21 published (2026-10-26)**: release `desktop-v0.6.21` points to `f8af550a7c01a603b1436989a29df07f54cecf85`, published at 15:50:44 UTC. It includes the merged TOR/saraban guide and document export/diagnostics work through #236. This entry records GitHub release/tag metadata only; it does not claim a new installer-digest or real-account acceptance check.
 
