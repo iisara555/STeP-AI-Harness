@@ -14,6 +14,18 @@ import { uiReviewEn } from './ui-review-en';
 import { receiptPacketEn } from './receipt-packet-en';
 import { afpPaymentVoucherEn } from './afp-payment-voucher-en';
 export const en: Record<string, string> = {
+  'แม่แบบ TOR ใช้หัวเอกสาร STeP พร้อมจัดย่อหน้า ตาราง และเลขหน้าใน Word กับ PDF ให้ใกล้ต้นฉบับมากขึ้น':
+    'TOR templates use STeP letterheads with Word and PDF paragraphs, tables and page numbers closer to the reference layout',
+  'เพิ่มใบสำคัญรับเงิน FM-AF-014 ที่แก้ไขได้ และจัดชุดหลักฐานเป็น PDF รวมพร้อมหน้าสรุปและสารบัญ':
+    'Create editable FM-AF-014 receipt vouchers and combine evidence into a PDF with a summary and index',
+  'เพิ่มร่างใบสำคัญจ่ายสำหรับ AFP แยกยอดก่อนหัก รายการหัก และยอดสุทธิ พร้อมส่งออก Word และรวมในชุด PDF':
+    'Draft AFP disbursement vouchers with separate gross amounts, deductions and net totals, with Word export and inclusion in the PDF packet',
+  'นำข้อมูลที่ตรวจแล้วมาใช้ต่อได้ โดยเตือนเมื่อหลักฐานเปลี่ยน ยอดหักที่ยังไม่ทราบคงว่าง และร่างยังต้องให้ AFP ตรวจรับ':
+    'Reuse checked data with warnings when evidence changes; unknown deductions stay blank and drafts still require AFP review',
+  'เพิ่มประเภทเอกสารทั่วไปในเครื่องมือร่าง และอ่านข้อมูล Google หลายหน้าได้ชัดเจนขึ้น พร้อมระบุส่วนที่ยังอ่านไม่ครบ':
+    'Draft additional document types and read paginated Google data with explicit incomplete-read notices',
+  'คำขอ Big idea และ Signature Moment เลือก Skill ได้ตรงขึ้น และคำถามลางานค้นเจอประกาศงานบุคคล':
+    'Route Big idea and Signature Moment requests more accurately and find HR announcements for leave questions',
   'ส่งออก TOR เป็น Word โดยกึ่งกลางเฉพาะชื่อเรื่อง และจัดข้อมูลหน่วยงานกับเนื้อหาให้อ่านตามแนวเอกสารราชการ':
     'Export TOR to Word with only the title centered, keeping agency details and body content aligned for official documents',
   'ปรับการตัดบรรทัดภาษาไทยใน Word และแม่แบบ DOCX ให้สม่ำเสมอขึ้น โดยไม่เปลี่ยนข้อความร่างต้นฉบับ':
