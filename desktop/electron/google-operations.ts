@@ -91,6 +91,18 @@ export function googleOperationServices(operation: string, write: boolean): Goog
   if (['tasks', 'chat', 'meet', 'forms', 'appscript'].includes(service)) return [service as GoogleService];
   throw new Error('GOOGLE_OPERATION_UNSUPPORTED');
 }
+function validReadInstant(value: unknown): value is string {
+  if (
+    typeof value !== 'string' ||
+    value.length > 50 ||
+    !/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/.test(value) ||
+    !Number.isFinite(Date.parse(value))
+  )
+    return false;
+  const day = new Date(value.slice(0, 10) + 'T00:00:00Z');
+  return Number.isFinite(day.getTime()) && day.toISOString().slice(0, 10) === value.slice(0, 10);
+}
+
 export function googleInvocation(request: GoogleRequest) {
   exact(request, ['operation', 'params', 'body']);
   if (!GOOGLE_OPERATIONS.includes(request.operation)) throw new Error('GOOGLE_OPERATION_UNSUPPORTED');
@@ -148,7 +160,7 @@ export function googleInvocation(request: GoogleRequest) {
     case 'docs.get':
       exact(p, ['documentId']);
       exact(b, []);
-      url = 'https://docs.googleapis.com/v1/documents/' + id(p.documentId);
+      url = 'https://docs.googleapis.com/v1/documents/' + id(p.documentId) + '?includeTabsContent=true';
       scopes = [...docRead, 'documents', 'documents.readonly'];
       break;
     case 'docs.create':
@@ -308,6 +320,8 @@ export function googleInvocation(request: GoogleRequest) {
     case 'calendar.events':
       exact(p, ['calendarId', 'timeMin', 'timeMax', 'pageToken']);
       exact(b, []);
+      if (![p.timeMin, p.timeMax].every(validReadInstant) || Date.parse(p.timeMax) <= Date.parse(p.timeMin))
+        throw new Error('INVALID_GOOGLE_INPUT');
       url =
         'https://www.googleapis.com/calendar/v3/calendars/' +
         encodeURIComponent(text(p.calendarId, 254)) +
@@ -315,6 +329,7 @@ export function googleInvocation(request: GoogleRequest) {
         new URLSearchParams({
           maxResults: '20',
           singleEvents: 'true',
+          orderBy: 'startTime',
           timeMin: text(p.timeMin, 50),
           timeMax: text(p.timeMax, 50),
           pageToken: page(),

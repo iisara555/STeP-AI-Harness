@@ -9,6 +9,7 @@ import { parseGoogleDesktopClient } from './google-client';
 import { bundledGoogleClientSecret } from './google-bundled-client';
 import { googleInvocation, type GoogleRequest } from './google-operations';
 import { googleMailContent } from './google-mail';
+import { googleReadCoverage } from './google-read-coverage';
 import { googleScriptContentHash } from './google-validation';
 
 export type GoogleConfig = { clientId: string; domains: string[]; services: GoogleService[] };
@@ -511,7 +512,13 @@ export class GoogleWorkspace {
     const tokens = response.tokens;
     if (request.operation === 'gmail.get') result = googleMailContent(result);
     if (request.operation === 'gmail.threads.get')
-      result = { id: result.id, messages: Array.isArray(result.messages) ? result.messages.slice(0, 50).map(googleMailContent) : [] };
+      result = {
+        id: result.id,
+        messages: Array.isArray(result.messages) ? result.messages.slice(0, 50).map(googleMailContent) : [],
+        ...(Array.isArray(result.messages) && result.messages.length > 50
+          ? { messagesTruncated: true, totalMessages: result.messages.length }
+          : {}),
+      };
     if (request.operation === 'gmail.drafts.get') result = { id: result.id, message: googleMailContent(result.message || {}) };
     if (request.operation === 'gmail.attachments.getText') {
       try {
@@ -559,13 +566,30 @@ export class GoogleWorkspace {
     if (!resourceUrl) {
       const family = request.operation.split('.')[0];
       const reference =
-        request.params?.[family === 'drive' ? 'fileId' : family === 'appscript' ? 'scriptId' : family === 'forms' ? 'formId' : ''] ||
+        request.params?.[
+          family === 'drive'
+            ? 'fileId'
+            : family === 'appscript'
+              ? 'scriptId'
+              : family === 'forms'
+                ? 'formId'
+                : family === 'docs'
+                  ? 'documentId'
+                  : family === 'sheets'
+                    ? 'spreadsheetId'
+                    : family === 'slides'
+                      ? 'presentationId'
+                      : ''
+        ] ||
         result.form?.formId ||
         (family === 'drive' ? result.id : undefined);
       if (typeof reference === 'string' && /^[A-Za-z0-9_-]{1,200}$/.test(reference)) {
         if (family === 'drive') resourceUrl = `https://drive.google.com/file/d/${reference}/view`;
         if (family === 'forms') resourceUrl = `https://docs.google.com/forms/d/${reference}/edit`;
         if (family === 'appscript') resourceUrl = `https://script.google.com/home/projects/${reference}/edit`;
+        if (family === 'docs') resourceUrl = `https://docs.google.com/document/d/${reference}/edit`;
+        if (family === 'sheets') resourceUrl = `https://docs.google.com/spreadsheets/d/${reference}/edit`;
+        if (family === 'slides') resourceUrl = `https://docs.google.com/presentation/d/${reference}/edit`;
       }
     }
     const clean = JSON.stringify(result)
@@ -573,6 +597,7 @@ export class GoogleWorkspace {
       .join('[credential removed]')
       .split(tokens.refresh)
       .join('[credential removed]');
+    const data = JSON.parse(clean);
     return {
       status: 'completed',
       operation: request.operation,
@@ -582,7 +607,8 @@ export class GoogleWorkspace {
       ...(invocation.write ? { requestDigest: invocation.digest } : {}),
       ...(invocation.acknowledge ? { target: structuredClone(request.params || {}) } : {}),
       ...(resourceUrl ? { resourceUrl } : {}),
-      data: JSON.parse(clean),
+      ...(!invocation.write ? { readCoverage: googleReadCoverage(request, data) } : {}),
+      data,
     };
   }
   async disconnect(id: string, revoke: boolean, context: Context) {

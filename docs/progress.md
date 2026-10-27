@@ -4,9 +4,11 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-10-26_
+_Last updated: 2026-10-27_
 
 ## Latest release
+
+- **Desktop v0.6.21 published (2026-10-26)**: release `desktop-v0.6.21` points to `f8af550a7c01a603b1436989a29df07f54cecf85`, published at 15:50:44 UTC. It includes the merged TOR/saraban guide and document export/diagnostics work through #236. This entry records GitHub release/tag metadata only; it does not claim a new installer-digest or real-account acceptance check.
 
 - **Desktop v0.6.20 published (2026-10-22)**: release `desktop-v0.6.20` targets `90ee71ca667c63284afe4996eddc7e8095b9a059` and was published at 01:25:32 UTC, combining merged #230 (Google reliability/once-per-request reads) and #231 (the seven Settings work sets). PR source `048152a` and merged main `90ee71c` passed all four validation jobs, including full macOS Electron; their Git trees match. Installer run `39703671812` passed Windows native checks, both builds, packaged Mac signature/launch checks and publication. All eight immutable/rolling asset digests and sizes match; both update feeds are 0.6.20. Downloaded public Windows EXE and Mac ZIP match their SHA-256 asset metadata and SHA-512 update feeds. Harness remains 0.7.7. Live Google account/API enablement and employee-device acceptance remain unverified.
 
@@ -46,6 +48,10 @@ _Last updated: 2026-10-26_
 - **Desktop v0.5.39** (2026-10-11) — published from PR #135 (`7f33d12`): managed/local Dev mode gates for Claude plan access, bounded cold fallback and idle prewarming cleanup. Windows x64 and macOS Apple silicon installers are published; Harness **0.7.7**. Intel Macs stay on 0.5.35. The audit fixes below are pull requests and are not in this release.
 
 ## In progress
+
+- **Desktop document drafting and Google reading completion (2026-10-27, source only)** — pulled main `a5e672a` and added a sixth document tool for reports, announcements, orders, certificates, draft agreements and a custom type. It uses the existing Skill/strict draft-review envelope and a bounded working outline; unsupported authority, dates, signers and terms stay pending. TOR now offers the seven types from its current content guide. Existing native agency-template support stays with memo/letter/project/minutes; the new generic tool accepts source material and uses the working Word/PDF layout, not an arbitrary DOCX-template round trip. No version bump or release.
+  - `docs.get` requests all tabs. Native reads include scoped `readCoverage` for pagination, incomplete search, missing content, unread attachments/images and text/thread caps. Sheets/Slides range/page reads retain a source link. Calendar requires a real ordered RFC3339 interval with timezone and sorts expanded events by start time. Gmail HTML-only bodies use inert bounded text extraction, preserving header/footer and table values without fetching external content. Existing Google account intent/scope, read consent, write approval and privacy review stay in force.
+  - Verification: `npm ci`, formatting, build, 57 targeted checks, full Desktop (949 passed, two existing skips), full Harness (1,067 passed, four existing skips), repository validation and generated-plugin freshness passed. Native Electron document smoke exercised all six profiles, DOCX/PDF export, source retention, separate review and revisions; Google services and Workspace reliability smokes passed account-bound full-service choices, readable consent, pause/resume and per-request consent. The original knowledge floor is preserved. The first simultaneous Desktop/Harness/build run hit Office/background-poll/config-lock timeouts; affected cases passed on unchanged main and both full suites passed when rerun separately, without disabling checks. All accounts/providers/documents were synthetic. Real employee Google accounts/API availability, generated-text accuracy, agency Word acceptance and unread image/attachment interpretation remain unverified.
 
 - **Staff-style routing benchmark (2026-10-26, owner asked to test routing for every Skill)**: `manifest/routing-staff-benchmark.json`
   holds 212 synthetic requests (four per routed Skill, phrased the way staff type), 8 general requests and 4 requests
