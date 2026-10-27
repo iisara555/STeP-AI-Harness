@@ -6,6 +6,7 @@ export function googleReadCoverage(request: GoogleRequest, data: any) {
   if (typeof data?.nextPageToken === 'string' && data.nextPageToken) reasons.add('NEXT_PAGE_AVAILABLE');
   if (data?.incompleteSearch === true) reasons.add('SEARCH_INCOMPLETE');
   if (data?.messagesTruncated === true) reasons.add('MESSAGES_TRUNCATED');
+  if (request.operation === 'drive.exportText') reasons.add('EXPORTED_TEXT_ONLY');
   const messages =
     request.operation === 'gmail.get'
       ? [data]
@@ -21,6 +22,25 @@ export function googleReadCoverage(request: GoogleRequest, data: any) {
     if (message?.inlineImagesNotRead) reasons.add('EMBEDDED_CONTENT_NOT_READ');
   }
   let tabsRead: number | undefined;
+  if (request.operation === 'slides.get' || request.operation === 'slides.pages.get') {
+    const pages = request.operation === 'slides.get' && Array.isArray(data?.slides) ? data.slides : [data];
+    const elements: any[] = pages.flatMap((page: any) => (Array.isArray(page?.pageElements) ? page.pageElements : []));
+    let visited = 0;
+    while (elements.length && visited++ < 5000) {
+      const element = elements.pop();
+      if (element?.image || element?.video || element?.sheetsChart) reasons.add('EMBEDDED_CONTENT_NOT_READ');
+      if (Array.isArray(element?.elementGroup?.children)) {
+        for (const child of element.elementGroup.children) {
+          if (elements.length + visited >= 5000) {
+            reasons.add('ELEMENT_INSPECTION_LIMIT');
+            break;
+          }
+          elements.push(child);
+        }
+      }
+    }
+    if (elements.length) reasons.add('ELEMENT_INSPECTION_LIMIT');
+  }
   if (request.operation === 'docs.get') {
     tabsRead = 0;
     const pending = Array.isArray(data?.tabs) ? [...data.tabs] : [];
@@ -49,9 +69,15 @@ export function googleReadCoverage(request: GoogleRequest, data: any) {
     scope:
       request.operation === 'docs.get'
         ? 'returned document tabs and text; images, drawings, comments and linked resources are not read'
-        : request.operation.startsWith('gmail.')
-          ? 'returned message text or search page; attachments require a separate read'
-          : 'requested resource, range or result page only',
+        : request.operation === 'sheets.get'
+          ? 'spreadsheet metadata only; read cell values with sheets.values.get or sheets.values.batchGet'
+          : request.operation === 'drive.exportText'
+            ? 'exported text only; CSV/TSV may include only one sheet and omit the rest of the source file'
+            : request.operation.startsWith('slides.')
+              ? 'returned slide text and metadata; embedded images, videos and chart data are not read'
+              : request.operation.startsWith('gmail.')
+                ? 'returned message text or search page; attachments require a separate read'
+                : 'requested resource, range or result page only',
     complete: reasons.size === 0,
     reasons: [...reasons],
     ...(count ? { returnedItems: data[count].length } : {}),

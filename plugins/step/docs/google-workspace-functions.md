@@ -33,6 +33,9 @@ Drive `incompleteSearch`, unavailable/truncated message text, unread attachments
 complete-read claim. Follow the returned page token with the same named operation when needed. An empty partial
 page is not evidence that the account has no matching records. Calendar reads require explicit ordered RFC3339
 bounds with a timezone and return events ordered by start time; coverage echoes the requested interval.
+Slides images/videos/linked charts remain unread, including inside groups. Text exports describe only the export
+view (CSV/TSV can omit other sheets); `sheets.get` describes metadata, not cell values. Read the required cell
+ranges separately rather than treating metadata or a single-sheet export as the entire workbook.
 
 Gmail prefers plain-text MIME alternatives and decodes their declared charset. HTML-only bodies use inert,
 bounded text extraction, retaining header/footer text and separating table cell values; no images or external

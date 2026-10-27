@@ -45,6 +45,30 @@ test('mail text and MIME traversal limits are explicit before the model receives
   assert.equal(googleReadCoverage({ operation: 'gmail.get' }, complete).complete, true);
 });
 
+test('Slides embeds and text exports do not certify the whole file; Sheets metadata is not cell data', () => {
+  const page = {
+    pageElements: [
+      {
+        elementGroup: {
+          children: [{ sheetsChart: { spreadsheetId: 'synthetic-sheet' } }, { image: { contentUrl: 'https://example.test/synthetic' } }],
+        },
+      },
+    ],
+  };
+  for (const operation of ['slides.get', 'slides.pages.get'] as const) {
+    const coverage = googleReadCoverage({ operation }, operation === 'slides.get' ? { slides: [page] } : page);
+    assert.equal(coverage.complete, false);
+    assert.ok(coverage.reasons.includes('EMBEDDED_CONTENT_NOT_READ'));
+  }
+  const exported = googleReadCoverage(
+    { operation: 'drive.exportText', params: { fileId: 'synthetic', mimeType: 'text/csv' } },
+    { text: '00123,1200' },
+  );
+  assert.equal(exported.complete, false);
+  assert.ok(exported.reasons.includes('EXPORTED_TEXT_ONLY'));
+  assert.match(googleReadCoverage({ operation: 'sheets.get' }, {}).scope, /metadata only/);
+});
+
 test('HTML-only mail is inert text with header, footer and table values retained', () => {
   const html =
     '<html><body><header>เลข 0007</header><main><p>วันนัดสังเคราะห์</p><table><tr><th>ยอดเงิน</th><td>1200.50</td></tr></table></main><footer>เงื่อนไขท้ายข้อความ</footer><script>DO_NOT_EXECUTE</script><img src="https://tracker.example.test/pixel" /></body></html>';
