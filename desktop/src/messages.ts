@@ -4,6 +4,7 @@ import { formatLocalDate, formatLocalMonth } from './thai-date';
 import { credentialErrorsTh } from './credential-copy';
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = localized({
+  DISBURSEMENT_RECEIPT_UNCHECKED: 'กรุณากรอกและตรวจ FM-AF-014 เทียบหลักฐานให้ครบก่อนนำข้อมูลไปเริ่มร่างใบสำคัญจ่าย',
   PACKET_CONFLICT: 'ชุดนี้มีข้อมูลใหม่ที่บันทึกแล้ว โปรดโหลดชุดล่าสุดก่อนแก้ต่อ',
   PACKET_NOT_FOUND: 'ไม่พบชุดเอกสารนี้ โปรดเลือกชุดงานใหม่',
   PACKET_SOURCE_NOT_FOUND: 'ไม่พบหลักฐานนี้ในชุดงาน โปรดโหลดชุดล่าสุด',
@@ -18,7 +19,7 @@ export const errorText: Record<string, string> = localized({
   PACKET_PDF_UNREADABLE: 'อ่าน PDF นี้ไม่ได้ อาจติดรหัสผ่านหรือไฟล์ไม่สมบูรณ์ โปรดบันทึกสำเนา PDF ที่เปิดได้แล้วเลือกใหม่',
   PACKET_EXPORT_SOURCE: 'กรุณาบันทึกเป็นไฟล์ใหม่ เพื่อเก็บต้นฉบับและสำเนาหลักฐานไว้ครบ',
   PACKET_EXPORT_LAYOUT: 'จัดเลขหน้าสรุปชุดไม่ได้ โปรดลดความยาวหน้าสรุปแล้วลองส่งออกใหม่',
-  PACKET_EMPTY: 'ยังไม่มีหน้าหลักฐานหรือร่าง FM-AF-014 ที่เลือกไว้สำหรับส่งออก',
+  PACKET_EMPTY: 'เลือกหน้าหลักฐานหรือร่างเอกสารอย่างน้อยหนึ่งรายการก่อนส่งออก',
   OCR_LOCAL_ONLY: 'โหมด OCR ในเครื่องไม่เรียกบริการ AI ภายนอก',
   DOCX_PRESENTATION_ONLY: 'สารบัญและหัวท้ายกระดาษที่ตั้งไว้ใช้กับ DOCX กรุณาส่งออก DOCX หรือปิดตัวเลือกเหล่านี้ก่อนส่งออกรูปแบบอื่น',
   ...credentialErrorsTh,

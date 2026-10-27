@@ -731,7 +731,7 @@ export function ReceiptApp({
             {t('ตรวจใบเสร็จ')}
           </button>
           <button aria-pressed={receiptMode === 'packet'} onClick={() => setReceiptMode('packet')}>
-            {t('ชุดเอกสารและ FM-AF-014')}
+            {t('ชุดเอกสารเบิกจ่าย')}
           </button>
         </nav>
       </header>

@@ -13,6 +13,7 @@ import {
   type ReviewedReceipt,
   type PacketSource,
 } from '../src/receipt-packet';
+import { blankPaymentVoucher, paymentVoucherFromReceipt } from '../src/afp-payment-voucher';
 
 type Records = {
   get<T>(kind: string, id: string): T | undefined;
@@ -74,11 +75,27 @@ export class ReceiptPackets {
     const packet = this.records.get<ReceiptPacket>(KIND, identifier(id));
     if (!packet) throw new Error('PACKET_NOT_FOUND');
     if (revision !== undefined && packet.revision !== revision) throw new Error('PACKET_CONFLICT');
-    return packet;
+    return {
+      ...packet,
+      disbursement: packet.disbursement || blankPaymentVoucher(),
+      includeDisbursement: Boolean(packet.includeDisbursement),
+    };
   }
   save(raw: ReceiptPacket) {
     const current = this.get(raw?.id);
     const next = editReceiptPacket(current, raw, this.now());
+    this.records.put(KIND, next.id, next);
+    return next;
+  }
+  importDisbursement(id: unknown, revision: unknown) {
+    const current = this.get(id, revision);
+    const next = {
+      ...current,
+      disbursement: paymentVoucherFromReceipt(current.disbursement, current.voucher),
+      revision: current.revision + 1,
+      updatedAt: this.now(),
+      paymentApproved: false as const,
+    };
     this.records.put(KIND, next.id, next);
     return next;
   }
@@ -239,6 +256,7 @@ export async function mergePacketPdf(
   cover: Uint8Array,
   voucher: Uint8Array | undefined,
   sources: { source: PacketSource; bytes: Uint8Array }[],
+  disbursement?: Uint8Array,
 ) {
   const output = await PDFDocument.create();
   const append = async (bytes: Uint8Array, indices?: number[]) => {
@@ -248,6 +266,7 @@ export async function mergePacketPdf(
   };
   await append(cover);
   if (voucher) await append(voucher);
+  if (disbursement) await append(disbursement);
   for (const { source, bytes } of sources) {
     const pages = source.pages.filter(page => page.included).map(page => page.number - 1);
     if (!pages.length) continue;

@@ -17,6 +17,7 @@ import {
   type ReviewedReceipt,
 } from './receipt-packet';
 import './receipt-packet.css';
+import { PaymentVoucherForm } from './afp-payment-voucher-form';
 
 type Props = {
   active: boolean;
@@ -26,6 +27,7 @@ type Props = {
 };
 
 export function ReceiptPacketApp({ active, call, review, notify }: Props) {
+  const [formMode, setFormMode] = useState<'receipt' | 'disbursement'>('receipt');
   const [list, setList] = useState<PacketListItem[]>([]);
   const [packet, setPacket] = useState<ReceiptPacket | null>(null);
   const [loaded, setLoaded] = useState(false),
@@ -53,6 +55,13 @@ export function ReceiptPacketApp({ active, call, review, notify }: Props) {
   const mutate = (update: (value: ReceiptPacket) => ReceiptPacket) => {
     if (!draft.current) return;
     const next = update(draft.current);
+    if (
+      ['title', 'project', 'purpose', 'mode'].some(
+        key => next[key as keyof ReceiptPacket] !== draft.current![key as keyof ReceiptPacket],
+      ) ||
+      (next.disbursement.sourceReceipt && next.voucher !== draft.current.voucher && !next.voucher.checked)
+    )
+      next.disbursement = { ...next.disbursement, checked: false };
     draft.current = next;
     version.current++;
     setPacket(next);
@@ -69,6 +78,7 @@ export function ReceiptPacketApp({ active, call, review, notify }: Props) {
         try {
           const normalized = editReceiptPacket(saved.current, target, new Date().toISOString());
           const confirmationNeedsFlush =
+            (target.disbursement.checked && !normalized.disbursement.checked) ||
             (target.voucher.checked && !normalized.voucher.checked) ||
             target.documents.some((doc, i) => doc.pages.some((page, p) => page.checked && !normalized.documents[i].pages[p].checked));
           if (confirmationNeedsFlush) {
@@ -426,132 +436,154 @@ export function ReceiptPacketApp({ active, call, review, notify }: Props) {
                 </ol>
               </section>
             </div>
-            <section className="packet-section packet-voucher" aria-label={t('ร่างใบสำคัญรับเงิน')}>
-              <div className="packet-section-heading">
-                <h2>{t('ใบสำคัญรับเงิน FM-AF-014')}</h2>
-                <span className="small muted">V.{FM014_REFERENCE.revision}</span>
-              </div>
-              <p className="small muted">{t('ร่างตามโครงแบบ STeP ช่องลงนามเว้นไว้ให้ผู้รับเงินและผู้จ่ายเงิน')}</p>
-              {(['date', 'recipient', 'address', 'payer', 'payerSignatory'] as const).map((key, index) => (
-                <label key={key}>
-                  {t(['วันที่รับเงิน', 'ชื่อผู้รับเงิน', 'ที่อยู่ผู้รับเงิน', 'ได้รับเงินจาก', 'ชื่อผู้จ่ายเงินสำหรับช่องลงนาม'][index])}
-                  {key === 'address' ? (
-                    <textarea
-                      rows={2}
-                      value={packet.voucher[key]}
-                      maxLength={600}
-                      onChange={event => updateVoucher(value => ({ ...value, [key]: event.target.value }))}
-                    />
-                  ) : (
-                    <input
-                      value={packet.voucher[key]}
-                      maxLength={key === 'date' ? 80 : key === 'payer' ? 300 : 200}
-                      onChange={event => updateVoucher(value => ({ ...value, [key]: event.target.value }))}
-                    />
-                  )}
-                </label>
-              ))}
-              <table className="packet-items">
-                <thead>
-                  <tr>
-                    <th>{t('รายการรับเงิน')}</th>
-                    <th>{t('จำนวนเงิน (บาท)')}</th>
-                    <th>
-                      <span className="sr-only">{t('จัดการรายการ')}</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {packet.voucher.items.map((item, index) => (
-                    <tr key={index}>
-                      <td>
-                        <textarea
-                          rows={2}
-                          maxLength={1200}
-                          aria-label={t('รายการรับเงิน {0}', index + 1)}
-                          value={item.description}
-                          onChange={event =>
-                            updateVoucher(value => ({
-                              ...value,
-                              items: value.items.map((row, i) => (i === index ? { ...row, description: event.target.value } : row)),
-                            }))
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          inputMode="decimal"
-                          maxLength={40}
-                          aria-label={t('จำนวนเงินรายการ {0}', index + 1)}
-                          value={item.amount}
-                          onChange={event =>
-                            updateVoucher(value => ({
-                              ...value,
-                              items: value.items.map((row, i) => (i === index ? { ...row, amount: event.target.value } : row)),
-                            }))
-                          }
-                        />
-                      </td>
-                      <td>
-                        <button
-                          className="icon"
-                          aria-label={t('ลบรายการรับเงิน {0}', index + 1)}
-                          disabled={packet.voucher.items.length === 1}
-                          onClick={() => updateVoucher(value => ({ ...value, items: value.items.filter((_, i) => i !== index) }))}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
+            <div className="packet-voucher packet-drafts">
+              <nav className="packet-form-modes" aria-label={t('แบบร่างในชุดเอกสาร')}>
+                <button aria-pressed={formMode === 'receipt'} onClick={() => setFormMode('receipt')}>
+                  {t('ใบสำคัญรับเงิน')}
+                </button>
+                <button aria-pressed={formMode === 'disbursement'} onClick={() => setFormMode('disbursement')}>
+                  {t('ใบสำคัญจ่ายสำหรับ AFP')}
+                </button>
+              </nav>
+              <section className="packet-section" aria-label={t('ร่างใบสำคัญรับเงิน')} hidden={formMode !== 'receipt'}>
+                <div className="packet-section-heading">
+                  <h2>{t('ใบสำคัญรับเงิน FM-AF-014')}</h2>
+                  <span className="small muted">V.{FM014_REFERENCE.revision}</span>
+                </div>
+                <p className="small muted">{t('ร่างตามโครงแบบ STeP ช่องลงนามเว้นไว้ให้ผู้รับเงินและผู้จ่ายเงิน')}</p>
+                {(['date', 'recipient', 'address', 'payer', 'payerSignatory'] as const).map((key, index) => (
+                  <label key={key}>
+                    {t(['วันที่รับเงิน', 'ชื่อผู้รับเงิน', 'ที่อยู่ผู้รับเงิน', 'ได้รับเงินจาก', 'ชื่อผู้จ่ายเงินสำหรับช่องลงนาม'][index])}
+                    {key === 'address' ? (
+                      <textarea
+                        rows={2}
+                        value={packet.voucher[key]}
+                        maxLength={600}
+                        onChange={event => updateVoucher(value => ({ ...value, [key]: event.target.value }))}
+                      />
+                    ) : (
+                      <input
+                        value={packet.voucher[key]}
+                        maxLength={key === 'date' ? 80 : key === 'payer' ? 300 : 200}
+                        onChange={event => updateVoucher(value => ({ ...value, [key]: event.target.value }))}
+                      />
+                    )}
+                  </label>
+                ))}
+                <table className="packet-items">
+                  <thead>
+                    <tr>
+                      <th>{t('รายการรับเงิน')}</th>
+                      <th>{t('จำนวนเงิน (บาท)')}</th>
+                      <th>
+                        <span className="sr-only">{t('จัดการรายการ')}</span>
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              <button
-                className="text-link"
-                disabled={packet.voucher.items.length >= 30}
-                onClick={() => updateVoucher(value => ({ ...value, items: [...value.items, { description: '', amount: '' }] }))}
-              >
-                <Plus size={14} />
-                {t('เพิ่มรายการรับเงิน')}
-              </button>
-              <div className="packet-total">
-                <span>{t('ยอดตามร่างใบสำคัญรับเงิน')}</span>
-                <strong>{total === null ? t('รอข้อมูลครบ') : t('{0} บาท', formatSatang(total))}</strong>
-                {total !== null && <span className="small">{thaiBahtWords(total)}</span>}
-              </div>
-              <label className="packet-check">
-                <input
-                  type="checkbox"
-                  checked={packet.voucher.checked}
-                  onChange={event => {
-                    const checked = event.target.checked;
-                    mutate(value => ({ ...value, voucher: { ...value.voucher, checked } }));
-                    void run(async () => undefined);
-                  }}
-                />
-                {t('ตรวจข้อมูลร่างใบสำคัญรับเงินเทียบกับหลักฐานแล้ว')}
-              </label>
-              <label className="packet-check">
-                <input
-                  type="checkbox"
-                  checked={packet.includeVoucher}
-                  onChange={event => {
-                    const includeVoucher = event.target.checked;
-                    mutate(value => ({ ...value, includeVoucher }));
-                  }}
-                />
-                {t('แนบร่าง FM-AF-014 ใน PDF รวม')}
-              </label>
-              <div className="packet-actions">
-                <button onClick={() => exportFile('voucher-docx')}>
-                  <FileText size={14} />
-                  {t('ส่งออกร่าง Word')}
+                  </thead>
+                  <tbody>
+                    {packet.voucher.items.map((item, index) => (
+                      <tr key={index}>
+                        <td>
+                          <textarea
+                            rows={2}
+                            maxLength={1200}
+                            aria-label={t('รายการรับเงิน {0}', index + 1)}
+                            value={item.description}
+                            onChange={event =>
+                              updateVoucher(value => ({
+                                ...value,
+                                items: value.items.map((row, i) => (i === index ? { ...row, description: event.target.value } : row)),
+                              }))
+                            }
+                          />
+                        </td>
+                        <td>
+                          <input
+                            inputMode="decimal"
+                            maxLength={40}
+                            aria-label={t('จำนวนเงินรายการ {0}', index + 1)}
+                            value={item.amount}
+                            onChange={event =>
+                              updateVoucher(value => ({
+                                ...value,
+                                items: value.items.map((row, i) => (i === index ? { ...row, amount: event.target.value } : row)),
+                              }))
+                            }
+                          />
+                        </td>
+                        <td>
+                          <button
+                            className="icon"
+                            aria-label={t('ลบรายการรับเงิน {0}', index + 1)}
+                            disabled={packet.voucher.items.length === 1}
+                            onClick={() => updateVoucher(value => ({ ...value, items: value.items.filter((_, i) => i !== index) }))}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <button
+                  className="text-link"
+                  disabled={packet.voucher.items.length >= 30}
+                  onClick={() => updateVoucher(value => ({ ...value, items: [...value.items, { description: '', amount: '' }] }))}
+                >
+                  <Plus size={14} />
+                  {t('เพิ่มรายการรับเงิน')}
                 </button>
-                <button className="text-link" onClick={() => exportFile('blank-docx')}>
-                  {t('แม่แบบ Word เปล่า')}
-                </button>
-              </div>
-            </section>
+                <div className="packet-total">
+                  <span>{t('ยอดตามร่างใบสำคัญรับเงิน')}</span>
+                  <strong>{total === null ? t('รอข้อมูลครบ') : t('{0} บาท', formatSatang(total))}</strong>
+                  {total !== null && <span className="small">{thaiBahtWords(total)}</span>}
+                </div>
+                <label className="packet-check">
+                  <input
+                    type="checkbox"
+                    checked={packet.voucher.checked}
+                    onChange={event => {
+                      const checked = event.target.checked;
+                      mutate(value => ({ ...value, voucher: { ...value.voucher, checked } }));
+                      void run(async () => undefined);
+                    }}
+                  />
+                  {t('ตรวจข้อมูลร่างใบสำคัญรับเงินเทียบกับหลักฐานแล้ว')}
+                </label>
+                <label className="packet-check">
+                  <input
+                    type="checkbox"
+                    checked={packet.includeVoucher}
+                    onChange={event => {
+                      const includeVoucher = event.target.checked;
+                      mutate(value => ({ ...value, includeVoucher }));
+                    }}
+                  />
+                  {t('แนบร่าง FM-AF-014 ใน PDF รวม')}
+                </label>
+                <div className="packet-actions">
+                  <button onClick={() => exportFile('voucher-docx')}>
+                    <FileText size={14} />
+                    {t('ส่งออกร่าง Word')}
+                  </button>
+                  <button className="text-link" onClick={() => exportFile('blank-docx')}>
+                    {t('แม่แบบ Word เปล่า')}
+                  </button>
+                </div>
+              </section>
+              <PaymentVoucherForm
+                packet={packet}
+                active={formMode === 'disbursement'}
+                onChange={disbursement => mutate(value => ({ ...value, disbursement }))}
+                onConfirm={checked => {
+                  mutate(value => ({ ...value, disbursement: { ...value.disbursement, checked } }));
+                  void run(async () => undefined);
+                }}
+                onInclude={includeDisbursement => mutate(value => ({ ...value, includeDisbursement }))}
+                onImport={() => documentAction('receiptPacketImportDisbursement')}
+                onExport={exportFile}
+              />
+            </div>
           </fieldset>
           <div className="packet-export">
             <div>
@@ -562,7 +594,7 @@ export function ReceiptPacketApp({ active, call, review, notify }: Props) {
             </div>
             <button
               className="primary"
-              disabled={busy || (!assessment!.includedPages && !packet.includeVoucher)}
+              disabled={busy || (!assessment!.includedPages && !packet.includeVoucher && !packet.includeDisbursement)}
               onClick={() => exportFile('packet-pdf')}
             >
               <Download size={15} />

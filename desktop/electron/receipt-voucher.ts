@@ -178,7 +178,7 @@ export async function receiptVoucherDocx(voucher: ReceiptVoucher) {
   return (await embedDocumentFonts(await Packer.toBuffer(document))).bytes;
 }
 
-function printDocument(body: string, fontCss: string, css = '') {
+export function printDocument(body: string, fontCss: string, css = '') {
   return `<!doctype html><html lang="th"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src data:"><style>${fontCss}
     @page{size:A4;margin:12mm 11.5mm 15mm}*{box-sizing:border-box}body{margin:0;color:#000;font:14pt/1.2 '${FONT}';word-break:normal;overflow-wrap:break-word}
     h1{font-size:18pt;margin:0 0 8mm;text-align:center}p{margin:0 0 2mm}table{border-collapse:collapse;width:100%;table-layout:fixed}thead{display:table-header-group}
@@ -211,8 +211,8 @@ export function receiptVoucherHtml(voucher: ReceiptVoucher, fontCss: string) {
   );
 }
 
-export function packetIndex(packet: ReceiptPacket, coverPages: number, voucherPages: number) {
-  let cursor = coverPages + voucherPages + 1;
+export function packetIndex(packet: ReceiptPacket, coverPages: number, voucherPages: number, disbursementPages = 0) {
+  let cursor = coverPages + voucherPages + disbursementPages + 1;
   return packet.documents.flatMap(doc => {
     const pages = doc.pages.filter(page => page.included);
     if (!pages.length) return [];
@@ -230,10 +230,16 @@ export function packetIndex(packet: ReceiptPacket, coverPages: number, voucherPa
     ];
   });
 }
-export function receiptPacketCoverHtml(packet: ReceiptPacket, coverPages: number, voucherPages: number, fontCss: string) {
+export function receiptPacketCoverHtml(
+  packet: ReceiptPacket,
+  coverPages: number,
+  voucherPages: number,
+  fontCss: string,
+  disbursementPages = 0,
+) {
   const assessment = packetAssessment(packet),
     total = voucherTotal(packet.voucher);
-  const index = packetIndex(packet, coverPages, voucherPages);
+  const index = packetIndex(packet, coverPages, voucherPages, disbursementPages);
   return printDocument(
     `<h1>สรุปชุดเอกสารเบิกจ่าย</h1><p><b>เรื่อง</b> ${html(packet.title)}</p>
     <p><b>โครงการ</b> ${html(packet.project || 'ยังไม่ระบุ')}</p><p><b>วัตถุประสงค์</b> ${multiline(packet.purpose || 'ยังไม่ระบุ')}</p>
@@ -246,6 +252,7 @@ export function receiptPacketCoverHtml(packet: ReceiptPacket, coverPages: number
       · ยอดตามร่าง ${total === null ? 'ยังไม่ครบ' : formatSatang(total) + ' บาท'} · ${packet.voucher.checked ? 'ตรวจข้อมูลแล้ว' : 'รอตรวจข้อมูล'}</p>`
         : ''
     }
+    ${packet.includeDisbursement ? `<p>ร่างใบสำคัญจ่ายสำหรับ AFP อยู่หน้า ${coverPages + voucherPages + 1}${disbursementPages > 1 ? `–${coverPages + voucherPages + disbursementPages}` : ''} · ยังไม่ใช่การอนุมัติหรือคำสั่งจ่าย</p>` : ''}
     <table><colgroup><col style="width:8%"><col style="width:38%"><col style="width:25%"><col style="width:17%"><col style="width:12%"></colgroup>
     <thead><tr><th>ลำดับ</th><th>เอกสาร</th><th>ประเภท / ผลตรวจ</th><th>หน้าต้นฉบับ</th><th>หน้าในชุด</th></tr></thead><tbody>${index
       .map(

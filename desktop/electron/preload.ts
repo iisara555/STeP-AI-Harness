@@ -126,6 +126,7 @@ const allowed = new Set([
   'receiptPacketCreate',
   'receiptPacketGet',
   'receiptPacketSave',
+  'receiptPacketImportDisbursement',
   'receiptPacketAdd',
   'receiptPacketAddReview',
   'receiptPacketRemoveSource',

@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Add an AFP disbursement-voucher working draft alongside FM-AF-014, with explicit checked-data reuse, source-change review, evidenced deductions and net totals, blank signature areas, editable Word and inclusion in the indexed PDF packet. Unknown deductions remain pending, and no tax rate, controlled form number or payment approval is inferred.
+
 - คำถามวันลาที่พนักงานพิมพ์ว่า "ลางาน" เช่น "ปีหน้าลางานได้กี่วัน" ค้นเจอประกาศงานบุคคล 2569 แล้ว (เดิมการค้นเอกสารไม่เจอ Webapp จึงตอบว่ายังไม่พบข้อมูล) เพิ่มคำค้น `ลางาน` ในทะเบียนเอกสารและ test คำถามวันลาแบบที่พนักงานพิมพ์
 - Add editable STeP FM-AF-014 receipt-voucher drafts and local expense document packets with immutable source copies, page selection/classification, checked receipt reuse, a summary/index and combined PDF export. Legacy receipt-voucher readings keep their meaning; Finance disbursement vouchers are a separate type. Outputs remain drafts for human/AFP review, without MIS submission or payment approval.
 - Add a built-in STeP TOR working layout for purchase/service drafts, with repeated branded letterheads, aligned editable clauses and consistent Word/PDF typography. Preserve saved presentation choices and explicit signing data; no procurement conditions are inferred from reference documents.

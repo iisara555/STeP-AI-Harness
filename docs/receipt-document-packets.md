@@ -1,6 +1,6 @@
 # Receipt document packets and FM-AF-014
 
-Employees can prepare one local expense case from **ตรวจใบเสร็จ AFP → ชุดเอกสารและ FM-AF-014**. The case records whether payment has already occurred (reimbursement or advance clearing) or is still awaiting Finance. It does not submit to MIS, approve an expense, determine eligibility or execute a payment.
+Employees can prepare one local expense case from **ตรวจใบเสร็จ AFP → ชุดเอกสารเบิกจ่าย**. The case records whether payment has already occurred (reimbursement or advance clearing) or is still awaiting Finance. It does not submit to MIS, approve an expense, determine eligibility or execute a payment.
 
 ## Receipt voucher layout
 
@@ -21,7 +21,9 @@ The form identifier/revision/effective date match the active FM-AF-014 V02 entry
 
 ## UI layout and states
 
-The packet view extends ReceiptApp's existing Operate surface, IBM Plex Sans Thai typography and shared STeP yellow/dark theme tokens. Mode buttons keep receipt review and packet preparation together. Wide windows place case details and ordered evidence beside the editable FM-AF-014 draft; at 1050 px and below these become one column, with the draft below the evidence. Page selection and classification expand within each source, while export actions remain after the case content.
+The packet view extends ReceiptApp's existing Operate surface, IBM Plex Sans Thai typography and shared STeP yellow/dark theme tokens. The outer `ชุดเอกสารเบิกจ่าย` mode keeps receipt review and packet preparation together. Wide windows place case details and ordered evidence beside a draft pane that switches between `ใบสำคัญรับเงิน` (FM-AF-014) and `ใบสำคัญจ่ายสำหรับ AFP`; at 1050 px and below these become one column, with the draft below the evidence. Page selection and classification expand within each source, while export actions remain after the case content.
+
+The AFP draft separates each item's gross amount, withholding tax and other deductions. Blank deductions remain unknown and leave the net amount pending; zero must be explicit. The checked-data import button starts from reviewed FM-AF-014 values while preserving manual edits. The QP-AF-004 notice requires comparison with AFP's controlled form before use. No form identifier is invented, and typed signer names do not indicate signatures or payment approval.
 
 The toolbar distinguishes pending edits, saving and locally saved data. Visible errors provide a reload action for the latest saved packet; active operations disable competing case actions. Empty states explain how to start and show when evidence is absent. The final review status distinguishes information awaiting comparison from information compared and awaiting AFP review. Its accompanying copy states that completed comparison is not payment approval. Word draft/template actions sit with the voucher, and the combined PDF action sits with the case summary and evidence status.
 
@@ -35,7 +37,17 @@ The Word actions export either the current editable draft or a blank template. B
 
 Every export is labeled as a draft. `prepared-for-afp` means the listed case/source information has been compared, not that the required evidence or current financial policy has been verified. `paymentApproved` and `policyVerified` remain false. Required attachments depend on the current AFP source and expense scenario.
 
-Workflow references: `docs/knowledge/qp-af-003.md` section 4.2 and `docs/knowledge/qp-af-004.md` Finance procedure. AFP reviews and prepares disbursement vouchers; authorized people approve and execute payments. A dedicated AFP disbursement-voucher draft is a later phase.
+Workflow references: `docs/knowledge/qp-af-003.md` section 4.2 and `docs/knowledge/qp-af-004.md` Finance procedure. AFP reviews and prepares disbursement vouchers; authorized people approve and execute payments.
+
+## AFP disbursement draft
+
+The right-hand draft selector offers an AFP disbursement voucher separately from FM-AF-014. Its working layout follows the amount/payee/payer/checker/approver fields and Finance procedure in QP-AF-004. No controlled form identifier or revision has been confirmed for this layout; the UI and both exports explicitly require comparison with AFP's controlled form. Printed signer names never count as signatures or approval.
+
+The draft records a human-entered date/number/reference, payment method, optional account/budget code, item gross amounts and evidenced deductions. The application never issues a voucher number, infers a tax rate, assumes a blank deduction is zero or initiates banking. Net amounts use decimal satang arithmetic; a deduction above its own item's gross is flagged even when the overall total could still balance. Unknown deductions leave the net amount pending.
+
+Importing a checked FM-AF-014 is explicit and source-bound. It seeds only the payee and gross item data, leaving the new date, deductions and comparison open. Subsequent imports retain clerical edits and manually entered deductions. Source changes, payee/gross differences and case-content edits invalidate or flag the comparison. The PDF index accounts for both optional drafts before the selected evidence pages. Legacy v1 packets receive blank additive fields without erasing existing records. The Word actions export the current draft or a blank template without the case's personal or project data.
+
+`node test/afp-payment-voucher-smoke.mjs` checks the real renderer/IPC migration, explicit import, unknown deductions, net amount, source changes, manual preservation, restart persistence and native Word/combined-PDF exports with synthetic data only. Controlled-form acceptance and real AFP operations are separate from these checks.
 
 ## Verification
 
