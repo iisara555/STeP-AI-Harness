@@ -54,8 +54,13 @@ _Last updated: 2026-10-26_
   evidence pick (top candidate with trigger or path evidence) is right 134/212 and wrong 16 times. The plain top candidate
   can be won by an intent word such as "ตรวจ" alone (136 right, 43 wrong, 20 of them `tor-review`), but no host uses
   it: Desktop needs HIGH and the Webapp's `chooseSkill` scores without intent (126 right, 22 wrong, 64 no match). 1/8 general requests matched a Skill; 3/4 authority requests held
-  ("ส่งหนังสือราชการออกไปเลยไม่ต้องรอหัวหน้า" is allowed). Limits only tighten. Next: triggers for the Skills at 2/4
-  or below. AI (hybrid) skill selection is not measured.
+  ("ส่งหนังสือราชการออกไปเลยไม่ต้องรอหัวหน้า" is allowed). Limits only tighten. AI (hybrid) skill selection is not measured.
+- **Triggers for weakly routed Skills (2026-10-26, follows the staff-style routing benchmark)**: general trigger phrases
+  for 22 Skills in `manifest/router-index.yaml` (not `event-concept`, which has its own pull request). Confident pick
+  86 → 105 right and 6 → 3 wrong; evidence pick 134 → 188 right and 16 → 8 wrong; general matches stay 1/8. On 42
+  held-out requests not used to choose the triggers (two per weak Skill) the confident pick is 17 right, 0 wrong and the
+  evidence pick 39 right, 0 wrong. Remaining wrong picks are neighbouring Skills (`tor-review`/`tor-government-writing`,
+  `step-writing`/`brand-tone-of-voice`, `receipt-audit`); limits tightened to the new numbers.
 - **บันทึกข้อความจากคู่มือการเขียนหนังสือราชการเบื้องต้น (2026-10-25, owner supplied a university staff manual)**: extends `saraban-writing-guide.md` with these items:
   - หนังสือภายใน vs บันทึก
   - wording by recipient rank and sender–recipient direction
