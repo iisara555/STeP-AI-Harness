@@ -11,6 +11,7 @@ import { feedbackEn } from './feedback-en';
 import { skillSuggestEn } from './skill-suggest-en';
 import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
+import { receiptPacketEn } from './receipt-packet-en';
 export const en: Record<string, string> = {
   'ส่งออก TOR เป็น Word โดยกึ่งกลางเฉพาะชื่อเรื่อง และจัดข้อมูลหน่วยงานกับเนื้อหาให้อ่านตามแนวเอกสารราชการ':
     'Export TOR to Word with only the title centered, keeping agency details and body content aligned for official documents',
@@ -2637,7 +2638,7 @@ export const en: Record<string, string> = {
   ใบกำกับภาษีอย่างย่อ: 'Abbreviated tax invoice',
   ใบเสร็จรับเงิน: 'Receipt',
   บิลเงินสด: 'Cash bill',
-  ใบสำคัญรับเงิน: 'Payment voucher',
+  ใบสำคัญรับเงิน: 'Receipt voucher',
   'ใบแจ้งหนี้ / ใบเสนอราคา / ใบส่งของ': 'Invoice / quotation / delivery note',
   สลิปโอนเงิน: 'Transfer slip',
   ไม่แน่ใจประเภท: 'Type unclear',
@@ -2692,7 +2693,7 @@ export const en: Record<string, string> = {
   'หมวดฉุกเฉินต้องได้รับความเห็นชอบจากหัวหน้าทีมหรือผู้บริหารทีมก่อนดำเนินการ และเข้าเงื่อนไขครบ 3 ข้อ (เร่งด่วน, ไม่ได้คาดการณ์ไว้, ทำตามระยะเวลาปกติไม่ทัน)':
     'The emergency category needs the team lead’s or team executive’s agreement first, and all 3 conditions (urgent, unforeseen, not possible in the normal time)',
   'ชุดเคลียร์เงิน: ใบขอเบิกค่าใช้จ่าย (FM-AF-002) + ใบเสร็จรับเงินหรือใบสำคัญรับเงิน (FM-AF-014) + สำเนาบัตรประชาชนผู้รับเงินหรือใบรับรองแทนใบเสร็จ (FM-AF-035/036) + รายงานขอความเห็นชอบ':
-    'Clearing set: expense claim (FM-AF-002) + receipt or payment voucher (FM-AF-014) + copy of the payee’s ID card or a receipt substitute certificate (FM-AF-035/036) + approval report',
+    'Clearing set: expense claim (FM-AF-002) + receipt or receipt voucher (FM-AF-014) + copy of the payee’s ID card or a receipt substitute certificate (FM-AF-035/036) + approval report',
   'กฎของหมวดนี้ยังไม่มีในระบบ ชุดเอกสารและกำหนดเวลาโปรดถาม AFP':
     'This category’s rules are not in the app yet; ask AFP for the documents and deadlines',
   'ครบแล้ว {0} ข้อ: {1}': '{0} complete: {1}',
@@ -3129,4 +3130,5 @@ export const en: Record<string, string> = {
   ยังโหลดข้อมูลตรวจระบบไม่ได้: 'System diagnostics could not be loaded',
   'กำลังโหลดข้อมูลตรวจระบบ…': 'Loading system diagnostics…',
   ...settingsEn,
+  ...receiptPacketEn,
 };

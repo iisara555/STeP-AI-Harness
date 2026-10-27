@@ -125,7 +125,8 @@ export function receiptAssessment(input: {
   checked: boolean;
 }) {
   let status: 'needs-document' | 'needs-correction' | 'needs-policy' | 'needs-actions' | 'awaiting-confirmation' | 'prepared';
-  if (input.type === 'invoice_or_quotation' || input.type === 'transfer_slip') status = 'needs-document';
+  if (input.type === 'invoice_or_quotation' || input.type === 'transfer_slip' || input.type === 'disbursement_voucher')
+    status = 'needs-document';
   else if (
     !input.values.merchant?.trim() ||
     !parseReceiptDate(input.values.date || '') ||

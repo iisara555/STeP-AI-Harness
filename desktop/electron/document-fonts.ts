@@ -13,6 +13,23 @@ type Face = { file: string; sha256: string };
 type Family = { family: string; files: Record<'regular' | 'bold' | 'italic' | 'boldItalic', Face> };
 export type FontEmbedding = { status: 'embedded' | 'partial' | 'disabled' | 'unavailable'; families: string[]; missingFamilies?: string[] };
 
+/** Data-only faces for isolated local printing; source documents never supply a font URL. */
+export async function documentPrintFontCss() {
+  const faces = [
+    { file: 'sarabun-new-regular.ttf', hash: '5f313df437c7b80e1a8ef2afad821279c21010d49a71a9fa571d171de5376858', weight: 400 },
+    { file: 'sarabun-new-bold.ttf', hash: '51fe212af014ee66a8a10d168c543953743125becc61bf649993e6df1bbc89e6', weight: 700 },
+  ];
+  return (
+    await Promise.all(
+      faces.map(async face => {
+        const bytes = await readFile(join(directory(), face.file));
+        if (createHash('sha256').update(bytes).digest('hex') !== face.hash) throw new Error('DOCUMENT_FONT_UNAVAILABLE');
+        return `@font-face{font-family:'TH Sarabun New';font-weight:${face.weight};src:url(data:font/ttf;base64,${bytes.toString('base64')}) format('truetype');}`;
+      }),
+    )
+  ).join('');
+}
+
 function directory() {
   const candidates = [
     join((process as NodeJS.Process & { resourcesPath?: string }).resourcesPath || '', 'document-fonts'),

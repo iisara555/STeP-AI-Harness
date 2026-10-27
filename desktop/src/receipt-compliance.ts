@@ -10,7 +10,8 @@ export const DOCUMENT_TYPES = [
   'abbreviated_tax_invoice',
   'receipt',
   'cash_bill',
-  'payment_voucher',
+  'receipt_voucher',
+  'disbursement_voucher',
   'invoice_or_quotation',
   'transfer_slip',
   'other',
@@ -22,7 +23,8 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   abbreviated_tax_invoice: 'ใบกำกับภาษีอย่างย่อ',
   receipt: 'ใบเสร็จรับเงิน',
   cash_bill: 'บิลเงินสด',
-  payment_voucher: 'ใบสำคัญรับเงิน',
+  receipt_voucher: 'ใบสำคัญรับเงิน FM-AF-014',
+  disbursement_voucher: 'ใบสำคัญจ่าย',
   invoice_or_quotation: 'ใบแจ้งหนี้ / ใบเสนอราคา / ใบส่งของ',
   transfer_slip: 'สลิปโอนเงิน',
   other: 'ไม่แน่ใจประเภท',
@@ -49,6 +51,8 @@ export const FEATURE_KEYS = [
 ] as const;
 
 export function parseDocumentType(value: unknown): DocumentType | '' {
+  // Earlier receipt exports used this name for FM-AF-014, never for a disbursement voucher.
+  if (value === 'payment_voucher') return 'receipt_voucher';
   return typeof value === 'string' && (DOCUMENT_TYPES as readonly string[]).includes(value) ? (value as DocumentType) : '';
 }
 
@@ -70,7 +74,8 @@ function classifyText(text: string): DocumentType | '' {
   const t = text.replace(/\s+/g, ' ');
   if (/ใบกำกับภาษีอย่างย่อ|\babb\b|tax invoice\s*\(abb/i.test(t)) return 'abbreviated_tax_invoice';
   if (/ใบกำกับภาษี|tax invoice/i.test(t)) return 'tax_invoice';
-  if (/ใบสำคัญรับเงิน|FM-AF-014/i.test(t)) return 'payment_voucher';
+  if (/ใบสำคัญรับเงิน|FM-AF-014/i.test(t)) return 'receipt_voucher';
+  if (/ใบสำคัญจ่าย|payment voucher/i.test(t)) return 'disbursement_voucher';
   if (/บิลเงินสด|cash sale|cash bill/i.test(t)) return 'cash_bill';
   if (/ใบเสร็จรับเงิน|ใบเสร็จ|receipt/i.test(t)) return 'receipt';
   if (/ใบแจ้งหนี้|ใบเสนอราคา|ใบส่งของ|ใบวางบิล|invoice|quotation|delivery order/i.test(t)) return 'invoice_or_quotation';

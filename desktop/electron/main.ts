@@ -1,6 +1,10 @@
 import { copilotDeviceLogin } from './copilot-auth';
 import { unscanned, credentialsOnly } from './checks';
 import { TERMS_VERSION } from '../src/terms-version';
+import { ReceiptPackets, receiptSourceToken, mergePacketPdf, loadPacketPdf } from './receipt-packets';
+import { receiptVoucherDocx, receiptVoucherHtml, receiptPacketCoverHtml } from './receipt-voucher';
+import { documentPrintFontCss } from './document-fonts';
+import { PACKET_LIMITS, blankReceiptVoucher, type ReviewedReceipt } from '../src/receipt-packet';
 import { takesImages } from '../src/vision-transport';
 import {
   app,
@@ -279,6 +283,7 @@ async function main() {
         details.mediaType === 'audio'),
   );
   store = new Store(join(data, 'workspace.sqlite'));
+  const receiptPackets = new ReceiptPackets(store, join(data, 'receipt-packets'));
   const vaultProfile = store.get<string>('vault-profile', 'main') || randomUUID();
   store.put('vault-profile', 'main', vaultProfile);
   const vault = new Vault(
@@ -3404,7 +3409,7 @@ async function main() {
             lastReceipt = { name: basename(path), path, extension, bytes };
             const type = previewTypes[extension];
             const preview = type && bytes.length <= 8 * 1024 * 1024 ? `data:${type};base64,${bytes.toString('base64')}` : '';
-            return { name: basename(path), preview, result: null, visionOnly: true };
+            return { name: basename(path), preview, result: null, visionOnly: true, sourceToken: receiptSourceToken(bytes) };
           }
           const started = performance.now();
           const read = await ocr.recognize(path, health.crosscheck, health.tesseract, health.handwriting, signal);
@@ -3414,7 +3419,7 @@ async function main() {
           // Show the receipt beside its fields; formats Chromium cannot draw (PDF, TIFF) fall back to text only.
           const type = previewTypes[read.extension];
           const preview = type && read.bytes.length <= 8 * 1024 * 1024 ? `data:${type};base64,${read.bytes.toString('base64')}` : '';
-          return { name: basename(path), preview, result: read.result, elapsedMs };
+          return { name: basename(path), preview, result: read.result, elapsedMs, sourceToken: receiptSourceToken(read.bytes) };
         });
       }
       case 'ocrResolve': {
@@ -3605,6 +3610,155 @@ async function main() {
             clearTimeout(timeout);
           }
         });
+      }
+      case 'receiptPacketList':
+        return receiptPackets.list();
+      case 'receiptPacketCreate':
+        return receiptPackets.create();
+      case 'receiptPacketGet':
+        return receiptPackets.get(input.id);
+      case 'receiptPacketSave':
+        return receiptPackets.save(input.packet);
+      case 'receiptPacketRemoveSource':
+        return receiptPackets.remove(input.id, input.revision, input.sourceId);
+      case 'receiptPacketOpenSource': {
+        const path = receiptPackets.path(input.id, input.sourceId);
+        const message = await shell.openPath(path);
+        if (message) throw new Error('PACKET_SOURCE_OPEN_FAILED');
+        return { opened: true };
+      }
+      case 'receiptPacketAdd':
+      case 'receiptPacketAddReview': {
+        receiptPackets.get(input.id, input.revision);
+        if (method === 'receiptPacketAddReview') {
+          const source = lastReceipt;
+          const review = input.review as ReviewedReceipt;
+          if (!source || !review || review.checked !== true || review.sourceToken !== receiptSourceToken(source.bytes))
+            throw new Error('PACKET_REVIEW_STALE');
+          return receiptPackets.add(
+            input.id,
+            input.revision,
+            [
+              {
+                name: source.name,
+                extension: source.extension === 'jpeg' ? 'jpg' : source.extension,
+                bytes: source.bytes,
+                originalPath: source.path,
+              },
+            ],
+            review,
+          );
+        }
+        const picked = await dialog.showOpenDialog(window, {
+          title: tm('เพิ่มเอกสารเข้าชุด'),
+          properties: ['openFile', 'multiSelections'],
+          filters: [{ name: 'PDF / PNG / JPG', extensions: ['pdf', 'png', 'jpg', 'jpeg'] }],
+        });
+        if (picked.canceled) return null;
+        if (picked.filePaths.length > PACKET_LIMITS.documents) throw new Error('PACKET_DOCUMENT_LIMIT');
+        const sources = [];
+        let bytes = 0;
+        for (const path of picked.filePaths) {
+          const source = await readOcrInput(path);
+          bytes += source.bytes.length;
+          if (bytes > PACKET_LIMITS.totalBytes) throw new Error('PACKET_SOURCE_LIMIT');
+          if (source.extension !== 'pdf') {
+            const image = nativeImage.createFromBuffer(source.bytes),
+              size = image.getSize();
+            if (image.isEmpty() || size.width * size.height > 40_000_000) throw new Error('PACKET_SOURCE_LIMIT');
+          }
+          sources.push({
+            name: basename(path),
+            extension: source.extension === 'jpeg' ? 'jpg' : source.extension,
+            bytes: source.bytes,
+            originalPath: path,
+          });
+        }
+        return receiptPackets.add(input.id, input.revision, sources);
+      }
+      case 'receiptPacketExport': {
+        const packet = receiptPackets.get(input.id, input.revision);
+        if (!['packet-pdf', 'voucher-docx', 'blank-docx'].includes(input.format)) throw new Error('INVALID_EXPORT');
+        const key = 'receipt-packet:' + packet.id;
+        if (exporting.has(key)) throw new Error('EXPORT_BUSY');
+        exporting.add(key);
+        try {
+          const extension = input.format === 'packet-pdf' ? 'pdf' : 'docx';
+          const saved = await dialog.showSaveDialog(window, {
+            title: tm('ส่งออกชุดเอกสารหรือแม่แบบ'),
+            defaultPath: join(
+              store.settings().workspace || app.getPath('documents'),
+              (input.format === 'packet-pdf'
+                ? 'receipt-packet-' + packet.id.slice(0, 8)
+                : 'FM-AF-014-' + (input.format === 'blank-docx' ? 'template' : 'draft')) +
+                '.' +
+                extension,
+            ),
+            filters: [{ name: extension.toUpperCase(), extensions: [extension] }],
+          });
+          if (saved.canceled || !saved.filePath) return null;
+          receiptPackets.get(packet.id, packet.revision);
+          await receiptPackets.assertDestination(packet, saved.filePath);
+          let bytes: Buffer;
+          if (extension === 'docx')
+            bytes = await receiptVoucherDocx(input.format === 'blank-docx' ? blankReceiptVoucher() : packet.voucher);
+          else {
+            const fontCss = await documentPrintFontCss();
+            const printHtml = async (html: string) => {
+              const printSession = electronSession.fromPartition('receipt-packet-print');
+              printSession.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*', 'file://*/*'] }, (_request, callback) =>
+                callback({ cancel: true }),
+              );
+              const print = new BrowserWindow({
+                show: false,
+                webPreferences: { session: printSession, sandbox: true, contextIsolation: true, nodeIntegration: false, javascript: false },
+              });
+              print.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+              try {
+                await print.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+                return await print.webContents.printToPDF({
+                  printBackground: true,
+                  pageSize: 'A4',
+                  preferCSSPageSize: true,
+                  margins: { top: 0, bottom: 0, left: 0, right: 0 },
+                });
+              } finally {
+                if (!print.isDestroyed()) print.destroy();
+              }
+            };
+            const voucher = packet.includeVoucher ? await printHtml(receiptVoucherHtml(packet.voucher, fontCss)) : undefined;
+            const voucherPages = voucher ? (await loadPacketPdf(voucher)).getPageCount() : 0;
+            let coverPages = 1,
+              cover: Buffer | undefined;
+            for (let attempt = 0; attempt < 3; attempt++) {
+              cover = await printHtml(receiptPacketCoverHtml(packet, coverPages, voucherPages, fontCss));
+              const measured = (await loadPacketPdf(cover)).getPageCount();
+              if (measured === coverPages) break;
+              coverPages = measured;
+              cover = undefined;
+            }
+            if (!cover) throw new Error('PACKET_EXPORT_LAYOUT');
+            const sources = [];
+            for (const source of packet.documents) {
+              if (!source.pages.some(page => page.included)) continue;
+              const original = await receiptPackets.sourceBytes(packet, source);
+              if (source.extension === 'pdf') sources.push({ source, bytes: original });
+              else {
+                const image = nativeImage.createFromBuffer(original),
+                  size = image.getSize();
+                if (image.isEmpty() || size.width * size.height > 40_000_000) throw new Error('PACKET_SOURCE_LIMIT');
+                sources.push({ source: { ...source, extension: 'png' as const }, bytes: image.toPNG() });
+              }
+            }
+            if (!sources.length && !voucher) throw new Error('PACKET_EMPTY');
+            bytes = await mergePacketPdf(cover, voucher, sources);
+          }
+          await writeFile(saved.filePath, bytes);
+          exportPaths.add(saved.filePath);
+          return { path: saved.filePath };
+        } finally {
+          exporting.delete(key);
+        }
       }
       case 'ocrTrialSave':
       case 'ocrSave': {
