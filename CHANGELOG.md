@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- เพิ่มปุ่มเชื่อม **LM Studio** ในเครื่อง (`127.0.0.1:1234`, ไม่ต้องใช้ key) ข้าง Ollama และให้แอปอ่านขนาด context ที่ Ollama/LM Studio โหลดโมเดลไว้จริงแทนการเดาจากชื่อโมเดล ถ้าเล็กกว่า 16,384 token จะแจ้งตอนเชื่อมพร้อมวิธีแก้ (`OLLAMA_CONTEXT_LENGTH` หรือ Context Length ใน LM Studio) แทนที่ server จะตัดคำสั่งทิ้งเงียบ ๆ จนตอบผิด
+
 ## Desktop v0.6.22 (2026-10-27)
 
 - Add a general document drafting tool and bounded Google reads with explicit coverage for pagination and unread content, retaining account-scoped consent and write approval.

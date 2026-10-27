@@ -74,6 +74,7 @@ import { Mcp } from './mcp';
 import { Sandbox } from './sandbox';
 import { adapter, closeClaudeSpares, listModels } from './providers';
 import { compatibleEndpoint, presetBaseUrl } from './preset-endpoint';
+import { LOCAL_PRESETS, localLimits } from './local-context';
 import { openRouterSignIn } from './openrouter-auth';
 import { PROVIDER_PRESETS, pickModel, presetFor } from '../src/provider-presets';
 import { errorCode, readDiagnosticLog, scrub } from './diagnostics';
@@ -407,7 +408,9 @@ async function main() {
       }),
     contextPolicy: routerPolicy.classifyContextPolicy,
     modelLimits: connection =>
-      policyState.policy.modelLimits?.[connection.model] || policyState.policy.modelLimits?.[connection.provider + ':*'] || {},
+      policyState.policy.modelLimits?.[connection.model] ||
+      policyState.policy.modelLimits?.[connection.provider + ':*'] ||
+      (connection.provider === 'compatible' ? localLimits(connection) : {}),
     privacy: scanText,
     publicSearch: (query, signal) => searchPublicWeb(query, signal, policyState.policy.network?.proxyUrl),
     catalog: skillCatalog.createSkillCatalog(root),
@@ -1794,6 +1797,16 @@ async function main() {
         models.map(m => m.id),
       );
       if (!connection.model) throw new Error('MODEL_REQUIRED');
+    }
+    // A model on this computer must have loaded a window the app's prompt fits in; say so now rather than mid-task.
+    if (LOCAL_PRESETS.includes(preset.id)) {
+      emit({
+        sessionId: '',
+        type: 'connect-progress',
+        connectionId: connection.id,
+        text: tm('กำลังตรวจขนาดข้อความที่โมเดลในเครื่องรับได้'),
+      });
+      await localLimits(connection);
     }
   }
   async function refreshModels(connection: Connection) {

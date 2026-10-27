@@ -9,7 +9,7 @@ export type ProviderPreset = {
   description: string;
   baseUrl: string;
   protocol: 'openai' | 'anthropic';
-  /** 'none' for a service on this computer (Ollama), which needs no key. */
+  /** 'none' for a service on this computer (Ollama, LM Studio), which needs no key. */
   key: 'required' | 'none';
   /** The service can issue a key through its own sign-in page (OAuth PKCE), so the employee need not copy one. */
   signIn?: 'openrouter';
@@ -103,6 +103,16 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     key: 'none',
     defaultModel: '',
     keyUrl: 'https://ollama.com/download',
+  },
+  {
+    id: 'lmstudio',
+    label: 'LM Studio',
+    description: 'โมเดลที่เปิดใน LM Studio บนเครื่องนี้ ข้อมูลไม่ออกนอกเครื่อง',
+    baseUrl: 'http://127.0.0.1:1234/v1',
+    protocol: 'openai',
+    key: 'none',
+    defaultModel: '',
+    keyUrl: 'https://lmstudio.ai/download',
   },
 ];
 

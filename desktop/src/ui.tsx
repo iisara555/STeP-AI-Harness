@@ -545,7 +545,7 @@ function providerTiles(claudeSubscription: boolean, presets: boolean): Tile[] {
     },
     key('claude', 'Claude API', t('คีย์จาก Anthropic Console คิดตามการใช้')),
     key('openai', 'OpenAI API', t('คีย์จาก OpenAI Platform คิดตามการใช้')),
-    ...(presets ? ['deepseek', 'qwen', 'minimax', 'groq', 'mistral', 'xai', 'ollama'].map(preset) : []),
+    ...(presets ? ['deepseek', 'qwen', 'minimax', 'groq', 'mistral', 'xai', 'ollama', 'lmstudio'].map(preset) : []),
   ];
 }
 const tileFor = (tiles: Tile[], c: ProviderChoice) =>

@@ -110,7 +110,12 @@ export type Harness = {
   answerCheck?: () => boolean;
   tools?: (scope: ToolScope) => Promise<LoopHost>;
   recordUsage?: (connection: Connection, count: TokenCount) => void;
-  modelLimits?: (connection: Connection) => Pick<Connection, 'contextWindow' | 'maxOutputTokens' | 'promptCaching'>;
+  /** Administrator limits, else the window a model on this computer actually loaded (electron/local-context.ts). */
+  modelLimits?: (
+    connection: Connection,
+  ) =>
+    | Pick<Connection, 'contextWindow' | 'maxOutputTokens' | 'promptCaching'>
+    | Promise<Pick<Connection, 'contextWindow' | 'maxOutputTokens' | 'promptCaching'>>;
   /** Policy autoEffort: pick the reasoning level by task size when the employee has not chosen one (electron/effort.ts). */
   autoEffort?: () => boolean;
   documentMetadata?: (ids: string[]) => Promise<any[]>;
@@ -719,7 +724,7 @@ export class WorkService {
     if (!stored?.ready) throw new Error('CONNECTION_NOT_READY');
     // The model picked for this task overrides the connection default; empty means the provider default.
     const selectedConnection: Connection = { ...stored, model: session.model ?? stored.model };
-    const connection: Connection = { ...selectedConnection, ...this.harness.modelLimits?.(selectedConnection) };
+    const connection: Connection = { ...selectedConnection, ...(await this.harness.modelLimits?.(selectedConnection)) };
     const recordUsage = (count: TokenCount) => {
       if (options.longBudget) options.longBudget.tokens += count.total;
       this.harness.recordUsage?.(connection, count);
