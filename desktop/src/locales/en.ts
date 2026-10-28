@@ -86,6 +86,8 @@ export const en: Record<string, string> = {
     'The page changed while permission was pending. Read it again before sending data.',
   'ยังบันทึกข้อมูลบัญชีไม่ได้ ตรวจว่าปลดล็อกเครื่องแล้วลองใหม่ หากยังไม่ได้ให้แจ้งผู้ดูแล':
     'Account details could not be saved. Check that the computer is unlocked and retry; contact support if it continues.',
+  'โมเดลในเครื่องเปิดรับข้อความได้น้อยกว่า 16,384 token ส่วนที่เกินจะถูกตัดทิ้งเงียบ ๆ ใน Ollama ให้ตั้ง OLLAMA_CONTEXT_LENGTH=16384 (หรือมากกว่า) แล้วเปิด Ollama ใหม่ ใน LM Studio ให้เพิ่ม Context Length ตอนโหลดโมเดล แล้วลองเชื่อมอีกครั้ง':
+    'The local model accepts fewer than 16,384 tokens, so anything longer is cut off silently. In Ollama set OLLAMA_CONTEXT_LENGTH=16384 (or more) and restart Ollama; in LM Studio raise Context Length when loading the model. Then connect again.',
   'ได้รับคำตอบจาก AI ไม่ครบ ลองอีกครั้ง': 'The AI response was incomplete. Try again.',
   'อ่านคำตอบจาก AI ไม่สำเร็จ ลองอีกครั้ง': 'The AI response could not be read. Try again.',
   'ยังเชื่อมต่อ AI ผ่านเครือข่ายองค์กรไม่ได้ ให้ผู้ดูแลตรวจการเชื่อมต่อ':
@@ -921,6 +923,7 @@ export const en: Record<string, string> = {
   โมเดลจากยุโรป: 'Models from Europe',
   'โมเดล Grok ของ xAI': "xAI's Grok models",
   'โมเดลที่รันในเครื่องนี้ ข้อมูลไม่ออกนอกเครื่อง': 'Models that run on this computer; data never leaves it',
+  'โมเดลที่เปิดใน LM Studio บนเครื่องนี้ ข้อมูลไม่ออกนอกเครื่อง': 'Models loaded in LM Studio on this computer; data never leaves it',
   'บริการนี้ไม่ได้แนะนำโมเดล กรุณาพิมพ์ชื่อโมเดลที่จะใช้': 'This service did not suggest a model. Type the model name to use',
   'ลงชื่อด้วย OpenRouter ไม่สำเร็จ ลองใหม่ หรือใส่ API key ของ OpenRouter แทน':
     'OpenRouter sign-in failed. Try again, or paste an OpenRouter API key instead',
@@ -2364,6 +2367,7 @@ export const en: Record<string, string> = {
   'ใช้ตัวเชื่อมที่เลือกเอง · ยังไม่ได้ทดสอบการเชื่อมต่อ': 'Using a custom connector · connection not tested yet',
   'GitHub: ใส่รหัส {0} ในหน้าที่เปิด': 'GitHub: enter code {0} on the page that opened',
   กำลังโหลดรายชื่อโมเดล: 'Loading model list',
+  กำลังตรวจขนาดข้อความที่โมเดลในเครื่องรับได้: 'Checking how much text the local model accepts',
   ผ่านการเชื่อมต่อและรับคำตอบบนเครื่องนี้แล้ว: 'Connected and received an answer on this computer',
   'เลือกโฟลเดอร์ local-thai-ocr': 'Choose the local-thai-ocr folder',
   'ให้ AI ช่วยกรองผล OCR': 'Let AI filter the OCR results',

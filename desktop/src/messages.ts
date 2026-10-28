@@ -63,6 +63,8 @@ export const errorText: Record<string, string> = localized({
   PROVIDER_URL_INVALID: 'Base URL ต้องเป็น HTTPS หรือ HTTP ของ localhost และไม่มีข้อมูลรับรองใน URL',
   PROVIDER_STREAM_INCOMPLETE: 'ได้รับคำตอบจาก AI ไม่ครบ ลองอีกครั้ง',
   PROVIDER_STREAM_INVALID: 'อ่านคำตอบจาก AI ไม่สำเร็จ ลองอีกครั้ง',
+  LOCAL_CONTEXT_TOO_SMALL:
+    'โมเดลในเครื่องเปิดรับข้อความได้น้อยกว่า 16,384 token ส่วนที่เกินจะถูกตัดทิ้งเงียบ ๆ ใน Ollama ให้ตั้ง OLLAMA_CONTEXT_LENGTH=16384 (หรือมากกว่า) แล้วเปิด Ollama ใหม่ ใน LM Studio ให้เพิ่ม Context Length ตอนโหลดโมเดล แล้วลองเชื่อมอีกครั้ง',
   PROVIDER_CAPABILITY_UNSUPPORTED: 'การเชื่อมต่อนี้รองรับร่างข้อความเท่านั้น',
   COPILOT_CLIENT_ID_REQUIRED: 'ผู้ดูแลต้องกำหนด GitHub OAuth App ก่อนเชื่อม Copilot',
   COPILOT_LOGIN_REQUIRED: 'กรุณาลงชื่อเข้าใช้ GitHub Copilot อีกครั้ง',

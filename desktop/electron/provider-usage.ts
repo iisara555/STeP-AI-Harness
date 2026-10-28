@@ -195,7 +195,7 @@ export function usageDashboard(c: Connection): string | undefined {
   if (c.provider === 'gemini') return c.mode === 'api' ? 'https://aistudio.google.com/usage' : 'https://console.cloud.google.com/';
   if (c.provider === 'antigravity') return 'https://antigravity.google/';
   if (c.provider === 'copilot') return 'https://github.com/settings/billing';
-  if (c.preset === 'ollama') return;
+  if (c.preset === 'ollama' || c.preset === 'lmstudio') return;
   if (c.preset === 'openrouter') return 'https://openrouter.ai/settings/credits';
   if (c.preset === 'deepseek') return 'https://platform.deepseek.com/usage';
   // Never open a user-supplied endpoint as an account/billing page.
