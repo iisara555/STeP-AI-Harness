@@ -155,6 +155,8 @@ try {
   await page.getByLabel('ชื่อเรื่องเบิก', { exact: true }).fill('อบรม SECRET_PERSON 1234567890123');
   await page.getByLabel('โครงการหรือหน่วยงาน', { exact: true }).fill('SECRET_PROJECT');
   await page.getByLabel('วัตถุประสงค์ของชุดเอกสาร', { exact: true }).fill('SECRET_PURPOSE');
+  await page.getByRole('button', { name: 'หลักฐาน', exact: true }).click();
+  await page.getByText('ปรับกิจกรรมและกรณีการเงิน', { exact: true }).click();
   await page.getByRole('combobox', { name: 'กรณีการเงินที่ทราบ', exact: true }).selectOption('b_clearance');
   const guidance = page.getByRole('region', { name: 'แนะนำเอกสารตามกิจกรรม' });
   await guidance.getByText('รายการอื่นที่ต้องการตรวจ (0)', { exact: true }).click();
@@ -183,6 +185,11 @@ try {
   await guidance.getByRole('button', { name: 'ตรวจและปิดบังบริบท', exact: true }).click();
   await expect(guidance.locator('.evidence-ai-preview pre')).toContainText('[หมายเลขโทรศัพท์ถูกปิดบัง]');
   await expect(guidance.locator('.evidence-ai-preview pre')).not.toContainText('081-234-5678');
+  await page.getByRole('button', { name: 'ข้อมูลเรื่อง', exact: true }).click();
+  await page.getByRole('button', { name: 'หลักฐาน', exact: true }).click();
+  await expect(contextInput).toHaveValue('อบรมหนึ่งวัน มีวิทยากร โทร 081-234-5678');
+  await expect(sendContext).toBeEnabled();
+  assert.equal((await app.evaluate(() => globalThis.receiptSendFixture.sent)).length, 3);
   await contextInput.fill('อบรมหนึ่งวัน มีวิทยากรและอาหาร โทร 081-234-5678');
   await expect(sendContext).toBeDisabled();
   await guidance.getByRole('button', { name: 'ตรวจและปิดบังบริบท', exact: true }).click();

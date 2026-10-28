@@ -126,6 +126,7 @@ try {
   await page.getByLabel('ชื่อเรื่องเบิก', { exact: true }).fill('ทดสอบชุดเบิก — ข้อมูลสมมติ');
   await page.getByLabel('โครงการหรือหน่วยงาน', { exact: true }).fill('โครงการทดสอบระบบ');
   await page.getByLabel('วัตถุประสงค์ของชุดเอกสาร', { exact: true }).fill('ตรวจแบบฟอร์มและการรวมหลักฐาน ข้อมูลทั้งหมดเป็นข้อมูลสมมติ');
+  await page.getByRole('button', { name: 'ร่างและส่งออก', exact: true }).click();
   await page.getByLabel('วันที่รับเงิน', { exact: true }).fill('27 ตุลาคม 2569');
   await page.getByLabel('ชื่อผู้รับเงิน', { exact: true }).fill('ผู้รับเงินตัวอย่าง');
   await page.getByLabel('ที่อยู่ผู้รับเงิน', { exact: true }).fill('ที่อยู่สมมติสำหรับตรวจรูปแบบเอกสาร');
@@ -149,6 +150,7 @@ try {
   });
   await writeFile(pngPath, Buffer.from(png, 'base64'));
   await pick([source, pngPath]);
+  await page.getByRole('button', { name: 'หลักฐาน', exact: true }).click();
   await page.getByRole('button', { name: 'เพิ่มเอกสาร', exact: true }).click();
   await expect(page.getByLabel('ประเภทของ synthetic-mixed.pdf', { exact: true })).toBeVisible();
   await page.getByLabel('ประเภทของ synthetic-mixed.pdf', { exact: true }).selectOption('receipt');
@@ -159,6 +161,7 @@ try {
   await page.getByLabel('ตรวจเทียบหน้าที่เลือกของ synthetic-mixed.pdf แล้ว', { exact: true }).check();
   await page.getByLabel('ตรวจเทียบหน้าที่เลือกของ synthetic-image.png แล้ว', { exact: true }).check();
   await page.getByLabel('เลื่อนเอกสารขึ้น synthetic-image.png', { exact: true }).click();
+  await page.getByRole('button', { name: 'ร่างและส่งออก', exact: true }).click();
   await page.getByLabel('ตรวจข้อมูลร่างใบสำคัญรับเงินเทียบกับหลักฐานแล้ว', { exact: true }).check();
   await expect(page.getByLabel('ตรวจข้อมูลร่างใบสำคัญรับเงินเทียบกับหลักฐานแล้ว', { exact: true })).toBeChecked();
   await page.getByLabel('จำนวนเงินรายการ 1', { exact: true }).fill('1,234.51');
@@ -236,15 +239,18 @@ try {
   await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
   await page.getByRole('button', { name: 'ชุดเอกสารเบิกจ่าย', exact: true }).click();
   await page.getByRole('button', { name: 'สร้างชุดใหม่', exact: true }).click();
+  await page.getByRole('button', { name: 'หลักฐาน', exact: true }).click();
   await page.getByRole('button', { name: 'เพิ่มใบเสร็จที่ตรวจแล้ว', exact: true }).click();
+  await expect(page.getByText('มีข้อมูลจากใบเสร็จที่คนตรวจเทียบแล้ว เก็บแหล่งที่มาคู่กับไฟล์นี้', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'ร่างและส่งออก', exact: true }).click();
   await expect(page.getByLabel('จำนวนเงินรายการ 1', { exact: true })).toHaveValue('107.00');
   await expect(page.getByLabel('ตรวจข้อมูลร่างใบสำคัญรับเงินเทียบกับหลักฐานแล้ว', { exact: true })).not.toBeChecked();
-  await expect(page.getByText('มีข้อมูลจากใบเสร็จที่คนตรวจเทียบแล้ว เก็บแหล่งที่มาคู่กับไฟล์นี้', { exact: true })).toBeVisible();
   assert.deepEqual(errors, []);
   await app.close();
   app = undefined;
   page = await launch();
   await page.getByLabel('เลือกชุดเอกสาร', { exact: true }).selectOption(packetId);
+  await page.getByRole('button', { name: 'ร่างและส่งออก', exact: true }).click();
   await expect(page.getByLabel('ชื่อผู้รับเงิน', { exact: true })).toHaveValue('ผู้รับเงินตัวอย่าง');
   await expect(page.getByLabel('ตรวจข้อมูลร่างใบสำคัญรับเงินเทียบกับหลักฐานแล้ว', { exact: true })).toBeChecked();
   const longCase = await page.evaluate(async id => {

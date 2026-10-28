@@ -19,6 +19,10 @@
 .packet-drafts {
   padding-top: 24px;
 }
+.packet-drafts > h2 {
+  margin: 0 0 16px;
+  font-size: 17px;
+}
 .packet-form-modes {
   display: flex;
   flex-direction: row;
@@ -101,18 +105,55 @@
   resize: vertical;
   line-height: 1.6;
 }
+.packet-steps {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 20px 0 4px;
+}
+.packet-steps button {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  width: auto;
+  font-size: 13px;
+}
+.packet-steps button span {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 12px;
+}
+.packet-steps button[aria-current='step'] {
+  background: var(--accent-soft);
+  color: var(--text);
+  border-color: var(--accent-ink);
+}
 .packet-layout {
   margin: 0;
   padding: 0;
   border: 0;
-  display: grid;
-  grid-template-columns: minmax(280px, 0.95fr) minmax(320px, 1.05fr);
-  gap: 32px;
   min-width: 0;
+  max-width: 880px;
 }
-.packet-case,
 .packet-section {
   min-width: 0;
+}
+.packet-step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 18px 0 24px;
+}
+.packet-step-actions > .primary:only-child {
+  margin-inline-start: auto;
 }
 .packet-section {
   padding: 24px 0;
@@ -131,7 +172,7 @@
   font-size: 12px;
 }
 .evidence-context {
-  margin: -4px 0 14px;
+  margin: 14px 0 4px;
   color: var(--accent-ink);
   font-size: 12px;
 }
@@ -178,10 +219,25 @@
 .evidence-ai {
   margin-top: 18px;
 }
-.evidence-extra summary {
+.evidence-extra summary,
+.evidence-options summary,
+.evidence-sources summary {
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
+}
+.evidence-options summary {
+  margin: 14px 0;
+}
+.evidence-sources ul {
+  padding-inline-start: 20px;
+}
+.evidence-sources li {
+  padding: 8px 0;
+  font-size: 13px;
+}
+.evidence-sources p {
+  margin: 4px 0;
 }
 .evidence-extra-row {
   padding: 12px 0;
@@ -232,10 +288,6 @@
 }
 .packet-section-heading + .packet-actions {
   margin-top: 14px;
-}
-.packet-voucher {
-  padding-inline-start: 28px;
-  border-inline-start: 1px solid var(--line);
 }
 .packet-sources {
   list-style: decimal;
@@ -371,17 +423,6 @@
 }
 .packet-error p {
   margin-top: 0;
-}
-@media (max-width: 1050px) {
-  .packet-layout {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-  }
-  .packet-voucher {
-    padding-inline-start: 0;
-    border-inline-start: 0;
-    border-top: 1px solid var(--line);
-  }
 }
 @media (prefers-reduced-motion: no-preference) {
   .packet-empty {

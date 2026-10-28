@@ -29,15 +29,30 @@ async function launch(first = false) {
 }
 try {
   let page = await launch(true);
+  await page.addStyleTag({ content: '*,*::before,*::after{animation:none!important;transition:none!important}' });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.getByRole('button', { name: 'สร้างชุดใหม่', exact: true }).click();
   await page.getByLabel('ชื่อเรื่องเบิก', { exact: true }).fill('อบรมวิทยากร ข้อมูลสมมติ');
   await page.getByLabel('วัตถุประสงค์ของชุดเอกสาร', { exact: true }).fill('กิจกรรมทดสอบระบบเท่านั้น');
+  assert.equal(await page.locator('.packet-steps').evaluate(element => getComputedStyle(element).flexDirection), 'row');
+  await expect(page.getByRole('button', { name: 'ข้อมูลเรื่อง', exact: true })).toHaveAttribute('aria-current', 'step');
+  await expect(page.getByRole('button', { name: 'เพิ่มเอกสาร', exact: true })).toBeHidden();
+  await page.screenshot({ path: join(out, 'step-details.png') });
+  await page.getByRole('button', { name: 'ต่อ: เพิ่มหลักฐาน', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'หลักฐานในชุด', exact: true })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'หลักฐาน', exact: true })).toHaveAttribute('aria-current', 'step');
+  await page.screenshot({ path: join(out, 'step-evidence.png') });
+  await page.getByRole('button', { name: 'ข้อมูลเรื่อง', exact: true }).click();
+  await expect(page.getByLabel('ชื่อเรื่องเบิก', { exact: true })).toHaveValue('อบรมวิทยากร ข้อมูลสมมติ');
+  await page.getByRole('button', { name: 'หลักฐาน', exact: true }).click();
   const panel = page.getByRole('region', { name: 'แนะนำเอกสารตามกิจกรรม' });
   await expect(panel).toContainText('ระบบคาดว่า: อบรม / workshop');
   await expect(panel).toContainText('ประวัติการทำงาน / CV');
+  await expect(panel).toContainText('ต้องยืนยันความจำเป็นกับ AFP');
+  await panel.getByText('ดูเหตุผลและที่มา', { exact: true }).click();
   await expect(panel).toContainText('ข้อเสนอให้ตรวจเพิ่ม');
+  await panel.getByText('ปรับกิจกรรมและกรณีการเงิน', { exact: true }).click();
   await page.getByRole('combobox', { name: 'กรณีการเงินที่ทราบ', exact: true }).selectOption('b_clearance');
   await expect(panel).toContainText('แนวปฏิบัติ AFP หมวด B');
   await panel.getByRole('heading', { name: 'แนะนำเอกสารตามกิจกรรม', exact: true }).scrollIntoViewIfNeeded();
@@ -72,10 +87,16 @@ try {
   await panel.scrollIntoViewIfNeeded();
   assert.ok(await page.locator('.receipt-app').evaluate(element => element.scrollWidth <= element.clientWidth + 1));
   await page.screenshot({ path: join(out, 'evidence-narrow.png') });
+  await page.setViewportSize({ width: 600, height: 800 });
+  await page.getByRole('navigation', { name: 'ขั้นตอนจัดชุดเอกสาร', exact: true }).scrollIntoViewIfNeeded();
+  assert.ok(await page.locator('.receipt-app').evaluate(element => element.scrollWidth <= element.clientWidth + 1));
+  await page.screenshot({ path: join(out, 'step-evidence-narrow.png') });
   await page.evaluate(() => {
     document.documentElement.dataset.theme = 'dark';
   });
-  await page.screenshot({ path: join(out, 'evidence-dark.png') });
+  await expect(page.getByRole('button', { name: 'หลักฐาน', exact: true })).toHaveCSS('background-color', 'rgb(58, 50, 25)');
+  await expect(page.getByRole('button', { name: 'หลักฐาน', exact: true })).toHaveCSS('color', 'rgb(244, 241, 234)');
+  await page.screenshot({ path: join(out, 'step-evidence-dark.png') });
   await expect
     .poll(
       async () => {
@@ -89,7 +110,9 @@ try {
   await app.close();
   app = undefined;
   page = await launch();
+  await page.getByRole('button', { name: 'หลักฐาน', exact: true }).click();
   const restored = page.getByRole('region', { name: 'แนะนำเอกสารตามกิจกรรม' });
+  await restored.getByText('ปรับกิจกรรมและกรณีการเงิน', { exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'กรณีการเงินที่ทราบ', exact: true })).toHaveValue('b_clearance');
   await expect(restored).toContainText('พบหน้าที่ตรวจเทียบแล้ว');
   await restored.getByText('รายการอื่นที่ต้องการตรวจ (1)', { exact: true }).click();
@@ -99,6 +122,9 @@ try {
   await app.evaluate(({ dialog }, path) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
   }, pdfPath);
+  await page.getByRole('button', { name: 'ร่างและส่งออก', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'ร่างและส่งออก', exact: true })).toBeFocused();
+  await page.screenshot({ path: join(out, 'step-draft.png') });
   await page.getByRole('button', { name: 'ส่งออก PDF รวม', exact: true }).click();
   await expect
     .poll(

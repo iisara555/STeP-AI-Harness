@@ -1,4 +1,9 @@
 export const afpEvidenceEn: Record<string, string> = {
+  'กิจกรรม: {0}': 'Activity: {0}',
+  'กรณีการเงิน: {0}': 'Finance scenario: {0}',
+  ปรับกิจกรรมและกรณีการเงิน: 'Adjust activity and finance scenario',
+  'ต้องยืนยันความจำเป็นกับ AFP': 'Confirm whether needed with AFP',
+  ดูเหตุผลและที่มา: 'See reasons and sources',
   'ใบเซ็นชื่อเข้าร่วม FM-AF-015': 'Attendance signatures FM-AF-015',
   'รายชื่อเข้าร่วมเลี้ยงรับรอง FM-AF-019': 'Hospitality attendee list FM-AF-019',
   สำเนาบัตรผู้รับเงิน: 'Payee identity document copy',

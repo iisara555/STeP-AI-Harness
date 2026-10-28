@@ -21,7 +21,7 @@ The form identifier/revision/effective date match the active FM-AF-014 V02 entry
 
 ## UI layout and states
 
-The packet view extends ReceiptApp's existing Operate surface, IBM Plex Sans Thai typography and shared STeP yellow/dark theme tokens. The outer `ชุดเอกสารเบิกจ่าย` mode keeps receipt review and packet preparation together. Wide windows place case details and ordered evidence beside a draft pane that switches between `ใบสำคัญรับเงิน` (FM-AF-014) and `ใบสำคัญจ่ายสำหรับ AFP`; at 1050 px and below these become one column, with the draft below the evidence. Page selection and classification expand within each source, while export actions remain after the case content.
+The packet view extends ReceiptApp's existing Operate surface, IBM Plex Sans Thai typography and shared STeP yellow/dark theme tokens. The outer `ชุดเอกสารเบิกจ่าย` mode keeps receipt review and packet preparation together. Three freely navigable steps show case details, ordered evidence, and drafts/exports in turn. Employees can return to earlier steps without losing their work; the current step is announced and keyboard focus moves to its heading. Evidence recommendations show a compact status first, with activity and finance choices, reasons and source references available on demand. Page selection and classification expand within each source. The final step switches between `ใบสำคัญรับเงิน` (FM-AF-014) and `ใบสำคัญจ่ายสำหรับ AFP` and contains the combined export.
 
 The AFP draft separates each item's gross amount, withholding tax and other deductions. Blank deductions remain unknown and leave the net amount pending; zero must be explicit. The checked-data import button starts from reviewed FM-AF-014 values while preserving manual edits. The QP-AF-004 notice requires comparison with AFP's controlled form before use. No form identifier is invented, and typed signer names do not indicate signatures or payment approval.
 
@@ -41,7 +41,7 @@ Workflow references: `docs/knowledge/qp-af-003.md` section 4.2 and `docs/knowled
 
 ## AFP disbursement draft
 
-The right-hand draft selector offers an AFP disbursement voucher separately from FM-AF-014. Its working layout follows the amount/payee/payer/checker/approver fields and Finance procedure in QP-AF-004. No controlled form identifier or revision has been confirmed for this layout; the UI and both exports explicitly require comparison with AFP's controlled form. Printed signer names never count as signatures or approval.
+The draft selector offers an AFP disbursement voucher separately from FM-AF-014. Its working layout follows the amount/payee/payer/checker/approver fields and Finance procedure in QP-AF-004. No controlled form identifier or revision has been confirmed for this layout; the UI and both exports explicitly require comparison with AFP's controlled form. Printed signer names never count as signatures or approval.
 
 The draft records a human-entered date/number/reference, payment method, optional account/budget code, item gross amounts and evidenced deductions. The application never issues a voucher number, infers a tax rate, assumes a blank deduction is zero or initiates banking. Net amounts use decimal satang arithmetic; a deduction above its own item's gross is flagged even when the overall total could still balance. Unknown deductions leave the net amount pending.
 

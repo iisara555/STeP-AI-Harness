@@ -56,46 +56,50 @@ export function AfpEvidencePanel({
         <span className="evidence-local">{t('วิเคราะห์บนเครื่อง')}</span>
       </div>
       <p className="small muted">{t('ระบบดูชื่อเรื่องและวัตถุประสงค์ แล้วเทียบกับประเภทหน้าที่เลือก คุณเปลี่ยนข้อเสนอได้')}</p>
-      <label>
-        {t('ลักษณะกิจกรรม')}
-        <select value={guidance.activity} onChange={event => change({ activity: event.target.value as EvidenceGuidance['activity'] })}>
-          {Object.entries(ACTIVITY_LABELS).map(([id, label]) => (
-            <option key={id} value={id}>
-              {t(label)}
-            </option>
-          ))}
-        </select>
-      </label>
-      {context.automatic && (
-        <p className="evidence-context" role="status">
-          {context.activity
+      <p className="evidence-context" role="status">
+        {context.activity
+          ? context.automatic
             ? t('ระบบคาดว่า: {0} · โปรดตรวจหรือเปลี่ยนได้', t(ACTIVITY_LABELS[context.activity]))
-            : context.candidates.length
-              ? t('พบหลายลักษณะกิจกรรม · โปรดเลือกประเภทที่ตรง')
-              : t('ยังระบุกิจกรรมไม่ได้ · เพิ่มบริบทหรือเลือกเอง')}
-        </p>
-      )}
-      <div className="evidence-selects">
+            : t('กิจกรรม: {0}', t(ACTIVITY_LABELS[context.activity]))
+          : context.candidates.length
+            ? t('พบหลายลักษณะกิจกรรม · โปรดเลือกประเภทที่ตรง')
+            : t('ยังระบุกิจกรรมไม่ได้ · เพิ่มบริบทหรือเลือกเอง')}
+      </p>
+      <p className="small muted">{t('กรณีการเงิน: {0}', t(FINANCE_LABELS[guidance.finance]))}</p>
+      <details className="evidence-options">
+        <summary>{t('ปรับกิจกรรมและกรณีการเงิน')}</summary>
         <label>
-          {t('กรณีการเงินที่ทราบ')}
-          <select value={guidance.finance} onChange={event => change({ finance: event.target.value as EvidenceGuidance['finance'] })}>
-            {Object.entries(FINANCE_LABELS).map(([id, label]) => (
+          {t('ลักษณะกิจกรรม')}
+          <select value={guidance.activity} onChange={event => change({ activity: event.target.value as EvidenceGuidance['activity'] })}>
+            {Object.entries(ACTIVITY_LABELS).map(([id, label]) => (
               <option key={id} value={id}>
                 {t(label)}
               </option>
             ))}
           </select>
         </label>
-        <label>
-          {t('วิทยากร / ผู้เชี่ยวชาญ')}
-          <select value={guidance.speaker} onChange={event => change({ speaker: event.target.value as EvidenceGuidance['speaker'] })}>
-            <option value="auto">{t('ดูจากบริบท')}</option>
-            <option value="yes">{t('มี')}</option>
-            <option value="no">{t('ไม่มี / ไม่เกี่ยวข้อง')}</option>
-          </select>
-        </label>
-      </div>
-      <p className="small muted">{t('กรณีการเงินต้องเลือกเอง ระบบไม่เดาหมวดค่าใช้จ่ายจากชื่อกิจกรรม')}</p>
+        <div className="evidence-selects">
+          <label>
+            {t('กรณีการเงินที่ทราบ')}
+            <select value={guidance.finance} onChange={event => change({ finance: event.target.value as EvidenceGuidance['finance'] })}>
+              {Object.entries(FINANCE_LABELS).map(([id, label]) => (
+                <option key={id} value={id}>
+                  {t(label)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {t('วิทยากร / ผู้เชี่ยวชาญ')}
+            <select value={guidance.speaker} onChange={event => change({ speaker: event.target.value as EvidenceGuidance['speaker'] })}>
+              <option value="auto">{t('ดูจากบริบท')}</option>
+              <option value="yes">{t('มี')}</option>
+              <option value="no">{t('ไม่มี / ไม่เกี่ยวข้อง')}</option>
+            </select>
+          </label>
+        </div>
+        <p className="small muted">{t('กรณีการเงินต้องเลือกเอง ระบบไม่เดาหมวดค่าใช้จ่ายจากชื่อกิจกรรม')}</p>
+      </details>
       {checklist.length ? (
         <ul className="evidence-list">
           {checklist.map(item => (
@@ -104,18 +108,31 @@ export function AfpEvidencePanel({
                 <strong>{t(item.label)}</strong>
                 <span className={`evidence-state evidence-state-${item.status}`}>{t(statusLabels[item.status])}</span>
               </div>
-              <p>{t(item.reason)}</p>
-              <p className="small muted">{t(sourceLabels[item.source])}</p>
-              {item.sources.map(source => (
-                <p className="small" key={source.id}>
-                  {t('ในชุด: {0} · หน้า {1}', source.name, source.pages.join(', '))}
-                </p>
-              ))}
+              {item.source === 'need-source' && <p className="small muted">{t('ต้องยืนยันความจำเป็นกับ AFP')}</p>}
             </li>
           ))}
         </ul>
       ) : (
         <p className="evidence-empty">{t('เลือกกิจกรรมหรือกรณีการเงินเพื่อดูรายการที่เกี่ยวข้อง')}</p>
+      )}
+      {checklist.length > 0 && (
+        <details className="evidence-sources">
+          <summary>{t('ดูเหตุผลและที่มา')}</summary>
+          <ul>
+            {checklist.map(item => (
+              <li key={item.id}>
+                <strong>{t(item.label)}</strong>
+                <p>{t(item.reason)}</p>
+                <p className="small muted">{t(sourceLabels[item.source])}</p>
+                {item.sources.map(source => (
+                  <p className="small" key={source.id}>
+                    {t('ในชุด: {0} · หน้า {1}', source.name, source.pages.join(', '))}
+                  </p>
+                ))}
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
       <p className="small muted">
         {t('รายการเป็นเครื่องช่วยตรวจตามบริบท ไม่ยืนยันว่าเอกสารครบหรืออนุมัติเบิกได้ โปรดเทียบข้อกำหนดล่าสุดกับ AFP')}
@@ -166,6 +183,7 @@ export function AfpEvidencePanel({
         })}
         <button
           type="button"
+          className="quiet"
           disabled={guidance.extra.length >= 20}
           onClick={() => change({ extra: [...guidance.extra, { id: crypto.randomUUID(), label: '', sourceId: '' }] })}
         >
@@ -176,6 +194,7 @@ export function AfpEvidencePanel({
       <div className="evidence-ai">
         <button
           type="button"
+          className="quiet"
           onClick={() => {
             if (previewAi) {
               contextReviewVersion.current++;
@@ -217,6 +236,7 @@ export function AfpEvidencePanel({
             </p>
             <button
               type="button"
+              className="quiet"
               disabled={!contextInput.trim() || checkingContext}
               onClick={() => {
                 const reviewVersion = ++contextReviewVersion.current;
