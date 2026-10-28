@@ -257,8 +257,8 @@ export class GeminiApiAdapter implements ProviderAdapter {
         }
       }
       if (candidate?.finishReason) {
-        if (candidate.finishReason !== 'STOP')
-          throw new Error(candidate.finishReason === 'MAX_TOKENS' ? 'PROVIDER_OUTPUT_LIMIT' : 'PROVIDER_REQUEST_FAILED');
+        if (candidate.finishReason === 'MAX_TOKENS') throw Object.assign(new Error('PROVIDER_OUTPUT_LIMIT'), { outputTruncated: true });
+        if (candidate.finishReason !== 'STOP') throw new Error('PROVIDER_REQUEST_FAILED');
         ended = true;
       }
     };

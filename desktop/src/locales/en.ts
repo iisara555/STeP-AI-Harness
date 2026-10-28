@@ -2413,6 +2413,9 @@ export const en: Record<string, string> = {
   กำลังจัดทำร่าง: 'Preparing the draft',
   'กำลังย่อบทสนทนาเก่า โดยเก็บสถานะงานไว้': 'Compacting older conversation while keeping the task state',
   'กำลังรอ AI เตรียมคำตอบ': 'Waiting for the AI to prepare an answer',
+  'คำตอบยังไม่จบ กำลังต่อร่าง TOR': 'The answer was interrupted; continuing the TOR draft',
+  'คำตอบยาวเกินขอบเขตของโมเดลหรือการตั้งค่า กรุณาลองแบ่งหัวข้อหรือตรวจการตั้งค่าโมเดล':
+    'The answer exceeded the model or configured limit. Try splitting the topics or checking the model settings.',
   กำลังเตรียมคำตอบ: 'Preparing the answer',
   กำลังเขียนคำตอบ: 'Writing the answer',
   'บริการ AI ขัดข้องชั่วคราว กำลังลองใหม่ ({0}/{1})': 'The AI service is temporarily down, retrying ({0}/{1})',

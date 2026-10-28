@@ -16,6 +16,7 @@ const SECTIONS = [
   'source_document',
   'web_evidence',
   'previous_step_draft',
+  'partial_tor_draft',
   'request',
   'latest_message',
   'earlier_request',

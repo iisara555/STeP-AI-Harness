@@ -178,7 +178,11 @@ export async function compatibleRun(
         }
       : {
           model: profile.model,
-          max_tokens: profile.maxOutputTokens || 8192,
+          ...(profile.maxOutputTokens
+            ? { max_tokens: profile.maxOutputTokens }
+            : context.longFormTor
+              ? {}
+              : { max_tokens: 8192 }),
           stream: true,
           stream_options: { include_usage: true },
           messages: [
@@ -239,7 +243,8 @@ export async function compatibleRun(
   let text = "",
     buffer = "",
     bytes = 0,
-    ended = false;
+    ended = false,
+    outputTruncated = false;
   let usage,
     rawUsage = {};
   const reader = response.body.getReader(),
@@ -264,6 +269,14 @@ export async function compatibleRun(
     if (event.error || event.type === "error")
       throw new Error("PROVIDER_REQUEST_FAILED");
     if (event.type === "message_stop") ended = true;
+    if (
+      (protocol === "anthropic" &&
+        event.type === "message_delta" &&
+        event.delta?.stop_reason === "max_tokens") ||
+      (protocol === "openai" &&
+        event.choices?.some((choice) => choice.finish_reason === "length"))
+    )
+      outputTruncated = true;
     const reported =
       protocol === "anthropic"
         ? event.type === "message_start"
@@ -323,6 +336,10 @@ export async function compatibleRun(
       throw new Error(
         context.signal?.aborted ? "CANCELLED" : "PROVIDER_TIMEOUT",
       );
+    if (ended && outputTruncated)
+      throw Object.assign(new Error("PROVIDER_OUTPUT_LIMIT"), {
+        outputTruncated: true,
+      });
     if (!ended || !text.trim()) throw new Error("PROVIDER_STREAM_INCOMPLETE");
     return text;
   } catch (error) {
