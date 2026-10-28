@@ -26,6 +26,8 @@ export const en: Record<string, string> = {
     'Draft additional document types and read paginated Google data with explicit incomplete-read notices',
   'คำขอ Big idea และ Signature Moment เลือก Skill ได้ตรงขึ้น และคำถามลางานค้นเจอประกาศงานบุคคล':
     'Route Big idea and Signature Moment requests more accurately and find HR announcements for leave questions',
+  'เพิ่มปุ่มเชื่อม LM Studio ในเครื่อง และตรวจว่า Ollama หรือ LM Studio เปิดรับข้อความได้พอ ถ้าน้อยเกินไปจะบอกวิธีแก้แทนการตอบผิดเงียบ ๆ':
+    'Connect LM Studio on this computer, and check that Ollama or LM Studio accepts enough text; if not, the app explains how to fix it instead of silently answering wrong',
   'ส่งออก TOR เป็น Word โดยกึ่งกลางเฉพาะชื่อเรื่อง และจัดข้อมูลหน่วยงานกับเนื้อหาให้อ่านตามแนวเอกสารราชการ':
     'Export TOR to Word with only the title centered, keeping agency details and body content aligned for official documents',
   'ปรับการตัดบรรทัดภาษาไทยใน Word และแม่แบบ DOCX ให้สม่ำเสมอขึ้น โดยไม่เปลี่ยนข้อความร่างต้นฉบับ':
