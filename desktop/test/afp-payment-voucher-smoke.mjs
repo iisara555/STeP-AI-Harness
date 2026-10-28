@@ -114,8 +114,10 @@ try {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
   }, sourcePath);
   await page.getByRole('button', { name: 'เพิ่มเอกสาร', exact: true }).click();
+  await expect(page.getByLabel('ตรวจข้อมูลร่างใบสำคัญจ่ายเทียบหลักฐานแล้ว', { exact: true })).not.toBeChecked();
   await page.getByLabel('ประเภทของ synthetic-payment-evidence.pdf', { exact: true }).selectOption('invoice_or_quotation');
   await page.getByLabel('ตรวจเทียบหน้าที่เลือกของ synthetic-payment-evidence.pdf แล้ว', { exact: true }).check();
+  await page.getByLabel('ตรวจข้อมูลร่างใบสำคัญจ่ายเทียบหลักฐานแล้ว', { exact: true }).check();
   await expect(page.getByText('บันทึกในเครื่องแล้ว', { exact: true })).toBeVisible();
   await app.close();
   app = undefined;

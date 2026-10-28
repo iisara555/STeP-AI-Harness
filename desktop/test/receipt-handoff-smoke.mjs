@@ -29,7 +29,7 @@ try {
       );
       db.close();
       const original = ipcMain._invokeHandlers.get('step:call');
-      globalThis.receiptSendFixture = { fail: true, sent: [] };
+      globalThis.receiptSendFixture = { fail: true, sent: [], delayPreview: false, previewCompleted: 0 };
       ipcMain.removeHandler('step:call');
       ipcMain.handle('step:call', async (event, method, input) => {
         const state = globalThis.receiptSendFixture;
@@ -66,6 +66,12 @@ try {
             return { consent: { token: 'synthetic-consent', first: false, flagged: false, labels: [], attachment: false } };
           return { started: true };
         }
+        if (method === 'receiptPacketPrivacyPreview' && state.delayPreview) {
+          const result = await original(event, method, input);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          state.previewCompleted++;
+          return result;
+        }
         if (['receiptVision', 'connect', 'run'].includes(method)) throw new Error('LIVE_PROVIDER_NOT_ALLOWED_IN_FIXTURE');
         return original(event, method, input);
       });
@@ -73,7 +79,7 @@ try {
     { home, id: connection.id },
   );
   await page.reload();
-  await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
+  await page.getByRole('button', { name: 'ตรวจใบเสร็จ AFP', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'ตรวจใบเสร็จ AFP' })).toBeVisible();
   await page.getByRole('button', { name: 'เลือกใบเสร็จ' }).click();
   await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
@@ -143,6 +149,78 @@ try {
     assert.equal(source.ocr.provenance, 'EXTRACTED_UNVERIFIED');
   }
   assert.equal(sent[2].consent, 'synthetic-consent');
+  await page.getByRole('button', { name: 'ตรวจใบเสร็จ AFP', exact: true }).click();
+  await page.getByRole('button', { name: 'ชุดเอกสารเบิกจ่าย', exact: true }).click();
+  await page.getByRole('button', { name: 'สร้างชุดใหม่', exact: true }).click();
+  await page.getByLabel('ชื่อเรื่องเบิก', { exact: true }).fill('อบรม SECRET_PERSON 1234567890123');
+  await page.getByLabel('โครงการหรือหน่วยงาน', { exact: true }).fill('SECRET_PROJECT');
+  await page.getByLabel('วัตถุประสงค์ของชุดเอกสาร', { exact: true }).fill('SECRET_PURPOSE');
+  await page.getByRole('combobox', { name: 'กรณีการเงินที่ทราบ', exact: true }).selectOption('b_clearance');
+  const guidance = page.getByRole('region', { name: 'แนะนำเอกสารตามกิจกรรม' });
+  await guidance.getByText('รายการอื่นที่ต้องการตรวจ (0)', { exact: true }).click();
+  await guidance.getByRole('button', { name: 'เพิ่มรายการตรวจ', exact: true }).click();
+  await guidance.getByLabel('รายการเพิ่มเติม 1', { exact: true }).fill('SECRET_EXTRA');
+  await guidance.getByRole('button', { name: 'ให้ AI ช่วยพิจารณาต่อ', exact: true }).click();
+  await expect(guidance.locator('.evidence-ai-preview pre')).not.toContainText('SECRET_PERSON');
+  assert.equal((await app.evaluate(() => globalThis.receiptSendFixture.sent)).length, 3);
+  const contextInput = guidance.getByRole('textbox', { name: 'บริบทเพิ่มเติมสำหรับ AI (ไม่บังคับ)', exact: true });
+  const sendContext = guidance.getByRole('button', { name: 'ส่งบริบทนี้ให้ AI วิเคราะห์', exact: true });
+  await app.evaluate(() => {
+    globalThis.receiptSendFixture.delayPreview = true;
+  });
+  await contextInput.fill('OLD_CONTEXT_SHOULD_NOT_RETURN');
+  await guidance.getByRole('button', { name: 'ตรวจและปิดบังบริบท', exact: true }).click();
+  await guidance.getByRole('button', { name: 'ให้ AI ช่วยพิจารณาต่อ', exact: true }).click();
+  await guidance.getByRole('button', { name: 'ให้ AI ช่วยพิจารณาต่อ', exact: true }).click();
+  await expect(contextInput).toHaveValue('');
+  await expect.poll(() => app.evaluate(() => globalThis.receiptSendFixture.previewCompleted), { timeout: 10000 }).toBe(1);
+  await expect(guidance.locator('.evidence-ai-preview pre')).not.toContainText('OLD_CONTEXT_SHOULD_NOT_RETURN');
+  await app.evaluate(() => {
+    globalThis.receiptSendFixture.delayPreview = false;
+  });
+  await contextInput.fill('อบรมหนึ่งวัน มีวิทยากร โทร 081-234-5678');
+  await expect(sendContext).toBeDisabled();
+  await guidance.getByRole('button', { name: 'ตรวจและปิดบังบริบท', exact: true }).click();
+  await expect(guidance.locator('.evidence-ai-preview pre')).toContainText('[หมายเลขโทรศัพท์ถูกปิดบัง]');
+  await expect(guidance.locator('.evidence-ai-preview pre')).not.toContainText('081-234-5678');
+  await contextInput.fill('อบรมหนึ่งวัน มีวิทยากรและอาหาร โทร 081-234-5678');
+  await expect(sendContext).toBeDisabled();
+  await guidance.getByRole('button', { name: 'ตรวจและปิดบังบริบท', exact: true }).click();
+  await expect(sendContext).toBeEnabled();
+  const blocked = await page.evaluate(async () => {
+    try {
+      await window.step.call('receiptPacketPrivacyPreview', { text: 'ผู้รับบริการ โทร 0812345678 มีข้อมูลสุขภาพเกี่ยวกับผลตรวจสุขภาพ' });
+      return false;
+    } catch {
+      return true;
+    }
+  });
+  assert.equal(blocked, true);
+  await app.evaluate(() => {
+    globalThis.receiptSendFixture.fail = true;
+  });
+  await sendContext.click();
+  await expect(page.locator('.packet-error')).toBeVisible();
+  await expect(contextInput).toHaveValue('อบรมหนึ่งวัน มีวิทยากรและอาหาร โทร 081-234-5678');
+  await app.evaluate(() => {
+    globalThis.receiptSendFixture.fail = false;
+  });
+  await sendContext.click();
+  const guidanceConsent = page.getByRole('alertdialog', { name: 'ยืนยันการส่งข้อมูลให้ AI' });
+  await guidanceConsent.getByRole('button', { name: 'มีสิทธิ์ส่งข้อมูลนี้' }).click();
+  await expect(guidanceConsent).toBeHidden();
+  const allSent = await app.evaluate(() => globalThis.receiptSendFixture.sent);
+  assert.equal(allSent.length, 6);
+  for (const request of allSent.slice(3)) {
+    assert.deepEqual(request.attachments, []);
+    assert.ok(!request.sourceText);
+    assert.equal(request.autoImage, false);
+    assert.match(request.text, /ประเภทกิจกรรม: อบรม \/ workshop/);
+    assert.match(request.text, /วิทยากรและอาหาร/);
+    for (const secret of ['SECRET_PERSON', '1234567890123', 'SECRET_PROJECT', 'SECRET_PURPOSE', 'SECRET_EXTRA', '081-234-5678'])
+      assert.ok(!JSON.stringify(request).includes(secret), secret);
+  }
+  assert.equal(allSent[5].consent, 'synthetic-consent');
   assert.deepEqual(errors, []);
   console.log(
     'Receipt handoff smoke passed: one-page review, preserved values on failure, isolated chat send and consent replay with provenance.',

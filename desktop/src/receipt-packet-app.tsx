@@ -18,15 +18,18 @@ import {
 } from './receipt-packet';
 import './receipt-packet.css';
 import { PaymentVoucherForm } from './afp-payment-voucher-form';
+import { AfpEvidencePanel } from './afp-evidence-panel';
+import { EVIDENCE_DOCUMENT_LABELS, suggestEvidenceKind } from './afp-evidence';
 
 type Props = {
   active: boolean;
   call: (method: string, input?: unknown) => Promise<any>;
   review?: ReviewedReceipt;
   notify: (text: string, tone?: 'info' | 'success' | 'error', action?: { label: string; run: () => unknown }) => void;
+  onAskAi: (text: string) => Promise<void>;
 };
 
-export function ReceiptPacketApp({ active, call, review, notify }: Props) {
+export function ReceiptPacketApp({ active, call, review, notify, onAskAi }: Props) {
   const [formMode, setFormMode] = useState<'receipt' | 'disbursement'>('receipt');
   const [list, setList] = useState<PacketListItem[]>([]);
   const [packet, setPacket] = useState<ReceiptPacket | null>(null);
@@ -59,6 +62,9 @@ export function ReceiptPacketApp({ active, call, review, notify }: Props) {
       ['title', 'project', 'purpose', 'mode'].some(
         key => next[key as keyof ReceiptPacket] !== draft.current![key as keyof ReceiptPacket],
       ) ||
+      JSON.stringify(next.guidance) !== JSON.stringify(draft.current.guidance) ||
+      JSON.stringify(next.documents.map(doc => ({ id: doc.id, pages: doc.pages }))) !==
+        JSON.stringify(draft.current.documents.map(doc => ({ id: doc.id, pages: doc.pages }))) ||
       (next.disbursement.sourceReceipt && next.voucher !== draft.current.voucher && !next.voucher.checked)
     )
       next.disbursement = { ...next.disbursement, checked: false };
@@ -108,15 +114,17 @@ export function ReceiptPacketApp({ active, call, review, notify }: Props) {
     return operation;
   };
   const run = async (fn: () => Promise<unknown>, save = true) => {
-    if (action.current) return;
+    if (action.current) return false;
     action.current = true;
     setBusy(true);
     setError('');
     try {
       if (save) await persist();
       await fn();
+      return true;
     } catch (failure) {
       setError(explainError(failure));
+      return false;
     } finally {
       action.current = false;
       setBusy(false);
@@ -266,6 +274,13 @@ export function ReceiptPacketApp({ active, call, review, notify }: Props) {
                   </select>
                 </label>
               </section>
+              <AfpEvidencePanel
+                key={packet.id}
+                packet={packet}
+                onChange={guidance => mutate(value => ({ ...value, guidance }))}
+                onAskAi={text => run(async () => onAskAi(text))}
+                onReviewContext={text => call('receiptPacketPrivacyPreview', { text })}
+              />
               <section className="packet-section" aria-label={t('หลักฐานในชุด')}>
                 <div className="packet-section-heading">
                   <h2>{t('หลักฐานในชุด')}</h2>
@@ -380,6 +395,37 @@ export function ReceiptPacketApp({ active, call, review, notify }: Props) {
                         />
                         {t('ตรวจเทียบหน้าที่เลือกของ {0} แล้ว', source.name)}
                       </label>
+                      {suggestEvidenceKind(source.name) && source.pages.some(page => page.kind === 'other') && (
+                        <div className="evidence-file-hint">
+                          <p className="small muted">
+                            {t(
+                              'ชื่อไฟล์ชวนให้ตรวจว่าเป็น {0} แต่ยังไม่ยืนยันเนื้อหา',
+                              t(EVIDENCE_DOCUMENT_LABELS[suggestEvidenceKind(source.name)!]),
+                            )}
+                          </p>
+                          <button
+                            type="button"
+                            className="text-link"
+                            onClick={() => {
+                              const kind = suggestEvidenceKind(source.name);
+                              if (!kind) return;
+                              mutate(value => ({
+                                ...value,
+                                documents: value.documents.map(doc =>
+                                  doc.id === source.id
+                                    ? {
+                                        ...doc,
+                                        pages: doc.pages.map(page => (page.kind === 'other' ? { ...page, kind, checked: false } : page)),
+                                      }
+                                    : doc,
+                                ),
+                              }));
+                            }}
+                          >
+                            {t('ใช้ประเภทที่เสนอในหน้าที่ยังไม่ระบุ')}
+                          </button>
+                        </div>
+                      )}
                       <details>
                         <summary>{t('เลือกหน้าและแยกประเภท ({0} หน้า)', source.pages.length)}</summary>
                         <div className="packet-pages">

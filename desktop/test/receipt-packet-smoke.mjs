@@ -74,7 +74,7 @@ const ocr = createServer((req, res) => {
 });
 await new Promise((resolve, reject) => {
   ocr.once('error', reject);
-  ocr.listen(8765, '127.0.0.1', resolve);
+  ocr.listen(0, '127.0.0.1', resolve);
 });
 const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home, STEP_DISABLE_UPDATES: '1' };
 delete env.ELECTRON_RUN_AS_NODE;
@@ -102,6 +102,15 @@ const pick = async paths =>
   }, paths);
 async function launch() {
   app = await electron.launch({ args: ['.'], env, timeout: 45000 });
+  // Keep the synthetic OCR fixture isolated when a real employee OCR service is already running.
+  await app.evaluate((_, port) => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (input, options) => {
+      if (typeof input === 'string' && input.startsWith('http://127.0.0.1:8765/'))
+        return originalFetch(input.replace('http://127.0.0.1:8765/', `http://127.0.0.1:${port}/`), options);
+      return originalFetch(input, options);
+    };
+  }, ocr.address().port);
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1500, height: 1050 });
   await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
