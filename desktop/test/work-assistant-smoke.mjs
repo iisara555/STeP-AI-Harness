@@ -61,7 +61,19 @@ await writeFile(
 const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home, STEP_DISABLE_UPDATES: '1' };
 delete env.ELECTRON_RUN_AS_NODE;
 let app;
+let phase = 'launch';
+const progress = next => {
+  phase = next;
+  console.log(`Work assistant smoke: ${next}`);
+};
+const watchdog = setTimeout(() => {
+  console.error(`Work assistant smoke timed out during ${phase}`);
+  app?.process()?.kill('SIGKILL');
+  server.closeAllConnections();
+  process.exit(1);
+}, 120000);
 try {
+  progress('launch Electron');
   app = await electron.launch({ args: ['.'], env, timeout: 45000 });
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -104,6 +116,7 @@ try {
   const created = await page.evaluate(() => window.step.call('create', { connectionId: 'fake', project: 'Synthetic assistant' }));
   await page.reload();
   await page.locator('.statusbar .status-dot.ok').waitFor();
+  progress('select assistant mode with keyboard');
   const mode = page.getByRole('combobox', { name: 'โหมดทำงาน' });
   await mode.focus();
   await page.keyboard.press('Home');
@@ -120,6 +133,7 @@ try {
     }
   }, created.id);
   assert.match(blocked, /ASSISTANT_PRIVACY_REQUIRED/);
+  progress('enable privacy policy');
   await writeFile(
     join(home, 'desktop-policy.json'),
     JSON.stringify({
@@ -139,6 +153,7 @@ try {
       if (event.type === 'work-action') window.syntheticWorkActions.push(event.workAction);
     });
   });
+  progress('run synthetic tool sequence');
   await page.locator('.composer textarea').fill('Read the local note and document, inspect the local website, and prepare a summary.');
   await page.keyboard.press('Enter');
   const finished = page.getByText('Synthetic task finished; the file proposal needs review.', { exact: true });
@@ -157,6 +172,7 @@ try {
       timeout: 15000,
     })
     .toBe('review');
+  progress('verify action trace and staged file');
   const snapshot = await page.evaluate(() => window.step.call('snapshot'));
   const run = snapshot.sessions.find(s => s.id === created.id).runs.at(-1);
   assert.equal(run.workflow, 'assistant');
@@ -180,6 +196,7 @@ try {
   await expect(page.locator('.work-assistant-activity')).toHaveAttribute('open', '');
   await expect(page.locator('.work-assistant-activity').getByText('เตรียมข้อเสนอแก้ไขไฟล์')).toBeVisible();
   await expect(page.locator('.work-assistant-activity')).toContainText('ติดขัด');
+  progress('verify review panel and responsive layouts');
   await page.getByRole('button', { name: 'ไปตรวจ', exact: true }).click();
   await expect(page.locator('.workbench-tabs button[aria-current="page"]')).toHaveText('รายการแก้ไข');
   await page.screenshot({ path: 'release/qa/work-assistant/wide.png' });
@@ -193,6 +210,7 @@ try {
   await page.screenshot({ path: 'release/qa/work-assistant/narrow-review.png' });
   await page.reload();
   await expect(page.locator('.work-assistant-activity')).toContainText('อ่านไฟล์ในพื้นที่งาน');
+  progress('verify persistence and English theme');
   await app.evaluate(({ app }) => {
     const { DatabaseSync } = process.mainModule.require('node:sqlite');
     const db = new DatabaseSync(app.getPath('userData') + '/workspace.sqlite');
@@ -209,6 +227,7 @@ try {
   await expect(page.locator('.work-assistant-activity')).toContainText('Read workspace files');
   await page.screenshot({ path: 'release/qa/work-assistant/narrow-dark-en.png' });
   // A later ordinary chat in the same session must not display the assistant's previous steps as if they are running now.
+  progress('verify ordinary follow-up');
   await page.getByRole('combobox', { name: 'Work mode' }).selectOption('chat');
   await page.locator('.composer textarea').fill('NEXT_PLAIN_TASK');
   await page.keyboard.press('Enter');
@@ -224,8 +243,33 @@ try {
   console.log(
     'Work assistant smoke passed: privacy policy, file/document/web tools, staged edit, command denial and persistent action history; synthetic data only.',
   );
+} catch (error) {
+  console.error(`Work assistant smoke failed during ${phase}`, error);
+  throw error;
 } finally {
-  await app?.close();
-  await new Promise(resolve => server.close(resolve));
-  await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  progress('cleanup');
+  await writeFile(join(home, 'plain-release'), 'continue').catch(() => {});
+  try {
+    if (app) {
+      let closeTimeout;
+      try {
+        await Promise.race([
+          app.close(),
+          new Promise((_, reject) => {
+            closeTimeout = setTimeout(() => {
+              app.process()?.kill('SIGKILL');
+              reject(new Error('ELECTRON_CLEANUP_TIMEOUT'));
+            }, 10000);
+          }),
+        ]);
+      } finally {
+        clearTimeout(closeTimeout);
+      }
+    }
+  } finally {
+    server.closeAllConnections();
+    await new Promise(resolve => server.close(resolve));
+    await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    clearTimeout(watchdog);
+  }
 }
