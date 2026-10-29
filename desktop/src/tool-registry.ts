@@ -128,7 +128,20 @@ const definitions: Record<string, [string, string[], Record<string, Schema>]> = 
       },
     },
   ],
-  terminal: ['Start a workspace command through execution permission; use tasks for its session-owned job.', ['execution', 'consent'], {}],
+  terminal: [
+    'Start a workspace command through execution permission; use args.waitMsBeforeAsync (0..10000) to wait inline for fast commands or tasks for background jobs.',
+    ['execution', 'consent'],
+    {
+      waitMsBeforeAsync: {
+        type: 'integer',
+        minimum: 0,
+        maximum: 10000,
+      },
+      isDaemon: {
+        type: 'boolean',
+      },
+    },
+  ],
   files: [
     'Read bounded text or list workspace files; protected paths and transmission checks apply.',
     ['workspace-read'],

@@ -24,6 +24,20 @@ All lifecycle results continue through existing output privacy/transmission appr
 
 Chat and Draft share a host tool loop in `WorkService`. Existing provider adapters remain isolated and their native file/shell/MCP tools remain disabled. Models request host operations in explicit `step-tool` JSON fences. The default limit is 40 tool turns and at most eight requests per turn. Consecutive read operations execute in groups of three; commands, staged previews, questions and approvals execute sequentially. At the limit, the model gets a final turn without further operations. Self-contained text scope omits tool execution; see [context performance](context-performance.md).
 
+Malformed members of a mixed batch are reported to the model instead of silently disappearing. When a batch exceeds
+the eight-request limit, none of its requests run; bounded complete proposals are returned as data for the model to
+split into smaller batches under the normal gates. Oversized responses and histories are bounded before effects.
+Other repeated requests still stop at the loop's repeat guard. An identical `tasks.wait` may continue up to eight
+times only when the consented result identifies the same job as running with `timedOut: true` and the wait timeout is
+at least one second. The overall turn budget, cancellation, outgoing-data review and process ownership still apply.
+The model should inspect the completed task's exit code and output before claiming success. Generated workspace
+scripts use normal staging, approval and execution checks; they are not automatically registered as host tools.
+
+An existing task-owned browser tab is reused. Opening a bare origin or the originally opened URL resumes the current
+page. A different URL with a query or fragment is an explicit destination: the employee approves that exact navigation
+in every mode because it may perform an action. Cancellation stops an in-flight reused-tab navigation without closing
+the tab. URL privacy, destination and policy checks still apply.
+
 ## Execution parity tranche 2: workspace search and exact patch
 
 ```step-tool
@@ -91,6 +105,12 @@ Managed `transmissionConsent.allowRunScope: false` keeps per-operation/result di
 [Google Workspace functions](google-workspace-functions.md#connection-and-intent).
 
 Model-generated search queries and fetch URLs require their own one-time destination consent before network access. Only pattern-checked public requests qualify; confirming a provider result does not authorize a new web/search destination. Policy/workspace checks repeat after this consent.
+
+Parallel requests for the exact same URL in the same run can share the pending site question. Different URLs retain
+their own pending questions, so the person can inspect each address. When the site question displays an exact URL
+and the privacy scan finds it public, unchanged and free of findings, that same approval also covers handing that URL
+to its destination; flagged, redacted or later URLs retain their existing privacy review. Site permissions are scoped
+to the task's workspace, policy and permission mode and expire on a change of those bindings.
 
 Model text-file reads scan the complete bounded source before paging. Known credentials block the entire source; paging offsets refer to masked text so detection cannot be bypassed at a chunk boundary. Manual previews remain local and use the existing attachment consent when sent into Chat.
 

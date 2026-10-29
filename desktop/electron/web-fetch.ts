@@ -119,8 +119,33 @@ async function proxyTunnel(proxyUrl: string, address: string, port: number, sign
     req.end();
   });
 }
+type RedirectAuthorization = (url: string, signal: AbortSignal) => Promise<void>;
+function awaitAuthorization(pending: Promise<void>, deadline: AbortSignal, signal: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    const stop = () => reject(new Error(signal.aborted ? 'CANCELLED' : 'WEB_TIMEOUT'));
+    if (deadline.aborted) stop();
+    else deadline.addEventListener('abort', stop, { once: true });
+    pending.then(
+      () => {
+        deadline.removeEventListener('abort', stop);
+        resolve();
+      },
+      error => {
+        deadline.removeEventListener('abort', stop);
+        reject(error);
+      },
+    );
+  });
+}
 /** DNS is checked on every redirect and pinned on the actual connection, including proxy CONNECT. */
-export async function fetchPublic(input: string, signal: AbortSignal, proxyUrl?: string, resolve?: Resolve, format?: 'rss' | 'html') {
+export async function fetchPublic(
+  input: string,
+  signal: AbortSignal,
+  proxyUrl?: string,
+  resolve?: Resolve,
+  format?: 'rss' | 'html',
+  options?: { onRedirect?: RedirectAuthorization },
+) {
   let current = publicUrl(input);
   const deadline = AbortSignal.any([signal, AbortSignal.timeout(30_000)]);
   for (let redirect = 0; redirect <= 4; redirect++) {
@@ -198,7 +223,21 @@ export async function fetchPublic(input: string, signal: AbortSignal, proxyUrl?:
         req.end();
       });
       if (response.location) {
-        current = publicUrl(new URL(response.location, current).href);
+        // Never ask for a hop beyond the existing four-redirect budget.
+        if (redirect === 4) throw new Error('WEB_REDIRECT_LIMIT');
+        const next = publicUrl(new URL(response.location, current).href);
+        // Close the prior connection before a person may need to review the next destination.
+        agent?.destroy();
+        tunnel?.destroy();
+        if (options?.onRedirect) {
+          await awaitAuthorization(
+            Promise.resolve().then(() => options.onRedirect!(next.href, deadline)),
+            deadline,
+            signal,
+          );
+        } else throw new Error('WEB_REDIRECT_REQUIRES_CONSENT');
+        if (deadline.aborted) throw new Error(signal.aborted ? 'CANCELLED' : 'WEB_TIMEOUT');
+        current = next;
         continue;
       }
       if (format === 'rss' || format === 'html') return { url: current.href, text: response.text || '' };

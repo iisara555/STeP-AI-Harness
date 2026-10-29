@@ -10,7 +10,7 @@
 
 ภาพใช้ข้อมูลตัวอย่าง หน้าจอและตัวเลือกอาจต่างตามรุ่นและการตั้งค่าขององค์กร
 
-Source version: Desktop **0.6.22**. Adds the STeP TOR layout, editable FM-AF-014 receipt vouchers, local document packets with an indexed combined PDF, and AFP disbursement-voucher working drafts. Word files remain editable. Unknown deductions stay pending; outputs require source comparison and human/AFP review. Download published installers from the links above. OCR results still require comparison with the original evidence.
+Source version: Desktop **0.6.23**. Adds the file and web assistant, activity-guided AFP evidence packets, full-depth TOR drafting, direct Skill template loading, and smoother Antigravity and tool-loop execution (governed local MCP bridge, warm spare sessions, inline command waits, browser tab reuse, and deduplicated site consent). Download published installers from the links above. OCR results and generated drafts still require comparison with the original evidence and human review.
 
 Desktop **0.6.15** กดปุ่มเข้าสู่ระบบเว็บอย่าง STeP MBS ให้เองหลังกรอกบัญชีจาก Vault ไม่ต้องสลับไปกดเอง
 
@@ -168,4 +168,4 @@ AI ได้รับโครงและชื่อช่องที่ร�
 
 อ่าน [ภาพรวม STeP AI](../README.md) หรือ [รายละเอียดสำหรับผู้ดูแลและนักพัฒนา](../docs/desktop-development.md) เมื่อต้องตั้งค่าระบบ ทดสอบ หรือสร้างตัวติดตั้ง
 
-รุ่นใน source: **STeP Desktop v0.6.22** ดูไฟล์ที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การมี release ไม่ได้แทนการอนุมัติใช้งานในหน่วยงาน
+รุ่นใน source: **STeP Desktop v0.6.23** ดูไฟล์ที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การมี release ไม่ได้แทนการอนุมัติใช้งานในหน่วยงาน

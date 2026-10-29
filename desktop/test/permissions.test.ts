@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { defaultPolicy, parsePolicy } from '../electron/policy';
-import { evaluatePermission, sensitivePath, deniedCommand } from '../electron/permissions';
+import { evaluatePermission, sensitivePath, deniedCommand, allowedCommand, allowedDomain } from '../electron/permissions';
 
 test('credential paths and policy files are denied in every mode, even with an allow rule', () => {
   const p = parsePolicy({
@@ -88,4 +88,48 @@ test('accept edits writes reviewed files without asking but still asks for comma
     evaluatePermission({ tool: 'write', readOnly: false, path: 'notes.md' }, 'acceptEdits', askOnly, { root }).requiresConfirmation,
     true,
   );
+});
+
+test('scoped allowedCommands and allowedDomains work only after sensitive/denied floors and reject shell chaining', () => {
+  const parsed = parsePolicy({
+    permission: {
+      modes: ['ask', 'plan', 'auto'],
+      allowedCommands: ['npm test', 'git status*', 'npx prettier *'],
+      allowedDomains: ['docs.step.cmu.ac.th', 'example.org'],
+      deniedCommands: ['npm test --watch*'],
+    },
+  });
+  assert.deepEqual(parsed.problems, []);
+  const policy = parsed.policy;
+  assert.equal(allowedCommand('npm test', policy.permission.allowedCommands), 'npm test');
+  assert.equal(allowedCommand('git status --short', policy.permission.allowedCommands), 'git status*');
+  // Any shell chaining, pipe, redirection or subshell is rejected even if the prefix matches.
+  for (const chained of ['npm test; whoami', 'npm test && echo pwned', 'npm test | cat', 'npm test > out.txt', 'npm test $(id)'])
+    assert.equal(allowedCommand(chained, policy.permission.allowedCommands), undefined, chained);
+  assert.deepEqual(evaluatePermission({ tool: 'terminal', readOnly: false, execute: true, command: 'npm test' }, 'ask', policy), {
+    allowed: true,
+    requiresConfirmation: false,
+    reason: 'allowed command',
+  });
+  // Plan mode still blocks execution even for allowedCommands.
+  assert.equal(
+    evaluatePermission({ tool: 'terminal', readOnly: false, execute: true, command: 'npm test' }, 'plan', policy).allowed,
+    false,
+  );
+  // Denied commands and sensitive path tokens still take precedence over allowedCommands.
+  assert.equal(
+    evaluatePermission({ tool: 'terminal', readOnly: false, execute: true, command: 'npm test --watch' }, 'ask', policy).allowed,
+    false,
+  );
+  assert.equal(
+    evaluatePermission({ tool: 'terminal', readOnly: false, execute: true, command: 'npx prettier .env' }, 'ask', policy).allowed,
+    false,
+  );
+  // Domain allowlist matches exact domain and subdomains, rejecting unrelated domains.
+  assert.equal(allowedDomain('docs.step.cmu.ac.th', policy.permission.allowedDomains), 'docs.step.cmu.ac.th');
+  assert.equal(allowedDomain('api.docs.step.cmu.ac.th:443', policy.permission.allowedDomains), 'docs.step.cmu.ac.th');
+  assert.equal(allowedDomain('evilstep.cmu.ac.th', policy.permission.allowedDomains), undefined);
+  // Policy parser rejects shell operators in allowedCommands and malformed domains in allowedDomains.
+  assert.ok(parsePolicy({ permission: { allowedCommands: ['npm test; rm -rf /'] } }).problems.length > 0);
+  assert.ok(parsePolicy({ permission: { allowedDomains: ['.invalid.com'] } }).problems.length > 0);
 });

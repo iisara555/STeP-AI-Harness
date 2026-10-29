@@ -111,6 +111,10 @@ export type Policy = {
     defaultMode: PermissionMode;
     pathRules: PathRule[];
     deniedCommands: string[];
+    /** Administrator-scoped safe command patterns that may run without an interactive shell prompt after deny/sensitive checks. */
+    allowedCommands?: string[];
+    /** Administrator-scoped public domains that skip the per-domain site dialog while retaining URL privacy checks. */
+    allowedDomains?: string[];
     /** Lets people remember a reviewed file write for the same file in the same workspace. Commands never are. */
     rememberApprovals: boolean;
   };
@@ -610,6 +614,26 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
           if (extra.length > 200) problems.push('deniedCommands exceeds 200 entries');
           if (extra.length !== permission.deniedCommands.length) problems.push('deniedCommands contains invalid entries');
           policy.permission.deniedCommands = [...new Set([...DEFAULT_DENIED_COMMANDS, ...extra])];
+        }
+      }
+      if (permission.allowedCommands !== undefined) {
+        if (!Array.isArray(permission.allowedCommands)) problems.push('permission.allowedCommands must be a list');
+        else {
+          const allowed = permission.allowedCommands.map((c: unknown) => text(c, 500)).filter(c => Boolean(c) && !/[;&|<>`$\r\n]/.test(c));
+          if (allowed.length > 200) problems.push('allowedCommands exceeds 200 entries');
+          if (allowed.length !== permission.allowedCommands.length) problems.push('allowedCommands contains invalid entries');
+          else policy.permission.allowedCommands = [...new Set(allowed)];
+        }
+      }
+      if (permission.allowedDomains !== undefined) {
+        if (!Array.isArray(permission.allowedDomains)) problems.push('permission.allowedDomains must be a list');
+        else {
+          const domains = permission.allowedDomains
+            .map((d: unknown) => text(d, 253).toLowerCase())
+            .filter(d => Boolean(d) && /^[a-z0-9.-]{1,253}$/.test(d) && !d.startsWith('.') && !d.endsWith('.'));
+          if (domains.length > 200) problems.push('allowedDomains exceeds 200 entries');
+          if (domains.length !== permission.allowedDomains.length) problems.push('allowedDomains contains invalid entries');
+          else policy.permission.allowedDomains = [...new Set(domains)];
         }
       }
     }

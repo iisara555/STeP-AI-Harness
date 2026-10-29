@@ -121,7 +121,10 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
       try {
         const results = JSON.parse(p.text);
         if (Array.isArray(results))
-          p.text = JSON.stringify(results.map(r => ({ ...r, ...(typeof r.text === 'string' ? { text: preview(r.text, 500) } : {}) })));
+          // Preserve model-proposed pending JSON exactly while keeping embedded prompt tags inert on re-render.
+          p.text = JSON.stringify(
+            results.map(r => ({ ...r, ...(typeof r.text === 'string' ? { text: preview(r.text, 500) } : {}) })),
+          ).replace(/</g, '\\u003c');
       } catch {
         /* Invalid result text stays inert. */
       }

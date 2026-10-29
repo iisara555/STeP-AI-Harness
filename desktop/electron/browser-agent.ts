@@ -321,20 +321,51 @@ export class AgentBrowser {
     entry.busy = true;
     try {
       this.dock?.select(id);
-      // The site's front page or the page first opened means "continue here": read the page as the employee left it.
+      // A bare front page or the original page means "continue here". A query or fragment is an explicit destination.
       const target = new URL(url);
-      if (url !== entry.opened && target.pathname !== '/' && url !== entry.contents.getURL()) {
+      const continueHere = url === entry.opened || (!target.search && !target.hash && target.pathname === '/');
+      if (!continueHere && url !== entry.contents.getURL()) {
+        // A query or fragment can trigger a site action, even on a GET or hash change. Confirm that exact URL
+        // in every mode; approval to open the earlier page is not approval for an arbitrary later action.
+        if (target.search || target.hash) {
+          context.activity?.(tm('รออนุญาตเปิดเว็บ {0}', target.host));
+          if (
+            !(await context.approve(
+              tm('ให้ผู้ช่วยเปิดเว็บไซต์นี้?'),
+              url + tm('\nการเปิดที่อยู่นี้อาจส่งข้อมูลหรือเปลี่ยนรายการบนเว็บไซต์ ตรวจที่อยู่ก่อนอนุญาต'),
+            ))
+          )
+            throw new Error('BROWSER_ACTION_DECLINED');
+          await context.check();
+          if (context.signal.aborted) throw new Error('CANCELLED');
+          if (entry.contents.isDestroyed() || this.tabs.get(id) !== entry) throw new Error('BROWSER_CLOSED');
+        }
         let timer: ReturnType<typeof setTimeout> | undefined;
-        await Promise.race([
-          entry.contents.loadURL(url),
-          new Promise((_, reject) => {
-            timer = setTimeout(() => reject(new Error('BROWSER_LOAD_FAILED')), 30000);
-          }),
-        ])
-          .catch(() => {
-            throw new Error(context.signal.aborted ? 'CANCELLED' : 'BROWSER_LOAD_FAILED');
-          })
-          .finally(() => clearTimeout(timer));
+        let abort: (() => void) | undefined;
+        if (context.signal.aborted) throw new Error('CANCELLED');
+        try {
+          await Promise.race([
+            entry.contents.loadURL(url),
+            new Promise<never>((_, reject) => {
+              abort = () => {
+                if (!entry.contents.isDestroyed()) entry.contents.stop();
+                reject(new Error('CANCELLED'));
+              };
+              context.signal.addEventListener('abort', abort, { once: true });
+              timer = setTimeout(() => {
+                if (!entry.contents.isDestroyed()) entry.contents.stop();
+                reject(new Error('BROWSER_LOAD_FAILED'));
+              }, 30000);
+              if (context.signal.aborted) abort();
+            }),
+          ]);
+          if (context.signal.aborted) throw new Error('CANCELLED');
+        } catch {
+          throw new Error(context.signal.aborted ? 'CANCELLED' : 'BROWSER_LOAD_FAILED');
+        } finally {
+          clearTimeout(timer);
+          if (abort) context.signal.removeEventListener('abort', abort);
+        }
       }
       return { ...(await this.snapshot(id, entry, context.signal)), reused: true };
     } finally {
@@ -348,19 +379,21 @@ export class AgentBrowser {
     if (action === 'open') {
       const url = browserUrl(request.input);
       context.review(decodeURIComponent(url));
-      context.activity?.(tm('รออนุญาตเปิดเว็บ {0}', new URL(url).host));
       await publicSite(new URL(url), this.privateHosts(), this.resolve);
+      await context.check();
       const reused = await this.reuse(url, context);
       if (reused) return reused;
       if (this.tabs.size >= 4) throw new Error('TASK_LIMIT');
-      if (
-        !context.routine?.() &&
-        !(await context.approve(
-          tm('ให้ผู้ช่วยเปิดเว็บไซต์นี้?'),
-          url + tm('\nเปิดในแท็บเว็บของ STeP แยกจากบัญชีส่วนตัว เว็บไซต์อาจได้รับข้อมูลการเชื่อมต่อ'),
-        ))
-      )
-        throw new Error('BROWSER_ACTION_DECLINED');
+      if (!context.routine?.()) {
+        context.activity?.(tm('รออนุญาตเปิดเว็บ {0}', new URL(url).host));
+        if (
+          !(await context.approve(
+            tm('ให้ผู้ช่วยเปิดเว็บไซต์นี้?'),
+            url + tm('\nเปิดในแท็บเว็บของ STeP แยกจากบัญชีส่วนตัว เว็บไซต์อาจได้รับข้อมูลการเชื่อมต่อ'),
+          ))
+        )
+          throw new Error('BROWSER_ACTION_DECLINED');
+      }
       await context.check();
       if (this.tabs.size >= 4) throw new Error('TASK_LIMIT');
       const id = randomUUID(),

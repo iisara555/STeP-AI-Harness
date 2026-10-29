@@ -16,6 +16,16 @@ import { afpPaymentVoucherEn } from './afp-payment-voucher-en';
 import { workAssistantEn } from './work-assistant-en';
 import { afpEvidenceEn } from './afp-evidence-en';
 export const en: Record<string, string> = {
+  'ผู้ช่วยตรวจไฟล์และเว็บ แสดงลำดับขั้นตอนที่ทำจริง อ่านไฟล์ เว็บ และข้อมูล Google โดยแก้ไฟล์เป็นร่างรอตรวจ':
+    'File and web assistant shows actual tool steps, reads files, websites and Google data, and stages file edits for review',
+  'ชุดหลักฐาน AFP แนะนำเอกสารตามประเภทกิจกรรม แยกขั้นตอนเคส หลักฐาน และการส่งออก พร้อมสรุปในไฟล์ PDF รวม':
+    'AFP evidence packets suggest documents by activity, separate case, evidence and export steps, and include the review summary in the combined PDF',
+  'ร่าง TOR เขียนเนื้อหาได้ละเอียดตามขนาดงาน และเขียนต่ออัตโนมัติเมื่อข้อความยาวเกินหนึ่งรอบของโมเดล':
+    'TOR drafts write at task-appropriate depth and continue automatically when a long draft exceeds one model turn',
+  'Skill โครงการโหลดตารางแม่แบบได้โดยตรง และปรับการวิเคราะห์ความเสี่ยงล่วงหน้าให้แยกข้อเท็จจริงกับข้อเสนอชัดเจนขึ้น':
+    'Project Skills can load their own Markdown templates and separate source facts from proposals in pre-mortem analysis',
+  'ปรับการทำงานเบื้องหลังของ Antigravity และเครื่องมือในแอปให้ต่อเนื่องขึ้น ลดการถามซ้ำเมื่อเปิดเว็บเดิม และรอผลคำสั่งสั้นได้ในรอบเดียว':
+    'Smoother Antigravity and tool-loop execution with warm sessions, fewer duplicate prompts on reused websites, and single-turn waits for fast commands',
   'แม่แบบ TOR ใช้หัวเอกสาร STeP พร้อมจัดย่อหน้า ตาราง และเลขหน้าใน Word กับ PDF ให้ใกล้ต้นฉบับมากขึ้น':
     'TOR templates use STeP letterheads with Word and PDF paragraphs, tables and page numbers closer to the reference layout',
   'เพิ่มใบสำคัญรับเงิน FM-AF-014 ที่แก้ไขได้ และจัดชุดหลักฐานเป็น PDF รวมพร้อมหน้าสรุปและสารบัญ':
@@ -2278,6 +2288,10 @@ export const en: Record<string, string> = {
   'บัญชีนี้ยังไม่มีสิทธิ์ใช้บริการ ตรวจแพ็กเกจหรือสิทธิ์ของบัญชี':
     "This account doesn't have access to the service yet. Check the plan or account permissions",
   'เชื่อมต่อบริการไม่ได้ ตรวจอินเทอร์เน็ต proxy หรือ firewall': "Couldn't reach the service. Check your internet, proxy or firewall",
+  'AI ส่งคำตอบทดสอบว่างเปล่า กรุณาลองทดสอบอีกครั้งหรือเลือกโมเดลอื่น':
+    'The AI returned an empty test response. Try the test again or choose another model',
+  '\nการเปิดที่อยู่นี้อาจส่งข้อมูลหรือเปลี่ยนรายการบนเว็บไซต์ ตรวจที่อยู่ก่อนอนุญาต':
+    '\nOpening this address may send information or change something on the website. Check the address before approving',
   'ลงชื่อสำเร็จ แต่ AI ไม่ตอบภายใน 2 นาที มักเกิดจากโควตาเต็มหรือบัญชียังไม่เปิดสิทธิ์ใช้งาน':
     "Signed in, but the AI didn't answer within 2 minutes — usually a full quota or an account that doesn't have access yet",
   'ไม่ได้ลงชื่อหรือวาง code ภายใน 5 นาที กดเชื่อมต่อใหม่เมื่อพร้อม':

@@ -16,7 +16,9 @@ import { Rpc } from './rpc';
 import { explainRuntimeFailure } from './diagnostics';
 import { claudeEnv } from './claude-auth';
 import { anthropicEnv } from './anthropic-auth';
-import { AntigravityAdapter, antigravityModels } from './antigravity';
+import { AntigravityAdapter, antigravityModels, prewarmAntigravity, antigravitySpareCount, closeAntigravitySpares } from './antigravity';
+import type { GovernedBridgeExecutor } from './antigravity-mcp-bridge';
+export { prewarmAntigravity, antigravitySpareCount, closeAntigravitySpares };
 import { strictJsonSchema } from './json-schema';
 
 // A failure keeps its code when the runtime said why; the scrubbed tail travels as `detail`.
@@ -67,6 +69,10 @@ export type ProviderContext = {
   onWebActivity?: (stage: 'search' | 'read' | 'complete' | 'failed') => void;
   /** Keeps the runtime conversation open between the tool turns of one run (see ProviderSession). */
   session?: ProviderSession;
+  /** Optional governed local MCP bridge executor for native Antigravity tool turns. */
+  nativeBridge?: GovernedBridgeExecutor;
+  /** Optional incremental delta when continuing a warm multi-message conversation on the same ProviderSession. */
+  followUpDelta?: string;
 };
 /**
  * One runtime conversation kept open across the tool turns of a step. The tool loop sends the whole prompt every turn,

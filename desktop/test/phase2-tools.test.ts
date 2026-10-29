@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import crypto from 'node:crypto';
 import { syncBuiltinESMExports } from 'node:module';
+import { EventEmitter, once } from 'node:events';
+import { createServer } from 'node:http';
 import ExcelJS from 'exceljs';
 import { Document, Packer, Paragraph } from 'docx';
 import { ToolLoop } from '../electron/tool-loop';
@@ -27,8 +29,8 @@ const privacy: any = await import('../../src/modules/privacy/index.js');
 const documents: any = await import('../../src/modules/privacy/document.js');
 async function fixture(mode: 'ask' | 'acceptEdits' | 'plan' | 'auto' = 'ask') {
   const root = await mkdtemp(join(tmpdir(), 'step-phase2-')),
-    store = new Store(':memory:'),
-    policy = defaultPolicy();
+    store = new Store(':memory:');
+  let policy = defaultPolicy();
   // These tests cover the transmission consent and privacy masking, which run when the organization turns them on.
   policy.checks = { authority: true, privacy: true };
   store.put('settings', 'main', { workspace: root });
@@ -38,6 +40,8 @@ async function fixture(mode: 'ask' | 'acceptEdits' | 'plan' | 'auto' = 'ask') {
   let holdApproval = false,
     lastApproval = '';
   let requests = 0;
+  const approvalIds: string[] = [];
+  const approvalEvents = new EventEmitter();
   let opened: () => void = () => {};
   const approvalOpened = new Promise<void>(resolve => {
     opened = resolve;
@@ -49,7 +53,9 @@ async function fixture(mode: 'ask' | 'acceptEdits' | 'plan' | 'auto' = 'ask') {
       requests++;
       bodies.push(r.body);
       lastApproval = r.id;
+      approvalIds.push(r.id);
       opened();
+      approvalEvents.emit('prompt');
       if (holdApproval) return;
       queueMicrotask(() => approvals.respond(r.id, !approve ? 'cancel' : allowRun && r.runScope ? 'run' : 'once'));
     }
@@ -102,7 +108,12 @@ async function fixture(mode: 'ask' | 'acceptEdits' | 'plan' | 'auto' = 'ask') {
     tools,
     harness,
     scope,
-    policy,
+    get policy() {
+      return policy;
+    },
+    setPolicy(value: ReturnType<typeof defaultPolicy>) {
+      policy = value;
+    },
     events,
     bodies,
     deny: () => {
@@ -116,8 +127,37 @@ async function fixture(mode: 'ask' | 'acceptEdits' | 'plan' | 'auto' = 'ask') {
       holdApproval = true;
     },
     lastApproval: () => lastApproval,
+    approvalIds,
+    waitForApprovals: async (count: number) => {
+      while (requests < count) await once(approvalEvents, 'prompt', { signal: AbortSignal.timeout(5000) });
+    },
     approvals,
     approvalOpened,
+  };
+}
+async function redirectProxy(location: string) {
+  const connects: string[] = [];
+  const proxy = createServer();
+  proxy.on('connect', (req, socket) => {
+    connects.push(req.url!);
+    socket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
+    socket.once('data', () =>
+      socket.end(
+        connects.length === 1
+          ? `HTTP/1.1 302 Found\r\nLocation: ${location}\r\nContent-Length: 0\r\n\r\n`
+          : 'HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nok',
+      ),
+    );
+  });
+  proxy.listen(0, '127.0.0.1');
+  await once(proxy, 'listening');
+  return {
+    connects,
+    url: `http://127.0.0.1:${(proxy.address() as any).port}`,
+    close: async () => {
+      proxy.closeAllConnections();
+      await new Promise<void>(done => proxy.close(() => done()));
+    },
   };
 }
 test('registry and dispatcher parity includes loop-owned paging, without phantom tools', async () => {
@@ -218,6 +258,44 @@ test('synthetic ToolLoop discovery then underlying file/patch/task calls retain 
     await assert.rejects(f.tools.execute({ tool: 'tool_search', input: '', args: { limit: '10' } } as any, f.scope), /INVALID_INPUT/);
     await assert.rejects(f.tools.execute({ tool: 'files', input: '../outside.txt' }, f.scope), /INVALID_PATH/);
   } finally {
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test('the real tool loop can wait through multiple timeouts and verify a background task', { timeout: 15000 }, async () => {
+  const f = await fixture();
+  const host = await f.tools.host(f.scope);
+  try {
+    await writeFile(
+      join(f.root, 'controlled.cjs'),
+      "const fs = require('node:fs'); const timer = setInterval(() => { if (fs.existsSync('finish')) { clearInterval(timer); console.log('synthetic test passed'); } }, 10);",
+    );
+    const job = (await host.execute({ tool: 'terminal', input: `${node} controlled.cjs` }, f.scope.signal)) as any;
+    let turns = 0;
+    const answer = await new ToolLoop(host).run(
+      'Wait for the synthetic test',
+      async prompt => {
+        turns++;
+        assert.doesNotMatch(prompt, /<tool_limit>/);
+        if (turns === 4) await writeFile(join(f.root, 'finish'), '');
+        const result = [...prompt.matchAll(/<tool_results>\n(.+)\n<\/tool_results>/g)].at(-1);
+        if (result) {
+          const row = JSON.parse(result[1])[0];
+          if (row.ok && JSON.parse(row.text).status === 'done') {
+            assert.match(JSON.parse(row.text).output, /synthetic test passed/);
+            return 'Test passed';
+          }
+        }
+        return '```step-tool\n' + JSON.stringify({ tool: 'tasks', input: job.id, args: { action: 'wait', timeoutMs: 1000 } }) + '\n```';
+      },
+      f.scope.signal,
+    );
+    assert.equal(answer, 'Test passed');
+    assert.ok(turns >= 5, 'at least three waits timed out before the task was allowed to finish');
+    assert.ok(f.requests() >= 4, 'tool-result transmission approval remains in force');
+  } finally {
+    await f.workbench.close();
     f.store.close();
     await rm(f.root, { recursive: true, force: true });
   }
@@ -886,6 +964,520 @@ test('the AI reads a website only after the employee allows that site once in th
     f.store.close();
   }
 });
+test('identical parallel searches share one task approval', async () => {
+  const f = await fixture();
+  f.workbench.root = async () => f.root;
+  f.policy.checks.privacy = false;
+  f.harness.publicSearch = async () => 'unused';
+  f.holdApproval();
+  let searches = 0;
+  f.scope.search = async () => {
+    searches++;
+    return 'synthetic result';
+  };
+  try {
+    const first = f.tools.execute({ tool: 'web_search', input: 'public synthetic query' }, f.scope);
+    const second = f.tools.execute({ tool: 'web_search', input: 'public synthetic query' }, f.scope);
+    const finished = Promise.allSettled([first, second]);
+    await Promise.race([
+      f.approvalOpened,
+      finished.then(results => {
+        throw new Error(JSON.stringify(results));
+      }),
+    ]);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(f.requests(), 1, 'the same URL should not open duplicate approvals');
+    assert.equal(searches, 0, 'neither request may search before approval');
+    f.approvals.respond(f.lastApproval(), 'once');
+    const results = await finished;
+    assert.ok(results.every(result => result.status === 'fulfilled' && result.value === 'synthetic result'));
+    assert.equal(searches, 2);
+  } finally {
+    f.approvals.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+test('parallel site requests keep approvals separate across tasks and reject cancelled batches', async () => {
+  const f = await fixture();
+  f.workbench.root = async () => f.root;
+  f.policy.checks.privacy = false;
+  f.harness.publicSearch = async () => 'unused';
+  f.holdApproval();
+  const controller = new AbortController();
+  const firstScope = { ...f.scope, signal: controller.signal };
+  const secondScope = { ...firstScope, sessionId: 'another-task' };
+  let searches = 0;
+  firstScope.search = secondScope.search = async () => {
+    searches++;
+    return 'synthetic result';
+  };
+  try {
+    const first = f.tools.execute({ tool: 'web_search', input: 'public synthetic query' }, firstScope);
+    const sameTask = f.tools.execute({ tool: 'web_search', input: 'public synthetic query' }, firstScope);
+    const otherTask = f.tools.execute({ tool: 'web_search', input: 'public synthetic query' }, secondScope);
+    const finished = Promise.allSettled([first, sameTask, otherTask]);
+    await Promise.race([
+      f.approvalOpened,
+      finished.then(results => {
+        throw new Error(JSON.stringify(results));
+      }),
+    ]);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(f.requests(), 2, 'another task needs its own approval');
+    controller.abort();
+    const results = await finished;
+    assert.ok(results.every(result => result.status === 'rejected' && /CANCELLED/.test(String(result.reason))));
+    assert.equal(searches, 0);
+  } finally {
+    f.approvals.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+test('parallel approvals for different websites are both remembered in the task', async () => {
+  const f = await fixture();
+  f.workbench.root = async () => f.root;
+  f.policy.checks.privacy = false;
+  f.holdApproval();
+  const stopBeforeNetwork = async () => {
+    throw new Error('STOP_BEFORE_NETWORK');
+  };
+  const read = (url: string) => f.tools.execute({ tool: 'web_fetch', input: url }, f.scope, stopBeforeNetwork);
+  try {
+    const first = read('https://one.example/article');
+    const second = read('https://two.example/article');
+    const finished = Promise.allSettled([first, second]);
+    await Promise.race([
+      f.approvalOpened,
+      finished.then(results => {
+        throw new Error(JSON.stringify(results));
+      }),
+    ]);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(f.requests(), 2, 'each website needs a separate approval');
+    for (const id of f.approvalIds) f.approvals.respond(id, 'once');
+    const results = await finished;
+    assert.ok(results.every(result => result.status === 'rejected' && /STOP_BEFORE_NETWORK/.test(String(result.reason))));
+    const again = Promise.allSettled([read('https://one.example/next'), read('https://two.example/next')]);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(f.requests(), 2, 'both approved sites remain approved in the task');
+    const repeated = await again;
+    assert.ok(repeated.every(result => result.status === 'rejected' && /STOP_BEFORE_NETWORK/.test(String(result.reason))));
+  } finally {
+    f.approvals.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+test('one approval covers the newly shown clean web URL without repeating its privacy dialog', async () => {
+  const f = await fixture();
+  f.workbench.root = async () => f.root;
+  const stopBeforeNetwork = async () => {
+    throw new Error('STOP_BEFORE_NETWORK');
+  };
+  try {
+    await assert.rejects(
+      f.tools.execute({ tool: 'web_fetch', input: 'https://source.example/article' }, f.scope, stopBeforeNetwork),
+      /STOP_BEFORE_NETWORK/,
+    );
+    assert.equal(f.requests(), 1, 'the exact clean URL was already shown in the website approval');
+    await assert.rejects(
+      f.tools.execute({ tool: 'web_fetch', input: 'https://source.example/another' }, f.scope, stopBeforeNetwork),
+      /STOP_BEFORE_NETWORK/,
+    );
+    assert.equal(f.requests(), 2, 'a new URL on the same website still gets privacy review');
+    await assert.rejects(
+      f.tools.execute(
+        { tool: 'web_fetch', input: 'https://source.example/?password=synthetic-test-credential' },
+        f.scope,
+        stopBeforeNetwork,
+      ),
+      /PRIVACY_REVIEW_REQUIRED/,
+    );
+    assert.equal(f.requests(), 2, 'credentials are rejected before approval');
+  } finally {
+    f.approvals.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+test('identical parallel clean web reads share a single exact URL approval', async () => {
+  const f = await fixture();
+  f.workbench.root = async () => f.root;
+  f.holdApproval();
+  const read = () =>
+    f.tools.execute({ tool: 'web_fetch', input: 'https://source.example/article' }, f.scope, async () => {
+      throw new Error('STOP_BEFORE_NETWORK');
+    });
+  try {
+    const finished = Promise.allSettled([read(), read()]);
+    await Promise.race([
+      f.approvalOpened,
+      finished.then(results => {
+        throw new Error(JSON.stringify(results));
+      }),
+    ]);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(f.requests(), 1);
+    f.approvals.respond(f.lastApproval(), 'once');
+    const results = await finished;
+    assert.ok(results.every(result => result.status === 'rejected' && /STOP_BEFORE_NETWORK/.test(String(result.reason))));
+    assert.equal(f.requests(), 1);
+  } finally {
+    f.approvals.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+test('parallel reads of different URLs show each URL and wait for its own approval', async () => {
+  for (const privacyEnabled of [true, false]) {
+    const f = await fixture();
+    f.workbench.root = async () => f.root;
+    f.policy.checks.privacy = privacyEnabled;
+    f.holdApproval();
+    const accessed: string[] = [];
+    const read = (path: string) =>
+      f.tools.execute({ tool: 'web_fetch', input: `https://source.example/${path}` }, f.scope, async () => {
+        accessed.push(path);
+        throw new Error('STOP_BEFORE_NETWORK');
+      });
+    try {
+      const finished = Promise.allSettled([read('one'), read('two')]);
+      await Promise.race([
+        f.approvalOpened,
+        finished.then(results => {
+          throw new Error(JSON.stringify(results));
+        }),
+      ]);
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(f.requests(), 2, 'each distinct URL is shown before network access');
+      assert.ok(f.bodies.some(body => body.includes('https://source.example/one')));
+      assert.ok(f.bodies.some(body => body.includes('https://source.example/two')));
+      f.approvals.respond(f.approvalIds[0], 'once');
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(accessed.length, 1, 'only the approved URL may proceed');
+      f.approvals.respond(f.approvalIds[1], 'once');
+      const results = await finished;
+      assert.ok(results.every(result => result.status === 'rejected' && /STOP_BEFORE_NETWORK/.test(String(result.reason))));
+      assert.deepEqual(accessed.sort(), ['one', 'two']);
+      assert.equal(f.requests(), 2, 'neither clean URL needs a duplicate privacy question');
+    } finally {
+      f.approvals.close();
+      f.store.close();
+      await rm(f.root, { recursive: true, force: true });
+    }
+  }
+});
+test('an approved site URL still needs privacy consent for classification, findings or redaction', async () => {
+  for (const risk of ['classification', 'findings', 'redaction'] as const) {
+    const f = await fixture();
+    f.workbench.root = async () => f.root;
+    const url = 'https://source.example/%41';
+    const original = f.harness.privacy;
+    f.harness.privacy = ((text: string, options?: unknown) =>
+      text === url
+        ? {
+            action: 'pass',
+            classification: risk === 'classification' ? 'internal' : 'public',
+            redactedText: risk === 'redaction' ? 'https://source.example/redacted' : text,
+            findings: risk === 'findings' ? [{ label: 'synthetic finding' }] : [],
+          }
+        : original(text, options as any)) as typeof f.harness.privacy;
+    const stopBeforeNetwork = async () => {
+      throw new Error('STOP_BEFORE_NETWORK');
+    };
+    try {
+      await assert.rejects(
+        f.tools.execute({ tool: 'web_fetch', input: url }, f.scope, stopBeforeNetwork),
+        risk === 'redaction' ? /PRIVACY_REVIEW_REQUIRED/ : /STOP_BEFORE_NETWORK/,
+      );
+      assert.equal(f.requests(), 2, `${risk} still requires its own consent`);
+    } finally {
+      f.approvals.close();
+      f.store.close();
+      await rm(f.root, { recursive: true, force: true });
+    }
+  }
+});
+test('declining a shared website question stops all requests and does not remember approval', async () => {
+  const f = await fixture();
+  f.workbench.root = async () => f.root;
+  f.policy.checks.privacy = false;
+  f.harness.publicSearch = async () => 'unused';
+  f.holdApproval();
+  let searches = 0;
+  f.scope.search = async () => {
+    searches++;
+    return 'synthetic result';
+  };
+  try {
+    const finished = Promise.allSettled([
+      f.tools.execute({ tool: 'web_search', input: 'public synthetic query' }, f.scope),
+      f.tools.execute({ tool: 'web_search', input: 'public synthetic query' }, f.scope),
+    ]);
+    await Promise.race([
+      f.approvalOpened,
+      finished.then(results => {
+        throw new Error(JSON.stringify(results));
+      }),
+    ]);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(f.requests(), 1);
+    f.approvals.respond(f.lastApproval(), 'cancel');
+    const results = await finished;
+    assert.ok(results.every(result => result.status === 'rejected' && /WEB_SITE_DECLINED/.test(String(result.reason))));
+    assert.equal(searches, 0);
+    const retry = Promise.allSettled([f.tools.execute({ tool: 'web_search', input: 'public synthetic retry' }, f.scope)]);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(f.requests(), 2, 'a declined question does not grant the website');
+    f.approvals.respond(f.lastApproval(), 'cancel');
+    await retry;
+  } finally {
+    f.approvals.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+test('a workspace change between site approval and outgoing validation still stops the URL', async () => {
+  const f = await fixture();
+  let roots = 0,
+    network = 0;
+  f.workbench.root = async () => (++roots >= 4 ? `${f.root}-different` : f.root);
+  const checkNetwork = async () => {
+    network++;
+  };
+  try {
+    await assert.rejects(
+      f.tools.execute({ tool: 'web_fetch', input: 'https://source.example/article' }, f.scope, checkNetwork),
+      /WORKSPACE_CHANGED/,
+    );
+    assert.equal(network, 0);
+    assert.equal(f.requests(), 1);
+  } finally {
+    f.approvals.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+test('a changed workspace or policy invalidates a pending site approval', async () => {
+  for (const changed of ['workspace', 'policy'] as const) {
+    const f = await fixture();
+    f.policy.checks.privacy = false;
+    f.harness.publicSearch = async () => 'unused';
+    f.holdApproval();
+    let currentRoot = f.root,
+      searches = 0;
+    f.workbench.root = async () => currentRoot;
+    f.scope.search = async () => {
+      searches++;
+      return 'synthetic result';
+    };
+    try {
+      const finished = Promise.allSettled([f.tools.execute({ tool: 'web_search', input: 'public synthetic query' }, f.scope)]);
+      await Promise.race([
+        f.approvalOpened,
+        finished.then(results => {
+          throw new Error(JSON.stringify(results));
+        }),
+      ]);
+      if (changed === 'workspace') currentRoot = `${f.root}-different`;
+      else f.setPolicy(defaultPolicy());
+      f.approvals.respond(f.lastApproval(), 'once');
+      const [result] = await finished;
+      assert.ok(result.status === 'rejected' && /WORKSPACE_CHANGED|POLICY_CHANGED/.test(String(result.reason)));
+      assert.equal(searches, 0);
+      const next = Promise.allSettled([f.tools.execute({ tool: 'web_search', input: 'another public synthetic query' }, f.scope)]);
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(f.requests(), 2, 'invalidated approval must not be remembered');
+      f.approvals.respond(f.lastApproval(), 'cancel');
+      await next;
+    } finally {
+      f.approvals.close();
+      f.store.close();
+      await rm(f.root, { recursive: true, force: true });
+    }
+  }
+});
+test('a previously approved website is asked again after a workspace or policy change', async () => {
+  for (const changed of ['workspace', 'policy'] as const) {
+    const f = await fixture();
+    f.policy.checks.privacy = false;
+    f.harness.publicSearch = async () => 'unused';
+    let currentRoot = f.root;
+    f.workbench.root = async () => currentRoot;
+    try {
+      await f.tools.execute({ tool: 'web_search', input: 'public synthetic query' }, f.scope);
+      assert.equal(f.requests(), 1);
+      if (changed === 'workspace') currentRoot = `${f.root}-different`;
+      else f.setPolicy(defaultPolicy());
+      await f.tools.execute({ tool: 'web_search', input: 'another public query' }, f.scope);
+      assert.equal(f.requests(), 2, `${changed} change invalidates the previous website permission`);
+    } finally {
+      f.approvals.close();
+      f.store.close();
+      await rm(f.root, { recursive: true, force: true });
+    }
+  }
+});
+test('parallel runs in the same task have separate abort and site-approval lifetimes', async () => {
+  const f = await fixture();
+  f.workbench.root = async () => f.root;
+  f.policy.checks.privacy = false;
+  f.harness.publicSearch = async () => 'unused';
+  f.holdApproval();
+  const cancelled = new AbortController(),
+    continuing = new AbortController();
+  try {
+    const first = f.tools.execute({ tool: 'web_search', input: 'first synthetic query' }, { ...f.scope, signal: cancelled.signal });
+    const second = f.tools.execute({ tool: 'web_search', input: 'second synthetic query' }, { ...f.scope, signal: continuing.signal });
+    const finished = Promise.allSettled([first, second]);
+    await Promise.race([
+      f.approvalOpened,
+      finished.then(results => {
+        throw new Error(JSON.stringify(results));
+      }),
+    ]);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(f.requests(), 2);
+    cancelled.abort();
+    f.approvals.respond(f.lastApproval(), 'once');
+    const [stopped, continued] = await finished;
+    assert.ok(stopped.status === 'rejected' && /CANCELLED/.test(String(stopped.reason)));
+    assert.ok(continued.status === 'fulfilled' && continued.value === 'web');
+  } finally {
+    f.approvals.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+test('each redirected web URL is shown and approved before the next proxy connection', async () => {
+  for (const destination of ['http://1.1.1.1/final', 'http://8.8.8.8/same-host']) {
+    const f = await fixture(),
+      proxy = await redirectProxy(destination);
+    f.policy.checks.privacy = false;
+    f.policy.network = { proxyUrl: proxy.url };
+    f.holdApproval();
+    try {
+      const finished = Promise.allSettled([f.tools.execute({ tool: 'web_fetch', input: 'http://8.8.8.8/start' }, f.scope)]);
+      await f.waitForApprovals(1);
+      assert.equal(proxy.connects.length, 0);
+      f.approvals.respond(f.lastApproval(), 'once');
+      await f.waitForApprovals(2);
+      assert.deepEqual(proxy.connects, ['8.8.8.8:80']);
+      assert.ok(
+        f.bodies.some(body => body.includes(destination)),
+        'the redirect URL is visible in its approval',
+      );
+      f.approvals.respond(f.lastApproval(), 'once');
+      const [result] = await finished;
+      assert.ok(result.status === 'fulfilled' && (result.value as any).text === 'ok');
+      assert.equal(proxy.connects.length, 2);
+    } finally {
+      f.approvals.close();
+      f.store.close();
+      await proxy.close();
+      await rm(f.root, { recursive: true, force: true });
+    }
+  }
+});
+test('declined, private and secret redirects do not reach the next URL', async () => {
+  for (const [destination, error] of [
+    ['http://8.8.8.8/declined', /WEB_SITE_DECLINED/],
+    ['http://127.0.0.1/private', /WEB_ADDRESS_BLOCKED/],
+    ['http://1.1.1.1/?password=synthetic-test-credential', /PRIVACY_REVIEW_REQUIRED/],
+  ] as const) {
+    const f = await fixture(),
+      proxy = await redirectProxy(destination);
+    f.policy.checks.privacy = false;
+    f.policy.network = { proxyUrl: proxy.url };
+    f.holdApproval();
+    try {
+      const finished = Promise.allSettled([f.tools.execute({ tool: 'web_fetch', input: 'http://8.8.8.8/start' }, f.scope)]);
+      await f.waitForApprovals(1);
+      f.approvals.respond(f.lastApproval(), 'once');
+      if (destination.includes('declined')) {
+        await f.waitForApprovals(2);
+        f.approvals.respond(f.lastApproval(), 'cancel');
+      }
+      const [result] = await finished;
+      assert.ok(result.status === 'rejected' && error.test(String(result.reason)));
+      assert.deepEqual(proxy.connects, ['8.8.8.8:80']);
+    } finally {
+      f.approvals.close();
+      f.store.close();
+      await proxy.close();
+      await rm(f.root, { recursive: true, force: true });
+    }
+  }
+});
+test('changed policy and cancelled runs close redirect approval before network access', async () => {
+  for (const action of ['policy', 'cancel', 'timeout'] as const) {
+    const f = await fixture(),
+      proxy = await redirectProxy('http://1.1.1.1/final');
+    f.policy.checks.privacy = false;
+    f.policy.network = { proxyUrl: proxy.url };
+    f.holdApproval();
+    const controller = new AbortController(),
+      timeout = AbortSignal.timeout;
+    f.scope.signal = controller.signal;
+    if (action === 'timeout') AbortSignal.timeout = ms => timeout(ms === 30_000 ? 500 : ms);
+    try {
+      const finished = Promise.allSettled([f.tools.execute({ tool: 'web_fetch', input: 'http://8.8.8.8/start' }, f.scope)]);
+      await f.waitForApprovals(1);
+      f.approvals.respond(f.lastApproval(), 'once');
+      await f.waitForApprovals(2);
+      const id = f.lastApproval();
+      if (action === 'policy') {
+        f.setPolicy(defaultPolicy());
+        f.approvals.respond(id, 'once');
+      }
+      if (action === 'cancel') controller.abort();
+      const [result] = await finished;
+      const error = action === 'policy' ? /POLICY_CHANGED/ : action === 'cancel' ? /CANCELLED/ : /WEB_TIMEOUT/;
+      assert.ok(result.status === 'rejected' && error.test(String(result.reason)));
+      assert.deepEqual(proxy.connects, ['8.8.8.8:80']);
+      assert.throws(() => f.approvals.respond(id, 'once'), /APPROVAL_EXPIRED/, 'the dialog was closed');
+    } finally {
+      AbortSignal.timeout = timeout;
+      f.approvals.close();
+      f.store.close();
+      await proxy.close();
+      await rm(f.root, { recursive: true, force: true });
+    }
+  }
+});
+test('redacted URL is not sent and redacted search query is the query actually used', async () => {
+  const f = await fixture(),
+    proxy = await redirectProxy('http://1.1.1.1/final');
+  f.policy.network = { proxyUrl: proxy.url };
+  const original = f.harness.privacy;
+  f.harness.privacy = ((text: string, options?: unknown) =>
+    text === 'http://8.8.8.8/start' || text === 'synthetic query'
+      ? {
+          action: 'pass',
+          classification: 'public',
+          redactedText: text === 'synthetic query' ? 'safe query' : 'http://8.8.8.8/redacted',
+          findings: [],
+        }
+      : original(text, options as any)) as typeof f.harness.privacy;
+  let searched = '';
+  f.scope.search = async query => {
+    searched = query;
+    return 'ok';
+  };
+  try {
+    await assert.rejects(f.tools.execute({ tool: 'web_fetch', input: 'http://8.8.8.8/start' }, f.scope), /PRIVACY_REVIEW_REQUIRED/);
+    assert.deepEqual(proxy.connects, [], 'no raw or changed URL is transmitted');
+    await f.tools.execute({ tool: 'web_search', input: 'synthetic query' }, f.scope);
+    assert.equal(searched, 'safe query');
+  } finally {
+    f.approvals.close();
+    f.store.close();
+    await proxy.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
 test('references and Skills load when the app is installed under a folder named STeP Desktop (Windows)', async () => {
   const f = await fixture();
   try {
@@ -1340,6 +1932,34 @@ test('agent task inspection is session/workspace scoped and output bounded over 
     f.store.put('settings', 'main', { workspace: join(f.root, 'different') });
     await mkdir(join(f.root, 'different'));
     await assert.rejects(f.tools.execute({ tool: 'tasks', input: job.id, args: { action: 'status' } }, f.scope), /TASK_NOT_FOUND/);
+  } finally {
+    await f.workbench.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test('terminal waitMsBeforeAsync completes fast commands inline in a single turn and backgrounds slow or daemon jobs', async () => {
+  const f = await fixture();
+  try {
+    await writeFile(join(f.root, 'fast.cjs'), "process.stdout.write('inline-fast-done\\n');");
+    const fast = (await f.tools.execute(
+      { tool: 'terminal', input: `${node} fast.cjs`, args: { waitMsBeforeAsync: 5000 } },
+      f.scope,
+    )) as any;
+    assert.equal(fast.status, 'done');
+    assert.equal(fast.completedInline, true);
+    assert.equal(fast.timedOut, false);
+    assert.match(fast.output, /inline-fast-done/);
+
+    await writeFile(join(f.root, 'daemon.cjs'), 'setTimeout(() => {}, 30000);');
+    const daemon = (await f.tools.execute(
+      { tool: 'terminal', input: `${node} daemon.cjs`, args: { waitMsBeforeAsync: 5000, isDaemon: true } },
+      f.scope,
+    )) as any;
+    assert.equal(daemon.status, 'running');
+    assert.equal(daemon.completedInline, undefined);
+    await f.workbench.cancel(daemon.id);
   } finally {
     await f.workbench.close();
     f.store.close();

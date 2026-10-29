@@ -132,6 +132,28 @@ export function deniedCommand(command: string, patterns: string[]) {
   return patterns.find(pattern => segments.some(segment => matches(segment, pattern)));
 }
 
+/**
+ * Matches a single-segment command against administrator-configured allowedCommands.
+ * Any shell chaining, redirection, pipe, subshell or newline is rejected so an allowed prefix cannot smuggle extra commands.
+ */
+export function allowedCommand(command: string, patterns?: string[]) {
+  if (!patterns?.length || /[;&|<>`$\r\n]/.test(command)) return undefined;
+  const line = command.trim().replace(/\s+/g, ' ');
+  if (!line) return undefined;
+  return patterns.find(pattern => !/[;&|<>`$\r\n]/.test(pattern) && matches(line, pattern));
+}
+
+/** Matches a hostname (with optional port) against administrator-configured allowedDomains. */
+export function allowedDomain(host: string, domains?: string[]) {
+  if (!domains?.length) return undefined;
+  const hostname = host.trim().toLowerCase().replace(/:\d+$/, '');
+  if (!hostname || !/^[a-z0-9.-]{1,253}$/.test(hostname) || hostname.startsWith('.')) return undefined;
+  return domains.find(domain => {
+    const clean = domain.trim().toLowerCase();
+    return Boolean(clean) && (hostname === clean || hostname.endsWith(`.${clean}`));
+  });
+}
+
 export function evaluatePermission(
   request: ToolRequest,
   mode: PermissionMode,
@@ -157,6 +179,8 @@ export function evaluatePermission(
   const effective = policy.permission.modes.includes(mode) ? mode : 'ask';
   if (request.readOnly) return { allowed: true, requiresConfirmation: false, reason: 'read-only' };
   if (effective === 'plan') return { allowed: false, requiresConfirmation: false, reason: 'PLAN_MODE' };
+  if (request.command && allowedCommand(request.command, policy.permission.allowedCommands))
+    return { allowed: true, requiresConfirmation: false, reason: 'allowed command' };
   // The Vault host owns its masked prompts and exact-origin checks. Saved logins/addresses are automatic;
   // payment data has its own one-shot approval there. Do not add a generic command dialog in front of it.
   if (request.tool === 'browser_vault') return { allowed: true, requiresConfirmation: false, reason: 'vault host consent' };

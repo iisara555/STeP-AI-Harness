@@ -18,7 +18,7 @@ import { fetchPublic, publicUrl } from './web-fetch';
 import { extractWeb } from './web-extract';
 import { searchUrl } from './public-search';
 import { sheetWorker } from './sheets';
-import { sensitivePath, evaluatePermission, deniedPath } from './permissions';
+import { sensitivePath, evaluatePermission, deniedPath, allowedDomain } from './permissions';
 import { RunTransmission, type TransmissionSource } from './transmission';
 import { documentSection, documentHeadings, OrganizationKnowledge } from './knowledge';
 import { mainLocale, tm } from './i18n';
@@ -64,6 +64,17 @@ export type ToolScope = {
   generate?: (prompt: string, model?: string) => Promise<unknown>;
   workflow?: Workflow;
 };
+type SiteApproval = { url: string; sessionId: string; signal: AbortSignal; workspace: string; policy: Policy; mode: PermissionMode };
+type OutgoingOptions = {
+  transmission?: RunTransmission;
+  source?: TransmissionSource;
+  what?: string;
+  own?: boolean;
+  credentialMetadata?: boolean;
+  consentedGoogleRead?: boolean;
+  /** Evidence for the exact URL just shown in the site question; never model-controlled. */
+  siteApproval?: SiteApproval;
+};
 /** The AI service as the employee knows it (the connection's own name and model), not internal ids. */
 const PROVIDER_NAMES: Record<string, string> = {
   openai: 'OpenAI',
@@ -90,7 +101,7 @@ export const ownAnswer = (r: LoopRequest | undefined, text: string) => {
     if (r.tool === 'ask_user') return keys.length === 1 && typeof value.answer === 'string';
     return (
       typeof value.approved === 'boolean' &&
-      keys.every(k => ['approved', 'scope', 'status', 'tasks', 'next'].includes(k)) &&
+      keys.every(k => ['approved', 'scope', 'status', 'tasks', 'next', 'canProceedInline'].includes(k)) &&
       keys.every(k => ['boolean', 'number', 'string'].includes(typeof value[k]))
     );
   } catch {
@@ -205,20 +216,23 @@ export class DesktopTools {
     text: string,
     scope: ToolScope,
     destination?: 'web-query' | 'web-url',
-    transmission?: RunTransmission,
-    source?: TransmissionSource,
-    what?: string,
-    own = false,
-    credentialMetadata = false,
-    consentedGoogleRead = false,
+    { transmission, source, what, own, credentialMetadata, consentedGoogleRead, siteApproval }: OutgoingOptions = {},
   ) {
     const review = this.harness.privacy(text, { credentialMetadata });
     if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
     if (consentedGoogleRead) return review.redactedText;
-    // Credential filtering is always on; optional privacy consent still follows policy.
-    if (!this.policy().checks.privacy) return review.redactedText;
     const clean =
       review.action === 'pass' && review.classification === 'public' && !review.findings?.length && review.redactedText === text;
+    // The site question already displayed this exact URL. Findings, redactions and later URLs still ask separately.
+    if (destination === 'web-url' && siteApproval?.url === text) {
+      if (siteApproval.workspace !== (await this.workbench.root().catch(() => ''))) throw new Error('WORKSPACE_CHANGED');
+      if (siteApproval.policy !== this.policy() || siteApproval.mode !== this.mode()) throw new Error('POLICY_CHANGED');
+      if (scope.sessionId !== siteApproval.sessionId || scope.signal !== siteApproval.signal) throw new Error('DESTINATION_CHANGED');
+      if (scope.signal.aborted) throw new Error('CANCELLED');
+      if (clean) return review.redactedText;
+    }
+    // Credential filtering is always on; optional privacy consent still follows policy.
+    if (!this.policy().checks.privacy) return review.redactedText;
     // The employee's own answer, typed or clicked in this app a moment ago, is not asked about again. Anything the
     // privacy scan flags still asks, as does every file, web and tool result.
     if (own && clean && !destination) return review.redactedText;
@@ -293,35 +307,95 @@ export class DesktopTools {
     if (!approved) return { approved: false, status: 'revise-the-plan-with-the-employee' };
     this.workbench.setWorkPlan(scope.sessionId, { ...parsed, approvedAt: new Date().toISOString() }, text);
     this.notify();
-    return { approved: true, tasks: parsed.tasks.length, next: 'tell the employee to press ลงมือทำตามแผน' };
+    return {
+      approved: true,
+      tasks: parsed.tasks.length,
+      canProceedInline: this.mode() !== 'plan',
+      next: 'tell the employee to press ลงมือทำตามแผน',
+    };
   }
-  // Sites the employee let the AI read in each task (session), by host.
-  private sites = new Map<string, Set<string>>();
+  // Sites approved in a task remain valid only while its workspace, managed policy and mode match.
+  private sites = new Map<string, { workspace: string; policy: Policy; mode: PermissionMode; hosts: Set<string> }>();
+  // Identical parallel reads in one run share the pending question. Other URLs and runs keep their own approvals.
+  private siteRequests = new WeakMap<AbortSignal, Map<string, { url: string; task: Promise<SiteApproval> }>>();
   /**
    * The AI reads a website only after the employee allows that site once in the task, in every permission mode, as
    * Claude Code asks per domain. A page or file with hidden instructions could otherwise make the AI send task data to
    * any address in a URL without anyone seeing it. The full URL is shown, so data carried in it is visible.
    */
-  private async siteConsent(url: string, scope: ToolScope) {
-    const host = new URL(url).host;
-    const allowed = this.sites.get(scope.sessionId) || new Set<string>();
-    if (allowed.has(host)) return;
-    const rule = this.approvals.rule(await this.workbench.root().catch(() => ''), 'web_fetch', host);
-    const approved = await this.approvals.request(
-      rule,
-      {
-        title: tm('ให้ AI อ่านเว็บไซต์นี้?'),
-        body: url + tm('\nอนุญาตครั้งเดียวต่อเว็บไซต์ในงานนี้ ตรวจว่าที่อยู่ไม่มีข้อมูลของงานแฝงอยู่'),
-        privacyClass: 'internal',
-        allowRemember: false,
-        sessionId: scope.sessionId,
-      },
-      scope.signal,
-    );
-    if (scope.signal.aborted) throw new Error('CANCELLED');
-    if (!approved) throw new Error('WEB_SITE_DECLINED');
-    allowed.add(host);
-    this.sites.set(scope.sessionId, allowed);
+  private async siteConsent(url: string, scope: ToolScope, exact = false) {
+    const host = new URL(url).host,
+      sessionId = scope.sessionId,
+      signal = scope.signal,
+      policy = this.policy(),
+      mode = this.mode();
+    if (signal.aborted) throw new Error('CANCELLED');
+    const workspace = await this.workbench.root().catch(() => '');
+    if (signal.aborted) throw new Error('CANCELLED');
+    if (policy !== this.policy() || mode !== this.mode()) throw new Error('POLICY_CHANGED');
+    if (scope.sessionId !== sessionId || scope.signal !== signal) throw new Error('DESTINATION_CHANGED');
+    const sites = this.sites.get(sessionId);
+    if (!exact && sites?.workspace === workspace && sites.policy === policy && sites.mode === mode && sites.hosts.has(host))
+      return undefined;
+    if (!exact && allowedDomain(host, policy.permission.allowedDomains)) {
+      let allowed = this.sites.get(sessionId);
+      if (!allowed || allowed.workspace !== workspace || allowed.policy !== policy || allowed.mode !== mode) {
+        allowed = { workspace, policy, mode, hosts: new Set() };
+        this.sites.set(sessionId, allowed);
+      }
+      allowed.hosts.add(host);
+      return { url, workspace, policy, mode, sessionId, signal };
+    }
+    let requests = this.siteRequests.get(signal);
+    if (!requests) {
+      requests = new Map();
+      this.siteRequests.set(signal, requests);
+    }
+    const key = JSON.stringify([sessionId, host, url]);
+    let pending = requests.get(key);
+    if (!pending) {
+      const task = (async () => {
+        const rule = this.approvals.rule(workspace, 'web_fetch', host);
+        const approved = await this.approvals.request(
+          rule,
+          {
+            title: tm('ให้ AI อ่านเว็บไซต์นี้?'),
+            body: url + tm('\nอนุญาตครั้งเดียวต่อเว็บไซต์ในงานนี้ ตรวจว่าที่อยู่ไม่มีข้อมูลของงานแฝงอยู่'),
+            privacyClass: 'internal',
+            allowRemember: false,
+            sessionId,
+          },
+          signal,
+        );
+        if (signal.aborted) throw new Error('CANCELLED');
+        if (!approved) throw new Error('WEB_SITE_DECLINED');
+        if (workspace !== (await this.workbench.root().catch(() => ''))) throw new Error('WORKSPACE_CHANGED');
+        if (policy !== this.policy() || mode !== this.mode()) throw new Error('POLICY_CHANGED');
+        if (scope.sessionId !== sessionId || scope.signal !== signal) throw new Error('DESTINATION_CHANGED');
+        if (signal.aborted) throw new Error('CANCELLED');
+        // Read again after the dialog: a different website may have been approved in the meantime.
+        let allowed = this.sites.get(sessionId);
+        if (!allowed || allowed.workspace !== workspace || allowed.policy !== policy || allowed.mode !== mode) {
+          allowed = { workspace, policy, mode, hosts: new Set() };
+          this.sites.set(sessionId, allowed);
+        }
+        allowed.hosts.add(host);
+        return { url, workspace, policy, mode, sessionId, signal };
+      })();
+      pending = { url, task };
+      requests.set(key, pending);
+    }
+    try {
+      const approval = await pending.task;
+      if (signal.aborted) throw new Error('CANCELLED');
+      if (scope.sessionId !== sessionId || scope.signal !== signal) throw new Error('DESTINATION_CHANGED');
+      return pending.url === url ? approval : undefined;
+    } finally {
+      if (requests.get(key) === pending) {
+        requests.delete(key);
+        if (!requests.size) this.siteRequests.delete(signal);
+      }
+    }
   }
   async host(scope: ToolScope): Promise<LoopHost> {
     const jobs = new Set<string>();
@@ -466,17 +540,14 @@ export class DesktopTools {
         ),
       outgoing: async (text, _signal, r) => {
         await runCheck();
-        const approved = await this.outgoing(
-          text,
-          transmissionScope,
-          undefined,
+        const approved = await this.outgoing(text, transmissionScope, undefined, {
           transmission,
-          await sourceFor(r),
-          describe(r),
-          ownAnswer(r, text),
-          r?.tool === 'browser_control' || r?.tool === 'browser_vault',
-          (await googleReads?.covers(r, text)) === true,
-        );
+          source: await sourceFor(r),
+          what: describe(r),
+          own: ownAnswer(r, text),
+          credentialMetadata: r?.tool === 'browser_control' || r?.tool === 'browser_vault',
+          consentedGoogleRead: (await googleReads?.covers(r, text)) === true,
+        });
         await runCheck();
         return approved;
       },
@@ -715,8 +786,20 @@ export class DesktopTools {
             return this.workbench.stage(target, r.content).then(c => this.settle({ id: c.id, path: c.path }, scope));
           case 'code_diagnostics':
             return this.workbench.diagnostics(target, scope.signal, join(dirname(this.sheetPath), 'code-worker.cjs'));
-          case 'terminal':
-            return this.workbench.start(target, scope.sessionId);
+          case 'terminal': {
+            const job = await this.workbench.start(target, scope.sessionId);
+            if (typeof a.waitMsBeforeAsync === 'number' && a.waitMsBeforeAsync > 0 && !a.isDaemon) {
+              const waited = await this.workbench.waitTask(
+                scope.sessionId,
+                job.id,
+                { action: 'wait', timeoutMs: a.waitMsBeforeAsync },
+                scope.signal,
+                check,
+              );
+              return { ...waited, completedInline: !Array.isArray(waited) && 'status' in waited && waited.status !== 'running' };
+            }
+            return job;
+          }
           case 'tasks':
             if (a.action === 'wait') return this.workbench.waitTask(scope.sessionId, target, a, scope.signal, check);
             if (cancelTask) {
@@ -730,17 +813,31 @@ export class DesktopTools {
           case 'web_extract':
           case 'web_fetch': {
             const url = publicUrl(target).href;
-            // A URL can leak task data through its path/query even on an otherwise public host.
-            if (this.harness.privacy(decodeURIComponent(url)).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
-            await this.siteConsent(url, scope);
-            await this.outgoing(url, scope, 'web-url');
-            await check();
+            const authorize = async (candidate: string, currentScope: ToolScope, redirect: boolean) => {
+              // A URL can leak task data through its encoded path/query even on an otherwise public host.
+              let decoded: string;
+              try {
+                decoded = decodeURIComponent(candidate);
+              } catch {
+                throw new Error('INVALID_URL');
+              }
+              const review = this.harness.privacy(decoded);
+              if (review.action !== 'pass' || review.redactedText !== decoded) throw new Error('PRIVACY_REVIEW_REQUIRED');
+              const siteApproval = await this.siteConsent(candidate, currentScope, redirect);
+              const approved = await this.outgoing(candidate, currentScope, 'web-url', { siteApproval });
+              // Do not silently send the original or navigate to a changed URL after privacy redaction.
+              if (approved !== candidate) throw new Error('PRIVACY_REVIEW_REQUIRED');
+              await check();
+              if (currentScope.signal.aborted) throw new Error('CANCELLED');
+            };
+            await authorize(url, scope, false);
             const fetched = await fetchPublic(
               url,
               scope.signal,
               this.policy().network?.proxyUrl,
               undefined,
               r.tool === 'web_extract' ? 'html' : undefined,
+              { onRedirect: async (next, signal) => authorize(next, { ...scope, signal }, true) },
             );
             await check();
             return r.tool === 'web_extract' ? extractWeb(fetched.text, fetched.url) : fetched;
@@ -748,9 +845,9 @@ export class DesktopTools {
           case 'web_search':
             if (!target.trim() || this.harness.privacy(target).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
             if (this.harness.publicSearch) await this.siteConsent(searchUrl(target), scope);
-            await this.outgoing(target, scope, 'web-query');
+            const approved = await this.outgoing(target, scope, 'web-query');
             await check();
-            return scope.search(target);
+            return scope.search(approved);
           case 'skill': {
             if (a.action === 'catalog' && a.resource !== undefined) throw new Error('INVALID_INPUT');
             if (a.action === 'catalog')
