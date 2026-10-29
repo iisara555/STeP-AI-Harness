@@ -7,6 +7,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 ## Unreleased
 
 - Draft TOR sections at the depth appropriate to the task and agency example. Remove the compatible transport's default output cap for TOR requests when no administrator limit is set, and continue a provider-truncated response when the transport reports an output-token stop. Preserve source checks, configured limits and human review.
+- Suggest activity-related AFP evidence from local case context and reviewed page classifications, with conditional source references, editable additional items and an optional reviewed AI handoff. Only category/status labels and optional locally masked context chosen by the employee are sent. Receipt-packet PDFs include the contextual review summary; missing or suggested documents do not establish financial-policy compliance or payment approval.
+- Simplify packet preparation into navigable case, evidence and draft/export steps, with compact evidence statuses and expandable source details.
 
 ## Desktop v0.6.22 (2026-10-28)
 

@@ -28,6 +28,7 @@ import {
   type ReceiptVoucher,
 } from '../src/receipt-packet';
 import { THAI_DOCUMENT_LANGUAGE } from '../src/thai-typography';
+import { ACTIVITY_LABELS, FINANCE_LABELS, blankEvidenceGuidance, evidenceChecklist, inferActivity } from '../src/afp-evidence';
 
 const FONT = 'TH Sarabun New';
 const FOOTER = 'FM-AF-014 V.02 วันที่บังคับใช้เอกสาร 1 มิ.ย. 2568 (อายุการจัดเก็บเอกสาร 15 ปี)';
@@ -240,12 +241,35 @@ export function receiptPacketCoverHtml(
   const assessment = packetAssessment(packet),
     total = voucherTotal(packet.voucher);
   const index = packetIndex(packet, coverPages, voucherPages, disbursementPages);
+  const guidance = packet.guidance || blankEvidenceGuidance(),
+    context = inferActivity(packet),
+    checklist = evidenceChecklist(packet);
+  const evidenceStatus = {
+    checked: 'พบหน้าที่ตรวจเทียบแล้ว',
+    unchecked: 'พบในชุด รอตรวจเทียบ',
+    suggested: 'ชื่อไฟล์คล้ายกัน รอยืนยันประเภท',
+    missing: 'ยังไม่พบหน้าที่ระบุประเภท',
+  };
+  const guidanceHtml =
+    context.activity || guidance.finance !== 'unknown' || guidance.extra.some(item => item.label.trim())
+      ? `<h2>รายการตรวจตามบริบท</h2><p>กิจกรรม: ${html(context.activity ? ACTIVITY_LABELS[context.activity] : 'ยังไม่แน่ใจ')} · กรณีการเงิน: ${html(FINANCE_LABELS[guidance.finance])}</p>
+       <ul>${checklist.map(item => `<li>${html(item.label)} — ${evidenceStatus[item.status]} (${item.source === 'need-source' ? 'ข้อเสนอ รอยืนยัน' : item.source === 'qp-af-003' ? 'QP-AF-003 ข้อ 4.2' : 'แนวปฏิบัติ AFP หมวด B'})</li>`).join('')}
+       ${guidance.extra
+         .filter(item => item.label.trim())
+         .map(
+           item =>
+             `<li>${html(item.label)} — ${item.sourceId && packet.documents.some(doc => doc.id === item.sourceId && doc.pages.some(page => page.included)) ? 'เชื่อมไฟล์ไว้ โปรดตรวจหน้าที่เลือก' : 'ยังไม่เชื่อมไฟล์ที่มีหน้าเลือก'}</li>`,
+         )
+         .join('')}</ul>
+       <p class="notice">รายการนี้เป็นข้อช่วยตรวจ ไม่ยืนยันว่าเอกสารครบหรือได้รับอนุมัติ ให้ AFP ตรวจข้อกำหนดตามกรณี</p>`
+      : '';
   return printDocument(
     `<h1>สรุปชุดเอกสารเบิกจ่าย</h1><p><b>เรื่อง</b> ${html(packet.title)}</p>
     <p><b>โครงการ</b> ${html(packet.project || 'ยังไม่ระบุ')}</p><p><b>วัตถุประสงค์</b> ${multiline(packet.purpose || 'ยังไม่ระบุ')}</p>
     <p><b>ประเภทงาน</b> ${packet.mode === 'paid' ? 'จ่ายแล้ว — เตรียมเบิกคืนหรือเคลียร์เงินยืม' : 'รอจ่าย — เตรียมเอกสารให้ฝ่ายการเงิน'}</p>
     <p><b>ผลตรวจข้อมูล</b> ${assessment.status === 'prepared-for-afp' ? 'ข้อมูลที่ระบุได้รับการตรวจเทียบแล้ว — รอ AFP ตรวจ' : 'ร่าง — ยังมีข้อมูลหรือหลักฐานรอตรวจ'}</p>
     <p class="notice">เป็นการจัดชุดและตรวจข้อมูลเบื้องต้น ไม่ใช่การยืนยันสิทธิ งบประมาณ หรือการอนุมัติจ่ายเงิน เอกสารที่ต้องใช้ขึ้นกับประเภทค่าใช้จ่ายและข้อกำหนดปัจจุบันของ AFP</p>
+    ${guidanceHtml}
     ${
       packet.includeVoucher
         ? `<p>ร่างใบสำคัญรับเงิน ${FM014_REFERENCE.code} อยู่หน้า ${coverPages + 1}${voucherPages > 1 ? `–${coverPages + voucherPages}` : ''}

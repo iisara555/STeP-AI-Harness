@@ -13,6 +13,7 @@ import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 import { receiptPacketEn } from './receipt-packet-en';
 import { afpPaymentVoucherEn } from './afp-payment-voucher-en';
+import { afpEvidenceEn } from './afp-evidence-en';
 export const en: Record<string, string> = {
   'แม่แบบ TOR ใช้หัวเอกสาร STeP พร้อมจัดย่อหน้า ตาราง และเลขหน้าใน Word กับ PDF ให้ใกล้ต้นฉบับมากขึ้น':
     'TOR templates use STeP letterheads with Word and PDF paragraphs, tables and page numbers closer to the reference layout',
@@ -3154,4 +3155,5 @@ export const en: Record<string, string> = {
   ...settingsEn,
   ...receiptPacketEn,
   ...afpPaymentVoucherEn,
+  ...afpEvidenceEn,
 };

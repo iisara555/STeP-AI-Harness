@@ -739,6 +739,7 @@ export function ReceiptApp({
         active={receiptMode === 'packet'}
         call={call}
         notify={notify}
+        onAskAi={text => handoff(text, '')}
         review={
           doc?.sourceToken
             ? {
