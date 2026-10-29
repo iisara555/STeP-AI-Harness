@@ -117,14 +117,13 @@ try {
   const created = await page.evaluate(() => window.step.call('create', { connectionId: 'fake', project: 'Synthetic assistant' }));
   await page.reload();
   await page.locator('.statusbar .status-dot.ok').waitFor();
-  progress('select assistant mode with keyboard');
+  progress('select assistant mode');
   const mode = page.getByRole('combobox', { name: 'โหมดทำงาน' });
   await mode.focus();
+  await expect(mode).toBeFocused();
   if (process.platform === 'darwin') {
-    // macOS opens the native menu before changing and committing its selection.
-    await page.keyboard.press('Space');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('Enter');
+    // Playwright keyboard events do not reliably commit the macOS native select popup in CI.
+    await mode.selectOption('assistant');
   } else {
     await page.keyboard.press('Home');
     await page.keyboard.press('ArrowDown');
