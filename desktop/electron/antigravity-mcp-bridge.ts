@@ -1,5 +1,5 @@
 import { randomUUID, timingSafeEqual } from 'node:crypto';
-import { chmod, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createServer, type Server as NetServer, type Socket } from 'node:net';
 import { join } from 'node:path';
 import { LOOP_TOOLS, taskAction, type LoopRequest } from '../src/tools';
@@ -59,6 +59,7 @@ function sameToken(expected: string, actual: unknown): boolean {
 export class AntigravityMcpBridge {
   private server?: NetServer;
   private sockets = new Set<Socket>();
+  private sockDir?: string;
   private closed = false;
   readonly token = randomUUID();
   endpoint = '';
@@ -70,10 +71,19 @@ export class AntigravityMcpBridge {
 
   async start(home: string): Promise<AntigravityMcpBridgeConfig> {
     if (this.closed) throw new Error('CANCELLED');
-    this.endpoint =
-      process.platform === 'win32'
-        ? `\\\\.\\pipe\\step-agy-host-${randomUUID()}`
-        : join(home, `step-host-${randomUUID().slice(0, 8)}.sock`);
+    if (process.platform === 'win32') {
+      this.endpoint = `\\\\.\\pipe\\step-agy-host-${randomUUID()}`;
+    } else {
+      // macOS sockaddr_un.sun_path is 104 bytes (103 chars); fall back to a 0700 /tmp dir when TMPDIR is long.
+      const candidate = join(home, 'h.sock');
+      if (candidate.length <= 96) {
+        this.endpoint = candidate;
+      } else {
+        this.sockDir = await mkdtemp('/tmp/step-agy-');
+        await chmod(this.sockDir, 0o700).catch(() => {});
+        this.endpoint = join(this.sockDir, 'h.sock');
+      }
+    }
 
     const runnerPath = join(home, 'step-mcp-stdio.mjs');
     const runnerSource = [
@@ -223,6 +233,10 @@ export class AntigravityMcpBridge {
     this.server = undefined;
     if (server) {
       await new Promise<void>(resolve => server.close(() => resolve()));
+    }
+    if (this.sockDir) {
+      await rm(this.sockDir, { recursive: true, force: true }).catch(() => {});
+      this.sockDir = undefined;
     }
   }
 }
