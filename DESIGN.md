@@ -30,3 +30,5 @@ Focused tools live under **เครื่องมือ** in the sidebar and r
 ## Layout and behaviour
 
 Prefer document space over cards. Keep tools discoverable through named buttons and consistent Lucide icons. Empty states explain the next action without fabricated projects, usage metrics, or completed work. Ask for confirmation with the in-app dialog, never a native popup. Preserve keyboard access, visible focus, reduced motion, pane resizing, and narrow-window layouts.
+
+For tool-assisted work, keep the activity list compact and expandable. Use text and icons to distinguish recorded running, completed, and failed steps; surface failures and direct staged file proposals to review before applying them. A completed step does not imply a completed task.

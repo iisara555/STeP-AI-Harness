@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { WORKFLOWS, isWorkflow, parsePlan, workflowRule } from '../electron/workflows';
+import { WORKFLOWS, assistantPolicyError, isWorkflow, parsePlan, workflowRule } from '../electron/workflows';
+import { defaultPolicy } from '../electron/policy';
 
 test('a submitted plan becomes a goal and tasks; checklist, numbered and bulleted lines all count', () => {
   const plan = parsePlan(
@@ -29,8 +30,10 @@ test('a submitted plan becomes a goal and tasks; checklist, numbered and bullete
 });
 
 test('each workflow gives the assistant its own way of working; execute follows the approved plan', () => {
-  assert.deepEqual([...WORKFLOWS], ['plan', 'execute', 'requirements', 'diagnose', 'coding']);
+  assert.deepEqual([...WORKFLOWS], ['assistant', 'plan', 'execute', 'requirements', 'diagnose', 'coding']);
   assert.ok(isWorkflow('plan') && !isWorkflow('approve') && !isWorkflow(undefined));
+  assert.match(workflowRule('assistant'), /host-governed file, document and web tools/);
+  assert.match(workflowRule('assistant'), /untrusted evidence[\s\S]*run terminal or sandbox commands/);
   assert.match(workflowRule('plan'), /ask_user[\s\S]*plan tool[\s\S]*- \[ \]/);
   assert.match(workflowRule('plan'), /Do not do the work itself/);
   assert.match(workflowRule('requirements'), /ความต้องการ[\s\S]*testable/);
@@ -47,4 +50,13 @@ test('each workflow gives the assistant its own way of working; execute follows 
   assert.match(rule, /1\. \[done\] ร่างกำหนดการ \(note: ส่งให้ทีมแล้ว\)/);
   assert.match(rule, /2\. \[todo\] ขออนุมัติงบ/);
   assert.match(rule, /plan_update[\s\S]*never done by the assistant/);
+});
+
+test('work assistant requires both governed tools and the full personal-data gate', () => {
+  const policy = defaultPolicy();
+  assert.equal(assistantPolicyError(policy), 'ASSISTANT_PRIVACY_REQUIRED');
+  policy.checks.privacy = true;
+  assert.equal(assistantPolicyError(policy), undefined);
+  policy.features.toolLoop = false;
+  assert.equal(assistantPolicyError(policy), 'TOOL_LOOP_DISABLED');
 });

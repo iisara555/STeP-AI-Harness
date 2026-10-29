@@ -13,6 +13,7 @@ import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 import { receiptPacketEn } from './receipt-packet-en';
 import { afpPaymentVoucherEn } from './afp-payment-voucher-en';
+import { workAssistantEn } from './work-assistant-en';
 import { afpEvidenceEn } from './afp-evidence-en';
 export const en: Record<string, string> = {
   'แม่แบบ TOR ใช้หัวเอกสาร STeP พร้อมจัดย่อหน้า ตาราง และเลขหน้าใน Word กับ PDF ให้ใกล้ต้นฉบับมากขึ้น':
@@ -3155,5 +3156,6 @@ export const en: Record<string, string> = {
   ...settingsEn,
   ...receiptPacketEn,
   ...afpPaymentVoucherEn,
+  ...workAssistantEn,
   ...afpEvidenceEn,
 };

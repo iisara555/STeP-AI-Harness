@@ -4,7 +4,7 @@ import { resolve, relative, isAbsolute, extname, dirname, sep, join } from 'node
 import { createHash } from 'node:crypto';
 import { consentPreview } from './consent-preview';
 import type { Connection, Workflow, WorkTask } from '../src/types';
-import { parsePlan } from './workflows';
+import { assistantPolicyError, parsePlan } from './workflows';
 import { taskAction, type LoopRequest } from '../src/tools';
 import { discoverTools, validateToolRequest } from '../src/tool-registry';
 import type { Harness } from './service';
@@ -339,6 +339,10 @@ export class DesktopTools {
       hostIdentity = this.identity(scope.sessionId);
     const check = async () => {
       if (scope.signal.aborted) throw new Error('CANCELLED');
+      if (scope.workflow === 'assistant') {
+        const unavailable = assistantPolicyError(this.policy());
+        if (unavailable) throw new Error(unavailable);
+      }
       if (blocked(scope.contract)) throw new Error('AUTHORITY_REVIEW_REQUIRED');
       if (workspace !== (await this.workbench.root().catch(() => ''))) throw new Error('WORKSPACE_CHANGED');
       if (policy !== this.policy() || mode !== this.mode()) throw new Error('POLICY_CHANGED');
@@ -528,6 +532,17 @@ export class DesktopTools {
   }
   async execute(r: LoopRequest, scope: ToolScope, check: () => Promise<void> = async () => {}) {
     validateToolRequest(r);
+    if (scope.workflow === 'assistant') {
+      const unavailable = assistantPolicyError(this.policy());
+      if (unavailable) throw new Error(unavailable);
+      if (['terminal', 'sandbox'].includes(r.tool)) throw new Error('ASSISTANT_COMMAND_DISABLED');
+      if (
+        r.tool === 'browser_vault' ||
+        (r.tool === 'browser_control' && !['open', 'read', 'close'].includes(String(r.args?.action || 'open')))
+      )
+        throw new Error('ASSISTANT_WEB_READ_ONLY');
+      if (r.tool === 'mcp_call') throw new Error('ASSISTANT_REMOTE_ACTION_DISABLED');
+    }
     const a = r.args || {},
       target = r.input;
     if (r.tool === 'tasks') taskAction(target, a);

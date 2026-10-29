@@ -40,6 +40,7 @@ export type LoopHost = {
   dispose?: () => Promise<void>;
   cancel?: () => void;
   activity?: (text: string) => void;
+  begin?: (action: { id: string; tool: string }) => void;
   timing?: (tool: string, ms: number) => void;
   observe?: (trace: ToolTrace) => void;
 };
@@ -66,6 +67,7 @@ export class ToolLoop {
     const traceId = randomUUID();
     let ok = false,
       failure: string | undefined;
+    this.host.begin?.({ id: traceId, tool: r.tool });
     try {
       if (signal.aborted) throw new Error('CANCELLED');
       await this.host.check();

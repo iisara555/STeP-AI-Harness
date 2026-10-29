@@ -140,6 +140,8 @@ export type WorkMode = 'chat' | 'draft' | 'image';
 export type ImageArtifact = { id: string; name: string; model: string; provider: Provider; mime: string; at: string };
 /** One model step of a run: sizes, references and timing only, never request, source or draft text. */
 export type ToolTrace = { id: string; tool: string; ok: boolean; code?: string; ms: number };
+/** A host-confirmed tool event, with no paths, arguments or source content. */
+export type WorkAction = { id: string; tool: string; state: 'running' | 'done' | 'failed'; code?: string };
 export type StepTrace = {
   label: string;
   systemChars: number;
@@ -179,6 +181,7 @@ export type RunTrace = {
   id: string;
   at: string;
   mode: string;
+  workflow?: Workflow;
   route: string;
   outcome: string;
   code?: string;
@@ -490,7 +493,7 @@ export type ApprovalRequest = {
 export type ToolQuestion = { id: string; sessionId: string; question: string; options: string[] };
 export type PlanStep = { label: string; action?: boolean };
 /** Native workflows of the harness (electron/workflows.ts), picked in the composer. */
-export type Workflow = 'plan' | 'execute' | 'requirements' | 'diagnose' | 'coding';
+export type Workflow = 'assistant' | 'plan' | 'execute' | 'requirements' | 'diagnose' | 'coding';
 export type WorkTask = { title: string; status: 'todo' | 'doing' | 'done' | 'blocked'; note?: string };
 export type WorkPlan = { goal: string; tasks: WorkTask[]; approvedAt?: string };
 /** Pages open in the Web tab (electron/browser-dock.ts): the assistant's and the employee's own. */
@@ -522,6 +525,7 @@ export type RunEvent = {
     | 'reasoning'
     | 'status'
     | 'activity'
+    | 'work-action'
     | 'heartbeat'
     | 'changed'
     | 'side-question'
@@ -553,6 +557,7 @@ export type RunEvent = {
   /** For discard: how many characters of the streamed answer to take back. */
   count?: number;
   trace?: RunTrace;
+  workAction?: WorkAction;
   detail?: string[];
   connectionId?: string;
   plan?: PlanStep[];

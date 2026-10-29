@@ -135,6 +135,31 @@ test('a colloquial review request selects, reroutes and loads real Skill instruc
   }
 });
 
+test('the work assistant still selects and loads relevant STeP Skills', async () => {
+  const f = fixture(undefined, { assistantPolicy: () => undefined });
+  try {
+    await f.service.run(
+      f.session.id,
+      'อ่านร่างนี้ให้หน่อย มีตรงไหนงง ข้อมูลตกหล่น หรือบอกไม่เหมือนกันบ้าง',
+      'ร่างจำลอง: นัดที่ห้องประชุม แต่ท้ายข้อความบอกออนไลน์',
+      true,
+      undefined,
+      'chat',
+      undefined,
+      ['synthetic.txt'],
+      { workflow: 'assistant' },
+    );
+    const done = f.store.session(f.session.id);
+    assert.equal(done.status, 'review');
+    assert.equal(done.runs!.at(-1)!.workflow, 'assistant');
+    assert.equal(done.runs!.at(-1)!.skillSelection?.skill, 'document-review');
+    assert.match(f.calls.at(-1)!.system, /Native workflow: WORK ASSISTANT/);
+    assert.match(f.calls.at(-1)!.system, /<skill_instructions>/);
+  } finally {
+    f.store.close();
+  }
+});
+
 test('HIGH routing loads a procedure without a selection model call', async () => {
   const f = fixture();
   try {
