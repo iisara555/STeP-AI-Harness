@@ -102,6 +102,8 @@ export type Harness = {
   compactHook?: (event: 'pre_compact' | 'post_compact', id: string, before: number, after: number) => Promise<void>;
   completed?: (session: Session) => Promise<void>;
   toolLoop?: () => boolean;
+  /** Rechecked throughout the work-assistant run, including before provider calls. */
+  assistantPolicy?: () => string | undefined;
   /** Choose a registered procedure before ordinary chat; explicit Skills and fixed workflows keep their own route. */
   hybridSkillSelection?: () => boolean;
   /** Trusted host instructions for a restricted tool surface; execution and consent gates still apply. */
@@ -591,6 +593,12 @@ export class WorkService {
     options: RunOptions,
     controller: AbortController,
   ) {
+    const checkAssistantPolicy = () => {
+      if (options.workflow !== 'assistant') return;
+      const error = this.harness.assistantPolicy ? this.harness.assistantPolicy() : 'ASSISTANT_PRIVACY_REQUIRED';
+      if (error) throw new Error(error);
+    };
+    checkAssistantPolicy();
     const selectedDocument = options.documentTool ? documentTool(options.documentTool) : undefined;
     if (options.documentTool && (!selectedDocument || mode !== 'draft')) throw new Error('INVALID_DOCUMENT_TOOL');
     if (selectedDocument && skill && skill !== selectedDocument.skill) throw new Error('INVALID_DOCUMENT_TOOL');
@@ -803,13 +811,23 @@ export class WorkService {
     // A host heartbeat means the app is responsive, not that the provider made progress.
     const heartbeat = setInterval(() => this.emit({ sessionId: id, type: 'heartbeat' }), 3000);
     const checkAbort = () => {
+      checkAssistantPolicy();
       if (options.longBudget && (Date.now() >= options.longBudget.deadline || options.longBudget.tokens >= options.longBudget.maxTokens))
         throw new Error('LONG_TASK_BUDGET');
       if (controller.signal.aborted) throw new Error('CANCELLED');
     };
     // What happened in this run, without request, source or draft text: for the session history and diagnostics.
     const started = Date.now();
-    const trace: RunTrace = { id: randomUUID(), at: new Date().toISOString(), mode: '', route: '', outcome: 'running', ms: 0, steps: [] };
+    const trace: RunTrace = {
+      id: randomUUID(),
+      at: new Date().toISOString(),
+      mode: '',
+      ...(options.workflow ? { workflow: options.workflow } : {}),
+      route: '',
+      outcome: 'running',
+      ms: 0,
+      steps: [],
+    };
     const finish = (target: Session, outcome: string, code?: string) => {
       trace.outcome = outcome;
       if (code) trace.code = code;
@@ -914,7 +932,7 @@ export class WorkService {
         contract.mode === 'GENERAL' &&
         !session.skill &&
         !session.documentTool &&
-        !options.workflow &&
+        (!options.workflow || options.workflow === 'assistant') &&
         !clarification &&
         !session.approvedPlan &&
         !session.workPlan &&
@@ -1570,6 +1588,11 @@ export class WorkService {
           });
           result = await new ToolLoop({
             ...host,
+            begin: action => {
+              host.begin?.(action);
+              if (options.workflow === 'assistant')
+                this.emit({ sessionId: id, type: 'work-action', workAction: { ...action, state: 'running' } });
+            },
             check: async () => {
               checkAbort();
               await host.check();
@@ -1595,6 +1618,17 @@ export class WorkService {
             observe: record => {
               stepTrace.tools = [...(stepTrace.tools || []), record].slice(-160);
               host.observe?.(record);
+              if (options.workflow === 'assistant')
+                this.emit({
+                  sessionId: id,
+                  type: 'work-action',
+                  workAction: {
+                    id: record.id,
+                    tool: record.tool,
+                    state: record.ok ? 'done' : 'failed',
+                    ...(record.code ? { code: record.code } : {}),
+                  },
+                });
             },
             timing: (tool, ms) => {
               stepTrace.toolMs = (stepTrace.toolMs || 0) + ms;

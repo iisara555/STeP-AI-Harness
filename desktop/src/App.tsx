@@ -103,6 +103,7 @@ import { toolRequests, visibleStream, type ToolTab, type ToolRequest } from './t
 import { isImageRequest, imageModels } from './image-routing';
 import type { WorkMode, Workflow } from './types';
 import { WorkPlanCard, WORKFLOW_LABELS } from './work-plan';
+import { WorkAssistantActivity, WorkAssistantGuide, updateWorkActions, workActionsFromTrace } from './work-assistant';
 import { ChatMarkdown } from './chat-markdown';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
 import { publicSourceUrl } from './web';
@@ -122,6 +123,7 @@ import { PacksDialog } from './packs';
 import { RELEASE_NOTES, compareVersions, unseenNotes, type ReleaseNote } from './whats-new';
 import { WhatsNewDialog } from './whats-new-dialog';
 import type { ToolQuestion } from './types';
+import type { WorkAction } from './types';
 import { locale, setLanguage, t, teamName } from './i18n';
 import { startersFor, starterTag, starterText } from './starters';
 import { MorningBriefCard } from './morning-brief';
@@ -262,6 +264,7 @@ export default function App() {
   }, [selected]);
   const [authCode, setAuthCode] = useState<{ id: string; code: string } | null>(null);
   const [plan, setPlan] = useState<(PlanStep & { state: string })[]>([]);
+  const [workActions, setWorkActions] = useState<Record<string, WorkAction[]>>({});
   const [view, setView] = useState<'chat' | 'receipt' | 'skills' | 'documents' | 'media' | 'schedules'>('chat');
   const navigate = (next: typeof view) => {
     if (
@@ -504,6 +507,13 @@ export default function App() {
   useEffect(
     () =>
       api?.onEvent(event => {
+        if (event.type === 'work-action' && event.workAction && event.sessionId) {
+          const action = event.workAction;
+          setWorkActions(previous => ({
+            ...previous,
+            [event.sessionId]: updateWorkActions(previous[event.sessionId] || [], action),
+          }));
+        }
         if (event.type === 'side-question') {
           void refresh();
           return;
@@ -966,6 +976,8 @@ export default function App() {
     const attempt = {},
       previousAttempt = runningIds.current.get(id);
     if (!aside) {
+      // A new run must never show the prior assistant's actions as its own. A rejected concurrent start keeps the active run.
+      if (!previousAttempt) setWorkActions(previous => (previous[id] ? { ...previous, [id]: [] } : previous));
       runningIds.current.set(id, attempt);
       currentId.current = id;
       setRunning(true);
@@ -2138,7 +2150,13 @@ export default function App() {
                               </button>
                             )}
                             {file.status === 'staged' && (
-                              <button className="quiet small" onClick={() => setToolTab('changes')}>
+                              <button
+                                className="quiet small"
+                                onClick={() => {
+                                  setToolTab('changes');
+                                  setRight(true);
+                                }}
+                              >
                                 {t('ไปตรวจ')}
                               </button>
                             )}
@@ -2291,6 +2309,7 @@ export default function App() {
                       </details>
                     )}
                     {liveText && !streamSaved && <RichText className="message-body streaming" text={liveText} onLink={openLink} />}
+                    {session && <WorkAssistantActivity actions={workActions[session.id] || []} running />}
                     {/* One quiet line while working, as in Claude and Codex: each step replaces the last, nothing stacks up. */}
                     <div className="activity" role="status" aria-live="polite">
                       <ThinkingScribble />
@@ -2305,6 +2324,7 @@ export default function App() {
                     )}
                   </article>
                 )}
+                {!running && session && <WorkAssistantActivity actions={workActionsFromTrace(session.runs?.at(-1))} running={false} />}
                 {!running && session?.runs?.some(run => run.steps.some(step => step.tools?.length)) && (
                   <details className="tool-observability">
                     <summary>{t('ประวัติเครื่องมือและรหัสตรวจสอบ')}</summary>
@@ -2431,6 +2451,12 @@ export default function App() {
                 {/* The assistant's questions and the task's plan sit right above the composer, under the newest message,
                   as in Claude and ChatGPT: what needs the employee is where they type. */}
                 <div className="composer-dock">
+                  {workflow === 'assistant' && (
+                    <WorkAssistantGuide
+                      privacyReady={snapshot.policy?.checks?.privacy === true}
+                      toolsReady={snapshot.policy?.features.toolLoop === true}
+                    />
+                  )}
                   {session?.workPlan?.tasks.length ? (
                     <WorkPlanCard
                       plan={session.workPlan}

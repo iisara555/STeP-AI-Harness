@@ -3,8 +3,70 @@ import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { Store } from '../electron/store';
 import { WorkService, type Harness } from '../electron/service';
-import type { Connection } from '../src/types';
+import type { Connection, RunEvent } from '../src/types';
 const privacy: any = await import('../../src/modules/privacy/index.js');
+test('work assistant emits only host-confirmed metadata and stops when its privacy policy is revoked', async () => {
+  const store = new Store(':memory:');
+  store.put('connection', 'c', { id: 'c', provider: 'openai', model: 'test', ready: true } as Connection);
+  store.put('settings', 'main', { workspace: tmpdir(), team: 'cc' });
+  const session = store.create('c', 'cc');
+  const events: RunEvent[] = [];
+  let calls = 0,
+    allowed = true,
+    toolCalls = 0;
+  const harness: Harness = {
+    root: tmpdir(),
+    route: async () => ({ routingContract: { mode: 'GENERAL', authority: { status: 'ALLOW' } } }),
+    contextPolicy: () => ({ history: 'ignore', carryover: false }),
+    privacy: privacy.evaluatePrivacyGate,
+    assistantPolicy: () => (allowed ? undefined : 'ASSISTANT_PRIVACY_REQUIRED'),
+    skillMetadata: async () => null,
+    documentPrivacy: async () => null,
+    nextOutput: async () => null,
+    toolLoop: () => true,
+    tools: async () => ({
+      enabled: () => true,
+      check: async () => {},
+      readOnly: () => true,
+      execute: async () => {
+        toolCalls++;
+        return 'synthetic source content';
+      },
+      outgoing: async text => text,
+    }),
+  };
+  const service = new WorkService(
+    store,
+    harness,
+    async () => ({
+      context: { cwd: tmpdir(), env: {} },
+      adapter: {
+        run: async () => (++calls === 1 ? '```step-tool\n{"tool":"files","input":"private-name.txt"}\n```' : 'Synthetic completed result'),
+      },
+    }),
+    event => events.push(event),
+  );
+  try {
+    await service.run(session.id, 'Read this file', '', true, undefined, 'chat', undefined, [], { workflow: 'assistant' });
+    const work = events.filter(event => event.type === 'work-action').map(event => event.workAction!);
+    assert.deepEqual(
+      work.map(event => event.state),
+      ['running', 'done'],
+    );
+    assert.equal(work[0].id, work[1].id);
+    assert.doesNotMatch(JSON.stringify(work), /private-name|synthetic source/);
+    assert.equal(store.session(session.id).runs?.at(-1)?.workflow, 'assistant');
+    allowed = false;
+    await assert.rejects(
+      service.run(session.id, 'Read again', '', true, undefined, 'chat', undefined, [], { workflow: 'assistant' }),
+      /ASSISTANT_PRIVACY_REQUIRED/,
+    );
+    assert.equal(toolCalls, 1);
+    assert.equal(calls, 2);
+  } finally {
+    store.close();
+  }
+});
 test('every connection searches via the host without a native provider search or extra model call', async () => {
   for (const provider of ['openai', 'claude', 'gemini', 'antigravity', 'compatible', 'copilot'] as const) {
     const store = new Store(':memory:');

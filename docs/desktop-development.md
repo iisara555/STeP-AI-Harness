@@ -11,6 +11,8 @@ and AI account sign-in remain separate and optional; retired employee login sett
 
 The Phase 2 [governed tool loop](desktop-tool-loop.md) connects Chat/Draft to bounded host tools, document/spreadsheet previews, one-time result consent, questions/plans, backups and `/usage`. It remains a development preview; synthetic validation does not prove live provider access.
 
+The [file and web assistant](desktop-work-assistant.md) gives employees a focused entry into that loop, with a readable action history. It requires `checks.privacy` and governed tools; its initial web and Google access is read-only. It does not establish live model, account or employee-device acceptance.
+
 The same `/usage` dialog also shows [per-account provider quotas, credits and API usage](desktop-provider-usage.md), with explicit refresh, reported units/reset times and separate local estimates. Supported account readers use managed credentials without sending a model prompt; unsupported connections retain local accounting and provider links when available. Claude/Copilot interfaces are experimental, and real-account access remains separately unverified.
 
 Phase 3 adds [context and memory controls](desktop-context-memory.md): `/memory`, workspace instructions/persona/styles, bounded compaction, session fork/search/export/resume, local OCR attachments and administrator-gated image input.

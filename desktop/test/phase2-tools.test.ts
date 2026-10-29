@@ -127,6 +127,39 @@ test('registry and dispatcher parity includes loop-owned paging, without phantom
   assert.deepEqual(Object.keys(TOOL_REGISTRY).sort(), [...LOOP_TOOLS].sort());
 });
 
+test('work assistant keeps edits staged, refuses commands and stops if privacy policy changes', async () => {
+  const f = await fixture('ask');
+  f.scope.workflow = 'assistant';
+  const host = await f.tools.host(f.scope);
+  try {
+    await writeFile(join(f.root, 'note.txt'), 'synthetic original');
+    const read = (await host.execute({ tool: 'files', input: 'note.txt' }, f.scope.signal)) as any;
+    assert.equal(read.text, 'synthetic original');
+    const edit = (await host.execute(
+      { tool: 'patch', input: 'note.txt', args: { old_string: 'original', new_string: 'revised' } },
+      f.scope.signal,
+    )) as any;
+    assert.equal(edit.status, 'staged-for-human-review');
+    assert.equal(await readFile(join(f.root, 'note.txt'), 'utf8'), 'synthetic original');
+    await assert.rejects(host.execute({ tool: 'terminal', input: 'ignored' }, f.scope.signal), /ASSISTANT_COMMAND_DISABLED/);
+    await assert.rejects(host.execute({ tool: 'sandbox', input: 'ignored' }, f.scope.signal), /ASSISTANT_COMMAND_DISABLED/);
+    await assert.rejects(
+      host.execute({ tool: 'browser_control', input: 'tab', args: { action: 'click', snapshot: 'synthetic', ref: 'e1' } }, f.scope.signal),
+      /ASSISTANT_WEB_READ_ONLY/,
+    );
+    await assert.rejects(
+      host.execute({ tool: 'mcp_call', input: 'synthetic', args: { name: 'write', arguments: {} } }, f.scope.signal),
+      /ASSISTANT_REMOTE_ACTION_DISABLED/,
+    );
+    f.policy.checks.privacy = false;
+    await assert.rejects(host.execute({ tool: 'files', input: 'note.txt' }, f.scope.signal), /ASSISTANT_PRIVACY_REQUIRED/);
+  } finally {
+    await host.dispose?.();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
 test('new media tools retain plan restrictions and protected-path checks before external dispatch', async () => {
   for (const mode of ['plan', 'ask'] as const) {
     const f = await fixture(mode);
