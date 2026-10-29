@@ -6,6 +6,79 @@ const event = (data) => `data: ${JSON.stringify(data)}\n\n`;
 const stream = (text) =>
   new Response(text, { headers: { "content-type": "text/event-stream" } });
 
+test("TOR requests omit only the compatible default and keep configured and Anthropic limits", async () => {
+  const bodies = [];
+  const fetcher = async (_url, options) => {
+    bodies.push(JSON.parse(options.body));
+    return stream(
+      bodies.at(-1).system !== undefined
+        ? event({
+            type: "content_block_delta",
+            delta: { type: "text_delta", text: "Done" },
+          }) + event({ type: "message_stop" })
+        : event({ choices: [{ delta: { content: "Done" } }] }) +
+            "data: [DONE]\n\n",
+    );
+  };
+  const profile = { baseUrl: "https://fixture.invalid/v1", model: "fixture" };
+  await compatibleRun("ordinary", profile, {}, fetcher);
+  await compatibleRun("TOR", profile, { longFormTor: true }, fetcher);
+  await compatibleRun(
+    "TOR configured",
+    { ...profile, maxOutputTokens: 1024 },
+    { longFormTor: true },
+    fetcher,
+  );
+  await compatibleRun(
+    "TOR anthropic",
+    { ...profile, protocol: "anthropic" },
+    { longFormTor: true, key: "synthetic" },
+    fetcher,
+  );
+  assert.equal(bodies[0].max_tokens, 8192);
+  assert.ok(!Object.hasOwn(bodies[1], "max_tokens"));
+  assert.equal(bodies[2].max_tokens, 1024);
+  assert.equal(bodies[3].max_tokens, 8192);
+});
+
+test("compatible transports report actual output truncation and retain usage", async () => {
+  for (const protocol of ["openai", "anthropic"]) {
+    const counts = [];
+    const events =
+      protocol === "openai"
+        ? event({ choices: [{ delta: { content: "Partial" } }] }) +
+          event({ choices: [{ delta: {}, finish_reason: "length" }] }) +
+          event({ usage: { prompt_tokens: 10, completion_tokens: 3 } }) +
+          "data: [DONE]\n\n"
+        : event({
+            type: "message_start",
+            message: { usage: { input_tokens: 10 } },
+          }) +
+          event({
+            type: "content_block_delta",
+            delta: { type: "text_delta", text: "Partial" },
+          }) +
+          event({
+            type: "message_delta",
+            delta: { stop_reason: "max_tokens" },
+            usage: { output_tokens: 3 },
+          }) +
+          event({ type: "message_stop" });
+    await assert.rejects(
+      compatibleRun(
+        "Request",
+        { baseUrl: "https://fixture.invalid/v1", model: "fixture", protocol },
+        { key: "synthetic", onUsage: (count) => counts.push(count) },
+        async () => stream(events),
+      ),
+      (error) =>
+        error.message === "PROVIDER_OUTPUT_LIMIT" &&
+        error.outputTruncated === true,
+    );
+    assert.deepEqual(counts, [{ input: 10, output: 3, total: 13 }]);
+  }
+});
+
 test("Gemini reported input includes cached content and output includes thinking without doubling cache tokens", () => {
   assert.deepEqual(
     providerUsage("gemini", {

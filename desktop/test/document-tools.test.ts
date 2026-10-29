@@ -151,6 +151,9 @@ test('an attached example form supplies structure only; its sample values are no
   assert.equal(JSON.parse(template.sourceText).fields.budget.value, null);
   assert.match(template.text, /ใช้เฉพาะโครงสร้างและชื่อช่อง/);
   assert.match(template.text, /ไม่ใช้ชื่อบุคคล เลขหนังสือ วันที่ รหัสโครงการ งบ/);
+  const torTemplate = documentRequest('tor', { title: 'งานสังเคราะห์ใหม่' }, 'service', 'template');
+  assert.match(torTemplate.text, /แนวการเขียนและระดับรายละเอียดที่เหมาะกับงานนี้/);
+  assert.match(torTemplate.text, /ไม่ใช้ชื่อบุคคล เลขหนังสือ วันที่ รหัสโครงการ งบ/);
   assert.equal(JSON.parse(documentRequest('memo', {}).sourceText).attachmentRole, 'source');
   assert.throws(() => documentRequest('memo', {}, 'approval', 'unverified' as any), /INVALID_DOCUMENT_SOURCE_ROLE/);
 });

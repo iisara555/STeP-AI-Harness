@@ -10,19 +10,33 @@ import { createRequire } from 'node:module';
 
 const requests = [];
 const fixtures = JSON.parse(await readFile(new URL('./fixtures/document-drafts.json', import.meta.url), 'utf8'));
+const longTor =
+  fixtures.documents.tor +
+  '\n\n' +
+  Array.from({ length: 32 }, (_, index) => {
+    const detail = Array.from(
+      { length: 8 },
+      (_, part) =>
+        `รายการสังเคราะห์ ${index + 1}.${part + 1} อธิบายผลส่งมอบและการตรวจเทียบกับหลักฐานของงานนี้ โดยให้เจ้าของเรื่องยืนยันรายละเอียดที่ยังไม่ทราบก่อนนำไปใช้ `,
+    ).join('');
+    return `### รายละเอียดงานสังเคราะห์ ${index + 1}\n\n${detail}`;
+  }).join('\n\n') +
+  '\n\nSYNTHETIC-TOR-END';
+assert.ok(longTor.length > 25000, 'the long synthetic draft should exceed a short one-response fixture');
 const previewFolder = join(tmpdir(), 'step-document-review');
 await mkdir(previewFolder, { recursive: true });
 const server = createServer(async (req, res) => {
   let body = '';
   for await (const chunk of req) body += chunk;
   if (req.method === 'GET') return res.writeHead(404).end();
-  const messages = JSON.parse(body).messages || [];
+  const parsed = JSON.parse(body);
+  const messages = parsed.messages || [];
   const system = messages
     .filter(m => m.role === 'system')
     .map(m => m.content)
     .join('\n');
   const prompt = messages.at(-1)?.content || '';
-  if (system.includes('<document_tool_contract>')) requests.push({ system, prompt });
+  if (system.includes('<document_tool_contract>')) requests.push({ system, prompt, hasMaxTokens: Object.hasOwn(parsed, 'max_tokens') });
   const type = system.match(/Selected document: (.*?). Primary Skill:/)?.[1];
   const id = {
     'ร่าง TOR': 'tor',
@@ -33,17 +47,27 @@ const server = createServer(async (req, res) => {
     ร่างเอกสารอื่น: 'other',
   }[type];
   const current = /<current_draft>\n([\s\S]*?)\n<\/current_draft>/.exec(prompt)?.[1];
-  let draftedBody = fixtures.documents[id];
+  let draftedBody = id === 'tor' ? longTor : fixtures.documents[id];
   if (id === 'project' && current) {
     draftedBody = current;
     if (prompt.includes('ชื่อโครงการ: SYNTHETIC-RENAMED')) draftedBody = draftedBody.replace(/^# .*$/m, '# SYNTHETIC-RENAMED');
     if (prompt.includes('วัตถุประสงค์: SYNTHETIC-OBJECTIVE')) draftedBody += '\n\nSYNTHETIC-OBJECTIVE';
   }
-  const text = id
+  let text = id
     ? `<document_draft>\n${draftedBody}\n</document_draft>\n<document_review>\n${fixtures.review}\n</document_review>`
     : 'Synthetic connection check';
+  let finishReason = 'stop';
+  if (id === 'tor' && !current) {
+    const boundary = Math.floor(text.length / 2);
+    if (prompt.includes('<partial_tor_draft>')) text = text.slice(boundary);
+    else {
+      text = text.slice(0, boundary);
+      finishReason = 'length';
+    }
+  }
   res.writeHead(200, { 'content-type': 'text/event-stream' });
   res.write('data: ' + JSON.stringify({ choices: [{ delta: { content: text } }] }) + '\n\n');
+  res.write('data: ' + JSON.stringify({ choices: [{ delta: {}, finish_reason: finishReason }] }) + '\n\n');
   res.end('data: [DONE]\n\n');
 });
 await new Promise(r => server.listen(0, '127.0.0.1', r));
@@ -210,6 +234,11 @@ try {
     assert.ok(call.system.includes('## Workflow'));
     assert.ok(call.system.includes('working template'));
     if (id === 'tor') {
+      const torCalls = requests.filter(request => request.system.includes('Primary Skill: tor-government-writing'));
+      assert.equal(torCalls.length, 2);
+      assert.ok(torCalls.every(request => !request.hasMaxTokens));
+      assert.ok(torCalls[1].prompt.includes('<partial_tor_draft>'));
+      assert.equal(last.proposals[0].text.trim(), longTor.trim());
       assert.ok(call.system.includes('TOR drafting method: task-led requirements'));
       assert.ok(call.system.includes('Procurement source map: discovery is not approval'));
       assert.ok(call.system.includes('TOR adaptation examples: goods and services'));
@@ -253,6 +282,7 @@ try {
     assert.ok(document.includes(`w:cs="${id === 'memo' ? 'TH Sarabun New' : 'TH SarabunPSK'}"`));
     assert.ok(!document.includes('Skill Verification') && !document.includes('Unresolved Fields'));
     assert.ok(!document.includes('document_draft') && !document.includes('&lt;br'));
+    if (id === 'tor') assert.ok(document.includes('SYNTHETIC-TOR-END'), 'the full long TOR reached the editable Word export');
     const accepted = (await snapshot()).sessions.find(s => s.id === last.id);
     assert.ok(accepted.documentReview.text.includes('Skill Verification'));
     await expect(page.locator('.tiptap')).not.toContainText('Skill Verification');
@@ -344,7 +374,7 @@ try {
       await writeFile(join(previewFolder, `app-${id}.pdf`), await readFile(pdf.path));
     }
   }
-  assert.equal(requests.length, profiles.length + 2, 'one generation per profile and two project revisions');
+  assert.equal(requests.length, profiles.length + 3, 'one generation per profile, one TOR continuation and two project revisions');
   const editor = page.locator('.tiptap[contenteditable="true"]');
   await expect(editor).toHaveAttribute('lang', 'th');
   assert.equal(await editor.evaluate(el => getComputedStyle(el).wordBreak), 'normal');

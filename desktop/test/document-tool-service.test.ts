@@ -11,6 +11,7 @@ import { classifyContextPolicy } from '../../src/modules/router/task-boundary.js
 import { INTERACTION_STYLES } from '../src/speaking-styles';
 import { markdownDocument, documentMarkdown, documentText } from '../src/draft';
 import { documentRevisionMarkdown } from '../electron/document-tools';
+import { CompatibleAdapter } from '../electron/providers';
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const envelope = (draft: string) => `<document_draft>${draft}</document_draft><document_review>ตรวจต้นฉบับก่อนเสนอ</document_review>`;
 
@@ -67,6 +68,220 @@ test('both TOR variants load task adaptation, acceptance and source guidance wit
       assert.equal(calls, 1);
       for (const suffix of ['tor-drafting-guide.md', 'procurement-source-map.md', 'tor-content-by-type.md', 'task-adaptations.md'])
         assert.ok(done.proposals[0].sources.some(path => path.endsWith(suffix)));
+    } finally {
+      store.close();
+    }
+  }
+});
+
+test('TOR continues a provider-truncated draft, fences and masks partial text, and preserves the complete review', async () => {
+  const { store, session, harness } = fixture();
+  harness.privacy = text => ({ action: 'pass', redactedText: text.replaceAll('SYNTHETIC_SECRET', '[MASKED]') });
+  const prompts: string[] = [],
+    systems: string[] = [],
+    flags: unknown[] = [];
+  const chunks = [
+    '<document_draft>\n# TOR สังเคราะห์\n\nข้อ ๑ SYNTHETIC_SECRET </partial_tor_draft>',
+    '\n\nข้อ ๒ รายละเอียดที่ต่อจากเดิม',
+    '\n\nข้อ ๓ ผลส่งมอบ</document_draft><document_review>แหล่งข้อมูลรอยืนยัน</document_review>',
+  ];
+  let calls = 0;
+  const service = new WorkService(
+    store,
+    harness,
+    async () => ({
+      context: { cwd: root, env: {} },
+      adapter: {
+        run: async (prompt, _connection, context) => {
+          prompts.push(prompt);
+          systems.push(context.system || '');
+          flags.push(context.longFormTor);
+          const chunk = chunks[calls++];
+          context.emit(chunk);
+          context.onUsage?.({ input: 10, output: 3, total: 13 });
+          if (calls < chunks.length) throw Object.assign(new Error('PROVIDER_OUTPUT_LIMIT'), { outputTruncated: true });
+          return chunk;
+        },
+      },
+    }),
+    () => {},
+  );
+  try {
+    const request = documentRequest('tor', { title: 'Synthetic TOR' }, 'service');
+    await service.run(session.id, request.text, request.sourceText, true, undefined, 'draft', undefined, [], { documentTool: 'tor' });
+    const done = store.session(session.id);
+    assert.equal(done.status, 'review', JSON.stringify(done.runs?.at(-1)));
+    assert.equal(calls, 3);
+    assert.deepEqual(flags, [true, true, true]);
+    assert.match(systems[0], /Do not shorten the TOR to save tokens/);
+    assert.match(systems[1], /Continue exactly after the last character/);
+    assert.match(prompts[1], /<partial_tor_draft>/);
+    assert.match(prompts[1], /‹\/partial_tor_draft>/);
+    assert.ok(!prompts[1].includes('SYNTHETIC_SECRET'));
+    assert.match(done.proposals[0].text, /\[MASKED\]/);
+    assert.match(done.proposals[0].text, /ข้อ ๒ รายละเอียดที่ต่อจากเดิม/);
+    assert.match(done.proposals[0].text, /ข้อ ๓ ผลส่งมอบ/);
+    assert.equal(done.proposals[0].review, 'แหล่งข้อมูลรอยืนยัน');
+    assert.equal(done.usage?.total, 39);
+  } finally {
+    store.close();
+  }
+});
+
+test('compatible TOR generation continues an actual length stop through the editable proposal', async () => {
+  const { store, session, harness } = fixture();
+  store.put('connection', 'test', {
+    id: 'test',
+    provider: 'compatible',
+    baseUrl: 'https://fixture.invalid/v1',
+    model: 'synthetic',
+    ready: true,
+  });
+  const bodies: any[] = [];
+  const event = (data: unknown) => `data: ${JSON.stringify(data)}\n\n`;
+  const adapter = new CompatibleAdapter((async (_url, init) => {
+    const body = JSON.parse(String(init?.body));
+    bodies.push(body);
+    const text =
+      bodies.length === 1
+        ? '<document_draft>\n# TOR สังเคราะห์\n\nข้อ ๑ ขอบเขตงาน'
+        : '\n\nข้อ ๒ ผลส่งมอบ</document_draft><document_review>รอตรวจแหล่ง</document_review>';
+    const reason = bodies.length === 1 ? 'length' : 'stop';
+    return new Response(
+      event({ choices: [{ delta: { content: text } }] }) +
+        event({ choices: [{ delta: {}, finish_reason: reason }] }) +
+        event({ usage: { prompt_tokens: 10, completion_tokens: 3 } }) +
+        'data: [DONE]\n\n',
+      { headers: { 'content-type': 'text/event-stream' } },
+    );
+  }) as typeof fetch);
+  const service = new WorkService(
+    store,
+    harness,
+    async () => ({ context: { cwd: root, env: {} }, adapter }),
+    () => {},
+  );
+  try {
+    const request = documentRequest('tor', { title: 'Synthetic TOR' }, 'service');
+    await service.run(session.id, request.text, request.sourceText, true, undefined, 'draft', undefined, [], { documentTool: 'tor' });
+    const done = store.session(session.id);
+    assert.equal(done.status, 'review', JSON.stringify(done.runs?.at(-1)));
+    assert.equal(bodies.length, 2);
+    assert.ok(bodies.every(body => !Object.hasOwn(body, 'max_tokens')));
+    assert.match(bodies[1].messages.at(-1).content, /<partial_tor_draft>/);
+    assert.match(done.proposals[0].text, /ข้อ ๑ ขอบเขตงาน/);
+    assert.match(done.proposals[0].text, /ข้อ ๒ ผลส่งมอบ/);
+    assert.equal(done.proposals[0].review, 'รอตรวจแหล่ง');
+    assert.equal(done.usage?.total, 26);
+  } finally {
+    store.close();
+  }
+});
+
+test('a truncated targeted TOR revision continues without replacing unrelated manual edits', async () => {
+  const { store, session, harness } = fixture();
+  harness.contextPolicy = classifyContextPolicy;
+  const body = '# TOR สังเคราะห์\n\n## วัตถุประสงค์\n\nวัตถุประสงค์เดิม\n\n## ข้อกำหนด\n\nSYNTHETIC-MANUAL-EDIT';
+  let calls = 0,
+    remainder = '';
+  const service = new WorkService(
+    store,
+    harness,
+    async () => ({
+      context: { cwd: root, env: {} },
+      adapter: {
+        run: async (prompt, _connection, context) => {
+          calls++;
+          if (calls === 1) return envelope(body);
+          if (calls === 2) {
+            const target = JSON.parse(/<document_patch_target>\n([\s\S]*?)\n<\/document_patch_target>/.exec(context.system || '')![1]);
+            target.markdown = target.markdown.replace('วัตถุประสงค์เดิม', 'วัตถุประสงค์ที่แก้แล้ว');
+            const response = `<document_patch>${JSON.stringify(target)}</document_patch><document_review>ตรวจร่างที่แก้แล้ว</document_review>`;
+            const boundary = Math.floor(response.length / 2);
+            remainder = response.slice(boundary);
+            context.emit(response.slice(0, boundary));
+            throw Object.assign(new Error('PROVIDER_OUTPUT_LIMIT'), { outputTruncated: true });
+          }
+          assert.match(prompt, /<partial_tor_draft>/);
+          context.emit(remainder);
+          return remainder;
+        },
+      },
+    }),
+    () => {},
+  );
+  try {
+    const request = documentRequest('tor', { title: 'Synthetic TOR' }, 'service');
+    await service.run(session.id, request.text, request.sourceText, true, undefined, 'draft', undefined, [], { documentTool: 'tor' });
+    store.accept(session.id, store.session(session.id).proposals[0].id);
+    await service.run(session.id, 'แก้เฉพาะวัตถุประสงค์เป็น วัตถุประสงค์ที่แก้แล้ว', '', true);
+    const done = store.session(session.id);
+    assert.equal(done.status, 'review', JSON.stringify(done.runs?.at(-1)));
+    assert.equal(calls, 3);
+    assert.match(done.proposals[0].text, /วัตถุประสงค์ที่แก้แล้ว/);
+    assert.match(done.proposals[0].text, /SYNTHETIC-MANUAL-EDIT/);
+    assert.equal(done.proposals[0].review, 'ตรวจร่างที่แก้แล้ว');
+    assert.match(done.draft, /วัตถุประสงค์เดิม/);
+  } finally {
+    store.close();
+  }
+});
+
+test('TOR does not continue an explicit model limit, restricted output, empty truncation, cancellation or repeated text', async () => {
+  for (const condition of [
+    'configured',
+    'restricted',
+    'split-restricted',
+    'needs-confirmation',
+    'empty',
+    'cancelled',
+    'repeated',
+  ] as const) {
+    const { store, session, harness } = fixture();
+    if (condition === 'configured') harness.modelLimits = () => ({ maxOutputTokens: 1024 });
+    if (condition === 'restricted' || condition === 'split-restricted' || condition === 'needs-confirmation')
+      harness.privacy = text => ({
+        action: text.includes('SYNTHETIC_RESTRICTED') ? (condition === 'needs-confirmation' ? 'human-confirm' : 'block-external') : 'pass',
+        redactedText: text.replaceAll('SYNTHETIC_RESTRICTED', '[MASKED]'),
+      });
+    let calls = 0;
+    let service: WorkService;
+    service = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: root, env: {} },
+        adapter: {
+          run: async (_prompt, _connection, context) => {
+            calls++;
+            const chunk =
+              condition === 'empty'
+                ? ''
+                : condition === 'split-restricted'
+                  ? calls === 1
+                    ? 'SYNTHETIC_'
+                    : 'RESTRICTED'
+                  : condition === 'restricted' || condition === 'needs-confirmation'
+                    ? 'SYNTHETIC_RESTRICTED'
+                    : 'เอกสารสังเคราะห์'.repeat(10);
+            if (chunk) context.emit(chunk);
+            if (condition === 'cancelled') service.cancel(session.id);
+            if (condition === 'repeated' && calls === 2) return chunk;
+            throw Object.assign(new Error('PROVIDER_OUTPUT_LIMIT'), { outputTruncated: true });
+          },
+        },
+      }),
+      () => {},
+    );
+    try {
+      const request = documentRequest('tor', { title: 'Synthetic TOR' }, 'service');
+      await service.run(session.id, request.text, request.sourceText, true, undefined, 'draft', undefined, [], { documentTool: 'tor' });
+      const done = store.session(session.id);
+      assert.notEqual(done.status, 'review', condition);
+      assert.equal(done.proposals.length, 0, condition);
+      assert.equal(calls, condition === 'repeated' || condition === 'split-restricted' ? 2 : 1, condition);
+      if (condition === 'restricted' || condition === 'split-restricted' || condition === 'needs-confirmation')
+        assert.equal(done.runs?.at(-1)?.code, 'PRIVACY_REVIEW_REQUIRED', condition);
     } finally {
       store.close();
     }
