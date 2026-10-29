@@ -6,6 +6,9 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.6.23 (2026-10-29)
+
+- Improve Antigravity and tool-loop backend execution: add an opt-in governed local MCP bridge (`step_host`) over authenticated named pipes/Unix sockets, prewarmed `agy` spare sessions with `followUpDelta` continuation, inline `waitMsBeforeAsync` / `isDaemon` support on `terminal`, administrator-scoped `permission.allowedCommands` and `permission.allowedDomains`, session-scoped MCP discovery caching, bounded `pending` batch splitting in `ToolLoop`, deduplicated parallel site approvals, browser tab reuse across turns, and transient empty-response retries during connection checks. All STeP privacy, permission and authority checks remain enforced.
 - Allow the routed Skill tool to read its own Markdown templates through the existing authority, path and consent checks. Improve the project pre-mortem Skill's source attribution, arithmetic, actionable risk and pending-confirmation guidance, and add a synthetic evaluation scenario; generated answers still need human review.
 - Add a file and web assistant that uses the existing governed tools and shows a simple history of actual tool steps. This initial workflow requires personal-data checks, stages local changes under the selected permission mode, reads websites and Google data, and refuses shell commands, website actions, remote MCP calls and Google writes. Live account and employee acceptance remain open.
 - Draft TOR sections at the depth appropriate to the task and agency example. Remove the compatible transport's default output cap for TOR requests when no administrator limit is set, and continue a provider-truncated response when the transport reports an output-token stop. Preserve source checks, configured limits and human review.

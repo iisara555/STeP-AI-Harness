@@ -8,6 +8,8 @@ _Last updated: 2026-10-29_
 
 ## Latest release
 
+- **Desktop v0.6.23 prepared (2026-10-29)**: the owner asked to merge and release Desktop v0.6.23 combining #249–#253 (AFP activity-guided evidence packets, full-depth TOR drafting, governed file/web assistant, direct Skill template loading and pre-mortem guidance, and Antigravity/tool-loop backend improvements). Harness remains 0.7.7. Published via `Build STeP Desktop installers` (`desktop-release.yml`) on `main` with `publish` ticked after #253 merges.
+
 - **Desktop v0.6.22 publication (2026-10-28)**: the owner asked to release on 2026-10-28. 0.6.22 now also carries the LM Studio preset and local loaded-context check (#247); its CHANGELOG entry moved from Unreleased into the 0.6.22 section and What's New gained one staff line (with English). Published with the `Build STeP Desktop installers` workflow on main with publish ticked after this PR merges. Earlier 0.6.22 preparation: release metadata combines merged staff routing, document/Google coverage, STeP TOR and FM-AF-014 packets with the AFP draft; Harness remains 0.7.7. AFP controlled-form acceptance, real employee data, native macOS Word and a real Ollama/LM Studio check remain separate acceptance work.
 
 - **Desktop v0.6.21 published (2026-10-26)**: release `desktop-v0.6.21` points to `f8af550a7c01a603b1436989a29df07f54cecf85`, published at 15:50:44 UTC. It includes the merged TOR/saraban guide and document export/diagnostics work through #236. This entry records GitHub release/tag metadata only; it does not claim a new installer-digest or real-account acceptance check.
