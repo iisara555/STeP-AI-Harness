@@ -62,6 +62,7 @@ export const errorText: Record<string, string> = localized({
   PROVIDER_DESTINATION_DENIED: 'องค์กรยังไม่อนุญาตบริการ AI นี้ เลือกบริการที่เปิดใช้หรือแจ้งผู้ดูแล',
   PROVIDER_URL_INVALID: 'Base URL ต้องเป็น HTTPS หรือ HTTP ของ localhost และไม่มีข้อมูลรับรองใน URL',
   PROVIDER_STREAM_INCOMPLETE: 'ได้รับคำตอบจาก AI ไม่ครบ ลองอีกครั้ง',
+  PROVIDER_OUTPUT_LIMIT: 'คำตอบยาวเกินขอบเขตของโมเดลหรือการตั้งค่า กรุณาลองแบ่งหัวข้อหรือตรวจการตั้งค่าโมเดล',
   PROVIDER_STREAM_INVALID: 'อ่านคำตอบจาก AI ไม่สำเร็จ ลองอีกครั้ง',
   LOCAL_CONTEXT_TOO_SMALL:
     'โมเดลในเครื่องเปิดรับข้อความได้น้อยกว่า 16,384 token ส่วนที่เกินจะถูกตัดทิ้งเงียบ ๆ ใน Ollama ให้ตั้ง OLLAMA_CONTEXT_LENGTH=16384 (หรือมากกว่า) แล้วเปิด Ollama ใหม่ ใน LM Studio ให้เพิ่ม Context Length ตอนโหลดโมเดล แล้วลองเชื่อมอีกครั้ง',

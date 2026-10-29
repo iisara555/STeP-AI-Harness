@@ -6,7 +6,7 @@ import { receiptVoucherDocx, receiptVoucherHtml, receiptPacketCoverHtml } from '
 import { paymentVoucherDocx, paymentVoucherHtml } from './afp-payment-voucher';
 import { blankPaymentVoucher } from '../src/afp-payment-voucher';
 import { documentPrintFontCss } from './document-fonts';
-import { PACKET_LIMITS, blankReceiptVoucher, type ReviewedReceipt } from '../src/receipt-packet';
+import { PACKET_LIMITS, blankReceiptVoucher, packetText, type ReviewedReceipt } from '../src/receipt-packet';
 import { takesImages } from '../src/vision-transport';
 import {
   app,
@@ -3639,6 +3639,14 @@ async function main() {
         return receiptPackets.save(input.packet);
       case 'receiptPacketImportDisbursement':
         return receiptPackets.importDisbursement(input.id, input.revision);
+      case 'receiptPacketPrivacyPreview': {
+        const context = packetText(input.text, 600);
+        // This handoff always scans even when optional organization-wide privacy checks are disabled.
+        const masked = vaultRedaction.mask(context);
+        const review = privacy.evaluatePrivacyGate(masked);
+        if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
+        return { text: review.redactedText, redacted: masked !== context || review.redactionApplied === true, action: review.action };
+      }
       case 'receiptPacketRemoveSource':
         return receiptPackets.remove(input.id, input.revision, input.sourceId);
       case 'receiptPacketOpenSource': {
