@@ -406,7 +406,7 @@ test('native MCP bridge executes governed host tools over local IPC and rejects 
 
     const badTool = await callPipe({ token: bridge.token, arguments: { tool: 'unknown_tool', input: 'a.txt' } });
     assert.equal(badTool.ok, false);
-    assert.equal(badTool.code, 'TOOL_DENIED');
+    assert.equal(badTool.code, 'UNKNOWN_OPERATION');
   } finally {
     await bridge.close();
     await rm(bridgeHome, { recursive: true, force: true });
