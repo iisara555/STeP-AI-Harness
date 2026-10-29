@@ -21,9 +21,12 @@ await writeFile(
   entry,
   `const {app,BrowserWindow}=require('electron');globalThis.AgentBrowser=require(${JSON.stringify(bundle)}).AgentBrowser;app.setPath('userData',${JSON.stringify(join(home, 'profile'))});app.whenReady().then(()=>{globalThis.testWindow=new BrowserWindow({show:false});return globalThis.testWindow.loadURL('about:blank');});`,
 );
+let dangerRequests = 0;
 const server = createServer((req, res) => {
+  if (req.url?.startsWith('/?action=delete')) dangerRequests++;
   // The cafe's menu arrives from the network after the page has loaded, as on a real single-page app.
   if (req.url === '/cafe/menu.json') return void setTimeout(() => res.end(JSON.stringify(['Espresso:10', 'Americano:7'])), 700);
+  if (req.url === '/slow') return void setTimeout(() => !res.destroyed && res.end('<p>slow page</p>'), 3000).unref();
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   if (req.url === '/otp') return res.end('<input name="otp" autocomplete="one-time-code" value="123456"><button>Verify</button>');
   if (req.url === '/verified') return res.end('<h1>Verified after OTP</h1>');
@@ -152,7 +155,80 @@ try {
   assert.equal(again.tab, tab);
   assert.equal(again.reused, true);
   assert.equal(await app.evaluate(() => globalThis.approvalCount), asked);
-  snapshot = again;
+  // A query or fragment on the site's root is an explicit destination, not a request to resume the current page.
+  const query = await run(url + '/?q=synthetic#results', { action: 'open' });
+  assert.equal(query.tab, tab);
+  assert.equal(query.reused, true);
+  assert.equal(query.url, url + '/?q=synthetic#results');
+  assert.equal(await app.evaluate(() => globalThis.approvalCount), asked + 1);
+  // A query can mutate a site even when it is a GET. It still asks in auto mode, before the request is sent.
+  await app.evaluate(() => {
+    globalThis.accept = false;
+    globalThis.context.routine = () => true;
+  });
+  assert.equal((await run(url + '/?action=delete', { action: 'open' })).error, 'BROWSER_ACTION_DECLINED');
+  assert.equal(dangerRequests, 0);
+  await app.evaluate(() => {
+    globalThis.accept = true;
+    delete globalThis.context.routine;
+  });
+  const policyChanged = await app.evaluate(async (_e, url) => {
+    let checks = 0;
+    try {
+      await globalThis.agentBrowser.run(
+        { tool: 'browser_control', input: url + '/?q=blocked', args: { action: 'open' } },
+        {
+          ...globalThis.context,
+          check: async () => {
+            if (++checks === 2) throw new Error('POLICY_CHANGED');
+          },
+        },
+      );
+      return 'not blocked';
+    } catch (error) {
+      return error.message;
+    }
+  }, url);
+  assert.equal(policyChanged, 'POLICY_CHANGED');
+  assert.equal((await run(tab, { action: 'read' })).url, query.url);
+  // Cancelling a reused tab's slow navigation must stop promptly without closing the tab.
+  const cancelled = await app.evaluate(
+    async (_e, { url, tab }) => {
+      const controller = new AbortController();
+      const pending = globalThis.agentBrowser.run(
+        { tool: 'browser_control', input: url + '/slow', args: { action: 'open' } },
+        { ...globalThis.context, signal: controller.signal },
+      );
+      const start = Date.now();
+      setTimeout(() => controller.abort(), 100);
+      try {
+        await pending;
+        return { error: 'not cancelled' };
+      } catch (error) {
+        return { error: error.message, elapsed: Date.now() - start, tabOpen: globalThis.agentBrowser.tabs.has(tab) };
+      }
+    },
+    { url, tab },
+  );
+  assert.equal(cancelled.error, 'CANCELLED');
+  assert.ok(cancelled.elapsed < 2000, `cancel took ${cancelled.elapsed}ms`);
+  assert.equal(cancelled.tabOpen, true);
+  // Reopening the initially opened URL resumes the signed-in page, even if that first URL had a query.
+  await app.evaluate(() => {
+    globalThis.context.sessionId = 'query-owner';
+  });
+  const originalQuery = url + '/?login=one#start';
+  const firstQuery = await run(originalQuery, { action: 'open' });
+  const signedIn = await run(url + '/verified', { action: 'open' });
+  const resumedQuery = await run(originalQuery, { action: 'open' });
+  assert.equal(resumedQuery.tab, firstQuery.tab);
+  assert.equal(resumedQuery.url, signedIn.url);
+  assert.match(resumedQuery.text, /Verified after OTP/);
+  await run(firstQuery.tab, { action: 'close' });
+  await app.evaluate(() => {
+    globalThis.context.sessionId = 'owner';
+  });
+  snapshot = await run(tab, { action: 'read' });
   const fill = { action: 'fill', snapshot: snapshot.snapshot, ref: snapshot.elements.find(e => e.editable).ref };
   assert.equal((await run(tab, fill, 'Browser agent works')).performed, true);
   assert.equal((await run(tab, fill, 'Must not repeat')).error, 'BROWSER_STALE_TARGET');

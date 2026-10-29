@@ -32,12 +32,70 @@ test('the connection test tries once more when the service was only busy', async
     base,
     deps(async () => {
       if (++calls === 1) throw new Error('PROVIDER_BUSY');
-      return { text: 'OK' };
+      return 'OK';
     }, progress),
     new AbortController().signal,
   );
   assert.equal(calls, 2);
   assert.ok(progress.some(line => line.includes('กำลังลองใหม่')));
+});
+
+test('a blank connection response is retried and never makes a connection ready on its own', async () => {
+  setTestRetryDelay(1);
+  let calls = 0;
+  await signInAndTest(
+    base,
+    deps(async () => (++calls === 1 ? '   ' : 'OK')),
+    new AbortController().signal,
+  );
+  assert.equal(calls, 2);
+  for (const response of ['', '  ', undefined, { text: 'OK' }]) {
+    calls = 0;
+    await assert.rejects(
+      signInAndTest(
+        base,
+        deps(async () => (calls++, response)),
+        new AbortController().signal,
+      ),
+      { message: 'PROVIDER_EMPTY_RESPONSE' },
+    );
+    assert.equal(calls, 2);
+  }
+});
+
+test('cancellation during a connection retry or a slow response does not start or accept another test', async () => {
+  setTestRetryDelay(1);
+  const controller = new AbortController();
+  let calls = 0;
+  const retry = deps(async () => {
+    calls++;
+    throw new Error('PROVIDER_NETWORK');
+  });
+  retry.progress = text => {
+    if (text.includes('กำลังลองใหม่')) controller.abort();
+  };
+  await assert.rejects(signInAndTest(base, retry, controller.signal), { message: 'CANCELLED' });
+  assert.equal(calls, 1);
+
+  const slow = new AbortController();
+  await assert.rejects(
+    signInAndTest(
+      base,
+      deps(async () => (slow.abort(), 'OK')),
+      slow.signal,
+    ),
+    { message: 'CANCELLED' },
+  );
+  calls = 0;
+  await assert.rejects(
+    signInAndTest(
+      base,
+      deps(async () => (calls++, 'OK')),
+      AbortSignal.abort(),
+    ),
+    { message: 'CANCELLED' },
+  );
+  assert.equal(calls, 0);
 });
 
 test('the connection test does not retry account problems, and retries a busy service only once', async () => {
@@ -69,6 +127,8 @@ test('a re-test that only met a busy service or a cancel keeps a working account
   const busy = connectFailure(working, 'PROVIDER_BUSY');
   assert.equal(busy.ready, true);
   assert.match(busy.note, /PROVIDER_BUSY/);
+  assert.equal(connectFailure(working, 'PROVIDER_EMPTY_RESPONSE').ready, false);
+  assert.equal(connectFailure(working, 'CONNECT_TEST_TIMEOUT').ready, false);
   // A real account problem still marks it not ready, with the code for the status chip.
   const expired = connectFailure(working, 'LOGIN_REQUIRED');
   assert.equal(expired.ready, false);

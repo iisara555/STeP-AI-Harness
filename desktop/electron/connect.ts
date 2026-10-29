@@ -45,6 +45,7 @@ export const connectNotes: Record<string, string> = {
     'บัญชี Google ขององค์กรหรือสถานศึกษาต้องตั้ง Google Cloud Project ก่อนใช้ Gemini ใช้ Gemini API key หรือบัญชี Google ส่วนตัวแทน',
   PROVIDER_PERMISSION_DENIED: 'บัญชีนี้ยังไม่มีสิทธิ์ใช้บริการ ตรวจแพ็กเกจหรือสิทธิ์ของบัญชี',
   PROVIDER_NETWORK: 'เชื่อมต่อบริการไม่ได้ ตรวจอินเทอร์เน็ต proxy หรือ firewall',
+  PROVIDER_EMPTY_RESPONSE: 'AI ส่งคำตอบทดสอบว่างเปล่า กรุณาลองทดสอบอีกครั้งหรือเลือกโมเดลอื่น',
   CONNECT_TEST_TIMEOUT: 'ลงชื่อสำเร็จ แต่ AI ไม่ตอบภายใน 2 นาที มักเกิดจากโควตาเต็มหรือบัญชียังไม่เปิดสิทธิ์ใช้งาน',
   LOGIN_TIMEOUT: 'ไม่ได้ลงชื่อหรือวาง code ภายใน 5 นาที กดเชื่อมต่อใหม่เมื่อพร้อม',
   LOGIN_FAILED: 'ลงชื่อเข้าใช้ไม่สำเร็จ ลองใหม่อีกครั้ง',
@@ -66,6 +67,7 @@ export const connectFailureNote = (code: string) =>
 
 /** Failures that say nothing about the account itself: the service was busy, the network dropped, or the person cancelled. */
 export const TRANSIENT_CONNECT_FAILURES = ['CANCELLED', 'PROVIDER_BUSY', 'PROVIDER_NETWORK'];
+const RETRYABLE_CONNECT_TEST_FAILURES = ['PROVIDER_BUSY', 'PROVIDER_NETWORK', 'PROVIDER_EMPTY_RESPONSE'];
 /** Failures a chat can hit after a connection passed its test, which only a new sign-in fixes. */
 export const SIGN_IN_EXPIRED = ['LOGIN_REQUIRED', 'COPILOT_LOGIN_REQUIRED'];
 
@@ -111,6 +113,7 @@ const pause = (ms: number, signal: AbortSignal) =>
       resolve();
     }
     signal.addEventListener('abort', done, { once: true });
+    if (signal.aborted) done();
   });
 const OPENAI_LOGIN_HOSTS = ['auth.openai.com', 'chatgpt.com', 'auth0.openai.com'];
 
@@ -131,6 +134,7 @@ export type ConnectDeps = {
  * failure; aborting `signal` cancels at any stage.
  */
 export async function signInAndTest(connection: Connection, deps: ConnectDeps, signal: AbortSignal) {
+  if (signal.aborted) throw new Error('CANCELLED');
   const { runtime, progress } = deps;
   if (connection.mode === 'api' && connection.provider !== 'compatible' && !runtime.context.key) throw new Error('API_KEY_REQUIRED');
   if (connection.provider === 'claude' && connection.mode === 'oauth') {
@@ -186,14 +190,18 @@ export async function signInAndTest(connection: Connection, deps: ConnectDeps, s
     // so a momentary hiccup does not send the person back to sign in again.
     for (let attempt = 0; ; attempt++) {
       try {
-        await runtime.adapter.run('Reply with exactly OK. Do not use tools.', connection, {
+        if (test.signal.aborted) throw new Error('CANCELLED');
+        const response = await runtime.adapter.run('Reply with exactly OK. Do not use tools.', connection, {
           ...runtime.context,
           signal: test.signal,
           emit: () => {},
         });
+        if (test.signal.aborted) throw new Error('CANCELLED');
+        if (typeof response !== 'string' || !response.trim()) throw new Error('PROVIDER_EMPTY_RESPONSE');
         break;
       } catch (error) {
-        if (attempt >= TEST_RETRIES || test.signal.aborted || !TRANSIENT_CONNECT_FAILURES.includes(testFailure(error))) throw error;
+        if (test.signal.aborted) throw new Error('CANCELLED');
+        if (attempt >= TEST_RETRIES || !RETRYABLE_CONNECT_TEST_FAILURES.includes(testFailure(error))) throw error;
         progress(tm('บริการตอบช้าหรือเครือข่ายสะดุด · กำลังลองใหม่'));
         await pause(TEST_RETRY_MS, test.signal);
       }

@@ -2278,6 +2278,10 @@ export const en: Record<string, string> = {
   'บัญชีนี้ยังไม่มีสิทธิ์ใช้บริการ ตรวจแพ็กเกจหรือสิทธิ์ของบัญชี':
     "This account doesn't have access to the service yet. Check the plan or account permissions",
   'เชื่อมต่อบริการไม่ได้ ตรวจอินเทอร์เน็ต proxy หรือ firewall': "Couldn't reach the service. Check your internet, proxy or firewall",
+  'AI ส่งคำตอบทดสอบว่างเปล่า กรุณาลองทดสอบอีกครั้งหรือเลือกโมเดลอื่น':
+    'The AI returned an empty test response. Try the test again or choose another model',
+  '\nการเปิดที่อยู่นี้อาจส่งข้อมูลหรือเปลี่ยนรายการบนเว็บไซต์ ตรวจที่อยู่ก่อนอนุญาต':
+    '\nOpening this address may send information or change something on the website. Check the address before approving',
   'ลงชื่อสำเร็จ แต่ AI ไม่ตอบภายใน 2 นาที มักเกิดจากโควตาเต็มหรือบัญชียังไม่เปิดสิทธิ์ใช้งาน':
     "Signed in, but the AI didn't answer within 2 minutes — usually a full quota or an account that doesn't have access yet",
   'ไม่ได้ลงชื่อหรือวาง code ภายใน 5 นาที กดเชื่อมต่อใหม่เมื่อพร้อม':
