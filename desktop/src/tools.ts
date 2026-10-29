@@ -81,12 +81,21 @@ export function taskAction(input: string, args: Record<string, unknown> = {}): T
       throw new Error('INVALID_INPUT');
   return action as TaskAction;
 }
+function withoutThink(text: string): string {
+  if (!text || !/<\s*think\b/i.test(text)) return text;
+  return text
+    .split(/(```[\s\S]*?```)/g)
+    .map((part, idx) => (idx % 2 === 1 ? part : part.replace(/<think>[\s\S]*?<\/think>\s*/gi, '')))
+    .join('');
+}
+
 /**
  * A reply that is nothing but one tool request in a ```json fence, an unlabelled fence or bare JSON. Smaller models
  * use these instead of step-tool; a JSON example inside a longer answer is never read as a request.
  */
 function looseRequest(text: string) {
-  const body = /^```(?:json)?\s*\n([\s\S]*?)\n?```$/.exec(text.trim())?.[1] ?? text.trim();
+  const cleaned = withoutThink(text).trim();
+  const body = /^```(?:json)?\s*\n([\s\S]*?)\n?```$/.exec(cleaned)?.[1] ?? cleaned;
   return body.startsWith('{') && /"tool"\s*:/.test(body) ? [body] : [];
 }
 /** Parse explicit protocol fences, or a reply made of a single tool request. All arguments are still validated by the host. */
@@ -176,6 +185,7 @@ export function toolRequests(text: string): ToolRequest[] {
  */
 export function visibleStream(text: string) {
   let shown = text
+    .replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '')
     .replace(/```(?:step-tool|json)?[ \t]*\n?\s*\{\s*"tool"\s*:[\s\S]*?(?:```|$)/g, '')
     .replace(/```step-tool[\s\S]*?(?:```|$)/g, '')
     .replace(/(^|\n\n)\s*\{\s*"tool"\s*:[\s\S]*?(?=\n\n|$)/g, '$1');

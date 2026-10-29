@@ -33,6 +33,9 @@ import { documentTool, type DocumentToolId } from '../src/document-tools';
 import { documentToolRule, isDocumentQuestion, documentRevisionMarkdown } from './document-tools';
 import { combineUsage } from './usage';
 import { promptMetrics } from './prompt-metrics';
+import { extractStructuredJson } from './json-schema';
+import { selectSkillBundle } from './skill-resources';
+import { sanitizeModelOutput, evaluateOutputQuality, buildRepairPrompt } from './output-quality';
 import { autoEffort, modelOption, taskSize } from './effort';
 import { selfContainedText } from './text-intent';
 import { selectDiscovery } from './discovery';
@@ -72,8 +75,8 @@ const ANSWER_CHECK_SCHEMA = {
 };
 /** The checker's reply, or undefined when it is not the expected JSON. Items are trimmed and capped for display. */
 export function parseAnswerCheck(reply: string): Message['check'] {
-  const json = /\{[\s\S]*\}/.exec(reply)?.[0];
-  if (!json) return undefined;
+  const json = extractStructuredJson(reply);
+  if (!json.startsWith('{')) return undefined;
   try {
     const value = JSON.parse(json);
     if (!Array.isArray(value?.unsupported)) return undefined;
@@ -110,6 +113,8 @@ export type Harness = {
   toolInstructions?: () => string;
   /** Policy answerCheck: check chat answers about STeP against the document excerpts they used. */
   answerCheck?: () => boolean;
+  /** Optional 1-pass auto-repair when deterministic output quality checks find critical defects. */
+  qualityRepair?: () => boolean;
   tools?: (scope: ToolScope) => Promise<LoopHost>;
   recordUsage?: (connection: Connection, count: TokenCount) => void;
   /** Administrator limits, else the window a model on this computer actually loaded (electron/local-context.ts). */
@@ -1239,6 +1244,16 @@ export class WorkService {
         }
         const governance = instructions.filter((_, i) => /^rules[\\/]/.test(paths[i] || ''));
         const selectedInstructions = instructions.filter((_, i) => !/^rules[\\/]/.test(paths[i] || ''));
+        if (!textOnly && skillPath && !general && !draftingTool) {
+          const skillBundle = await selectSkillBundle(
+            this.harness.root,
+            skillPath,
+            [session.originalQuery, latest].filter(Boolean).join('\n'),
+            { skillName: String(skillId || ''), mode },
+          ).catch(() => null);
+          if (skillBundle?.manifestText) selectedInstructions.push(skillBundle.manifestText);
+          if (skillBundle?.preloadedText) selectedInstructions.push(skillBundle.preloadedText);
+        }
         sources = [...new Set([...sources, ...paths, ...known.map(k => k.path)])];
         status(step.description || tm('กำลังจัดทำร่าง'));
         // Standing rules and registries precede task-specific instructions and preferences.
@@ -1681,10 +1696,62 @@ export class WorkService {
       // A chat reply that is only tool requests the loop could not read would show as an empty message.
       if (chat && !result.replace(/```step-tool[\s\S]*?(?:```|$)/g, '').trim() && brokenRequests(result).length)
         throw new Error('TOOL_REQUEST_UNREADABLE');
+      handoff = sanitizeModelOutput(handoff) || handoff;
+      const executedTools = (trace.steps.flatMap(s => s.tools || []) || []).filter(t => t.ok).map(t => t.tool);
+      const groundingCorpus = [
+        incomingSource || session.sourceText || '',
+        knowledgeText(known),
+        ...catalog.map(c => `${c.id} ${c.title} ${c.summary || ''}`),
+      ].join('\n');
+      let qualityReport = evaluateOutputQuality(handoff, {
+        documentTool: target ? undefined : draftingTool?.id,
+        executedTools,
+        writtenFilesCount: written.size,
+        groundingCorpus,
+      });
+      if (qualityReport.needsRepair && this.harness.qualityRepair?.()) {
+        const repairPrompt = buildRepairPrompt(handoff, qualityReport.findings, target ? undefined : draftingTool?.id);
+        let counted: TokenCount = { input: 0, output: 0, total: 0 };
+        try {
+          checkAbort();
+          const repaired = await runtime.adapter.run(repairPrompt, connection, {
+            ...runtime.context,
+            signal: controller.signal,
+            system: draftingTool ? documentToolRule(draftingTool.id, Boolean(session.documentTemplate)) : CHAT_RULES,
+            emit: () => {},
+            onUsage: count => {
+              counted = combineUsage(counted, count, 'max');
+            },
+          });
+          const maskedRepaired = sanitizeModelOutput(masked(repaired));
+          if (maskedRepaired.trim()) {
+            handoff = maskedRepaired;
+            qualityReport = evaluateOutputQuality(handoff, {
+              documentTool: target ? undefined : draftingTool?.id,
+              executedTools,
+              writtenFilesCount: written.size,
+              groundingCorpus,
+            });
+          }
+        } catch {
+          checkAbort();
+        } finally {
+          usage = combineUsage(usage, counted);
+          recordUsage(counted);
+        }
+      }
       const patched = target ? applyDocumentPatch(handoff, target, revisionDocument) : undefined;
       const documentOutput =
         patched || (draftingTool ? parseDocumentOutput(handoff, draftingTool.id, { requireEnvelope: true }) : undefined);
-      if (documentOutput) handoff = documentOutput.draft;
+      if (documentOutput) {
+        handoff = documentOutput.draft;
+        const tableOrCodeWarnings = qualityReport.findings
+          .filter(f => f.code === 'TABLE_TOTAL_MISMATCH' || f.code === 'UNGROUNDED_DOC_CODE')
+          .map(f => `- [ตรวจคุณภาพอัตโนมัติ] ${f.detail}`);
+        if (tableOrCodeWarnings.length) {
+          documentOutput.review = [documentOutput.review, ...tableOrCodeWarnings].filter(Boolean).join('\n');
+        }
+      }
       // The STeP documents a chat answer drew on, shown under it: strong matches given to the AI and documents it opened.
       const groundedIn = chat ? known.filter(k => k.score >= STRONG_MATCH) : [];
       const docSources = chat

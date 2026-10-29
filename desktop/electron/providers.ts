@@ -19,7 +19,7 @@ import { anthropicEnv } from './anthropic-auth';
 import { AntigravityAdapter, antigravityModels, prewarmAntigravity, antigravitySpareCount, closeAntigravitySpares } from './antigravity';
 import type { GovernedBridgeExecutor } from './antigravity-mcp-bridge';
 export { prewarmAntigravity, antigravitySpareCount, closeAntigravitySpares };
-import { strictJsonSchema } from './json-schema';
+import { strictJsonSchema, jsonSchemaInstruction } from './json-schema';
 
 // A failure keeps its code when the runtime said why; the scrubbed tail travels as `detail`.
 export function runtimeError(error: unknown, rpc: Rpc) {
@@ -408,7 +408,9 @@ export class GeminiAdapter implements ProviderAdapter {
     const started = Date.now();
     if (context.signal.aborted) throw new Error('CANCELLED');
     const session = context.webSearch ? undefined : context.session;
-    const system = context.system || '';
+    const system = context.jsonSchema
+      ? [context.system, jsonSchemaInstruction(context.jsonSchema)].filter(Boolean).join('\n\n')
+      : context.system || '';
     const identity = providerSessionKey(connection, context);
     // Every tool turn of a run continues on one Gemini CLI process and ACP session, sending only the new tool results,
     // instead of starting the CLI again and resending the whole prompt each turn.
@@ -705,6 +707,9 @@ export class ClaudeAdapter implements ProviderAdapter {
     let completed = false;
     try {
       if (context.signal.aborted) throw new Error('CANCELLED');
+      const system = context.jsonSchema
+        ? [context.system, jsonSchemaInstruction(context.jsonSchema)].filter(Boolean).join('\n\n')
+        : context.system;
       const input = conversation?.input || (session ? new InputQueue<SDKUserMessage>() : undefined);
       const delta = reuse ? prompt.slice(conversation!.sent.length) : prompt;
       if (input) input.push({ type: 'user', session_id: '', parent_tool_use_id: null, message: { role: 'user', content: delta } });
@@ -715,7 +720,7 @@ export class ClaudeAdapter implements ProviderAdapter {
             options: {
               cwd: context.cwd,
               ...(connection.model ? { model: connection.model } : {}),
-              ...(context.system ? { appendSystemPrompt: context.system } : {}),
+              ...(system ? { appendSystemPrompt: system } : {}),
               ...(context.effort ? { settings: { effortLevel: context.effort as EffortLevel } } : {}),
             },
           });
@@ -753,7 +758,7 @@ export class ClaudeAdapter implements ProviderAdapter {
             cwd: context.cwd,
             ...authOptions,
             model: connection.model || undefined,
-            ...(context.system ? { systemPrompt: context.system } : {}),
+            ...(system ? { systemPrompt: system } : {}),
             ...(context.effort ? { effort: context.effort as EffortLevel } : {}),
             tools: context.webSearch ? ['WebSearch'] : [],
             allowedTools: [],
@@ -1135,6 +1140,9 @@ export class CompatibleAdapter implements ProviderAdapter {
   constructor(private fetcher: typeof fetch = fetch) {}
   async run(prompt: string, connection: Connection, context: ProviderContext) {
     if (connection.promptCaching === 'gemini-explicit') throw new Error('INVALID_INPUT');
+    const system = context.jsonSchema
+      ? [context.system, jsonSchemaInstruction(context.jsonSchema)].filter(Boolean).join('\n\n')
+      : context.system;
     try {
       return await compatibleRun(
         prompt,
@@ -1145,7 +1153,7 @@ export class CompatibleAdapter implements ProviderAdapter {
           maxOutputTokens: connection.maxOutputTokens,
           promptCaching: connection.promptCaching,
         },
-        context,
+        system ? { ...context, system } : context,
         this.fetcher,
       );
     } catch (error) {

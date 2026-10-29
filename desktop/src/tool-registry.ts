@@ -126,6 +126,19 @@ const definitions: Record<string, [string, string[], Record<string, Schema>]> = 
       ref: {
         type: 'string',
       },
+      fields: {
+        type: 'array',
+        maxItems: 12,
+        items: {
+          type: 'object',
+          required: ['ref', 'value'],
+          properties: {
+            ref: { type: 'string', maxLength: 10 },
+            value: { type: 'string', maxLength: 4000 },
+          },
+          additionalProperties: false,
+        },
+      },
     },
   ],
   terminal: [
@@ -192,7 +205,7 @@ const definitions: Record<string, [string, string[], Record<string, Schema>]> = 
     },
   ],
   patch: [
-    'Exact unique text replacement on existing workspace text. Stages via Changes; write approval/hooks/snapshot still apply.',
+    'Exact unique text replacement on existing workspace text (single old_string/new_string or atomic multi-hunk args.edits). Stages via Changes; write approval/hooks/snapshot still apply.',
     ['workspace-stage', 'conditional-write'],
     {
       old_string: {
@@ -200,6 +213,19 @@ const definitions: Record<string, [string, string[], Record<string, Schema>]> = 
       },
       new_string: {
         type: 'string',
+      },
+      edits: {
+        type: 'array',
+        maxItems: 20,
+        items: {
+          type: 'object',
+          required: ['old_string', 'new_string'],
+          properties: {
+            old_string: { type: 'string' },
+            new_string: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
       },
       expectedHash: {
         type: 'string',
@@ -245,13 +271,18 @@ const definitions: Record<string, [string, string[], Record<string, Schema>]> = 
   ],
   web_fetch: ['Read a public URL after site consent and privacy checks.', ['network-read', 'consent'], {}],
   skill: [
-    'Read a routed Skill with mandatory references; args.resource reads one Markdown reference, example or template inside that Skill. Catalog lists routed skills; routing/authority still checked.',
+    'Read a routed Skill with mandatory references; args.resource reads one Markdown reference, example or template inside that Skill (or args.resources for up to 4). Catalog lists routed skills; routing/authority still checked.',
     ['harness-read'],
     {
       action: {
         enum: ['catalog'],
       },
       resource: { type: 'string', maxLength: 200 },
+      resources: {
+        type: 'array',
+        maxItems: 4,
+        items: { type: 'string', maxLength: 200 },
+      },
     },
   ],
   session_search: [
@@ -266,7 +297,7 @@ const definitions: Record<string, [string, string[], Record<string, Schema>]> = 
     },
   ],
   reference: [
-    'Read registered organization documents, outline or section; not arbitrary filesystem access.',
+    'Read registered organization documents, outline or section(s); not arbitrary filesystem access.',
     ['harness-read'],
     {
       action: {
@@ -274,6 +305,11 @@ const definitions: Record<string, [string, string[], Record<string, Schema>]> = 
       },
       section: {
         type: 'string',
+      },
+      sections: {
+        type: 'array',
+        maxItems: 5,
+        items: { type: 'string', maxLength: 200 },
       },
     },
   ],

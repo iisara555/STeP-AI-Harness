@@ -34,3 +34,64 @@ export function strictJsonSchema(schema: unknown): Record<string, unknown> {
   };
   return convert(schema, false);
 }
+
+/**
+ * Strips `<think>...</think>` reasoning blocks emitted by local or reasoning models when they appear outside markdown
+ * code fences, preserving any literal `<think>` tags inside fenced code examples.
+ */
+export function stripReasoningBlocks(text: string): string {
+  if (!text || !/<\s*think\b/i.test(text)) return text;
+  const segments = text.split(/(```[\s\S]*?```)/g);
+  return segments
+    .map((segment, index) => {
+      if (index % 2 === 1) return segment;
+      return segment.replace(/<think>[\s\S]*?<\/think>\s*/gi, '');
+    })
+    .join('')
+    .trim();
+}
+
+/**
+ * Extracts a JSON object or array from model output that may include `<think>` blocks, markdown code fences, or
+ * brief leading/trailing prose. Returns the extracted substring (or the trimmed input if no balanced JSON is found).
+ */
+export function extractStructuredJson(raw: string): string {
+  const cleaned = stripReasoningBlocks(String(raw || '')).trim();
+  const fenced = /```(?:json)?\s*([\s\S]*?)```/i.exec(cleaned);
+  const candidate = (fenced ? fenced[1] : cleaned).trim();
+  const objStart = candidate.indexOf('{');
+  const arrStart = candidate.indexOf('[');
+  const start = objStart >= 0 && arrStart >= 0 ? Math.min(objStart, arrStart) : Math.max(objStart, arrStart);
+  if (start < 0) return candidate;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < candidate.length; i++) {
+    const ch = candidate[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (inString) {
+      if (ch === '\\') escape = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+    } else if (ch === '{' || ch === '[') {
+      depth++;
+    } else if (ch === '}' || ch === ']') {
+      depth--;
+      if (depth === 0) return candidate.slice(start, i + 1);
+    }
+  }
+  return candidate.slice(start);
+}
+
+/**
+ * System-prompt instruction for providers without a native JSON Schema wire parameter (Claude SDK, Copilot, OpenAI-compatible).
+ */
+export function jsonSchemaInstruction(schema: unknown): string {
+  return `Respond with a single valid JSON object matching this JSON Schema (no markdown code fences or surrounding commentary):\n${JSON.stringify(strictJsonSchema(schema))}`;
+}
