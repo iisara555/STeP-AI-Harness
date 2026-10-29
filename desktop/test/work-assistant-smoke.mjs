@@ -61,6 +61,7 @@ await writeFile(
 const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home, STEP_DISABLE_UPDATES: '1' };
 delete env.ELECTRON_RUN_AS_NODE;
 let app;
+let page;
 let phase = 'launch';
 const progress = next => {
   phase = next;
@@ -75,7 +76,7 @@ const watchdog = setTimeout(() => {
 try {
   progress('launch Electron');
   app = await electron.launch({ args: ['.'], env, timeout: 45000 });
-  const page = await app.firstWindow();
+  page = await app.firstWindow();
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง', exact: true }).click();
   await page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' }).waitFor({ state: 'detached' });
@@ -119,8 +120,15 @@ try {
   progress('select assistant mode with keyboard');
   const mode = page.getByRole('combobox', { name: 'โหมดทำงาน' });
   await mode.focus();
-  await page.keyboard.press('Home');
-  await page.keyboard.press('ArrowDown');
+  if (process.platform === 'darwin') {
+    // macOS opens the native menu before changing and committing its selection.
+    await page.keyboard.press('Space');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+  } else {
+    await page.keyboard.press('Home');
+    await page.keyboard.press('ArrowDown');
+  }
   await expect(mode).toHaveValue('assistant');
   await expect(page.locator('.work-assistant-guide')).toContainText('ผู้ดูแลต้องเปิดการตรวจข้อมูลส่วนบุคคล');
   await page.screenshot({ path: 'release/qa/work-assistant/privacy-off.png' });
@@ -250,6 +258,19 @@ try {
   progress('cleanup');
   await writeFile(join(home, 'plain-release'), 'continue').catch(() => {});
   try {
+    if (page && !page.isClosed()) {
+      let escapeTimeout;
+      try {
+        await Promise.race([
+          page.keyboard.press('Escape').catch(() => {}),
+          new Promise(resolve => {
+            escapeTimeout = setTimeout(resolve, 2000);
+          }),
+        ]);
+      } finally {
+        clearTimeout(escapeTimeout);
+      }
+    }
     if (app) {
       let closeTimeout;
       try {
