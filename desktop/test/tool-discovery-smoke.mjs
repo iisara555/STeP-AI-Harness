@@ -171,3 +171,6 @@ try {
   await child?.close();
   await rm(home, { recursive: true, force: true });
 }
+
+// Also verify a discovered routed Skill resource reaches the provider in the full app.
+await import('./skill-template-smoke.mjs');

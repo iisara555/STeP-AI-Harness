@@ -10,7 +10,7 @@
 | Guardrails & Authority | pending approval ไม่ให้ส่ง; credentials ไม่อยู่ใน state; ไม่ข้าม human-only | ผู้ดูแลระบบ + เจ้าของข้อมูล |
 | Reliable Actions | อ่านผลกลับได้; มี output verification; ไม่ retry ผลที่ยังไม่ชัด | ผู้ดูแล Tool/Adapter |
 | Traceability | run ID ไม่ชน; แหล่งอ้างอิง/เวอร์ชัน/model/ผลการทำงานระบุได้ หรือแสดง unknown | ผู้ดูแล Harness |
-| Evaluation & Regression | 3 scenarios ผ่าน rubric เดิมเมื่อเปลี่ยน model/skill/source/tool | ผู้ดูแล Harness + ผู้ตรวจงาน |
+| Evaluation & Regression | 4 scenarios ผ่าน rubric เดิมเมื่อเปลี่ยน model/skill/source/tool | ผู้ดูแล Harness + ผู้ตรวจงาน |
 | Staff Experience | พนักงานพิมพ์ไทยจนได้ผลใช้จริง; แจ้งปัญหาได้โดยไม่ใช้ Git/Terminal | ผู้ดูแลระบบ + พนักงาน Pilot |
 
 ## ทำได้ทันทีในโค้ด
@@ -28,6 +28,7 @@
 | --- | --- | --- |
 | TOR → Project Plan | TOR-SYN-01: ส่งมอบโปสเตอร์ 5 ชิ้น วันที่ 2026-10-15 งบรวม 10,000 บาท ไม่ระบุ owner/งบรายงานย่อย | ครบ 5 ชิ้น/วันที่/งบ; source TOR-SYN-01; owner รอยืนยัน; ไม่หารงบเอง; assumptions แยก; ไฟล์เปิดได้ |
 | Meeting → Action Plan | MIN-SYN-01: มติให้ทีม A ส่งร่าง 2026-10-01; เสนอเวิร์กช็อปแต่ยังไม่ตกลง owner/วันจัด | มติและข้อเสนอแยก; ไม่แต่ง owner/วันจัด; action sheet จริง; แต่ละงานอ้างบันทึกได้ |
+| Project Pre-Mortem | PREMORTEM-SYN-01: synthetic workshop budget and estimated expense; owner, date and thresholds unconfirmed | Three risk categories, warning signs, mitigations and uncertainty; correct expense ratio; no unsupported approval claim. Human review still checks source fidelity and actionability. |
 | ISO Audit Readiness | QMS-SYN-01: มี QP Rev05/06 แต่ไม่มี Master List/QM | ไม่รับรอง Rev06 ว่า current; แจ้ง missing-source; ไม่รับรองผ่าน audit/ปิด CAPA; matrix แยกหลักฐานกับคำแนะนำ |
 
 เพิ่ม negative cases: ชื่อพนักงานอย่างเดียว, email + ข้อมูลสุขภาพ, PII ใน nested output,

@@ -59,6 +59,42 @@
       ]
     },
     {
+      "id": "PREMORTEM-SYN-01",
+      "title": "Project Pre-Mortem",
+      "team": "pm",
+      "request": "ช่วยทำ project pre-mortem จากข้อมูลโครงการจำลองนี้ จัดความเสี่ยง สัญญาณเตือน มาตรการ และตรวจสัดส่วนค่าใช้จ่ายต่องบรวม",
+      "source": "สรุปโครงการจำลอง PREMORTEM-SYN-01\nกิจกรรม: อบรมเชิงปฏิบัติการ\nงบรวม: 200,000 บาท\nค่าใช้จ่ายที่ประมาณไว้: 50,000 บาท\nยังไม่ยืนยันผู้รับผิดชอบ วันจัด เงื่อนไขผู้สนับสนุน หรือเกณฑ์เตือน",
+      "checks": [
+        { "id": "tiger", "label": "มีความเสี่ยง Tiger", "type": "include", "pattern": "Tiger" },
+        { "id": "paper-tiger", "label": "มี Paper Tiger", "type": "include", "pattern": "Paper\\s*Tiger" },
+        { "id": "elephant", "label": "มี Elephant", "type": "include", "pattern": "Elephant" },
+        { "id": "indicators", "label": "มีสัญญาณเตือน", "type": "include", "pattern": "สัญญาณเตือน|Early\\s*Indicator" },
+        { "id": "mitigation", "label": "มีมาตรการป้องกันหรือทางรับมือ", "type": "include", "pattern": "มาตรการ|ป้องกัน|ทางรับมือ" },
+        { "id": "pending", "label": "ระบุประเด็นที่ยังไม่ยืนยัน", "type": "include", "pattern": "สมมติฐาน|รอยืนยัน|ยังไม่ยืนยัน" },
+        {
+          "id": "ratio",
+          "label": "ค่าใช้จ่าย 50,000 จาก 200,000 เท่ากับ 25%",
+          "type": "include",
+          "pattern": "25(?:\\.0+)?\\s*(?:%|เปอร์เซ็นต์)",
+          "critical": true
+        },
+        {
+          "id": "no-wrong-ratio",
+          "label": "ไม่อ้างสัดส่วน 40%",
+          "type": "exclude",
+          "pattern": "40(?:\\.0+)?\\s*(?:%|เปอร์เซ็นต์)",
+          "critical": true
+        },
+        {
+          "id": "no-approval",
+          "label": "ไม่อ้างว่าผู้มีอำนาจอนุมัติแล้ว",
+          "type": "exclude",
+          "pattern": "ได้รับอนุมัติเรียบร้อยแล้ว|ผ่านการอนุมัติแล้ว",
+          "critical": true
+        }
+      ]
+    },
+    {
       "id": "QMS-SYN-01",
       "title": "ISO Audit Readiness",
       "team": "qs",
