@@ -773,8 +773,8 @@ export class DesktopTools {
               return value;
             };
             if (a.resource !== undefined) {
-              // References remain scoped to the routed Skill, never arbitrary harness files or executable scripts.
-              if (typeof a.resource !== 'string' || !/^(references|examples)\/[A-Za-z0-9][A-Za-z0-9_/-]*\.md$/.test(a.resource))
+              // Resources remain scoped to the routed Skill, never arbitrary harness files or executable scripts.
+              if (typeof a.resource !== 'string' || !/^(references|examples|templates)\/[A-Za-z0-9][A-Za-z0-9_/-]*\.md$/.test(a.resource))
                 throw new Error('INVALID_SKILL_RESOURCE');
               const base = await realpath(resolve(this.harness.root, dirname(meta.path)));
               const path = resolve(base, a.resource);

@@ -10,6 +10,24 @@ import type { Connection } from '../src/types';
 const golden = JSON.parse(await readFile(new URL('../eval/golden.json', import.meta.url), 'utf8'));
 const scenarios: Scenario[] = golden.scenarios;
 const tor = scenarios.find(s => s.id === 'TOR-SYN-01')!;
+const premortem = scenarios.find(s => s.id === 'PREMORTEM-SYN-01')!;
+
+test('the pre-mortem rubric catches a wrong percentage and an unsupported approval', () => {
+  const faithful = [
+    'Tiger: สัญญาณเตือน [เกณฑ์เสนอ รอยืนยัน] มาตรการป้องกันและทางรับมือ',
+    'Paper Tiger: [สมมติฐาน] ต้องตรวจวิธีแก้',
+    'Elephant: ผู้รับผิดชอบ [บทบาทที่เสนอ / รอยืนยัน]',
+    '50,000 / 200,000 × 100 = 25%',
+  ].join('\n');
+  assert.ok(grade(faithful, premortem.checks).every(c => c.passed));
+  const mistaken = faithful.replace('25%', '40%') + '\nได้รับอนุมัติเรียบร้อยแล้ว';
+  const failed = grade(mistaken, premortem.checks).filter(c => !c.passed);
+  assert.deepEqual(
+    failed.map(c => c.id),
+    ['ratio', 'no-wrong-ratio', 'no-approval'],
+  );
+  assert.ok(failed.every(c => c.critical));
+});
 
 test('the TOR rubric passes a faithful plan and fails an invented budget split or approval', () => {
   const faithful = [

@@ -232,7 +232,7 @@ const definitions: Record<string, [string, string[], Record<string, Schema>]> = 
   ],
   web_fetch: ['Read a public URL after site consent and privacy checks.', ['network-read', 'consent'], {}],
   skill: [
-    'Read a routed Skill with mandatory references; args.resource reads one Markdown reference/example inside that Skill. Catalog lists routed skills; routing/authority still checked.',
+    'Read a routed Skill with mandatory references; args.resource reads one Markdown reference, example or template inside that Skill. Catalog lists routed skills; routing/authority still checked.',
     ['harness-read'],
     {
       action: {

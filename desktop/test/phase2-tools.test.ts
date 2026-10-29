@@ -669,12 +669,15 @@ test('Skill resources load progressively and cannot escape the routed Skill or b
   try {
     await mkdir(join(base, 'references'), { recursive: true });
     await mkdir(join(base, 'examples'));
+    await mkdir(join(base, 'templates'));
     await mkdir(join(f.root, 'elsewhere'));
     await writeFile(join(base, 'SKILL.md'), 'Core Skill only');
     await writeFile(join(base, 'references', 'search.md'), 'Bounded search procedure');
     await writeFile(join(base, 'examples', 'good.md'), 'Worked example');
+    await writeFile(join(base, 'templates', 'matrix.md'), 'Routed Skill matrix');
     await writeFile(join(f.root, 'elsewhere', 'outside.md'), 'Not part of this Skill');
     await symlink(join(f.root, 'elsewhere'), join(base, 'references', 'linked'), 'junction');
+    await symlink(join(f.root, 'elsewhere'), join(base, 'templates', 'linked'), 'junction');
     f.harness.catalog = async () => [{ name: 'known', path: 'skills/known/SKILL.md', status: 'routed' }];
     f.harness.skillMetadata = async () => ({ path: 'skills/known/SKILL.md', mandatoryReferences: [] });
     const call = (resource: string) => f.tools.execute({ tool: 'skill', input: 'known', args: { resource } }, f.scope);
@@ -684,18 +687,57 @@ test('Skill resources load progressively and cannot escape the routed Skill or b
     assert.equal(ref.resource, 'references/search.md');
     assert.equal(ref.text, 'Bounded search procedure');
     assert.equal(((await call('examples/good.md')) as any).text, 'Worked example');
-    for (const resource of ['../elsewhere/outside.md', 'references/../../elsewhere/outside.md', '/etc/passwd', 'scripts/run.mjs'])
+    assert.equal(((await call('templates/matrix.md')) as any).text, 'Routed Skill matrix');
+    for (const resource of [
+      '../elsewhere/outside.md',
+      'references/../../elsewhere/outside.md',
+      'templates/../../elsewhere/outside.md',
+      'templates/run.mjs',
+      '/etc/passwd',
+      'scripts/run.mjs',
+    ])
       await assert.rejects(call(resource), /INVALID_SKILL_RESOURCE/);
     await assert.rejects(call('references/linked/outside.md'), /INVALID_SKILL_RESOURCE/);
+    await assert.rejects(call('templates/linked/outside.md'), /INVALID_SKILL_RESOURCE/);
     await assert.rejects(
       f.tools.execute({ tool: 'skill', input: 'known', args: { action: 'catalog', resource: 'references/search.md' } }, f.scope),
       /INVALID_INPUT/,
     );
     f.policy.permission.pathRules.push({ pattern: 'skills/known/references/search.md', allow: false });
     await assert.rejects(call('references/search.md'), /PATH_RULE_DENIED/);
+    f.policy.permission.pathRules.push({ pattern: 'skills/known/templates/matrix.md', allow: false });
+    await assert.rejects(call('templates/matrix.md'), /PATH_RULE_DENIED/);
     f.policy.permission.pathRules = [];
     f.harness.route = async () => ({ routingContract: { mode: 'BLOCK', skill: 'known', authority: { status: 'DENY' } } });
     await assert.rejects(call('references/search.md'), /AUTHORITY_REVIEW_REQUIRED/);
+    await assert.rejects(call('templates/matrix.md'), /AUTHORITY_REVIEW_REQUIRED/);
+  } finally {
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test('the routed project pre-mortem Skill can load its own matrix template', async () => {
+  const f = await fixture();
+  const catalog: any = await import('../../src/modules/skills/catalog.js');
+  const router: any = await import('../../src/cli/commands/ask.js');
+  const resolver: any = await import('../../src/modules/role-resolver.js');
+  try {
+    f.harness.root = resolver.PACKAGE_ROOT;
+    f.harness.catalog = () => catalog.loadSkillCatalog();
+    f.harness.route = (query, options) => router.queryStepRouter(query, options);
+    f.harness.skillMetadata = async id => ({
+      path: (await catalog.loadSkillCatalog()).find((entry: any) => entry.name === id)?.path,
+      mandatoryReferences: [],
+    });
+    f.scope.query = 'ช่วยทำ pre-mortem โครงการจัดอบรมจำลองและระบุความเสี่ยง';
+    const result: any = await f.tools.execute(
+      { tool: 'skill', input: 'project-pre-mortem', args: { resource: 'templates/pre-mortem-matrix-template.md' } },
+      f.scope,
+    );
+    assert.equal(result.route.skill, 'project-pre-mortem');
+    assert.match(result.text, /Tiger/i);
+    assert.match(result.text, /สัญญาณเตือน/);
   } finally {
     f.store.close();
     await rm(f.root, { recursive: true, force: true });
