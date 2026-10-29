@@ -30,6 +30,7 @@ export function browserUrl(input: string) {
 export class Workbench {
   executionAllowed: () => void = () => {};
   private children = new Map<string, ChildProcess>();
+  private exiting = new Map<string, Promise<void>>();
   private stopped = new Set<string>();
   private cancelling = new Set<string>();
   private disposed = false;
@@ -616,6 +617,11 @@ export class Workbench {
           )
         : spawn('/bin/sh', ['-c', command], { cwd, env, detached: true });
     this.children.set(id, child);
+    const exited = new Promise<void>(resolve => {
+      child.once('close', () => resolve());
+      child.once('error', () => resolve());
+    });
+    this.exiting.set(id, exited);
     let timer: ReturnType<typeof setTimeout> | undefined;
     const flush = () => {
       if (timer) clearTimeout(timer);
@@ -643,6 +649,7 @@ export class Workbench {
       task.status = this.stopped.has(id) ? 'cancelled' : code === 0 ? 'done' : 'failed';
       task.code = code;
       this.children.delete(id);
+      this.exiting.delete(id);
       this.stopped.delete(id);
       flush();
     };
@@ -730,6 +737,7 @@ export class Workbench {
   async cancel(id: string) {
     const child = this.children.get(id);
     if (!child || this.cancelling.has(id)) return;
+    const exited = this.exiting.get(id);
     this.cancelling.add(id);
     this.stopped.add(id);
     try {
@@ -742,6 +750,7 @@ export class Workbench {
           child.kill();
         }
       }
+      if (exited) await Promise.race([exited, new Promise<void>(resolve => setTimeout(resolve, 2000))]);
     } finally {
       this.cancelling.delete(id);
     }

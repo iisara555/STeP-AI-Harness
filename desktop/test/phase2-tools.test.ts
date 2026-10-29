@@ -1938,3 +1938,31 @@ test('agent task inspection is session/workspace scoped and output bounded over 
     await rm(f.root, { recursive: true, force: true });
   }
 });
+
+test('terminal waitMsBeforeAsync completes fast commands inline in a single turn and backgrounds slow or daemon jobs', async () => {
+  const f = await fixture();
+  try {
+    await writeFile(join(f.root, 'fast.cjs'), "process.stdout.write('inline-fast-done\\n');");
+    const fast = (await f.tools.execute(
+      { tool: 'terminal', input: `${node} fast.cjs`, args: { waitMsBeforeAsync: 5000 } },
+      f.scope,
+    )) as any;
+    assert.equal(fast.status, 'done');
+    assert.equal(fast.completedInline, true);
+    assert.equal(fast.timedOut, false);
+    assert.match(fast.output, /inline-fast-done/);
+
+    await writeFile(join(f.root, 'daemon.cjs'), 'setTimeout(() => {}, 30000);');
+    const daemon = (await f.tools.execute(
+      { tool: 'terminal', input: `${node} daemon.cjs`, args: { waitMsBeforeAsync: 5000, isDaemon: true } },
+      f.scope,
+    )) as any;
+    assert.equal(daemon.status, 'running');
+    assert.equal(daemon.completedInline, undefined);
+    await f.workbench.cancel(daemon.id);
+  } finally {
+    await f.workbench.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});

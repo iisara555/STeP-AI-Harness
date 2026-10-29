@@ -18,7 +18,7 @@ import { fetchPublic, publicUrl } from './web-fetch';
 import { extractWeb } from './web-extract';
 import { searchUrl } from './public-search';
 import { sheetWorker } from './sheets';
-import { sensitivePath, evaluatePermission, deniedPath } from './permissions';
+import { sensitivePath, evaluatePermission, deniedPath, allowedDomain } from './permissions';
 import { RunTransmission, type TransmissionSource } from './transmission';
 import { documentSection, documentHeadings, OrganizationKnowledge } from './knowledge';
 import { mainLocale, tm } from './i18n';
@@ -101,7 +101,7 @@ export const ownAnswer = (r: LoopRequest | undefined, text: string) => {
     if (r.tool === 'ask_user') return keys.length === 1 && typeof value.answer === 'string';
     return (
       typeof value.approved === 'boolean' &&
-      keys.every(k => ['approved', 'scope', 'status', 'tasks', 'next'].includes(k)) &&
+      keys.every(k => ['approved', 'scope', 'status', 'tasks', 'next', 'canProceedInline'].includes(k)) &&
       keys.every(k => ['boolean', 'number', 'string'].includes(typeof value[k]))
     );
   } catch {
@@ -307,7 +307,12 @@ export class DesktopTools {
     if (!approved) return { approved: false, status: 'revise-the-plan-with-the-employee' };
     this.workbench.setWorkPlan(scope.sessionId, { ...parsed, approvedAt: new Date().toISOString() }, text);
     this.notify();
-    return { approved: true, tasks: parsed.tasks.length, next: 'tell the employee to press ลงมือทำตามแผน' };
+    return {
+      approved: true,
+      tasks: parsed.tasks.length,
+      canProceedInline: this.mode() !== 'plan',
+      next: 'tell the employee to press ลงมือทำตามแผน',
+    };
   }
   // Sites approved in a task remain valid only while its workspace, managed policy and mode match.
   private sites = new Map<string, { workspace: string; policy: Policy; mode: PermissionMode; hosts: Set<string> }>();
@@ -332,6 +337,15 @@ export class DesktopTools {
     const sites = this.sites.get(sessionId);
     if (!exact && sites?.workspace === workspace && sites.policy === policy && sites.mode === mode && sites.hosts.has(host))
       return undefined;
+    if (!exact && allowedDomain(host, policy.permission.allowedDomains)) {
+      let allowed = this.sites.get(sessionId);
+      if (!allowed || allowed.workspace !== workspace || allowed.policy !== policy || allowed.mode !== mode) {
+        allowed = { workspace, policy, mode, hosts: new Set() };
+        this.sites.set(sessionId, allowed);
+      }
+      allowed.hosts.add(host);
+      return { url, workspace, policy, mode, sessionId, signal };
+    }
     let requests = this.siteRequests.get(signal);
     if (!requests) {
       requests = new Map();
@@ -772,8 +786,20 @@ export class DesktopTools {
             return this.workbench.stage(target, r.content).then(c => this.settle({ id: c.id, path: c.path }, scope));
           case 'code_diagnostics':
             return this.workbench.diagnostics(target, scope.signal, join(dirname(this.sheetPath), 'code-worker.cjs'));
-          case 'terminal':
-            return this.workbench.start(target, scope.sessionId);
+          case 'terminal': {
+            const job = await this.workbench.start(target, scope.sessionId);
+            if (typeof a.waitMsBeforeAsync === 'number' && a.waitMsBeforeAsync > 0 && !a.isDaemon) {
+              const waited = await this.workbench.waitTask(
+                scope.sessionId,
+                job.id,
+                { action: 'wait', timeoutMs: a.waitMsBeforeAsync },
+                scope.signal,
+                check,
+              );
+              return { ...waited, completedInline: !Array.isArray(waited) && 'status' in waited && waited.status !== 'running' };
+            }
+            return job;
+          }
           case 'tasks':
             if (a.action === 'wait') return this.workbench.waitTask(scope.sessionId, target, a, scope.signal, check);
             if (cancelTask) {

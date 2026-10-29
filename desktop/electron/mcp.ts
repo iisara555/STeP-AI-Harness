@@ -16,6 +16,7 @@ export class Mcp {
   executionAllowed: () => void = () => {};
   private clients = new Set<Client>();
   private closers = new Map<Client, () => Promise<void>>();
+  private discoveryCache = new Map<string, { policy: Policy; identity: string; spec: string; at: number; tools: McpTool[] }>();
   constructor(
     private policy: () => Policy,
     private identity: () => string,
@@ -27,6 +28,7 @@ export class Mcp {
     return this.policy().mcpServers.map(s => ({ name: s.name, transport: s.transport, ...(s.profile ? { profile: s.profile } : {}) }));
   }
   async close() {
+    this.discoveryCache.clear();
     await Promise.allSettled([...this.clients].map(c => this.closers.get(c)?.() || c.close()));
     this.clients.clear();
   }
@@ -148,7 +150,21 @@ export class Mcp {
   async search(name: string, query = '', signal?: AbortSignal) {
     const server = this.server(name),
       policy = this.policy(),
-      identity = this.identity();
+      identity = this.identity(),
+      spec = JSON.stringify(server);
+    const filterTools = (tools: McpTool[]) => {
+      const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+      return {
+        total: tools.length,
+        searchRequired: tools.length > 12,
+        tools: tools.filter(t => !words.length || words.every(w => (t.name + ' ' + t.description).toLowerCase().includes(w))).slice(0, 12),
+      };
+    };
+    const cached = this.discoveryCache.get(name);
+    if (cached && cached.policy === policy && cached.identity === identity && cached.spec === spec && Date.now() - cached.at < 300_000) {
+      if (signal?.aborted) throw new Error('CANCELLED');
+      return filterTools(cached.tools);
+    }
     if (
       !(await this.consent(
         tm('ค้นหาเครื่องมือจาก MCP?'),
@@ -178,14 +194,8 @@ export class Mcp {
             if (cursor && seen.has(cursor)) throw new Error('MCP_TOOL_LIMIT');
             if (cursor) seen.add(cursor);
           } while (cursor);
-          const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-          return {
-            total: tools.length,
-            searchRequired: tools.length > 12,
-            tools: tools
-              .filter(t => !words.length || words.every(w => (t.name + ' ' + t.description).toLowerCase().includes(w)))
-              .slice(0, 12),
-          };
+          this.discoveryCache.set(name, { policy, identity, spec, at: Date.now(), tools });
+          return filterTools(tools);
         });
       } catch (error) {
         if (signal?.aborted || attempt >= 2 || (error as Error).message !== 'MCP_UNAVAILABLE') throw error;

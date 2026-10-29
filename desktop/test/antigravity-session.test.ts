@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { AntigravityAdapter } from '../electron/antigravity';
+import { AntigravityAdapter, prewarmAntigravity, antigravitySpareCount, closeAntigravitySpares } from '../electron/antigravity';
+import { AntigravityMcpBridge } from '../electron/antigravity-mcp-bridge';
 import { ToolLoop } from '../electron/tool-loop';
 import { ProviderSession, type TokenCount } from '../electron/providers';
 import { strictJsonSchema } from '../electron/json-schema';
@@ -26,9 +27,12 @@ if(args[0]==='--version'){console.log('1.3.2');process.exit(0);}
 const schema=args.includes('--json-schema')?JSON.parse(fs.readFileSync(args[args.indexOf('--json-schema')+1],'utf8')):null;
 fs.appendFileSync(log,JSON.stringify({start:process.pid,args,home:process.env.HOME,schema})+'\\n');
 const send=x=>console.log(JSON.stringify(x));
-send({event:'init',conversation_id:'conv',init:{cwd:process.cwd(),agent:'step-draft',model:args[args.indexOf('--model')+1],permission_mode:'strict',tools:['finish']}});
+const mcpCfgPath=process.env.HOME+'/.gemini/antigravity-cli/mcp_config.json';
+const hasMcp=fs.existsSync(mcpCfgPath)&&JSON.parse(fs.readFileSync(mcpCfgPath,'utf8')).mcpServers?.step_host;
+const initTools=hasMcp?['finish','mcp:step_host:step_host']:['finish'];
+send({event:'init',conversation_id:'conv',init:{cwd:process.cwd(),agent:'step-draft',model:args[args.indexOf('--model')+1],permission_mode:'strict',tools:initTools}});
 let turns=0;
-createInterface({input:process.stdin}).on('line',line=>{
+createInterface({input:process.stdin}).on('line',async line=>{
   const input=JSON.parse(line);turns++;
   fs.appendFileSync(log,JSON.stringify({pid:process.pid,content:input.message.content})+'\\n');
   const starts=fs.readFileSync(log,'utf8').trim().split('\\n').map(x=>JSON.parse(x)).filter(x=>x.start).length;
@@ -39,6 +43,28 @@ createInterface({input:process.stdin}).on('line',line=>{
   if(kind==='die' && turns===2) process.exit(0);
   if(kind==='schema-tool' && schema) return send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'finish'}});
   if(kind==='tool' && turns===2) return send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'read_file'}});
+  if(kind==='native-bridge-unapproved' && starts===1) return send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'bash'}});
+  if(kind==='native-bridge' && hasMcp){
+    send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'mcp:step_host:step_host'}});
+    const {spawn}=await import('node:child_process');
+    const child=spawn(hasMcp.command,hasMcp.args,{env:{...process.env,...hasMcp.env},stdio:['pipe','pipe','pipe']});
+    const rl=createInterface({input:child.stdout});
+    const rpc=(id,method,params)=>new Promise(res=>{
+      const onLine=l=>{const msg=JSON.parse(l);if(msg.id===id){rl.off('line',onLine);res(msg);}};
+      rl.on('line',onLine);
+      child.stdin.write(JSON.stringify({jsonrpc:'2.0',id,method,params})+'\\n');
+    });
+    await rpc(1,'initialize',{});
+    const listed=await rpc(2,'tools/list',{});
+    const called=await rpc(3,'tools/call',{name:'step_host',arguments:{tool:'files',input:'note.txt'}});
+    rl.close();
+    child.stdin.end();
+    child.kill();
+    const text=called.result?.content?.[0]?.text||'';
+    const ans='bridge:'+listed.result.tools[0].name+':'+text;
+    send({event:'step_update',step_update:{conversation_id:'conv',step_type:'agent_response',text_delta:ans}});
+    return send({event:'result',result:{status:'SUCCESS',conversation_id:'conv',num_turns:turns,response:ans,usage:{input_tokens:50,output_tokens:10,total_tokens:60}}});
+  }
   if(kind==='reinit') send({event:'init',conversation_id:'conv',init:{cwd:process.cwd(),agent:'step-draft',permission_mode:'strict',tools:['finish']}});
   let answer='answer '+turns, provisional=answer;
   if(kind==='workspace-rewrite'){
@@ -314,5 +340,105 @@ test('protocol recovery covers the first kept turn and never adds a third attemp
     } finally {
       await f.close();
     }
+  }
+});
+
+test('native MCP bridge executes governed host tools over local IPC and rejects unapproved native tools', async () => {
+  const f = await fixture('native-bridge');
+  const seen: any[] = [];
+  try {
+    const adapter = new AntigravityAdapter();
+    const answer = await adapter.run('Read note', f.connection, {
+      ...f.context,
+      nativeBridge: async (request, _signal) => {
+        seen.push(request);
+        return { ok: true, result: { text: 'governed-content' } };
+      },
+    });
+    assert.equal(answer, 'bridge:step_host:{"ok":true,"result":{"text":"governed-content"}}');
+    assert.deepEqual(seen, [{ tool: 'files', input: 'note.txt' }]);
+  } finally {
+    await f.session.closeAndWait();
+    await f.close();
+  }
+
+  // Unapproved native tool (e.g. bash) even when nativeBridge is enabled stops attempt 1 and falls back to text-only on attempt 2.
+  const unapproved = await fixture('native-bridge-unapproved');
+  try {
+    const adapter = new AntigravityAdapter();
+    const answer = await adapter.run('Fallback', unapproved.connection, {
+      ...unapproved.context,
+      nativeBridge: async () => ({ ok: true }),
+    });
+    assert.equal(answer, 'answer 1');
+    const starts = (await unapproved.calls()).filter(c => c.start);
+    assert.equal(starts.length, 2);
+  } finally {
+    await unapproved.session.closeAndWait();
+    await unapproved.close();
+  }
+
+  // Direct bridge unit check: invalid token and invalid tool request fail closed.
+  const bridgeHome = await mkdtemp(join(tmpdir(), 'step-agy-bridge-'));
+  const bridge = new AntigravityMcpBridge(async req => ({ ok: true, result: { echoed: req.tool } }));
+  const cfg = await bridge.start(bridgeHome);
+  try {
+    const net = await import('node:net');
+    const callPipe = (payload: unknown) =>
+      new Promise<any>((resolve, reject) => {
+        const sock = net.createConnection(cfg.endpoint);
+        let buf = '';
+        sock.setEncoding('utf8');
+        sock.on('connect', () => sock.write(JSON.stringify(payload) + '\n'));
+        sock.on('data', chunk => {
+          buf += chunk;
+          const nl = buf.indexOf('\n');
+          if (nl !== -1) {
+            sock.end();
+            resolve(JSON.parse(buf.slice(0, nl)));
+          }
+        });
+        sock.on('error', reject);
+      });
+    const denied = await callPipe({ token: 'wrong-token', arguments: { tool: 'files', input: 'a.txt' } });
+    assert.equal(denied.ok, false);
+    assert.equal(denied.code, 'TOOL_DENIED');
+
+    const badTool = await callPipe({ token: bridge.token, arguments: { tool: 'unknown_tool', input: 'a.txt' } });
+    assert.equal(badTool.ok, false);
+    assert.equal(badTool.code, 'TOOL_DENIED');
+  } finally {
+    await bridge.close();
+    await rm(bridgeHome, { recursive: true, force: true });
+  }
+});
+
+test('prewarmAntigravity spare pool and followUpDelta reuse a warm agy process across messages', async () => {
+  const f = await fixture();
+  try {
+    await closeAntigravitySpares();
+    const warmed = await prewarmAntigravity(f.connection, f.context);
+    assert.equal(warmed, true);
+    assert.equal(antigravitySpareCount(f.connection.id), 1);
+    const adapter = new AntigravityAdapter();
+    assert.equal(await adapter.run('First message', f.connection, f.context), 'answer 1');
+    assert.equal(antigravitySpareCount(f.connection.id), 0, 'spare was claimed by the first run');
+    assert.equal(
+      await adapter.run('Completely rewritten full prompt', f.connection, {
+        ...f.context,
+        followUpDelta: 'Follow-up delta only',
+      }),
+      'answer 2',
+    );
+    const calls = await f.calls();
+    assert.equal(calls.filter(c => c.start).length, 1, 'both turns used the single prewarmed agy process');
+    assert.deepEqual(
+      calls.filter(c => c.content !== undefined).map(c => c.content),
+      ['First message', 'Follow-up delta only'],
+    );
+  } finally {
+    await f.session.closeAndWait();
+    await closeAntigravitySpares();
+    await f.close();
   }
 });

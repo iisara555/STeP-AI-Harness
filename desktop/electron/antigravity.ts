@@ -9,6 +9,7 @@ import type { Connection, ModelOption } from '../src/types';
 import { providerSessionKey, type ProviderAdapter, type ProviderContext, type ProviderSession, type TokenCount } from './providers';
 import { combineUsage } from './usage';
 import { strictJsonSchema } from './json-schema';
+import { AntigravityMcpBridge, isGovernedBridgeTool, type GovernedBridgeExecutor } from './antigravity-mcp-bridge';
 
 const LIMIT = 4_000_000;
 // Fixed protocol stages help diagnose a failure without retaining prompts, tool arguments or Google results.
@@ -18,6 +19,7 @@ const invalidStream = (stage: string) =>
 export const ANTIGRAVITY_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
 const AGENT = 'step-draft';
 const TEXT_TRANSPORT_RULES = `Native tools are unavailable in this STeP connection, including finish, file access, commands, MCP and native web search. Return the host's requested text format, including JSON when required. If the host supplied tools, request only those tools using fenced step-tool JSON in your text, never native function calls. Do not invent current facts or claim a search was performed. For fresh information without supplied evidence, ask for a source or explain that live search requires a supported connection.`;
+const NATIVE_BRIDGE_RULES = `Built-in native tools (direct file access, shell commands, web fetch, browser) are disabled. When the host supplies tools, call the governed MCP bridge tool step_host (mcp(step_host/step_host)) with {"tool":"<name>","input":"<string>","content":"<optional>","args":{...}} or emit a fenced step-tool JSON block. Every tool call is checked by STeP host permissions, authority and privacy rules.`;
 const TOOL_RECOVERY_RULES = `The previous attempt was stopped because it requested a native tool. No native tool result is available. Answer the original request in its required text format or use the host's step-tool text protocol if supplied. Do not repeat the native tool call.`;
 export const ANTIGRAVITY_DENY = ['read_file', 'write_file', 'read_url', 'execute_url', 'command', 'unsandboxed', 'mcp'].map(
   action => `${action}(*)`,
@@ -56,7 +58,7 @@ async function shareSignIn(home: string, profile: string, platform: NodeJS.Platf
 
 /** Native credentials stay in the OS keyring. Configuration and request state are isolated per invocation. */
 export async function antigravityHome(
-  context: Pick<ProviderContext, 'cwd' | 'env' | 'system'>,
+  context: Pick<ProviderContext, 'cwd' | 'env' | 'system'> & { nativeBridge?: GovernedBridgeExecutor; signal?: AbortSignal },
   profile = { home: profileHome(), platform: process.platform },
 ) {
   const base = resolve(context.cwd);
@@ -64,8 +66,10 @@ export async function antigravityHome(
   const cwd = join(home, 'workspace');
   const settings = join(home, '.gemini', 'antigravity-cli', 'settings.json');
   const agent = join(home, '.gemini', 'config', 'agents', AGENT, 'agent.md');
+  let bridge: AntigravityMcpBridge | undefined;
   const close = async () => {
     if (dirname(resolve(home)) !== base || !home.startsWith(join(base, 'antigravity-'))) throw new Error('INVALID_RUNTIME_HOME');
+    await bridge?.close().catch(() => {});
     // Remove the link to the real keychain folder first, so nothing below it can ever be deleted.
     await unlink(join(home, 'Library', 'Keychains')).catch(() => {});
     await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
@@ -78,21 +82,43 @@ export async function antigravityHome(
     // so without it every message started `agy --bg-updater`, which flashed a console window on Windows.
     // AGY_CLI_DISABLE_AUTO_UPDATE below does not stop that spawn (checked with the Windows 1.2.17 binary).
     await writeFile(join(dirname(settings), 'last_check.timestamp'), '');
+    const bridgeConfig = context.nativeBridge
+      ? await (bridge = new AntigravityMcpBridge(context.nativeBridge, context.signal)).start(home)
+      : undefined;
     await writeFile(
       settings,
       JSON.stringify({
         toolPermission: 'strict',
         artifactReviewPolicy: 'asks-for-review',
         allowNonWorkspaceAccess: false,
-        permissions: { allow: [], ask: [], deny: ANTIGRAVITY_DENY },
+        permissions: {
+          allow: bridgeConfig ? ['mcp(step_host/step_host)'] : [],
+          ask: [],
+          deny: ANTIGRAVITY_DENY,
+        },
       }),
       { mode: 0o600 },
     );
-    // Declare only harmless finish and opt out of the built-in tools and prompt sections (excludeDefaultComponents,
-    // agy 1.2.1+). Neither narrows the init catalog; the denied permissions and the tool-step stop below enforce it.
+    if (bridgeConfig) {
+      const mcpPayload = JSON.stringify({
+        mcpServers: {
+          step_host: {
+            command: bridgeConfig.command,
+            args: bridgeConfig.args,
+            env: bridgeConfig.env,
+          },
+        },
+      });
+      await writeFile(join(dirname(settings), 'mcp_config.json'), mcpPayload, { mode: 0o600 });
+      await writeFile(join(home, '.gemini', 'config', 'mcp_config.json'), mcpPayload, { mode: 0o600 });
+    }
+    // Declare only harmless finish (plus governed step_host when nativeBridge is active) and opt out of the built-in
+    // tools and prompt sections (excludeDefaultComponents, agy 1.2.1+).
+    const toolsHeader = bridgeConfig ? '[finish, mcp:step_host:step_host]' : '[finish]';
+    const mcpHeader = bridgeConfig ? '[step_host]' : '[]';
     await writeFile(
       agent,
-      '---\nname: step-draft\ndescription: STeP governed text generation\ntools: [finish]\nexcludeDefaultComponents: true\nmainAgent: true\nsubagent: false\ncommandExecutionPolicy: off\nmcpServers: []\nskills: []\nplugins: []\n---\n' +
+      `---\nname: step-draft\ndescription: STeP governed text generation\ntools: ${toolsHeader}\nexcludeDefaultComponents: true\nmainAgent: true\nsubagent: false\ncommandExecutionPolicy: off\nmcpServers: ${mcpHeader}\nskills: []\nplugins: []\n---\n` +
         (context.system || 'Answer the supplied request as a text-only assistant. Do not use tools.'),
       { mode: 0o600 },
     );
@@ -117,6 +143,7 @@ export async function antigravityHome(
   return {
     cwd,
     env,
+    bridge,
     close,
   };
 }
@@ -363,6 +390,7 @@ function turnReader(
   emit: (text: string) => void,
   onUsage: (count: TokenCount, cumulative: boolean) => void,
   discard?: (chars: number) => void,
+  allowGovernedBridge = false,
 ) {
   let text = '';
   let result: any;
@@ -374,7 +402,11 @@ function turnReader(
       if (event.event === 'step_update') {
         const step = event.step_update;
         if (!conversation() || result || !step || step.conversation_id !== conversation()) throw invalidStream('step-conversation');
-        if (step.step_type === 'tool' || step.tool_name !== undefined || step.tool_call !== undefined) throw new Error('TOOL_DENIED');
+        if (step.step_type === 'tool' || step.tool_name !== undefined || step.tool_call !== undefined) {
+          const toolName = step.tool_name ?? step.tool_call?.name;
+          if (allowGovernedBridge && isGovernedBridgeTool(toolName)) return undefined;
+          throw new Error('TOOL_DENIED');
+        }
         if (step.step_type === 'agent_response' && step.text_delta !== undefined) {
           if (typeof step.text_delta !== 'string') throw invalidStream('step-text');
           text += step.text_delta;
@@ -388,7 +420,7 @@ function turnReader(
       result = event.result;
       if (!result || typeof result.status !== 'string') throw invalidStream('result-shape');
       const count = antigravityUsage(result.usage);
-      if (count) onUsage(count, turns > 0 && result.num_turns === turns + 1);
+      if (count) onUsage(count, turns > 0 && (result.num_turns === turns + 1 || (allowGovernedBridge && result.num_turns > turns)));
       // Authentication failures may be emitted before init; never copy their raw message.
       if (result.status !== 'SUCCESS') {
         const reason = typeof result.error === 'string' ? scrub(result.error) : '';
@@ -397,12 +429,10 @@ function turnReader(
             (['CANCELED', 'INTERRUPTED'].includes(result.status) ? 'CANCELLED' : 'PROVIDER_REQUEST_FAILED'),
         );
       }
-      if (
-        !conversation() ||
-        result.conversation_id !== conversation() ||
-        !(result.num_turns === 1 || (turns > 0 && result.num_turns === turns + 1)) ||
-        typeof result.response !== 'string'
-      )
+      const validTurns = allowGovernedBridge
+        ? Number.isSafeInteger(result.num_turns) && result.num_turns >= 1
+        : result.num_turns === 1 || (turns > 0 && result.num_turns === turns + 1);
+      if (!conversation() || result.conversation_id !== conversation() || !validTurns || typeof result.response !== 'string')
         throw invalidStream('result-metadata');
       if (result.response.length > LIMIT) throw new Error('PROVIDER_OUTPUT_LIMIT');
       if (!result.response.trim()) throw new Error('EMPTY_RESULT');
@@ -417,6 +447,136 @@ function turnReader(
   };
 }
 
+type AgySpare = {
+  held: AgyConversation;
+  key: string;
+  timer: ReturnType<typeof setTimeout>;
+};
+const agySpares = new Map<string, AgySpare>();
+const AGY_SPARE_IDLE_MS = 5 * 60_000;
+
+export const antigravitySpareCount = (connectionId: string) => (agySpares.has(connectionId) ? 1 : 0);
+
+export async function closeAntigravitySpares(connectionId?: string) {
+  const closing: Promise<void>[] = [];
+  for (const [id, spare] of [...agySpares]) {
+    if (connectionId && id !== connectionId) continue;
+    agySpares.delete(id);
+    clearTimeout(spare.timer);
+    spare.held.handles?.end();
+    const stop = setTimeout(() => spare.held.handles?.stop(new Error('CANCELLED')), 2000);
+    (stop as any).unref?.();
+    closing.push(
+      spare.held.done.finally(() => {
+        clearTimeout(stop);
+      }),
+    );
+  }
+  await Promise.allSettled(closing);
+}
+
+function takeAntigravitySpare(connectionId: string, key: string): AgyConversation | undefined {
+  const spare = agySpares.get(connectionId);
+  if (!spare) return undefined;
+  if (spare.key !== key || spare.held.exited || !spare.held.conversation) {
+    void closeAntigravitySpares(connectionId);
+    return undefined;
+  }
+  agySpares.delete(connectionId);
+  clearTimeout(spare.timer);
+  return spare.held;
+}
+
+/**
+ * Prewarms one isolated `agy` process past its `init` handshake so the next conversation turn can write to stdin immediately
+ * without waiting for process startup or initialization. Idle spares are reaped after 5 minutes.
+ */
+export async function prewarmAntigravity(connection: Connection, context: ProviderContext): Promise<boolean> {
+  if (
+    connection.provider !== 'antigravity' ||
+    connection.mode !== 'subscription' ||
+    !connection.executable ||
+    !/^gemini-[\w.-]{1,93}$/.test(connection.model)
+  )
+    return false;
+  await closeAntigravitySpares(connection.id);
+  const transportRules = context.nativeBridge ? NATIVE_BRIDGE_RULES : TEXT_TRANSPORT_RULES;
+  const fullContext: ProviderContext = {
+    ...context,
+    system: [context.system || '', transportRules].join('\n\n'),
+  };
+  const key = providerSessionKey(connection, fullContext);
+  const home = await antigravityHome(fullContext);
+  try {
+    await checkAntigravity(connection.executable, home, context.signal);
+  } catch {
+    await home.close().catch(() => {});
+    return false;
+  }
+  const held: AgyConversation = { home, identity: key, sent: '', turns: 0, conversation: '', exited: false, done: Promise.resolve() };
+  let initReady!: (ok: boolean) => void;
+  const initialized = new Promise<boolean>(resolve => {
+    initReady = resolve;
+  });
+  const args = [
+    '--agent',
+    AGENT,
+    '--disable-slash-commands',
+    '--input-format',
+    'stream-json',
+    '--output-format',
+    'stream-json',
+    '--print-timeout',
+    '9m',
+    ...(connection.model ? ['--model', connection.model] : []),
+    ...(context.effort ? ['--effort', context.effort] : []),
+  ];
+  const running = runAntigravity(connection.executable, args, home, {
+    timeoutMs: 60 * 60_000,
+    holdInput: true,
+    keepInput: true,
+    control: handles => (held.handles = handles),
+    line: (line, send) => {
+      const event = parseEvent(line);
+      if (!held.conversation && event.event === 'init') {
+        held.conversation = checkInit(event, home.cwd, connection);
+        initReady(true);
+        return;
+      }
+      if (!held.handler) throw invalidStream('idle-event');
+      held.handler(event, send);
+    },
+  });
+  held.done = running
+    .then(
+      async () => {
+        held.exited = true;
+        initReady(false);
+        held.onExit?.(new Error('RUNTIME_EXITED'));
+        await home.close();
+      },
+      async error => {
+        held.exited = true;
+        initReady(false);
+        held.onExit?.(error instanceof Error ? error : new Error('RUNTIME_EXITED'));
+        if (!(error as any)?.shutdownIncomplete) await home.close();
+      },
+    )
+    .catch(() => {});
+  const ok = await initialized;
+  if (!ok || held.exited) {
+    held.handles?.stop(new Error('CANCELLED'));
+    await held.done;
+    return false;
+  }
+  const timer = setTimeout(() => {
+    if (agySpares.get(connection.id)?.held === held) void closeAntigravitySpares(connection.id);
+  }, AGY_SPARE_IDLE_MS);
+  (timer as any).unref?.();
+  agySpares.set(connection.id, { held, key, timer });
+  return true;
+}
+
 export class AntigravityAdapter implements ProviderAdapter {
   private conversations = new WeakMap<ProviderSession, AgyConversation>();
   constructor(private timeoutMs = 600_000) {}
@@ -425,10 +585,13 @@ export class AntigravityAdapter implements ProviderAdapter {
     const timeout = AbortSignal.timeout(this.timeoutMs);
     const signal = AbortSignal.any([context.signal, timeout]);
     for (let attempt = 0; attempt < 2; attempt++) {
-      const attemptContext = {
+      const useNativeBridge = attempt === 0 && Boolean(context.nativeBridge);
+      const transportRules = useNativeBridge ? NATIVE_BRIDGE_RULES : TEXT_TRANSPORT_RULES;
+      const attemptContext: ProviderContext = {
         ...context,
         signal,
-        system: [context.system || '', TEXT_TRANSPORT_RULES, ...(attempt ? [TOOL_RECOVERY_RULES] : [])].join('\n\n'),
+        nativeBridge: useNativeBridge ? context.nativeBridge : undefined,
+        system: [context.system || '', transportRules, ...(attempt ? [TOOL_RECOVERY_RULES] : [])].join('\n\n'),
       };
       // Text is shown as it arrives. An attempt that fails takes its text back first, so the recovery attempt
       // (or the error) never leaves a stopped attempt's prose or tool requests on screen next to the new one.
@@ -522,6 +685,7 @@ export class AntigravityAdapter implements ProviderAdapter {
         context.discard ? context.emit : () => {},
         count => context.onUsage?.(count),
         context.discard,
+        Boolean(context.nativeBridge),
       );
       let answer = '';
       await runAntigravity(connection.executable, this.args(connection, context, extra), home, {
@@ -550,13 +714,15 @@ export class AntigravityAdapter implements ProviderAdapter {
     }
   }
 
-  /** A turn on the run's kept process: the first sends the whole prompt, later ones only the new tool results. */
+  /** A turn on the run's kept process: the first sends the whole prompt, later ones only the new tool results or follow-up delta. */
   private async conversationTurn(prompt: string, connection: Connection, context: ProviderContext, deadline: number) {
     this.check(connection, context);
     const session = context.session!;
     const identity = providerSessionKey(connection, context);
     const held = this.conversations.get(session);
-    const reuse = Boolean(held && !held.exited && held.identity === identity && held.sent && prompt.startsWith(held.sent));
+    const reuse = Boolean(
+      held && !held.exited && held.identity === identity && held.sent && (prompt.startsWith(held.sent) || Boolean(context.followUpDelta)),
+    );
     if (held && !reuse) await session.closeAndWait();
     if (reuse) {
       let shown = 0;
@@ -585,7 +751,7 @@ export class AntigravityAdapter implements ProviderAdapter {
           await this.open(session, identity, connection, context),
           prompt,
           connection,
-          context,
+          { ...context, followUpDelta: undefined },
           deadline,
           Date.now(),
           'session-invalid',
@@ -597,7 +763,22 @@ export class AntigravityAdapter implements ProviderAdapter {
       }
     }
     const started = Date.now();
-    return this.turn(await this.open(session, identity, connection, context), prompt, connection, context, deadline, started);
+    const claimed = takeAntigravitySpare(connection.id, identity);
+    const active = claimed ? this.bindConversation(session, claimed) : await this.open(session, identity, connection, context);
+    return this.turn(active, prompt, connection, context, deadline, claimed ? Date.now() : started);
+  }
+
+  private bindConversation(session: ProviderSession, held: AgyConversation) {
+    this.conversations.set(session, held);
+    session.onClose = async () => {
+      this.conversations.delete(session);
+      // Closing stdin ends the conversation; a process that does not exit soon is stopped.
+      held.handles?.end();
+      const stop = setTimeout(() => held.handles?.stop(new Error('CANCELLED')), 5000);
+      await held.done;
+      clearTimeout(stop);
+    };
+    return held;
   }
 
   private async open(session: ProviderSession, identity: string, connection: Connection, context: ProviderContext) {
@@ -636,16 +817,7 @@ export class AntigravityAdapter implements ProviderAdapter {
       )
       // A home that cannot be removed is left behind; it must never leave a turn waiting forever.
       .catch(() => {});
-    this.conversations.set(session, held);
-    session.onClose = async () => {
-      this.conversations.delete(session);
-      // Closing stdin ends the conversation; a process that does not exit soon is stopped.
-      held.handles?.end();
-      const stop = setTimeout(() => held.handles?.stop(new Error('CANCELLED')), 5000);
-      await held.done;
-      clearTimeout(stop);
-    };
-    return held;
+    return this.bindConversation(session, held);
   }
 
   private turn(
@@ -658,7 +830,7 @@ export class AntigravityAdapter implements ProviderAdapter {
     resetReason?: string,
   ) {
     const fresh = !held.turns;
-    const input = fresh ? prompt : prompt.slice(held.sent.length);
+    const input = fresh ? prompt : context.followUpDelta || prompt.slice(held.sent.length);
     context.onTransport?.({
       mode: fresh ? 'full' : 'delta',
       sentChars: input.length,
@@ -696,6 +868,7 @@ export class AntigravityAdapter implements ProviderAdapter {
           context.onUsage?.(turnCount);
         },
         context.discard,
+        Boolean(context.nativeBridge),
       );
       const ask = (send: (message: unknown) => void) => send({ event: 'user', message: { content: input } });
       held.handler = (event, send) => {
