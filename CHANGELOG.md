@@ -6,6 +6,9 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Suggest activity-related AFP evidence from local case context and reviewed page classifications, with conditional source references, editable additional items and an optional reviewed AI handoff. Only category/status labels and optional locally masked context chosen by the employee are sent. Receipt-packet PDFs include the contextual review summary; missing or suggested documents do not establish financial-policy compliance or payment approval.
+- Simplify packet preparation into navigable case, evidence and draft/export steps, with compact evidence statuses and expandable source details.
+
 ## Desktop v0.6.22 (2026-10-28)
 
 - เพิ่มปุ่มเชื่อม **LM Studio** ในเครื่อง (`127.0.0.1:1234`, ไม่ต้องใช้ key) ข้าง Ollama และให้แอปอ่านขนาด context ที่ Ollama/LM Studio โหลดโมเดลไว้จริงแทนการเดาจากชื่อโมเดล ถ้าเล็กกว่า 16,384 token จะแจ้งตอนเชื่อมพร้อมวิธีแก้ (`OLLAMA_CONTEXT_LENGTH` หรือ Context Length ใน LM Studio) แทนที่ server จะตัดคำสั่งทิ้งเงียบ ๆ จนตอบผิด
