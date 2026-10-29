@@ -6,6 +6,14 @@ import {
   paymentVoucherSourceStale,
   type PaymentVoucher,
 } from './afp-payment-voucher';
+import {
+  ACTIVITY_LABELS,
+  FINANCE_LABELS,
+  EVIDENCE_DOCUMENT_LABELS,
+  blankEvidenceGuidance,
+  type EvidenceGuidance,
+  type EvidenceDocumentKind,
+} from './afp-evidence';
 
 export const FM014_REFERENCE = {
   code: 'FM-AF-014',
@@ -14,8 +22,8 @@ export const FM014_REFERENCE = {
   source: 'docs/knowledge/mis-master-lists.md',
 } as const;
 export const PACKET_LIMITS = { documents: 40, pages: 250, sourceBytes: 25 * 1024 * 1024, totalBytes: 100 * 1024 * 1024 };
-export const PACKET_DOCUMENT_LABELS = { ...DOCUMENT_TYPE_LABELS, supporting: 'เอกสารประกอบ' };
-export type PacketDocumentKind = DocumentType | 'supporting';
+export const PACKET_DOCUMENT_LABELS = { ...DOCUMENT_TYPE_LABELS, supporting: 'เอกสารประกอบ', ...EVIDENCE_DOCUMENT_LABELS };
+export type PacketDocumentKind = DocumentType | 'supporting' | EvidenceDocumentKind;
 export type VoucherItem = { description: string; amount: string };
 export type ReceiptVoucher = {
   date: string;
@@ -43,6 +51,7 @@ export type ReceiptPacket = {
   project: string;
   purpose: string;
   mode: 'paid' | 'awaiting-payment';
+  guidance: EvidenceGuidance;
   voucher: ReceiptVoucher;
   includeVoucher: boolean;
   disbursement: PaymentVoucher;
@@ -82,6 +91,7 @@ export function createReceiptPacket(id: string, now: string): ReceiptPacket {
     project: '',
     purpose: '',
     mode: 'paid',
+    guidance: blankEvidenceGuidance(),
     voucher: blankReceiptVoucher(),
     includeVoucher: false,
     disbursement: blankPaymentVoucher(),
@@ -101,9 +111,33 @@ export function packetText(value: unknown, limit: number): string {
 
 export function packetKind(value: unknown): PacketDocumentKind {
   if (value === 'supporting') return value;
+  if (typeof value === 'string' && Object.hasOwn(EVIDENCE_DOCUMENT_LABELS, value)) return value as EvidenceDocumentKind;
   const kind = parseDocumentType(value);
   if (!kind) throw new Error('INVALID_INPUT');
   return kind;
+}
+
+function editGuidance(raw: unknown, current: EvidenceGuidance, documents: PacketSource[]): EvidenceGuidance {
+  if (raw === undefined) return current;
+  if (!raw || typeof raw !== 'object') throw new Error('INVALID_INPUT');
+  const input = raw as EvidenceGuidance;
+  if (
+    !Object.hasOwn(ACTIVITY_LABELS, input.activity) ||
+    !Object.hasOwn(FINANCE_LABELS, input.finance) ||
+    !['auto', 'yes', 'no'].includes(input.speaker) ||
+    !Array.isArray(input.extra) ||
+    input.extra.length > 20
+  )
+    throw new Error('INVALID_INPUT');
+  const seen = new Set<string>();
+  const extra = input.extra.map(item => {
+    if (!item || typeof item !== 'object' || !/^[a-f0-9-]{36}$/i.test(item.id) || seen.has(item.id)) throw new Error('INVALID_INPUT');
+    seen.add(item.id);
+    const sourceId = packetText(item.sourceId, 80);
+    if (sourceId && !documents.some(doc => doc.id === sourceId)) throw new Error('INVALID_INPUT');
+    return { id: item.id, label: packetText(item.label, 180), sourceId };
+  });
+  return { activity: input.activity, finance: input.finance, speaker: input.speaker, extra };
 }
 
 /** Edits never turn an earlier source comparison into a confirmation of new content. */
@@ -154,8 +188,13 @@ export function editReceiptPacket(current: ReceiptPacket, raw: unknown, now: str
     current.disbursement || blankPaymentVoucher(),
     input.disbursement || current.disbursement || blankPaymentVoucher(),
   );
+  const previousGuidance = current.guidance || blankEvidenceGuidance();
+  const guidance = editGuidance(input.guidance, previousGuidance, documents);
   if (
     ['title', 'project', 'purpose', 'mode'].some(key => input[key as keyof ReceiptPacket] !== current[key as keyof ReceiptPacket]) ||
+    JSON.stringify(guidance) !== JSON.stringify(previousGuidance) ||
+    JSON.stringify(documents.map(doc => ({ id: doc.id, pages: doc.pages }))) !==
+      JSON.stringify(current.documents.map(doc => ({ id: doc.id, pages: doc.pages }))) ||
     paymentVoucherSourceStale(disbursement, voucher)
   )
     disbursement.checked = false;
@@ -165,6 +204,7 @@ export function editReceiptPacket(current: ReceiptPacket, raw: unknown, now: str
     project: packetText(input.project, 200),
     purpose: packetText(input.purpose, 1200),
     mode: input.mode,
+    guidance,
     voucher,
     includeVoucher: input.includeVoucher,
     disbursement,

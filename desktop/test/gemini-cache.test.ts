@@ -98,6 +98,28 @@ const stream = (cached = 40, complete = true) =>
     { headers: { 'content-type': 'text/event-stream' } },
   );
 
+test('Gemini marks a real output-token stop as continuable while retaining streamed text and usage', async () => {
+  let emitted = '';
+  const counts: TokenCount[] = [];
+  const api = new GeminiApiAdapter(
+    (async () =>
+      new Response(
+        event({
+          candidates: [{ content: { parts: [{ text: 'Partial TOR' }] }, finishReason: 'MAX_TOKENS' }],
+          usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 3, totalTokenCount: 13 },
+        }),
+        { headers: { 'content-type': 'text/event-stream' } },
+      )) as typeof fetch,
+    new Map(),
+  );
+  await assert.rejects(
+    api.run('Request', { ...connection, promptCaching: 'off' }, context({ emit: text => (emitted += text), onUsage: u => counts.push(u) })),
+    (error: any) => error.message === 'PROVIDER_OUTPUT_LIMIT' && error.outputTruncated === true,
+  );
+  assert.equal(emitted, 'Partial TOR');
+  assert.deepEqual(counts, [{ input: 10, output: 3, total: 13 }]);
+});
+
 test('Gemini API dispatch caches only the stable system, reuses across adapter instances and preserves cache/thinking usage', async () => {
   const calls: { url: string; body: any }[] = [],
     counts: TokenCount[] = [],

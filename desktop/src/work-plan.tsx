@@ -4,6 +4,7 @@ import { t } from './i18n';
 
 /** The native workflows offered in the composer (electron/workflows.ts), with the label each shows. */
 export const WORKFLOW_LABELS: Record<Workflow, string> = {
+  assistant: 'ผู้ช่วยทำงานกับไฟล์และเว็บ',
   plan: 'วางแผนก่อนลงมือ',
   execute: 'ลงมือทำตามแผน',
   requirements: 'เขียนเอกสารความต้องการ',

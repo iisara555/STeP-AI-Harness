@@ -14,6 +14,7 @@ import {
   type PacketSource,
 } from '../src/receipt-packet';
 import { blankPaymentVoucher, paymentVoucherFromReceipt } from '../src/afp-payment-voucher';
+import { blankEvidenceGuidance } from '../src/afp-evidence';
 
 type Records = {
   get<T>(kind: string, id: string): T | undefined;
@@ -79,6 +80,7 @@ export class ReceiptPackets {
       ...packet,
       disbursement: packet.disbursement || blankPaymentVoucher(),
       includeDisbursement: Boolean(packet.includeDisbursement),
+      guidance: packet.guidance || blankEvidenceGuidance(),
     };
   }
   save(raw: ReceiptPacket) {
@@ -183,6 +185,7 @@ export class ReceiptPackets {
       const next: ReceiptPacket = {
         ...current,
         documents: [...current.documents, ...documents],
+        disbursement: { ...current.disbursement, checked: false },
         revision: current.revision + 1,
         updatedAt: this.now(),
         paymentApproved: false,
@@ -215,6 +218,11 @@ export class ReceiptPackets {
     const next = {
       ...current,
       documents: current.documents.filter(doc => doc.id !== source.id),
+      guidance: {
+        ...current.guidance,
+        extra: current.guidance.extra.map(item => (item.sourceId === source.id ? { ...item, sourceId: '' } : item)),
+      },
+      disbursement: { ...current.disbursement, checked: false },
       revision: current.revision + 1,
       updatedAt: this.now(),
       paymentApproved: false as const,

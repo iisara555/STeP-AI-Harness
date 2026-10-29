@@ -37,6 +37,31 @@ function host(extra: Partial<LoopHost> = {}): LoopHost {
     ...extra,
   };
 }
+test('tool action events identify the actual start and result without exposing inputs or content', async () => {
+  const started: { id: string; tool: string }[] = [],
+    finished: { id: string; tool: string; ok: boolean; code?: string }[] = [];
+  const loop = new ToolLoop(
+    host({
+      begin: action => started.push(action),
+      observe: action => finished.push(action),
+      execute: async r => {
+        if (r.tool === 'web_fetch') throw new Error('WEB_SITE_DECLINED');
+        return 'private synthetic contents';
+      },
+    }),
+  );
+  let calls = 0;
+  await loop.run(
+    'request',
+    async () => (++calls === 1 ? request('files', 'private-file.txt') + request('web_fetch', 'https://example.test/private') : 'Done'),
+    signal(),
+  );
+  assert.equal(started.length, 2);
+  assert.deepEqual(finished.map(f => f.id).sort(), started.map(s => s.id).sort());
+  assert.equal(finished.find(f => f.tool === 'files')?.ok, true);
+  assert.equal(finished.find(f => f.tool === 'web_fetch')?.code, 'WEB_SITE_DECLINED');
+  assert.doesNotMatch(JSON.stringify([started, finished]), /private-file|example\.test|private synthetic/);
+});
 test('protocol ignores arbitrary prose, invalid fields, NUL and unknown tools', () => {
   assert.equal(loopRequests('files read secret').length, 0);
   for (const value of [

@@ -11,6 +11,8 @@ and AI account sign-in remain separate and optional; retired employee login sett
 
 The Phase 2 [governed tool loop](desktop-tool-loop.md) connects Chat/Draft to bounded host tools, document/spreadsheet previews, one-time result consent, questions/plans, backups and `/usage`. It remains a development preview; synthetic validation does not prove live provider access.
 
+The [file and web assistant](desktop-work-assistant.md) gives employees a focused entry into that loop, with a readable action history. It requires `checks.privacy` and governed tools; its initial web and Google access is read-only. It does not establish live model, account or employee-device acceptance.
+
 The same `/usage` dialog also shows [per-account provider quotas, credits and API usage](desktop-provider-usage.md), with explicit refresh, reported units/reset times and separate local estimates. Supported account readers use managed credentials without sending a model prompt; unsupported connections retain local accounting and provider links when available. Claude/Copilot interfaces are experimental, and real-account access remains separately unverified.
 
 Phase 3 adds [context and memory controls](desktop-context-memory.md): `/memory`, workspace instructions/persona/styles, bounded compaction, session fork/search/export/resume, local OCR attachments and administrator-gated image input.
@@ -38,6 +40,8 @@ The optional CLI Google Workspace connector remains separate. Current Desktop ha
 ## Document exports — Desktop 0.5.29
 
 The five drafting tools use their registered Skills, source checks and working templates. After accepting a proposal, edit the native draft and choose DOCX or PDF. Memos default to **TH Sarabun New** following the supplied form example; the other profiles default to **TH Sarabun PSK**. Both allow a font override and show a local font-availability notice. Fonts are not downloaded or installed automatically. Document body and Skill checks are stored separately: accepting a proposal keeps its review outside the editor/export, tied to the accepted revision. Legacy proposals with recognized review headings are also separated at acceptance.
+
+TOR drafting asks for the depth appropriate to the task and selected example instead of a word or page target. For an OpenAI-compatible TOR request without an administrator-set output limit, the transport omits its usual 8,192-token default; Anthropic-compatible requests retain their required per-call setting. If a compatible transport or Gemini API reports an actual output-token stop and supplies partial text, the host rechecks privacy and continues from a masked, fenced copy within the same authorized task. A configured `modelLimits.maxOutputTokens` is honored without automatic continuation. Privacy blocks, unconfirmed sensitive content, empty, cancelled or obviously repeated continuations fail rather than becoming a completed proposal. Output still depends on model context, runtime and editable-document limits; continuation can require additional provider calls and usage. Synthetic tests do not establish the quality of a live model's TOR.
 
 Export opens the shared native workspace picker when no working folder exists, supports creating the selected folder, and resumes export. Cancel returns without changing the draft or settings. Folder choice is shared across concurrent requests and each document's export has one owner. See [document drafting review](document-drafting-review.md) for the source/template audit and rendering limits.
 

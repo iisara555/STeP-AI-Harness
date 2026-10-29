@@ -80,6 +80,8 @@ Keep unknown factual values and authority-dependent conditions pending: amounts,
 
 ## Output
 
+Develop each applicable heading, subclause, deliverable and inspection method to the level of detail requested or shown by the relevant agency example. Do not shorten the TOR to save tokens or impose a page target. Adapt writing depth and structure to this task; example-specific facts and unverified policy conditions remain subject to the Source Gate.
+
 ส่งอย่างน้อย:
 
 ตัวอย่างวิธีเขียนและเหตุผล (ข้อมูลสังเคราะห์): [ซื้ออุปกรณ์ / จ้างทำคู่มือ / แก้จำนวน](examples/task-adaptations.md) ใช้เรียนวิธีปรับตามงาน ไม่คัดข้อเท็จจริงของตัวอย่าง

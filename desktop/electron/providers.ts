@@ -33,6 +33,8 @@ import type { Connection, ModelOption, VisionInput } from '../src/types';
 
 export type ProviderContext = {
   images?: VisionInput[];
+  /** Request a complete TOR without imposing the compatible transport's default output cap. */
+  longFormTor?: boolean;
   /** Host-only receipt extraction: Gemini API image input, no CLI or explicit cache creation. */
   receiptOcr?: boolean;
   cwd: string;

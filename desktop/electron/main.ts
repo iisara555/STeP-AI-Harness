@@ -6,7 +6,7 @@ import { receiptVoucherDocx, receiptVoucherHtml, receiptPacketCoverHtml } from '
 import { paymentVoucherDocx, paymentVoucherHtml } from './afp-payment-voucher';
 import { blankPaymentVoucher } from '../src/afp-payment-voucher';
 import { documentPrintFontCss } from './document-fonts';
-import { PACKET_LIMITS, blankReceiptVoucher, type ReviewedReceipt } from '../src/receipt-packet';
+import { PACKET_LIMITS, blankReceiptVoucher, packetText, type ReviewedReceipt } from '../src/receipt-packet';
 import { takesImages } from '../src/vision-transport';
 import {
   app,
@@ -151,7 +151,7 @@ import { WorkspaceContext } from './workspace-context';
 import { section } from './prompt';
 import { ocrAttachmentReport, ocrAttachmentSource } from './ocr-attachment';
 import { pdfPageImages } from './pdf-pages';
-import { isWorkflow } from './workflows';
+import { assistantPolicyError, isWorkflow } from './workflows';
 import { RECEIPT_VISION_SCHEMA, RECEIPT_VISION_SYSTEM } from '../src/receipt-vision';
 import type {
   Attachment,
@@ -417,6 +417,7 @@ async function main() {
     documentMetadata: routing.loadDocumentContextMetadata,
     documentCatalog: routing.loadDocumentCatalog,
     toolLoop: () => policyState.policy.features.toolLoop,
+    assistantPolicy: () => assistantPolicyError(policyState.policy),
     hybridSkillSelection: () => policyState.policy.features.hybridSkillSelection,
     visionEnabled: () => policyState.policy.features.vision,
     answerCheck: () => policyState.policy.features.answerCheck,
@@ -972,13 +973,15 @@ async function main() {
         return catalog;
       }
       if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
-      const id = google.resolve(inputText(request.args?.account, 80), binding);
       const input = structuredClone({
         operation: request.input as GoogleRequest['operation'],
         params: request.args?.params as any,
         body: request.args?.body as any,
       });
-      if (!googleInvocation(input).write && scope.googleReads)
+      const invocation = googleInvocation(input);
+      if (scope.workflow === 'assistant' && invocation.write) throw new Error('ASSISTANT_CLOUD_WRITE_DISABLED');
+      const id = google.resolve(inputText(request.args?.account, 80), binding);
+      if (!invocation.write && scope.googleReads)
         return executeGoogleRead(
           google,
           id,
@@ -3636,6 +3639,14 @@ async function main() {
         return receiptPackets.save(input.packet);
       case 'receiptPacketImportDisbursement':
         return receiptPackets.importDisbursement(input.id, input.revision);
+      case 'receiptPacketPrivacyPreview': {
+        const context = packetText(input.text, 600);
+        // This handoff always scans even when optional organization-wide privacy checks are disabled.
+        const masked = vaultRedaction.mask(context);
+        const review = privacy.evaluatePrivacyGate(masked);
+        if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
+        return { text: review.redactedText, redacted: masked !== context || review.redactionApplied === true, action: review.action };
+      }
       case 'receiptPacketRemoveSource':
         return receiptPackets.remove(input.id, input.revision, input.sourceId);
       case 'receiptPacketOpenSource': {
@@ -3971,6 +3982,10 @@ async function main() {
         const mode = input.mode === 'image' || input.mode === 'chat' || input.mode === 'draft' ? input.mode : 'draft';
         // A native workflow (plan, execute, requirements, diagnose) runs as chat, never as an image request.
         const workflow = isWorkflow(input.workflow) ? input.workflow : undefined;
+        if (workflow === 'assistant') {
+          const unavailable = assistantPolicyError(policyState.policy);
+          if (unavailable) throw new Error(unavailable);
+        }
         if (input.autoContinue && workflow !== 'execute') throw new Error('INVALID_INPUT');
         const workMode =
           !workflow && mode === 'chat' && input.autoImage !== false && isImageRequest(text) ? 'image' : workflow ? 'chat' : mode;
@@ -4077,6 +4092,7 @@ async function main() {
                 draftingTool?.id || '',
                 attachmentRole,
                 workMode,
+                workflow || '',
                 input.imageModel || '',
                 String(coordinated),
                 String(aside),

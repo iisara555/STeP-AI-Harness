@@ -13,6 +13,8 @@ import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 import { receiptPacketEn } from './receipt-packet-en';
 import { afpPaymentVoucherEn } from './afp-payment-voucher-en';
+import { workAssistantEn } from './work-assistant-en';
+import { afpEvidenceEn } from './afp-evidence-en';
 export const en: Record<string, string> = {
   'แม่แบบ TOR ใช้หัวเอกสาร STeP พร้อมจัดย่อหน้า ตาราง และเลขหน้าใน Word กับ PDF ให้ใกล้ต้นฉบับมากขึ้น':
     'TOR templates use STeP letterheads with Word and PDF paragraphs, tables and page numbers closer to the reference layout',
@@ -2413,6 +2415,9 @@ export const en: Record<string, string> = {
   กำลังจัดทำร่าง: 'Preparing the draft',
   'กำลังย่อบทสนทนาเก่า โดยเก็บสถานะงานไว้': 'Compacting older conversation while keeping the task state',
   'กำลังรอ AI เตรียมคำตอบ': 'Waiting for the AI to prepare an answer',
+  'คำตอบยังไม่จบ กำลังต่อร่าง TOR': 'The answer was interrupted; continuing the TOR draft',
+  'คำตอบยาวเกินขอบเขตของโมเดลหรือการตั้งค่า กรุณาลองแบ่งหัวข้อหรือตรวจการตั้งค่าโมเดล':
+    'The answer exceeded the model or configured limit. Try splitting the topics or checking the model settings.',
   กำลังเตรียมคำตอบ: 'Preparing the answer',
   กำลังเขียนคำตอบ: 'Writing the answer',
   'บริการ AI ขัดข้องชั่วคราว กำลังลองใหม่ ({0}/{1})': 'The AI service is temporarily down, retrying ({0}/{1})',
@@ -3151,4 +3156,6 @@ export const en: Record<string, string> = {
   ...settingsEn,
   ...receiptPacketEn,
   ...afpPaymentVoucherEn,
+  ...workAssistantEn,
+  ...afpEvidenceEn,
 };
