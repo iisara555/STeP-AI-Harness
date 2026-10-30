@@ -8,16 +8,17 @@
   gap: 8px;
   margin: 18px 0;
 }
-/* Same treatment as the document type picker: plain cards, the selected one solid accent. */
+/* Same treatment as the document type picker: plain cards, the selected one soft yellow with a gold edge. */
 .media-types button:not(.active) {
   border-color: var(--line);
   background: var(--surface);
   color: var(--text);
 }
 .media-types button.active {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--on-accent);
+  border-color: var(--accent-ink);
+  background: var(--accent-soft);
+  color: var(--text);
+  box-shadow: 0 0 0 1px var(--accent-ink);
 }
 .media-workspace {
   display: grid;
@@ -323,4 +324,16 @@
     mix-blend-mode: screen;
     opacity: 0.88;
   }
+}
+
+/* The English prompt: short and quiet under the layout sketch; it scrolls for anyone who wants to read it. */
+.media-prompt-text {
+  display: grid;
+  gap: 4px;
+}
+.media-result .media-prompt-text textarea {
+  font-size: 11.5px;
+  color: var(--muted);
+  background: var(--sidebar);
+  resize: vertical;
 }

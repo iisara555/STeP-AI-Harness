@@ -160,7 +160,7 @@ try {
   await composer.press('i');
   await composer.fill('Prepare a public community draft');
   await page.keyboard.press('ControlOrMeta+j');
-  await palette.getByRole('option', { name: 'Skill Packs', exact: true }).click();
+  await palette.getByRole('option', { name: 'ชุด Skill ที่ติดตั้ง (Skill Packs)', exact: true }).click();
   const packs = page.getByRole('alertdialog', { name: 'Skill Packs' });
   await expect(packs).toContainText('public-writing');
   // The fixture is a legacy Skill, so the automated Standard v2 report lists what it lacks.
