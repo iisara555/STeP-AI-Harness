@@ -240,6 +240,7 @@ export function TitleBar({
           />
           <button
             className="quiet titlebar-palette"
+            data-tour="palette"
             aria-label={t('ค้นหางานและคำสั่ง')}
             title={t('ค้นหางานและคำสั่ง')}
             onClick={() => run('palette')}
@@ -250,6 +251,7 @@ export function TitleBar({
       ) : (
         <button
           className="titlebar-command quiet"
+          data-tour="palette"
           onClick={() => run('palette')}
           title={t('ค้นหางานและคำสั่ง')}
           aria-label={t('ค้นหางานและคำสั่ง')}

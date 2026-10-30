@@ -47,7 +47,10 @@ try {
   await expect(page.getByRole('button', { name: 'เริ่มงานใหม่' }).first()).toBeVisible();
   await page.waitForTimeout(500);
   await expect(page.getByRole('dialog', { name: 'มีอะไรใหม่' })).toHaveCount(0);
-  // At 1100px with the draft panel open the task list folds to the icon rail; opening it shows the version under the name.
+  // With no draft the panel stays closed and the task list is full; opening the panel at 1100px folds the list to the
+  // icon rail, and opening the list again shows the version under the name.
+  await expect(page.locator('.profile')).toHaveCount(1);
+  await page.getByRole('button', { name: 'เปิดร่าง', exact: true }).click();
   await expect(page.locator('.profile')).toHaveCount(0);
   await page.getByRole('button', { name: 'งานทั้งหมด' }).first().click();
   await expect(page.locator('.profile .version-line')).toContainText(`v${version}`);

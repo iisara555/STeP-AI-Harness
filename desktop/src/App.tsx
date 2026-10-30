@@ -38,7 +38,6 @@ import {
   Pencil,
   Trash2,
   Brain,
-  Command,
   Timer,
   ShieldCheck,
   Circle,
@@ -92,7 +91,7 @@ import { Avatar } from './avatars';
 import { SidebarRail, readSidebarChoice, saveSidebarChoice } from './sidebar-rail';
 import { UpdateCard, VersionLine, useUpdate } from './update';
 import type { Attachment, Connection, PlanStep, Session, OwnPack, SkillEntry, Snapshot } from './types';
-import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, connectionName, shortcut, statusText } from './messages';
+import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, connectionName, statusText } from './messages';
 import { SettingsPanel } from './settings';
 import { ApprovalDialog } from './approval';
 import { VaultPromptDialog, type VaultPrompt } from './vault-prompt';
@@ -417,7 +416,18 @@ export default function App() {
   sessionMode.current = session?.mode === 'draft' || workMode === 'draft' ? 'draft' : 'chat';
   useEffect(() => setChatMenu(false), [selected, view]);
   const saveInFlight = useRef<Promise<void> | null>(null);
-  const showPanel = right && !settings && view === 'chat';
+  // The output panel waits for something to show: a task with no draft yet gives the chat the whole width. Opening the
+  // panel by hand (or opening a file, a proposal or a tool in it) keeps it open for this task even while it is empty.
+  const [panelPinned, setPanelPinned] = useState(false);
+  useEffect(() => setPanelPinned(false), [selected]);
+  const openPanel = () => {
+    setRight(true);
+    setPanelPinned(true);
+  };
+  const hasOutput = Boolean(
+    session?.draft?.trim() || session?.proposals?.length || session?.documentTool || dirty || (running && session?.mode === 'draft'),
+  );
+  const showPanel = right && !settings && view === 'chat' && (hasOutput || panelPinned);
   const fullSidebar = left && (roomy || !showPanel || leftPeek);
   const questionPending = questions.some(q => q.sessionId === selected);
   const runFailed = !running && session?.status === 'error';
@@ -569,7 +579,7 @@ export default function App() {
         if (event.type === 'question-close') setQuestions(list => list.filter(q => q.id !== event.questionId));
         // A page the assistant (or the employee) opens shows in the Web tab, so bring that tab forward.
         if (event.type === 'browser' && event.browser?.focus) {
-          setRight(true);
+          openPanel();
           setToolTab('browser');
         }
         if (event.sessionId === currentId.current) {
@@ -829,7 +839,7 @@ export default function App() {
     setQuery('');
     setFiles([]);
     setPendingSource('');
-    setRight(true);
+    openPanel();
     setToolTab('output');
     await refresh();
     await start(
@@ -859,7 +869,7 @@ export default function App() {
     setQuery('');
     setFiles([]);
     setPendingSource('');
-    setRight(true);
+    openPanel();
     setToolTab('output');
     await refresh();
     await start(id, t('แก้ร่างเดิมตามคำขอนี้: {0}', changes), [], undefined, undefined, undefined, '', 'draft');
@@ -1110,7 +1120,7 @@ export default function App() {
       }
       if (result.mode === 'image' || result.mode === 'draft') {
         setToolTab('output');
-        setRight(true);
+        openPanel();
       }
     }
   }
@@ -1367,7 +1377,7 @@ export default function App() {
         return next;
       });
     },
-    right: () => setRight(p => !p),
+    right: () => (showPanel ? setRight(false) : openPanel()),
     skills: () => {
       setSettings(false);
       navigate('skills');
@@ -1423,33 +1433,43 @@ export default function App() {
     window.addEventListener('keydown', listener);
     return () => window.removeEventListener('keydown', listener);
   }, []);
+  const recentSessions = snapshot ? [...snapshot.sessions].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) : [];
   const paletteItems: PaletteItem[] = snapshot
-    ? commandPalette(commands, snapshot.settings.keybindings || {}, [
-        ...routedSkills.map(s => ({
-          id: 'skill-' + s.name,
-          group: 'Skill',
-          label: t('ใช้ Skill: ') + s.title,
-          hint: '/' + s.name,
-          run: () => useSkill(s.name),
-        })),
-        ...(connection?.models || []).map(m => ({
-          id: 'model-' + m.id,
-          group: t('โมเดล'),
-          label: t('ใช้ ') + m.label,
-          hint: m.id === currentModel ? t('ใช้อยู่') : providerName(connection),
-          run: () => action(() => chooseModel(m.id)),
-        })),
-        ...[...snapshot.sessions]
-          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-          .slice(0, 50)
-          .map(s => ({
+    ? commandPalette(
+        commands,
+        snapshot.settings.keybindings || {},
+        [
+          ...routedSkills.map(s => ({
+            id: 'skill-' + s.name,
+            group: 'Skill',
+            label: t('ใช้ Skill: ') + s.title,
+            hint: '/' + s.name,
+            run: () => useSkill(s.name),
+          })),
+          ...(connection?.models || []).map(m => ({
+            id: 'model-' + m.id,
+            group: t('โมเดล'),
+            label: t('ใช้ ') + m.label,
+            hint: m.id === currentModel ? t('ใช้อยู่') : providerName(connection),
+            run: () => action(() => chooseModel(m.id)),
+          })),
+          ...recentSessions.slice(5, 50).map(s => ({
             id: 'session-' + s.id,
             group: t('งาน'),
             label: s.title,
             hint: s.project || statusText[s.status],
             run: () => action(() => selectSession(s.id)),
           })),
-      ])
+        ],
+        // The palette says it finds tasks too, so the latest five come first, above the commands.
+        recentSessions.slice(0, 5).map(s => ({
+          id: 'session-' + s.id,
+          group: t('งานล่าสุด'),
+          label: s.title,
+          hint: s.project || statusText[s.status],
+          run: () => action(() => selectSession(s.id)),
+        })),
+      )
     : [];
   const elapsed = running && startedAt ? formatElapsed(now - startedAt) : '';
   // The newest answer keeps its copy and feedback buttons in view; older ones show them on hover, as in other AI apps.
@@ -1689,6 +1709,9 @@ export default function App() {
               >
                 <FileText size={17} />
                 <span className="nav-label">{t('เครื่องมือร่างเอกสาร')}</span>
+                <span className="nav-short" aria-hidden="true">
+                  {t('เอกสาร')}
+                </span>
               </button>
               <button
                 data-tour="media"
@@ -1701,6 +1724,9 @@ export default function App() {
               >
                 <Megaphone size={17} />
                 <span className="nav-label">{t('สื่อภายใน')}</span>
+                <span className="nav-short" aria-hidden="true">
+                  {t('สื่อ')}
+                </span>
               </button>
               <button
                 data-tour="skills"
@@ -1713,6 +1739,9 @@ export default function App() {
               >
                 <Blocks size={17} />
                 <span className="nav-label">{t('ศูนย์รวม Skill')}</span>
+                <span className="nav-short" aria-hidden="true">
+                  {t('Skill')}
+                </span>
                 <span className="count">{staffSkills ? staffSkills.length + toolCount : ''}</span>
               </button>
               <button
@@ -1726,6 +1755,9 @@ export default function App() {
               >
                 <CalendarClock size={17} />
                 <span className="nav-label">{t('งานตั้งเวลา')}</span>
+                <span className="nav-short" aria-hidden="true">
+                  {t('ตั้งเวลา')}
+                </span>
               </button>
               <button
                 data-tour="receipt"
@@ -1738,6 +1770,9 @@ export default function App() {
               >
                 <Receipt size={17} />
                 <span className="nav-label">{t('ตรวจใบเสร็จ AFP')}</span>
+                <span className="nav-short" aria-hidden="true">
+                  {t('ใบเสร็จ')}
+                </span>
                 {receiptBusy && view !== 'receipt' ? (
                   <LoaderCircle size={14} className="spin" aria-label={t('กำลังตรวจใบเสร็จอยู่')} />
                 ) : (
@@ -1894,13 +1929,15 @@ export default function App() {
                           ? t('ค้นหา Skill และดูว่ารายการใดพร้อมใช้')
                           : view === 'schedules'
                             ? t('ให้ผู้ช่วยทำงานซ้ำตามเวลา ผลเป็นร่างให้คุณตรวจ')
-                            : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
+                            : session
+                              ? `${session.project || session.team.toUpperCase() || t('ทุกทีม')} · ${taskStatus(session)}`
+                              : t('เลือกงานตัวอย่าง หรือพิมพ์สิ่งที่อยากให้ช่วยด้านล่าง')}
               </small>
             </div>
             {!settings && view === 'chat' && (
-              <button className="quiet" onClick={() => setRight(!right)}>
+              <button className="quiet" onClick={() => (showPanel ? setRight(false) : openPanel())}>
                 <FileText size={16} />
-                {right ? t('ซ่อนร่าง') : t('เปิดร่าง')}
+                {showPanel ? t('ซ่อนร่าง') : t('เปิดร่าง')}
               </button>
             )}
           </header>
@@ -2197,7 +2234,7 @@ export default function App() {
                                 className="quiet small"
                                 onClick={() => {
                                   setToolTab('changes');
-                                  setRight(true);
+                                  openPanel();
                                 }}
                               >
                                 {t('ไปตรวจ')}
@@ -2275,9 +2312,8 @@ export default function App() {
                         {/* A drafting run's note is not a document; the draft itself is already in Output. */}
                         {!message.draftSummary && (
                           <button
-                            className="icon"
-                            aria-label={t('เปิดใน Output')}
-                            title={t('เปิดใน Output')}
+                            className="quiet message-open"
+                            title={t('เปิดในผลงาน')}
                             onClick={() =>
                               void action(async () => {
                                 await save();
@@ -2285,12 +2321,13 @@ export default function App() {
                                 await api.call('stageMessage', { id: session.id, index });
                                 await refresh();
                                 setToolTab('output');
-                                setRight(true);
+                                openPanel();
                                 if (session.documentTool) notify(t('ส่งเป็นข้อเสนอแล้ว เทียบกับร่างแล้วกด “ใช้ร่างนี้”'), 'info');
                               })
                             }
                           >
                             <FileText size={15} />
+                            {t('เปิดในผลงาน')}
                           </button>
                         )}
                         <FeedbackButtons
@@ -2308,7 +2345,7 @@ export default function App() {
                             onClick={() => {
                               setToolRequest({ ...request });
                               setToolTab(request.tool);
-                              setRight(true);
+                              openPanel();
                             }}
                           >
                             {t('ตรวจ')} {request.tool}: {request.input.slice(0, 50)}
@@ -2845,7 +2882,8 @@ export default function App() {
                           {t('เริ่มงานใหม่')}
                         </button>
                       )}
-                      {session && (
+                      {/* A side question only makes sense while the main run is busy; otherwise Enter just sends. */}
+                      {running && (
                         <button
                           className="quiet"
                           disabled={
@@ -3136,10 +3174,6 @@ export default function App() {
                 {t('{0} tokens', formatTokens(session.usage.total))}
               </span>
             )}
-            <button className="status-item status-button" data-tour="palette" onClick={() => setPalette(true)}>
-              <Command size={12} />
-              {t('คำสั่ง')} {shortcut}
-            </button>
           </footer>
         </main>
         {/* The workbench stays mounted once shown, so a file opened in Files with unsaved edits, a typed command or the

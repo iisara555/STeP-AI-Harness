@@ -18,6 +18,8 @@ import { workAssistantEn } from './work-assistant-en';
 import { afpEvidenceEn } from './afp-evidence-en';
 import { planCommentsEn } from './plan-comments-en';
 import { taskAlertsEn } from './task-alerts-en';
+import { uxToolsEn } from './ux-tools-en';
+import { uxReviewEn } from './ux-review-en';
 import { googleChangesEn } from './google-changes-en';
 export const en: Record<string, string> = {
   'ผู้ช่วยตรวจไฟล์และเว็บ แสดงลำดับขั้นตอนที่ทำจริง อ่านไฟล์ เว็บ และข้อมูล Google โดยแก้ไฟล์เป็นร่างรอตรวจ':
@@ -302,6 +304,8 @@ export const en: Record<string, string> = {
   ...uxSetupEn,
   ...planCommentsEn,
   ...taskAlertsEn,
+  ...uxToolsEn,
+  ...uxReviewEn,
   'กดเข้าสู่ระบบเว็บอย่าง STeP MBS ให้เองหลังกรอกบัญชีจาก Vault ไม่ต้องสลับไปกดเอง':
     'After filling a saved Vault account, the app presses sign in itself on sites like STeP MBS',
   'งานตั้งเวลาแสดงรอบถัดไป บัญชี AI และโฟลเดอร์ก่อนบันทึก พร้อมคำแนะนำเมื่อทำงานไม่สำเร็จ':
@@ -749,8 +753,8 @@ export const en: Record<string, string> = {
   'ตอนนี้ AI ไม่ได้อ่านภาพใบเสร็จ (นโยบายองค์กรหรือ AI ที่เลือกยังไม่รองรับ) AI ช่วยจัดข้อความจาก OCR เข้าฟอร์มเท่านั้น':
     'The AI is not reading the receipt image right now (your organisation or the selected AI does not allow it). It only maps OCR text into the form.',
   'รอตรวจบริการ OCR สักครู่': 'Checking the OCR service, one moment',
-  'กด "เปิดบริการ OCR" ด้านล่างก่อน จึงเลือกใบเสร็จได้': 'Press "Start OCR service" below first, then choose a receipt',
-  'กด "ติดตั้ง OCR" ด้านล่างก่อน จึงเลือกใบเสร็จได้': 'Press "Install OCR" below first, then choose a receipt',
+  'กด "เปิดบริการ OCR" ด้านบนก่อน จึงเลือกใบเสร็จได้': 'Press "Start OCR service" above first, then choose a receipt',
+  'กด "ติดตั้ง OCR" ด้านบนก่อน จึงเลือกใบเสร็จได้': 'Press "Install OCR" above first, then choose a receipt',
   'เลือก AI ที่เชื่อมต่อแล้วด้านบนก่อน': 'Choose a connected AI above first',
   'ไฟล์แนบส่งให้ AI ไม่ได้ ให้นำออกหรือแนบไฟล์อื่นก่อน': 'The attachment cannot be sent to the AI. Remove it or attach another file first',
   'กรอกอย่างน้อยหนึ่งช่อง หรือแนบต้นเรื่อง แล้วจึงให้ AI ร่าง':
