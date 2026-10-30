@@ -4333,6 +4333,55 @@ nav .count {
   font-size: 11px;
   margin-top: 2px;
 }
+/* Comments on plan tasks (src/work-plan.tsx): a small button on each task, the comment under its title. */
+.work-plan li > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.work-plan .work-plan-comment-button {
+  flex-shrink: 0;
+  padding: 3px;
+  margin-top: -1px;
+}
+.work-plan li.done .work-plan-comment,
+.work-plan .work-plan-comment {
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+  color: var(--accent-ink);
+  font-size: 12px;
+}
+.work-plan-comment svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.work-plan-comment-box {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+}
+.work-plan-comment-box textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  font: inherit;
+  font-size: 13px;
+}
+.work-plan-comment-box div {
+  display: flex;
+  gap: 6px;
+}
+.work-plan-comment-box button {
+  font-size: 12px;
+  padding: 5px 10px;
+}
+.work-plan-revise {
+  margin-bottom: 8px;
+}
+.work-plan-revise p {
+  margin: 6px 0 0;
+}
 .work-plan-run {
   display: inline-flex;
   align-items: center;

@@ -6,6 +6,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Comment on each step of an approved plan, like comments on an Antigravity artifact. A comment shows under its step; "ให้ผู้ช่วยแก้แผนตามความเห็น" runs the plan workflow again so the assistant proposes a revised plan for approval, and carrying out the plan follows each step's comment. Comments are masked like any other request before they are sent, and cannot be changed while the task is running.
 - Tighten the administrator allowlists added in 0.6.23. `permission.allowedCommands` now runs a command without asking only when it holds words, paths, flags, file globs and plain quotes, so PowerShell grouping such as `(...)` or `@(...)` inside an allowed prefix asks as usual. `permission.allowedDomains` skips only the per-site question: with privacy checks on, the URL privacy question still shows the address before any network access.
 
 ## Desktop v0.6.23 (2026-10-29)

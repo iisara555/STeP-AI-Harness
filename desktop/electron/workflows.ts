@@ -46,22 +46,42 @@ const DIAGNOSE_RULE = `Native workflow: DIAGNOSE A PROBLEM. Find the cause befor
 5. Name a root cause only with evidence; otherwise say what is still unknown and how to find out.
 6. Recommend fixes (a quick fix and a lasting fix) with risk, owner and how to verify, and how to prevent it happening again.`;
 
+const planLines = (plan: WorkPlan) =>
+  plan.tasks
+    .map(
+      (t, i) =>
+        `${i + 1}. [${t.status}] ${t.title}${t.note ? ` (note: ${t.note})` : ''}${t.comment ? ` (employee comment: ${t.comment})` : ''}`,
+    )
+    .join('\n');
+
+/** Revising a plan the employee commented on: the comments say what to change, and finished tasks stay finished. */
+function reviseRule(plan: WorkPlan) {
+  return `${PLAN_RULE}
+REVISE THE CURRENT PLAN. The employee commented on tasks of the plan below; the comments are their instructions for the revision.
+Goal: ${plan.goal}
+Tasks (number, status, task):
+${planLines(plan)}
+Address every comment: change, split, add, reorder or remove tasks as the comment asks, and keep the tasks nobody commented on. Ask with ask_user only when a comment is unclear. Submit the whole revised plan with the plan tool in the same format, writing tasks already done as "- [x] <task>". After submitting, say in one line per comment what changed.`;
+}
+
 function executeRule(plan?: WorkPlan) {
   if (!plan?.tasks.length)
     return 'Native workflow: EXECUTE THE PLAN. There is no approved plan in this task. Tell the employee to run the "วางแผน" workflow first, and do not start the work.';
-  const tasks = plan.tasks.map((t, i) => `${i + 1}. [${t.status}] ${t.title}${t.note ? ` (note: ${t.note})` : ''}`).join('\n');
+  const tasks = planLines(plan);
   return `Native workflow: EXECUTE THE APPROVED PLAN.
 Goal: ${plan.goal}
 Tasks (number, status, task):
 ${tasks}
-Work through the tasks in order, starting at the first one not done. Before starting a task call plan_update(input=<task number>, args.status="doing"). Do it with the tools, check its "done when" outcome, then call plan_update(input=<task number>, args.status="done", content=<one-line result>). A task marked (ผู้มีอำนาจ), or anything that needs approval, a signature, a submission or a payment, is never done by the assistant: mark it "blocked" with what the person must do, and continue with the tasks that do not depend on it. If something contradicts the plan, mark the task "blocked" with the reason and ask the employee with ask_user; never change the plan silently. End with a short summary: done, blocked (and who must act), and what is next.`;
+Work through the tasks in order, starting at the first one not done. Before starting a task call plan_update(input=<task number>, args.status="doing"). Do it with the tools, check its "done when" outcome, then call plan_update(input=<task number>, args.status="done", content=<one-line result>). A task marked (ผู้มีอำนาจ), or anything that needs approval, a signature, a submission or a payment, is never done by the assistant: mark it "blocked" with what the person must do, and continue with the tasks that do not depend on it. If something contradicts the plan, mark the task "blocked" with the reason and ask the employee with ask_user; never change the plan silently. An "employee comment" on a task is the employee's own instruction for that task: follow it when doing the task; if it asks for something outside the plan or that only a person may do, mark the task "blocked" and ask with ask_user. End with a short summary: done, blocked (and who must act), and what is next.`;
 }
 
 export function workflowRule(workflow: Workflow, plan?: WorkPlan) {
   return workflow === 'assistant'
     ? ASSISTANT_RULE
     : workflow === 'plan'
-      ? PLAN_RULE
+      ? plan?.tasks.some(task => task.comment)
+        ? reviseRule(plan)
+        : PLAN_RULE
       : workflow === 'execute'
         ? executeRule(plan)
         : workflow === 'coding'

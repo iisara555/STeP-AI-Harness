@@ -103,6 +103,7 @@ import { toolRequests, visibleStream, type ToolTab, type ToolRequest } from './t
 import { isImageRequest, imageModels } from './image-routing';
 import type { WorkMode, Workflow } from './types';
 import { WorkPlanCard, WORKFLOW_LABELS } from './work-plan';
+import { revisionRequest } from './plan-comments';
 import { WorkAssistantActivity, WorkAssistantGuide, updateWorkActions, workActionsFromTrace } from './work-assistant';
 import { ChatMarkdown } from './chat-markdown';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
@@ -2484,6 +2485,37 @@ export default function App() {
                             false,
                             false,
                             continuous,
+                          );
+                        })
+                      }
+                      onComment={async (number, comment) => {
+                        try {
+                          await api!.call('planComment', { id: session.id, number, comment });
+                          await refresh();
+                          return true;
+                        } catch (e) {
+                          notify(explainError(e), 'error');
+                          return false;
+                        }
+                      }}
+                      onRevise={() =>
+                        void action(async () => {
+                          // Revising by the comments runs the plan workflow again; the new plan needs approval as before.
+                          setWorkflow('plan');
+                          workflowRef.current = 'plan';
+                          setWorkMode('chat');
+                          await start(
+                            session.id,
+                            revisionRequest(session.workPlan!, t('ปรับแผนตามความเห็นของฉันในแต่ละข้อ'), number => t('ข้อ {0}', number)),
+                            [],
+                            undefined,
+                            undefined,
+                            undefined,
+                            undefined,
+                            'chat',
+                            '',
+                            false,
+                            false,
                           );
                         })
                       }

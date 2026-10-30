@@ -152,6 +152,7 @@ export const errorText: Record<string, string> = localized({
   TOOL_OUTPUT_LIMIT: 'ผลเครื่องมือเกินขอบเขตการอ่าน ลองระบุช่วงที่เล็กลง',
   PLAN_TASK_UNKNOWN: 'ยังไม่มีแผนที่อนุมัติในงานนี้ ใช้ "วางแผนก่อนลงมือ" ก่อน',
   PLAN_NO_TASKS: 'แผนต้องมีขั้นงานอย่างน้อยหนึ่งข้อ',
+  SESSION_BUSY: 'งานนี้กำลังทำอยู่ รอให้เสร็จก่อนแล้วค่อยแสดงความเห็น',
   SIDE_QUESTION_TOOLS_BLOCKED: 'คำถามแทรกใช้สำหรับอ่านภาพสถานะและตอบเท่านั้น งานหลักยังอยู่เหมือนเดิม',
   SIDE_QUESTION_SOURCE_NOT_ALLOWED: 'ถามแทรกใช้ภาพสถานะงานเดิม กรุณานำไฟล์หรือข้อมูลแนบออกก่อน',
   CODE_LANGUAGE_UNSUPPORTED: 'การตรวจโค้ดนี้รองรับ TypeScript และ JavaScript',

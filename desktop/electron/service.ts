@@ -29,6 +29,7 @@ import { compact, contextBudget, promptTooLong, tokens } from './compact';
 import { mainLocale, tm } from './i18n';
 import { internalSystemFor, internalSystemRule } from './internal-systems';
 import { workflowRule } from './workflows';
+import { maskedPlan } from '../src/plan-comments';
 import { documentTool, type DocumentToolId } from '../src/document-tools';
 import { documentToolRule, isDocumentQuestion, documentRevisionMarkdown } from './document-tools';
 import { combineUsage } from './usage';
@@ -1309,7 +1310,8 @@ export class WorkService {
             options.mergeOnly &&
             'Integrate the supplied subtask drafts into the requested deliverable. Preserve evidence, expose conflicts and missing facts, and do not repeat the subtask execution.',
           // A native workflow the employee picked (plan, execute, requirements, diagnose) shapes how this run works.
-          options.workflow && workflowRule(options.workflow, this.store.session(id).workPlan),
+          // The employee's comments on plan tasks are their own text: masked like every other request before sending.
+          options.workflow && workflowRule(options.workflow, maskedPlan(this.store.session(id).workPlan, masked)),
           draftingTool && documentToolRule(draftingTool.id, Boolean(session.documentTemplate)),
           target && patchContract(target, targetText),
           options.isolatedQuestion &&
@@ -1337,7 +1339,9 @@ export class WorkService {
             toolResultScope: 'current-run-only',
             decisions: session.followUps || [],
             approvedPlan: this.store.session(id).approvedPlan || '',
-            ...(!textOnly ? { workPlan: this.store.session(id).workPlan, currentRevision: this.store.session(id).revision } : {}),
+            ...(!textOnly
+              ? { workPlan: maskedPlan(this.store.session(id).workPlan, masked), currentRevision: this.store.session(id).revision }
+              : {}),
             plan: steps.map((s: any) => ({ id: s.id, skill: s.skill || s.skillId, description: s.description })),
             completedSteps: index,
           });

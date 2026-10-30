@@ -82,6 +82,7 @@ const allowed = new Set([
   'providerUsage',
   'providerUsagePage',
   'questionRespond',
+  'planComment',
   'toolSnapshots',
   'toolSnapshotRestore',
   'toolSnapshotForget',
