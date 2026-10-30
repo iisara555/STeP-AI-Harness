@@ -152,9 +152,19 @@ try {
   // Revising sends the comments as the employee's request in the plan workflow, which then revises the current plan.
   await revise.click();
   await expect(page.getByRole('combobox', { name: 'โหมดทำงาน' })).toHaveValue('plan');
-  await expect.poll(async () => (await stored()).status, { timeout: 30000 }).not.toBe('running');
+  // The task was already finished before the click, so wait for the request itself, then for its answer to be kept.
+  await expect
+    .poll(() => sent.some(body => body.includes('REVISE THE CURRENT PLAN')), {
+      timeout: 30000,
+      message: 'the plan workflow was asked to revise the plan',
+    })
+    .toBe(true);
+  await expect
+    .poll(async () => (await stored()).messages.some(m => m.role === 'assistant' && m.text === 'ปรับแผนตามความเห็นแล้ว'), {
+      timeout: 30000,
+    })
+    .toBe(true);
   const request = sent.find(body => body.includes('REVISE THE CURRENT PLAN'));
-  assert.ok(request, 'the plan workflow was asked to revise the plan');
   assert.match(request, /ปรับแผนตามความเห็นของฉันในแต่ละข้อ/);
   assert.match(request, /ข้อ 3 «ขออนุมัติงบ \(ผู้มีอำนาจ\)[^»]*»: แยกเป็นขอใบเสนอราคา 3 ราย ก่อนขออนุมัติ/);
   assert.match(request, /employee comment: ใช้ห้อง D203/);
