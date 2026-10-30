@@ -27,6 +27,7 @@ export function TitleBar({
   showRight,
   theme,
   feedback,
+  search,
 }: {
   api: DesktopAPI;
   title: string;
@@ -38,6 +39,8 @@ export function TitleBar({
   theme: string;
   /** "แจ้งปัญหา / เสนอแนะ" is on in policy. */
   feedback: boolean;
+  /** While the task list is open, the bar holds its search (titles and conversation text) instead of the page title. */
+  search?: { value: string; onChange: (value: string) => void };
 }) {
   const [open, setOpen] = useState(false);
   const bar = useRef<HTMLElement>(null);
@@ -222,17 +225,41 @@ export function TitleBar({
           <PanelLeft size={16} />
         </button>
       </div>
-      <button
-        className="titlebar-command quiet"
-        onClick={() => run('palette')}
-        title={t('ค้นหางานและคำสั่ง')}
-        aria-label={t('ค้นหางานและคำสั่ง')}
-        aria-description={title || undefined}
-      >
-        <Search size={13} />
-        <span>{title || t('ค้นหางานและคำสั่ง')}</span>
-        <kbd>{hint('palette')}</kbd>
-      </button>
+      {search ? (
+        <label className="titlebar-command titlebar-search">
+          <Search size={13} />
+          <input
+            type="search"
+            placeholder={t('ค้นหางานหรือเนื้อหา')}
+            aria-label={t('ค้นหางานหรือเนื้อหา')}
+            value={search.value}
+            onChange={event => search.onChange(event.target.value)}
+            onKeyDown={event => {
+              if (event.key === 'Escape') search.onChange('');
+            }}
+          />
+          <button
+            className="quiet titlebar-palette"
+            aria-label={t('ค้นหางานและคำสั่ง')}
+            title={t('ค้นหางานและคำสั่ง')}
+            onClick={() => run('palette')}
+          >
+            <kbd>{hint('palette')}</kbd>
+          </button>
+        </label>
+      ) : (
+        <button
+          className="titlebar-command quiet"
+          onClick={() => run('palette')}
+          title={t('ค้นหางานและคำสั่ง')}
+          aria-label={t('ค้นหางานและคำสั่ง')}
+          aria-description={title || undefined}
+        >
+          <Search size={13} />
+          <span>{title || t('ค้นหางานและคำสั่ง')}</span>
+          <kbd>{hint('palette')}</kbd>
+        </button>
+      )}
       <div className="titlebar-end">
         {checked && (
           <span className="titlebar-note" role="status">

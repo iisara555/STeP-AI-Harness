@@ -105,8 +105,9 @@ try {
   await expect(page.locator('.message.assistant').last()).toContainText('19 วัน');
   await expect(task(holiday.title)).toHaveClass(/selected/);
 
-  // Search finds text inside the conversation, in Thai, and says so when nothing matches.
-  const search = sidebar.getByPlaceholder('ค้นหางานหรือเนื้อหา');
+  // Search, in the title bar while the task list is open, finds text inside the conversation, in Thai, and says so
+  // when nothing matches.
+  const search = page.locator('header.titlebar').getByRole('searchbox', { name: 'ค้นหางานหรือเนื้อหา' });
   await search.fill('รายงานการประชุม');
   await expect(sidebar.locator('.session')).toHaveCount(1);
   await expect(sidebar.locator('.session')).toContainText(report.title);
@@ -119,7 +120,7 @@ try {
   await expect(sidebar.locator('.session')).toHaveCount(2);
 
   // The shortcut button beside search opens the command palette.
-  await sidebar.getByRole('button', { name: 'เปิดคำสั่ง' }).click();
+  await page.locator('header.titlebar').getByRole('button', { name: 'ค้นหางานและคำสั่ง' }).click();
   await expect(page.getByRole('dialog').getByRole('combobox').or(page.getByRole('dialog').getByRole('textbox')).first()).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
