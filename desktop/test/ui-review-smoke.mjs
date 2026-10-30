@@ -16,7 +16,7 @@ try {
   page.on('request', request => chunks.push(request.url()));
   await page.getByRole('button', { name: 'เริ่มตั้งค่า', exact: true }).click();
   const wizard = page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' });
-  await expect(wizard.getByRole('heading', { name: 'เลือก AI และเชื่อมต่อ', level: 2, exact: true })).toBeVisible();
+  await expect(wizard.getByRole('heading', { name: 'เลือก AI และเชื่อมต่อ', level: 1, exact: true })).toBeVisible();
   await expect(wizard.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง', exact: true })).toHaveCount(0);
   await wizard.getByRole('button', { name: 'ทำภายหลัง', exact: true }).click();
   await wizard.getByRole('checkbox', { name: 'ฉันอ่านและรับทราบข้อตกลงการใช้งาน' }).check();
