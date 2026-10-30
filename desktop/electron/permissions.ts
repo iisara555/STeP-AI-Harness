@@ -132,12 +132,17 @@ export function deniedCommand(command: string, patterns: string[]) {
   return patterns.find(pattern => segments.some(segment => matches(segment, pattern)));
 }
 
+// Words, paths, flags, file globs and plain quotes only. Every other character can start another command in /bin/sh or
+// PowerShell (PowerShell evaluates `(...)` and `@(...)` inside arguments, for example), so such a command asks as usual.
+const PLAIN_COMMAND = /^[\p{L}\p{M}\p{N} \t_\-./\\:=,+@'"~*?]+$/u;
+
 /**
  * Matches a single-segment command against administrator-configured allowedCommands.
- * Any shell chaining, redirection, pipe, subshell or newline is rejected so an allowed prefix cannot smuggle extra commands.
+ * Only the characters in PLAIN_COMMAND are accepted, so an allowed prefix cannot smuggle chaining, redirection, pipes,
+ * subexpressions, grouping or a newline.
  */
 export function allowedCommand(command: string, patterns?: string[]) {
-  if (!patterns?.length || /[;&|<>`$\r\n]/.test(command)) return undefined;
+  if (!patterns?.length || !PLAIN_COMMAND.test(command)) return undefined;
   const line = command.trim().replace(/\s+/g, ' ');
   if (!line) return undefined;
   return patterns.find(pattern => !/[;&|<>`$\r\n]/.test(pattern) && matches(line, pattern));

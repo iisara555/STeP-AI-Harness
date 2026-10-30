@@ -338,15 +338,9 @@ export class DesktopTools {
     const sites = this.sites.get(sessionId);
     if (!exact && sites?.workspace === workspace && sites.policy === policy && sites.mode === mode && sites.hosts.has(host))
       return undefined;
-    if (!exact && allowedDomain(host, policy.permission.allowedDomains)) {
-      let allowed = this.sites.get(sessionId);
-      if (!allowed || allowed.workspace !== workspace || allowed.policy !== policy || allowed.mode !== mode) {
-        allowed = { workspace, policy, mode, hosts: new Set() };
-        this.sites.set(sessionId, allowed);
-      }
-      allowed.hosts.add(host);
-      return { url, workspace, policy, mode, sessionId, signal };
-    }
+    // An administrator-allowed domain skips only this site question. Nobody saw the URL, so there is no evidence to
+    // hand to outgoing(): its URL privacy question still asks while privacy checks are on.
+    if (!exact && allowedDomain(host, policy.permission.allowedDomains)) return undefined;
     let requests = this.siteRequests.get(signal);
     if (!requests) {
       requests = new Map();

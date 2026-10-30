@@ -103,9 +103,30 @@ test('scoped allowedCommands and allowedDomains work only after sensitive/denied
   const policy = parsed.policy;
   assert.equal(allowedCommand('npm test', policy.permission.allowedCommands), 'npm test');
   assert.equal(allowedCommand('git status --short', policy.permission.allowedCommands), 'git status*');
-  // Any shell chaining, pipe, redirection or subshell is rejected even if the prefix matches.
-  for (const chained of ['npm test; whoami', 'npm test && echo pwned', 'npm test | cat', 'npm test > out.txt', 'npm test $(id)'])
+  assert.equal(allowedCommand('git status -- "docs/สรุปผล.md"', policy.permission.allowedCommands), 'git status*');
+  assert.equal(allowedCommand('npx prettier --check "src/**/*.ts"', policy.permission.allowedCommands), 'npx prettier *');
+  // Any shell chaining, pipe, redirection, subexpression or grouping is rejected even if the prefix matches.
+  // PowerShell, which runs terminal commands on Windows, evaluates `(...)` and `@(...)` inside an argument.
+  for (const chained of [
+    'npm test; whoami',
+    'npm test && echo pwned',
+    'npm test | cat',
+    'npm test > out.txt',
+    'npm test $(id)',
+    'git status (Remove-Item -Recurse -Force src)',
+    'git status @(whoami)',
+    'git status {whoami}',
+    'git status whoami',
+  ])
     assert.equal(allowedCommand(chained, policy.permission.allowedCommands), undefined, chained);
+  assert.deepEqual(
+    evaluatePermission(
+      { tool: 'terminal', readOnly: false, execute: true, command: 'git status (Remove-Item -Recurse -Force src)' },
+      'ask',
+      policy,
+    ),
+    { allowed: true, requiresConfirmation: true, reason: 'ask mode' },
+  );
   assert.deepEqual(evaluatePermission({ tool: 'terminal', readOnly: false, execute: true, command: 'npm test' }, 'ask', policy), {
     allowed: true,
     requiresConfirmation: false,

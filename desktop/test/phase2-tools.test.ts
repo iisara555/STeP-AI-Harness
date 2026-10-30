@@ -1169,6 +1169,33 @@ test('parallel reads of different URLs show each URL and wait for its own approv
     }
   }
 });
+test('an administrator-allowed domain skips the site question but keeps the URL privacy question', async () => {
+  for (const privacyChecks of [true, false]) {
+    const f = await fixture();
+    f.workbench.root = async () => f.root;
+    f.policy.checks.privacy = privacyChecks;
+    f.policy.permission.allowedDomains = ['source.example'];
+    let network = 0;
+    try {
+      await assert.rejects(
+        f.tools.execute({ tool: 'web_fetch', input: 'https://docs.source.example/article?q=synthetic' }, f.scope, async () => {
+          network++;
+          throw new Error('STOP_BEFORE_NETWORK');
+        }),
+        /STOP_BEFORE_NETWORK/,
+      );
+      assert.equal(network, 1);
+      if (privacyChecks) {
+        assert.equal(f.requests(), 1, 'the URL is still shown once before network access');
+        assert.ok(f.bodies[0].includes('ที่อยู่เว็บ'), 'the question is the URL privacy question, not the site question');
+      } else assert.equal(f.requests(), 0, 'without privacy checks the allowed domain needs no question');
+    } finally {
+      f.approvals.close();
+      f.store.close();
+      await rm(f.root, { recursive: true, force: true });
+    }
+  }
+});
 test('an approved site URL still needs privacy consent for classification, findings or redaction', async () => {
   for (const risk of ['classification', 'findings', 'redaction'] as const) {
     const f = await fixture();

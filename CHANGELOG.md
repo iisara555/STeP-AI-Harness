@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Tighten the administrator allowlists added in 0.6.23. `permission.allowedCommands` now runs a command without asking only when it holds words, paths, flags, file globs and plain quotes, so PowerShell grouping such as `(...)` or `@(...)` inside an allowed prefix asks as usual. `permission.allowedDomains` skips only the per-site question: with privacy checks on, the URL privacy question still shows the address before any network access.
+
 ## Desktop v0.6.23 (2026-10-29)
 
 - Improve Antigravity and tool-loop backend execution: add an opt-in governed local MCP bridge (`step_host`) over authenticated named pipes/Unix sockets, prewarmed `agy` spare sessions with `followUpDelta` continuation, inline `waitMsBeforeAsync` / `isDaemon` support on `terminal`, administrator-scoped `permission.allowedCommands` and `permission.allowedDomains`, session-scoped MCP discovery caching, bounded `pending` batch splitting in `ToolLoop`, deduplicated parallel site approvals, browser tab reuse across turns, and transient empty-response retries during connection checks. All STeP privacy, permission and authority checks remain enforced.
