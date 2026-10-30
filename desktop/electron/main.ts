@@ -41,6 +41,7 @@ import { VaultPrompts } from './vault-prompts';
 import { GoogleWorkspace } from './google-workspace';
 import { readGoogleClientFile } from './google-client';
 import { GOOGLE_PAGES, type GoogleService } from '../src/google-services';
+import { googleChange, googleResourceUrl } from '../src/google-changes';
 import type { GoogleRequest } from './google-operations';
 import { googleInvocation, googleOperationCatalog } from './google-operations';
 import { BRIEF_OPERATIONS, briefDay, readMorningBrief, type MorningBrief } from './morning-brief';
@@ -999,6 +1000,11 @@ async function main() {
             ),
         );
       const result = await google.execute(id, input, googleContext(scope.signal, check, scope.sessionId));
+      // Recorded before the result goes to the AI: the change happened even if sending the result is refused.
+      if (invocation.write) {
+        const change = googleChange(input.operation, result);
+        if (change) scope.googleChange?.(change);
+      }
       const report = privacy.evaluatePrivacyGate(JSON.stringify(result));
       if (report.action === 'block-external' || !report.redactedText) throw new Error('PRIVACY_REVIEW_REQUIRED');
       if (
@@ -2217,6 +2223,12 @@ async function main() {
       case 'googleOpen': {
         if (!Object.hasOwn(GOOGLE_PAGES, input.service)) throw new Error('INVALID_INPUT');
         await shell.openExternal(GOOGLE_PAGES[input.service as keyof typeof GOOGLE_PAGES]);
+        return true;
+      }
+      case 'googleOpenChange': {
+        // A changed item's own page, only in the fixed Google link shapes; anything else opens nothing.
+        if (!googleResourceUrl(input.url)) throw new Error('INVALID_INPUT');
+        await shell.openExternal(input.url);
         return true;
       }
       case 'learningList':

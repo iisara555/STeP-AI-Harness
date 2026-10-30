@@ -18,6 +18,7 @@ const allowed = new Set([
   'googleDisconnect',
   'googleExecute',
   'googleOpen',
+  'googleOpenChange',
   'morningBriefState',
   'morningBriefRun',
   'morningBriefSettings',

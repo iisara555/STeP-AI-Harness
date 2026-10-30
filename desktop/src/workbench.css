@@ -732,3 +732,14 @@
   align-items: center;
   gap: 4px;
 }
+/* What an answer did in Google Workspace (src/google-changes-list.tsx), in the same shape as the files it wrote. */
+.google-changes {
+  margin: 8px 0 0;
+}
+.google-changes-title {
+  margin: 0;
+}
+.google-change-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}

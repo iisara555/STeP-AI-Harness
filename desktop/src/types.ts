@@ -214,6 +214,8 @@ export type Message = {
   written?: { path: string; id: string; status: 'applied' | 'staged' }[];
   /** The note a drafting run leaves in chat; the document itself is the proposal, so this is never opened as one. */
   draftSummary?: boolean;
+  /** What this answer created or changed in Google Workspace (completed writes only), listed under it. */
+  google?: import('./google-changes').GoogleChange[];
 };
 /** A file sent in a chat: its checked, masked text stays with the conversation. */
 export type ConversationFile = { name: string; text: string; at: string };
