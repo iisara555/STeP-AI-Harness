@@ -24,6 +24,12 @@
   --selection: #ffe38a;
   --scroll: #cfcac2;
   --danger: #b3261e;
+  /* Task notification dots in the task list (src/task-alerts.ts). Not brand colours: status tones picked to sit with
+     STeP Yellow and STeP Dark on the warm surfaces, each at least 3:1 against the task list. Running uses STeP Yellow. */
+  --alert-needs-you: #c8372d;
+  --alert-running-ring: #7a5b00;
+  --alert-done: #2f8a5b;
+  --alert-stopped: #3f6fb5;
   --on-danger: #fff;
   --overlay: #0007;
   --shadow-faint: #00000006;
@@ -63,6 +69,10 @@
   --selection: #6b5610;
   --scroll: #4e4745;
   --danger: #f2a197;
+  --alert-needs-you: #ff7a6b;
+  --alert-running-ring: #ffc709;
+  --alert-done: #5fc48a;
+  --alert-stopped: #7ea6ec;
   --on-danger: #231f20;
   --disabled-bg: #37312f;
   --disabled-text: #ada6a0;
@@ -97,6 +107,10 @@
     --selection: #6b5610;
     --scroll: #4e4745;
     --danger: #f2a197;
+    --alert-needs-you: #ff7a6b;
+    --alert-running-ring: #ffc709;
+    --alert-done: #5fc48a;
+    --alert-stopped: #7ea6ec;
     --on-danger: #231f20;
     --disabled-bg: #37312f;
     --disabled-text: #ada6a0;

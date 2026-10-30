@@ -27,7 +27,6 @@ import {
   PanelRightClose,
   Paperclip,
   Plus,
-  Search,
   Settings2,
   Square,
   X,
@@ -129,6 +128,7 @@ import type { WorkAction } from './types';
 import { locale, setLanguage, t, teamName } from './i18n';
 import { startersFor, starterTag, starterText } from './starters';
 import { MorningBriefCard } from './morning-brief';
+import { initialSeen, needsYouCount, taskAlert, TASK_ALERT_LABELS, TASK_SEEN_KEY } from './task-alerts';
 
 const ReceiptApp = lazyScreen(async () => ({ default: (await import('./receipt')).ReceiptApp }));
 const DocumentTools = lazyScreen(async () => ({ default: (await import('./document-tool-app')).DocumentTools }));
@@ -359,6 +359,30 @@ export default function App() {
   const sendInFlight = useRef(false),
     conversationEnd = useRef<HTMLDivElement>(null);
   const session = snapshot?.sessions.find(s => s.id === selected);
+  // Per task, the updatedAt the employee last saw with the task open: finished and stopped tasks show a dot until then.
+  const [seen, setSeen] = useState<Record<string, string>>();
+  useEffect(() => {
+    if (!snapshot) return;
+    let next = seen;
+    if (!next) {
+      let stored: string | null = null;
+      try {
+        stored = localStorage.getItem(TASK_SEEN_KEY);
+      } catch {
+        // Without storage the marks last for this session.
+      }
+      next = initialSeen(stored, snapshot.sessions);
+    }
+    if (session && view === 'chat' && !settings && next[session.id] !== session.updatedAt)
+      next = { ...next, [session.id]: session.updatedAt };
+    if (next === seen) return;
+    setSeen(next);
+    try {
+      localStorage.setItem(TASK_SEEN_KEY, JSON.stringify(next));
+    } catch {
+      // The dots still clear for this session.
+    }
+  }, [snapshot, session, view, settings, seen]);
   useEffect(() => {
     if (session?.documentTemplate) {
       setFormat('docx');
@@ -529,6 +553,14 @@ export default function App() {
           setSettingsPage('credentials');
           setSettings(true);
         }
+        if ((event.type === 'approval' && event.approval) || (event.type === 'question' && event.question))
+          // Another window has focus: the task waiting on the employee says so outside the app, like a finished task.
+          if (!document.hasFocus() && typeof Notification !== 'undefined' && Notification.permission !== 'denied')
+            try {
+              new Notification('STeP Desktop', { body: t(event.approval ? 'มีงานรอคุณอนุญาต' : 'มีงานรอคุณตอบ'), silent: true });
+            } catch {
+              /* Notifications are optional. */
+            }
         if (event.type === 'approval' && event.approval)
           setToolApprovals(list => [...list.filter(a => a.id !== event.approval!.id), event.approval!]);
         if (event.type === 'approval-close') setToolApprovals(list => list.filter(a => a.id !== event.approvalId));
@@ -1277,6 +1309,12 @@ export default function App() {
       : toolApprovals.some(a => a.sessionId === s.id)
         ? t('รอคุณอนุญาต')
         : statusText[s.status] || s.status;
+  // The notification dot of each task in the list (src/task-alerts.ts); the open task needs none.
+  const alertOf = (s: Session) => {
+    const alert = taskAlert(s, questions, toolApprovals, seen ? seen[s.id] : s.updatedAt);
+    return selected === s.id && view === 'chat' && alert !== 'needs-you' && alert !== 'running' ? undefined : alert;
+  };
+  const needsYou = snapshot ? needsYouCount(snapshot.sessions, questions, toolApprovals) : 0;
   const setTheme = (theme: string) =>
     action(async () => {
       await api!.call('settings', { assistant: snapshot!.settings.assistant, team: snapshot!.settings.team, theme });
@@ -1487,6 +1525,7 @@ export default function App() {
         showRight={!settings && view === 'chat'}
         theme={snapshot.settings.theme}
         feedback={snapshot.policy?.features.feedback !== false}
+        search={fullSidebar ? { value: search, onChange: setSearch } : undefined}
       />
       <div className="app" style={{ '--artifact-width': `${width}px` } as React.CSSProperties}>
         {!fullSidebar && (
@@ -1499,6 +1538,7 @@ export default function App() {
             view={view}
             settings={settings}
             receiptBusy={receiptBusy}
+            needsYou={needsYou}
             onNew={() => void action(create)}
             onSearch={() => setPalette(true)}
             onTasks={() => commandRef.current.left?.()}
@@ -1521,13 +1561,6 @@ export default function App() {
             <button className="new-work" data-tour="new-work" onClick={() => void action(create)}>
               <Plus size={18} /> {t('เริ่มงานใหม่')}
             </button>
-            <label className="search">
-              <Search size={16} />
-              <input placeholder={t('ค้นหางานหรือเนื้อหา')} value={search} onChange={e => setSearch(e.target.value)} />
-              <button className="icon palette-hint" aria-label={t('เปิดคำสั่ง')} onClick={() => setPalette(true)}>
-                {shortcut}
-              </button>
-            </label>
             <div className="session-filter" role="tablist" aria-label={t('กรองงาน')}>
               {(
                 [
@@ -1584,6 +1617,14 @@ export default function App() {
                             {s.project || s.team.toUpperCase() || t('ทุกทีม')} · {taskStatus(s)}
                           </small>
                         </button>
+                        {alertOf(s) && (
+                          <span
+                            className={'task-alert ' + alertOf(s)}
+                            role="img"
+                            aria-label={t(TASK_ALERT_LABELS[alertOf(s)!])}
+                            title={t(TASK_ALERT_LABELS[alertOf(s)!])}
+                          />
+                        )}
                         <span className="session-actions">
                           <button
                             className="icon"

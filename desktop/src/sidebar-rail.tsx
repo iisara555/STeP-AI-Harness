@@ -38,6 +38,7 @@ function RailButton({
   className = '',
   tour,
   busy,
+  badge,
   onClick,
 }: {
   icon: AnimatedIcon;
@@ -47,6 +48,8 @@ function RailButton({
   className?: string;
   tour?: string;
   busy?: ReactNode;
+  /** Tasks waiting on the employee, counted on the icon. */
+  badge?: number;
   onClick: () => void;
 }) {
   const reduced = useReducedMotion();
@@ -57,7 +60,7 @@ function RailButton({
     <button
       className={`rail-button ${className}`}
       data-tour={tour}
-      aria-label={label}
+      aria-label={badge ? `${label} (${badge})` : label}
       data-tip={label}
       onClick={onClick}
       onMouseEnter={start}
@@ -66,6 +69,11 @@ function RailButton({
       onBlur={stop}
     >
       {busy || (reduced ? <StillIcon size={size} className="rail-icon" /> : <Icon ref={icon} size={size} className="rail-icon" />)}
+      {!!badge && (
+        <span className="rail-badge" aria-hidden="true">
+          {badge > 9 ? '9+' : badge}
+        </span>
+      )}
     </button>
   );
 }
@@ -101,6 +109,7 @@ export function SidebarRail({
   view,
   settings,
   receiptBusy,
+  needsYou = 0,
   onNew,
   onSearch,
   onTasks,
@@ -114,6 +123,8 @@ export function SidebarRail({
   view: string;
   settings: boolean;
   receiptBusy: boolean;
+  /** Tasks waiting on the employee (src/task-alerts.ts), counted on the task list icon. */
+  needsYou?: number;
   onNew: () => void;
   onSearch: () => void;
   onTasks: () => void;
@@ -143,7 +154,7 @@ export function SidebarRail({
           onClick={onNew}
         />
         <RailButton icon={SearchIcon} stillIcon={Search} label={t('ค้นหางาน')} onClick={onSearch} />
-        <RailButton icon={MessageSquareIcon} stillIcon={MessageSquare} label={t('งานทั้งหมด')} onClick={onTasks} />
+        <RailButton icon={MessageSquareIcon} stillIcon={MessageSquare} label={t('งานทั้งหมด')} badge={needsYou} onClick={onTasks} />
         <span className="rail-divider" aria-hidden="true" />
         <nav aria-label={t('เครื่องมือ')}>
           {tools.map(([id, label, Icon, StillIcon]) => (

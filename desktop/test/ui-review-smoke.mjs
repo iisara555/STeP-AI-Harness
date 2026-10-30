@@ -70,8 +70,9 @@ try {
     await page.locator(`[data-tour="${view}"]`).click();
     await expect(page.locator(selector)).toBeVisible();
     await expect(page.locator('.main-pane').getByRole('heading', { level: 1 })).toHaveText(title);
-    await expect(page.locator('.titlebar-command')).toContainText(title);
-    await expect(page.getByRole('button', { name: 'ค้นหางานและคำสั่ง', exact: true })).toHaveAttribute('aria-description', title);
+    // The page names itself in its own header; with the task list open, the title bar holds the task search instead.
+    await expect(page.locator('.topbar-heading')).toContainText(title);
+    await expect(page.locator('header.titlebar').getByRole('searchbox', { name: 'ค้นหางานหรือเนื้อหา' })).toBeVisible();
   }
   await page.locator('[data-tour="documents"]').click();
   assert.ok(
