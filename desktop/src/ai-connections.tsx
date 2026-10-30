@@ -33,13 +33,13 @@ export function AIConnections({
   refresh: () => Promise<Snapshot | undefined>;
   onError: (error: unknown) => void;
   onBusy: (id: string) => void;
-  headingLevel?: 2 | 3;
+  headingLevel?: 1 | 2 | 3;
   selectedConnectionId?: string;
   selectionScope?: 'task' | 'new';
   onSelectConnection?: (id: string) => Promise<void>;
   selectionDisabled?: boolean;
 }) {
-  const StepHeading = headingLevel === 2 ? 'h2' : 'h3';
+  const StepHeading = headingLevel === 1 ? 'h1' : headingLevel === 2 ? 'h2' : 'h3';
   const [choice, setChoice] = useState<ProviderChoice>(recommendedChoice);
   const [pickerOpen, setPickerOpen] = useState(!snapshot.connections.length);
   const [newConnectionId, setNewConnectionId] = useState('');
@@ -390,10 +390,14 @@ function ConnectionCard({
       </div>
       {c.ready && (
         <>
-          <CapabilityList items={connectionCapabilities(c, snapshot.policy).filter(item => ['web', 'vision'].includes(item.id))} />
           <p className="small muted">
             {t('ผลทดสอบนี้ยืนยันการตอบข้อความเท่านั้น Google Workspace ต้องเชื่อมบัญชีและเลือกสิทธิ์ในบัญชีและบริการแยกต่างหาก')}
           </p>
+          {/* Tools are their own block under the account's test result, so a tool that is off does not read as a failed account. */}
+          <div className="connection-tools">
+            <h4>{t('เครื่องมือที่ใช้กับบัญชีนี้')}</h4>
+            <CapabilityList items={connectionCapabilities(c, snapshot.policy).filter(item => ['web', 'vision'].includes(item.id))} />
+          </div>
         </>
       )}
       {c.provider === 'claude' && c.mode === 'subscription' && (

@@ -6813,3 +6813,110 @@ summary {
     grid-template-columns: 1fr;
   }
 }
+
+/* UX/UI review fixes, part 3: first-run setup and Settings. */
+/* Setup: the picker's heading is the step title, without a frame around it. */
+.wizard .ai-connect-step {
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.wizard .ai-connect-step > h1 {
+  margin: 0 0 12px;
+}
+/* Organisation functions, administrator fields and the developer pilot stay in Settings, out of the first run. */
+.wizard .ai-organization-capabilities,
+.wizard .ai-developer-options,
+.wizard .provider-picker + p {
+  display: none;
+}
+/* Skipping is the quiet way out, so it does not look like the optional customise link. */
+.wizard-actions .wizard-skip {
+  color: var(--muted);
+}
+/* How a service connects is a plain label under its name, not a second button on the card. */
+.provider-tile-head {
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 2px;
+}
+.provider-kind,
+.provider-kind.account {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-weight: 400;
+}
+/* The terms list fades at its lower edge, so it reads as scrollable rather than cut off. */
+.terms ul {
+  padding-bottom: 20px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+}
+/* Settings: tabs at the top, then a compact search; the section title is in the tab. */
+.settings-content > .settings-tabs {
+  margin-top: 0;
+}
+.settings-content > .settings-hero {
+  min-height: 0;
+  margin: 14px 0 4px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+.settings-content > .settings-hero > p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.settings-content > .settings-hero .settings-search {
+  flex: 1 1 280px;
+  max-width: 420px;
+  margin: 0;
+}
+.settings-content > .settings-hero .settings-search-results {
+  flex-basis: 100%;
+}
+.settings-content > .settings-hero .settings-illustration {
+  margin-left: auto;
+}
+/* Language and theme choices use the soft selected state, like other choices in the app. */
+.theme-options button.active {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-color: var(--accent-ink);
+}
+/* The policy summary is read-only text, so it should not look like a text box. */
+.settings-content .pilot-note {
+  border: 0;
+  border-left: 3px solid var(--accent-ink);
+  border-radius: 0;
+  background: transparent;
+  padding: 2px 0 2px 12px;
+}
+.policy-badge.off {
+  color: var(--text);
+  background: var(--selected);
+}
+.privacy-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.privacy-heading .policy-badge {
+  font-weight: 400;
+}
+/* The account's tools sit in their own block under its test result. */
+.connection-tools {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.connection-tools h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.connection-tools .ai-capability-list {
+  margin-top: 4px;
+}

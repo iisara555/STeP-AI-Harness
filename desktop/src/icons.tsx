@@ -85,6 +85,7 @@ import {
   ThumbsUp as StillThumbsUp,
   Timer as StillTimer,
   Trash2 as StillTrash2,
+  UserRound as StillUserRound,
   Video as StillVideo,
   X as StillX,
   ZoomIn as StillZoomIn,
@@ -250,6 +251,7 @@ export const ThumbsDown = /* @__PURE__ */ animated(StillThumbsDown, 'ThumbsDown'
 export const ThumbsUp = /* @__PURE__ */ animated(StillThumbsUp, 'ThumbsUp', 'pulse');
 export const Timer = /* @__PURE__ */ animated(StillTimer, 'Timer', 'pulse');
 export const Trash2 = /* @__PURE__ */ animated(StillTrash2, 'Trash2', 'turn');
+export const UserRound = /* @__PURE__ */ animated(StillUserRound, 'UserRound', 'pulse');
 export const Video = /* @__PURE__ */ animated(StillVideo, 'Video', 'pulse');
 export const X = /* @__PURE__ */ animated(StillX, 'X', 'add');
 export const ZoomIn = /* @__PURE__ */ animated(StillZoomIn, 'ZoomIn', 'pulse');
