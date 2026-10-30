@@ -15,6 +15,7 @@ import { receiptPacketEn } from './receipt-packet-en';
 import { afpPaymentVoucherEn } from './afp-payment-voucher-en';
 import { workAssistantEn } from './work-assistant-en';
 import { afpEvidenceEn } from './afp-evidence-en';
+import { planCommentsEn } from './plan-comments-en';
 import { taskAlertsEn } from './task-alerts-en';
 import { googleChangesEn } from './google-changes-en';
 export const en: Record<string, string> = {
@@ -297,6 +298,7 @@ export const en: Record<string, string> = {
   ...feedbackEn,
   ...skillSuggestEn,
   ...morningBriefEn,
+  ...planCommentsEn,
   ...taskAlertsEn,
   'กดเข้าสู่ระบบเว็บอย่าง STeP MBS ให้เองหลังกรอกบัญชีจาก Vault ไม่ต้องสลับไปกดเอง':
     'After filling a saved Vault account, the app presses sign in itself on sites like STeP MBS',

@@ -496,7 +496,13 @@ export type ToolQuestion = { id: string; sessionId: string; question: string; op
 export type PlanStep = { label: string; action?: boolean };
 /** Native workflows of the harness (electron/workflows.ts), picked in the composer. */
 export type Workflow = 'assistant' | 'plan' | 'execute' | 'requirements' | 'diagnose' | 'coding';
-export type WorkTask = { title: string; status: 'todo' | 'doing' | 'done' | 'blocked'; note?: string };
+export type WorkTask = {
+  title: string;
+  status: 'todo' | 'doing' | 'done' | 'blocked';
+  note?: string;
+  /** The employee's comment on this task (src/work-plan.tsx), followed when the plan is revised or carried out. */
+  comment?: string;
+};
 export type WorkPlan = { goal: string; tasks: WorkTask[]; approvedAt?: string };
 /** Pages open in the Web tab (electron/browser-dock.ts): the assistant's and the employee's own. */
 export type BrowserDockTab = {

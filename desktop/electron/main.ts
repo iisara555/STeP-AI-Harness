@@ -49,6 +49,7 @@ import { credentialTitles } from '../src/credential-copy';
 import { credentialErrorsTh, credentialErrorsEn } from '../src/credential-copy';
 import { googleResultConsent } from './google-consent';
 import { executeGoogleRead } from './google-read-tool';
+import { PLAN_COMMENT_LIMIT } from '../src/plan-comments';
 import { Workbench, browserUrl } from './workbench';
 import { AgentBrowser } from './browser-agent';
 import { BrowserDock } from './browser-dock';
@@ -4226,6 +4227,12 @@ async function main() {
         s.pinned = input.pinned === true;
         store.put('session', s.id, s);
         return s;
+      }
+      case 'planComment': {
+        const id = inputText(input.id, 60);
+        if (store.session(id).status === 'running') throw new Error('SESSION_BUSY');
+        workbench.commentWorkTask(id, Number(input.number), inputText(input.comment, PLAN_COMMENT_LIMIT));
+        return store.session(id);
       }
       case 'rename': {
         const s = store.session(inputText(input.id, 60)),

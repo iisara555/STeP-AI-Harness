@@ -1,5 +1,7 @@
-import { Check, Circle, LoaderCircle, OctagonAlert, Play, ListChecks } from './icons';
+import { useState } from 'react';
+import { Check, Circle, LoaderCircle, MessageSquare, OctagonAlert, Play, ListChecks } from './icons';
 import type { WorkPlan, Workflow } from './types';
+import { commentedTasks, PLAN_COMMENT_LIMIT } from './plan-comments';
 import { t } from './i18n';
 
 /** The native workflows offered in the composer (electron/workflows.ts), with the label each shows. */
@@ -12,20 +14,68 @@ export const WORKFLOW_LABELS: Record<Workflow, string> = {
   coding: 'เขียนและตรวจโค้ด',
 };
 
+/** One comment being written on a task: the box opens under the task, like a comment on an Antigravity artifact. */
+function CommentBox({ initial, onSave, onCancel }: { initial: string; onSave: (comment: string) => void; onCancel: () => void }) {
+  const [text, setText] = useState(initial);
+  return (
+    <form
+      className="work-plan-comment-box"
+      onSubmit={event => {
+        event.preventDefault();
+        onSave(text);
+      }}
+    >
+      <textarea
+        autoFocus
+        rows={2}
+        maxLength={PLAN_COMMENT_LIMIT}
+        value={text}
+        aria-label={t('ความเห็นต่อข้อนี้')}
+        placeholder={t('เช่น ขอแยกเป็นสองขั้น หรือ ใช้แม่แบบของกองคลัง')}
+        onChange={event => setText(event.target.value)}
+        onKeyDown={event => {
+          if (event.key === 'Escape') onCancel();
+          if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+            event.preventDefault();
+            onSave(text);
+          }
+        }}
+      />
+      <div>
+        <button type="submit">{t('บันทึกความเห็น')}</button>
+        <button type="button" className="quiet" onClick={onCancel}>
+          {t('ยกเลิก')}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 /** The plan approved in the plan workflow, ticked off live while the execute workflow works through it. */
 export function WorkPlanCard({
   plan,
   running,
   continuation,
   onExecute,
+  onComment,
+  onRevise,
 }: {
   plan: WorkPlan;
   running: boolean;
   continuation?: import('./types').Session['longTask'];
   onExecute: (continuous?: boolean) => void;
+  /** Keeps the employee's comment on a task (1-based number); an empty comment removes it. */
+  onComment: (number: number, comment: string) => Promise<boolean>;
+  /** Asks the assistant to revise the plan by the comments. */
+  onRevise: () => void;
 }) {
+  const [editing, setEditing] = useState<number>();
   const done = plan.tasks.filter(task => task.status === 'done').length;
   const finished = done === plan.tasks.length;
+  const comments = commentedTasks(plan).length;
+  const save = async (number: number, comment: string) => {
+    if (await onComment(number, comment)) setEditing(undefined);
+  };
   return (
     <details className="work-plan" open>
       <summary>
@@ -49,13 +99,46 @@ export function WorkPlanCard({
             <span>
               {task.title}
               {task.note && <small>{task.note}</small>}
+              {task.comment && editing !== index + 1 && (
+                <small className="work-plan-comment">
+                  <MessageSquare size={12} aria-hidden="true" />
+                  {t('ความเห็นของคุณ: {0}', task.comment)}
+                </small>
+              )}
+              {editing === index + 1 && (
+                <CommentBox
+                  initial={task.comment || ''}
+                  onSave={comment => void save(index + 1, comment)}
+                  onCancel={() => setEditing(undefined)}
+                />
+              )}
             </span>
+            {editing !== index + 1 && (
+              <button
+                className="icon quiet work-plan-comment-button"
+                disabled={running}
+                aria-label={t(task.comment ? 'แก้ความเห็นข้อ {0}' : 'แสดงความเห็นข้อ {0}', index + 1)}
+                title={t(task.comment ? 'แก้ความเห็นข้อ {0}' : 'แสดงความเห็นข้อ {0}', index + 1)}
+                onClick={() => setEditing(index + 1)}
+              >
+                <MessageSquare size={14} />
+              </button>
+            )}
           </li>
         ))}
       </ol>
+      {comments > 0 && (
+        <div className="work-plan-revise">
+          <button className="work-plan-run" disabled={running || editing !== undefined} onClick={onRevise}>
+            <MessageSquare size={14} />
+            {t('ให้ผู้ช่วยแก้แผนตามความเห็น ({0})', comments)}
+          </button>
+          <p className="small muted">{t('ผู้ช่วยจะเสนอแผนใหม่ให้คุณอนุมัติอีกครั้ง ถ้าลงมือทำเลย ผู้ช่วยจะทำตามความเห็นในข้อนั้น')}</p>
+        </div>
+      )}
       {!finished && (
         <div className="work-plan-actions">
-          <button className="work-plan-run" disabled={running} onClick={() => onExecute(false)}>
+          <button className={comments ? 'quiet' : 'work-plan-run'} disabled={running} onClick={() => onExecute(false)}>
             <Play size={14} />
             {done ? t('ทำตามแผนต่อ') : t('ลงมือทำตามแผน')}
           </button>

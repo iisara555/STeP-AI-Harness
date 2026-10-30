@@ -11,6 +11,7 @@ import { codeDiagnostics } from './code-diagnostics';
 import type { BackgroundTask, FileChange } from '../src/tools';
 import { taskAction } from '../src/tools';
 import type { WorkPlan, WorkTask } from '../src/types';
+import { PLAN_COMMENT_LIMIT } from '../src/plan-comments';
 import { Store } from './store';
 import { sensitivePath, evaluatePermission } from './permissions';
 import type { Policy } from './policy';
@@ -54,6 +55,19 @@ export class Workbench {
     plan.tasks[number - 1] = { ...plan.tasks[number - 1], status, ...(note ? { note } : {}) };
     this.store.save(session);
     return plan.tasks.filter(t => t.status !== 'done').length;
+  }
+  /** Keeps the employee's comment on one task of the plan (1-based number); an empty comment removes it. */
+  commentWorkTask(sessionId: string, number: number, comment: string) {
+    const session = this.store.session(sessionId);
+    const plan = session.workPlan;
+    if (!plan || !Number.isSafeInteger(number) || !plan.tasks[number - 1]) throw new Error('PLAN_TASK_UNKNOWN');
+    if (typeof comment !== 'string' || comment.length > PLAN_COMMENT_LIMIT) throw new Error('INVALID_INPUT');
+    const task: WorkTask = { ...plan.tasks[number - 1] };
+    delete task.comment;
+    const text = comment.trim();
+    plan.tasks[number - 1] = text ? { ...task, comment: text } : task;
+    this.store.save(session);
+    return plan.tasks[number - 1];
   }
   constructor(
     private store: Store,
