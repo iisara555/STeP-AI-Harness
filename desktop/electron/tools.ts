@@ -54,6 +54,8 @@ export type ToolScope = {
   request?: string;
   /** Host-owned, scoped to one tool loop; unavailable to tool arguments. */
   googleReads?: GoogleReadConsent;
+  /** Records a completed Google write for the answer's list of changes; the record never reaches the AI. */
+  googleChange?: (change: import('../src/google-changes').GoogleChange) => void;
   team: string;
   contract: any;
   connection: Connection;
