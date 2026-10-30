@@ -246,10 +246,19 @@ export function InternalMedia({
           </header>
           {/* Sticky: what is still missing and the copy button stay in view while the lower fields are filled. */}
           <div className="media-copy-bar">
-            <p role="status" aria-live="polite" className={result.ready ? 'small' : 'small media-audit-pending'}>
+            {/* The reason names the fields still empty and is tied to the button, so a disabled copy button explains itself. */}
+            <p id="media-copy-reason" role="status" aria-live="polite" className={result.ready ? 'small' : 'small media-audit-pending'}>
+              {!result.ready && <strong>{t('ยังคัดลอกไม่ได้:')} </strong>}
               {audit}
             </p>
-            <button type="button" className="primary" disabled={!result.ready} onClick={() => void copy(result.prompt)}>
+            <button
+              type="button"
+              className="primary"
+              disabled={!result.ready}
+              aria-describedby="media-copy-reason"
+              title={result.ready ? undefined : audit}
+              onClick={() => void copy(result.prompt)}
+            >
               <Copy size={16} />
               {t('คัดลอก Prompt')}
             </button>

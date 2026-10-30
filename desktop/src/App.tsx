@@ -2093,6 +2093,21 @@ export default function App() {
                             {t('ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน')}
                           </button>
                         )}
+                        {/* Under the headline, so the composer never covers the promises a new user reads first. */}
+                        <ul className="welcome-trust">
+                          <li>
+                            <ShieldCheck size={14} />
+                            {t('ข้อมูลอยู่ในเครื่อง ปิดบังข้อมูลส่วนบุคคลก่อนส่ง')}
+                          </li>
+                          <li>
+                            <Check size={14} />
+                            {t('AI ร่าง คนตรวจและอนุมัติ')}
+                          </li>
+                          <li>
+                            <Blocks size={14} />
+                            {t('รู้จักทีมและ Skill ของ STeP')}
+                          </li>
+                        </ul>
                       </div>
                       <SectionArt scene="chat" className="welcome-illustration" />
                     </div>
@@ -2120,20 +2135,6 @@ export default function App() {
                         'ผู้ช่วยที่รู้จักงานของ STeP สรุปเอกสารยาว ร่างหนังสือ วางแผนโครงการ และตรวจความพร้อมก่อนส่ง ทุกร่างผ่านตาคุณก่อนใช้จริง',
                       )}
                     </p>
-                    <ul className="welcome-trust">
-                      <li>
-                        <ShieldCheck size={14} />
-                        {t('ข้อมูลอยู่ในเครื่อง ปิดบังข้อมูลส่วนบุคคลก่อนส่ง')}
-                      </li>
-                      <li>
-                        <Check size={14} />
-                        {t('AI ร่าง คนตรวจและอนุมัติ')}
-                      </li>
-                      <li>
-                        <Blocks size={14} />
-                        {t('รู้จักทีมและ Skill ของ STeP')}
-                      </li>
-                    </ul>
                   </div>
                 )}
                 {session?.messages.map((message, index) => (
