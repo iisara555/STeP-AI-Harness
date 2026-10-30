@@ -160,9 +160,11 @@ try {
   await waitDone();
   await page.setViewportSize({ width: 960, height: 720 });
   const inputBox = await page.locator('.composer textarea').boundingBox();
-  const asideBox = await page.locator('.composer').getByRole('button', { name: 'ถามแทรก', exact: true }).boundingBox();
+  // With the run finished, the side-question button gives way to the send button.
+  await expect(page.locator('.composer').getByRole('button', { name: 'ถามแทรก', exact: true })).toHaveCount(0);
+  const sendBox = await page.locator('.composer .send').boundingBox();
   assert.ok(inputBox && inputBox.y >= 0 && inputBox.y + inputBox.height <= 720);
-  assert.ok(asideBox && asideBox.x >= 0 && asideBox.x + asideBox.width <= 960 && asideBox.y + asideBox.height <= 720);
+  assert.ok(sendBox && sendBox.x >= 0 && sendBox.x + sendBox.width <= 960 && sendBox.y + sendBox.height <= 720);
   await mkdir('release/qa/long-task-workflows', { recursive: true });
   await page.screenshot({ path: 'release/qa/long-task-workflows/questions-and-draft.png' });
   await page.getByRole('button', { name: 'ทำตามแผนแบบต่อเนื่อง', exact: true }).click();
