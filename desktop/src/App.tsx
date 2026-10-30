@@ -102,6 +102,7 @@ import { toolRequests, visibleStream, type ToolTab, type ToolRequest } from './t
 import { isImageRequest, imageModels } from './image-routing';
 import type { WorkMode, Workflow } from './types';
 import { WorkPlanCard, WORKFLOW_LABELS } from './work-plan';
+import { GoogleChangesList } from './google-changes-list';
 import { WorkAssistantActivity, WorkAssistantGuide, updateWorkActions, workActionsFromTrace } from './work-assistant';
 import { ChatMarkdown } from './chat-markdown';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
@@ -2204,6 +2205,18 @@ export default function App() {
                           </li>
                         ))}
                       </ul>
+                    )}
+                    {!!message.google?.length && (
+                      <GoogleChangesList
+                        changes={message.google}
+                        onOpen={change =>
+                          void action(() =>
+                            change.url
+                              ? api.call('googleOpenChange', { url: change.url })
+                              : api.call('googleOpen', { service: change.service }),
+                          )
+                        }
+                      />
                     )}
                     {message.check &&
                       (message.check.unsupported.length ? (

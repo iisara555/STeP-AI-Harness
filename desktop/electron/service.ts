@@ -41,6 +41,7 @@ import { selfContainedText } from './text-intent';
 import { selectDiscovery } from './discovery';
 import { highConfidenceSkill, prepareSkillSelection } from './skill-selection';
 import { parseDocumentOutput } from '../src/document-output';
+import { GOOGLE_CHANGE_LIMIT, type GoogleChange } from '../src/google-changes';
 import { markdownDocument, documentText } from '../src/draft';
 import { documentTarget, patchContract, applyDocumentPatch } from './document-patch';
 import {
@@ -840,6 +841,8 @@ export class WorkService {
       target.runs = [...(target.runs || []), trace].slice(-TRACE_LIMIT);
       this.emit({ sessionId: id, type: 'trace', trace });
     };
+    // Completed Google writes of this run, for the list under the answer (src/google-changes.ts).
+    const googleChanges: GoogleChange[] = [];
     try {
       status(tm('กำลังเตรียมงาน'));
       let routed = await this.harness.route(session.originalQuery, {
@@ -1604,6 +1607,9 @@ export class WorkService {
             connection,
             signal: controller.signal,
             activity,
+            googleChange: change => {
+              if (googleChanges.length < GOOGLE_CHANGE_LIMIT) googleChanges.push(change);
+            },
             workflow: options.workflow,
             analyze: (prompt, image) => callProvider(prompt, runtime, false, image),
             generate: async (prompt, model) => {
@@ -1824,6 +1830,7 @@ export class WorkService {
         ms: Date.now() - started,
         ...(docSources.length ? { docSources } : {}),
         ...(written.size ? { written: [...written.values()] } : {}),
+        ...(googleChanges.length ? { google: [...googleChanges] } : {}),
         ...(check ? { check } : {}),
         ...(retrieved || searched.length ? { webSources: webSources([retrieved, ...searched].filter(Boolean).join('\n\n')) } : {}),
       });
@@ -1836,7 +1843,13 @@ export class WorkService {
       const code = codeOf(error);
       const shown = timedOut ? 'RUN_TIMEOUT' : controller.signal.aborted ? 'CANCELLED' : code;
       const done = session.checkpoint?.done || 0;
-      session.messages.push({ role: 'status', text: shown, at: new Date().toISOString() });
+      // A failed or cancelled run can still have sent an email or created a file: those stay listed.
+      session.messages.push({
+        role: 'status',
+        text: shown,
+        at: new Date().toISOString(),
+        ...(googleChanges.length ? { google: [...googleChanges] } : {}),
+      });
       if (done && session.status === 'error')
         session.messages.push({
           role: 'status',
