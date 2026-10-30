@@ -1,3 +1,4 @@
+import { uxSmallEn } from './ux-small-en';
 import { uxSetupEn } from './ux-setup-en';
 import { settingsEn } from './settings-en';
 // English UI text keyed by the Thai source text (see src/i18n.ts). Generated once from the UI and then
@@ -301,6 +302,7 @@ export const en: Record<string, string> = {
   ...feedbackEn,
   ...skillSuggestEn,
   ...morningBriefEn,
+  ...uxSmallEn,
   ...uxSetupEn,
   ...planCommentsEn,
   ...taskAlertsEn,

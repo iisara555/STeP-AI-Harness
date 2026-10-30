@@ -712,6 +712,9 @@ function ProviderDetail({
           />
         </label>
       )}
+      {needsKey && (
+        <p className="small muted">{t('API key คือรหัสลับจากหน้าบัญชีของ {0} ใช้แทนการลงชื่อเข้าใช้ ห้ามส่งต่อให้ผู้อื่น', tile.label)}</p>
+      )}
       {preset && (
         <label>
           <span>

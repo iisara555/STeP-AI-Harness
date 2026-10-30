@@ -6869,6 +6869,22 @@ summary {
   }
 }
 
+/* UX/UI review fixes, part 4: Skill filters are tabs like the Settings and output panel tabs. */
+.skills-filters {
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+}
+.skills-filters button {
+  border-radius: 7px 7px 0 0;
+  padding: 8px 12px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.skills-filters button.active {
+  background: transparent;
+  box-shadow: none;
+  border-bottom: 3px solid var(--accent);
+}
 /* UX/UI review fixes, part 3: first-run setup and Settings. */
 /* Setup: the picker's heading is the step title, without a frame around it. */
 .wizard .ai-connect-step {
