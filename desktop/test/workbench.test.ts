@@ -230,3 +230,66 @@ test('browser rejects local file and script schemes; model tool proposals remain
   assert.deepEqual(toolRequests('```step-tool\n{"tool":"eval","input":"evil"}\n```'), []);
   assert.deepEqual(toolRequests('```step-tool\nnot-json\n```'), []);
 });
+
+test('Workbench codeSymbols and codeReferences inspect workspace TypeScript definitions and usages', async () => {
+  const f = await fixture();
+  try {
+    await writeFile(
+      join(f.root, 'service.ts'),
+      'export class AccountService {\n  getBalance(accId: string): number { return 1000; }\n}\nexport function createService(): AccountService { return new AccountService(); }\n',
+    );
+    const symbols = await f.tools.codeSymbols('service.ts');
+    assert.equal(symbols.total, 3);
+    assert.ok(symbols.symbols.some(s => s.name === 'AccountService' && s.kind === 'class'));
+    assert.ok(symbols.symbols.some(s => s.name === 'getBalance' && s.kind === 'method'));
+    assert.ok(symbols.symbols.some(s => s.name === 'createService' && s.kind === 'function'));
+
+    const refs = await f.tools.codeReferences('AccountService');
+    assert.equal(refs.symbol, 'AccountService');
+    assert.ok(refs.definitions.length >= 1);
+    assert.ok(refs.references.length >= 1);
+  } finally {
+    await f.close();
+  }
+});
+
+test('Workbench repl evaluates sandboxed stateful scripts and preserves variables', async () => {
+  const f = await fixture();
+  try {
+    const turn1 = f.tools.repl('sess-1', 'const x = 50; const y = 5; x * y;');
+    assert.equal(turn1.error, undefined);
+    assert.equal(turn1.result, '250');
+
+    const turn2 = f.tools.repl('sess-1', 'x + y + 10;');
+    assert.equal(turn2.error, undefined);
+    assert.equal(turn2.result, '65');
+  } finally {
+    await f.close();
+  }
+});
+
+test('Workbench manages session artifacts and spawns subagents', async () => {
+  const f = await fixture();
+  try {
+    const art = f.tools.saveArtifact('sess-art', 'draft-spec', 'TOR Proposal Draft', 'markdown', '# Content');
+    assert.equal(art.id, 'draft-spec');
+    assert.equal(art.version, 1);
+    assert.equal(art.uri, 'sidecar://artifact/draft-spec');
+
+    const retrieved = f.tools.getArtifact('sess-art', 'draft-spec');
+    assert.equal(retrieved?.title, 'TOR Proposal Draft');
+
+    const list = f.tools.listArtifacts('sess-art');
+    assert.equal(list.length, 1);
+
+    const subtask = await f.tools.invokeSubagent('sess-art', {
+      role: 'Reviewer',
+      prompt: 'Check the proposal',
+      workspace: 'inherit',
+    });
+    assert.equal(subtask.status, 'completed');
+    assert.equal(subtask.role, 'Reviewer');
+  } finally {
+    await f.close();
+  }
+});

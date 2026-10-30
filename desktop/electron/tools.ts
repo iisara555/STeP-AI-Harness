@@ -44,6 +44,12 @@ const TOOL_ACTIVITY: Record<string, string> = {
   patch: 'กำลังเตรียมแก้ข้อความเฉพาะจุด',
   changes: 'กำลังเตรียมการแก้ไขไฟล์',
   sheet_create: 'กำลังจัดทำไฟล์ Excel',
+  code_symbols: 'กำลังค้นหาสัญลักษณ์ในโค้ด',
+  code_references: 'กำลังค้นหาจุดอ้างอิงของสัญลักษณ์',
+  repl_eval: 'กำลังประมวลผลคำสั่งใน Sandbox',
+  artifact_save: 'กำลังบันทึกเอกสาร Interactive Artifact',
+  artifact_read: 'กำลังเปิดดูเอกสาร Interactive Artifact',
+  invoke_subagent: 'กำลังประสานงานกับ Subagent ผู้ช่วยย่อย',
   slides_create: 'กำลังจัดทำไฟล์ PowerPoint',
 };
 export type ToolScope = {
@@ -626,6 +632,10 @@ export class DesktopTools {
     if (r.tool === 'browser_control' && this.mode() === 'plan' && a.action !== 'read') throw new Error('PLAN_MODE_BLOCKED');
     const fileTool = [
       'code_diagnostics',
+      'code_symbols',
+      'code_references',
+      'artifact_save',
+      'artifact_read',
       'files',
       'vision_analyze',
       'search_files',
@@ -638,9 +648,13 @@ export class DesktopTools {
       'sheet_create',
       'slides_create',
     ].includes(r.tool);
-    const command = r.tool === 'terminal' || r.tool === 'sandbox' ? target : undefined;
+    const command =
+      r.tool === 'terminal' || r.tool === 'sandbox' || r.tool === 'repl_eval' || r.tool === 'invoke_subagent' ? target : undefined;
     if (command && this.harness.privacy(command).action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
-    if (this.mode() === 'plan' && ['changes', 'patch', 'sheet_edit', 'sheet_create', 'slides_create', 'image_generate'].includes(r.tool))
+    if (
+      this.mode() === 'plan' &&
+      ['changes', 'patch', 'sheet_edit', 'sheet_create', 'slides_create', 'image_generate', 'repl_eval', 'invoke_subagent'].includes(r.tool)
+    )
       throw new Error('PLAN_MODE_BLOCKED');
     const request = {
       tool: r.tool,
@@ -783,6 +797,36 @@ export class DesktopTools {
             return this.workbench.stage(target, r.content).then(c => this.settle({ id: c.id, path: c.path }, scope));
           case 'code_diagnostics':
             return this.workbench.diagnostics(target, scope.signal, join(dirname(this.sheetPath), 'code-worker.cjs'));
+          case 'code_symbols':
+            return this.workbench.codeSymbols(target, a);
+          case 'code_references':
+            return this.workbench.codeReferences(target, a);
+          case 'repl_eval':
+            await check();
+            return this.workbench.repl(
+              scope.sessionId,
+              typeof a.code === 'string' ? a.code : target,
+              Boolean(a.reset),
+              typeof a.timeoutMs === 'number' ? a.timeoutMs : 5000,
+            );
+          case 'artifact_save':
+            return this.workbench.saveArtifact(
+              scope.sessionId,
+              (a.id as string) || target,
+              (a.title as string) || (a.id as string) || target,
+              (a.kind as any) || 'markdown',
+              (a.content as string) || '',
+            );
+          case 'artifact_read':
+            if (a.id || target) return this.workbench.getArtifact(scope.sessionId, (a.id as string) || target);
+            return this.workbench.listArtifacts(scope.sessionId);
+          case 'invoke_subagent':
+            await check();
+            return this.workbench.invokeSubagent(scope.sessionId, {
+              role: (a.role as string) || 'Assistant',
+              prompt: (a.prompt as string) || target,
+              workspace: (a.workspace as any) || 'inherit',
+            });
           case 'terminal': {
             const job = await this.workbench.start(target, scope.sessionId);
             if (typeof a.waitMsBeforeAsync === 'number' && a.waitMsBeforeAsync > 0 && !a.isDaemon) {

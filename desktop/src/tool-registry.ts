@@ -14,6 +14,57 @@ type Schema = {
   additionalProperties?: boolean;
 };
 const definitions: Record<string, [string, string[], Record<string, Schema>]> = {
+  code_symbols: [
+    'Search symbol declarations (functions, classes, interfaces, types, methods, enums, variables) across workspace code files or inspect a specific file. Returns line numbers, signatures, and container names.',
+    ['workspace-read'],
+    {
+      query: { type: 'string', maxLength: 100 },
+      kind: { enum: ['all', 'function', 'class', 'interface', 'type', 'enum', 'method', 'variable', 'constant'] },
+      limit: { type: 'integer', minimum: 1, maximum: 200 },
+    },
+  ],
+  code_references: [
+    'Find definitions and identifier references of a symbol across workspace code files using TypeScript AST analysis. Target is the symbol name or file path; args.symbol specifies the symbol name.',
+    ['workspace-read'],
+    {
+      symbol: { type: 'string', maxLength: 100 },
+    },
+  ],
+  artifact_save: [
+    'Save or update a structured interactive artifact (markdown, html, mermaid, table, code, json). Persists live documents in the session artifact store and returns a sidecar URI for side-by-side inspection.',
+    ['workspace-read'],
+    {
+      id: { type: 'string', maxLength: 80 },
+      title: { type: 'string', maxLength: 200 },
+      kind: { enum: ['markdown', 'html', 'mermaid', 'table', 'code', 'json'] },
+      content: { type: 'string', maxLength: 200000 },
+    },
+  ],
+  artifact_read: [
+    'Read an interactive artifact from the session artifact store by ID or list all artifacts in the current session.',
+    ['workspace-read'],
+    {
+      id: { type: 'string', maxLength: 80 },
+    },
+  ],
+  invoke_subagent: [
+    'Launch an isolated subagent with its own prompt and role. Set workspace="branch" to create an isolated Git worktree branch for safe modifications, or "inherit" to run in the current workspace.',
+    ['execution', 'consent'],
+    {
+      role: { type: 'string', maxLength: 100 },
+      prompt: { type: 'string', maxLength: 4000 },
+      workspace: { enum: ['inherit', 'branch', 'share'] },
+    },
+  ],
+  repl_eval: [
+    'Evaluate JavaScript code in a stateful in-memory sandboxed session. Variables, functions, and state persist across turns within the same task session. Target or args.code contains the script; args.reset=true clears session state.',
+    ['execution', 'consent'],
+    {
+      code: { type: 'string', maxLength: 50000 },
+      reset: { type: 'boolean' },
+      timeoutMs: { type: 'integer', minimum: 500, maximum: 10000 },
+    },
+  ],
   code_diagnostics: [
     'Check TypeScript/JavaScript syntax and semantic types in a bounded local snapshot with relative imports. Does not run project code, plugins or scripts. Not a full project build: incomplete=true requires project checks.',
     ['workspace-read'],
@@ -47,7 +98,7 @@ const definitions: Record<string, [string, string[], Record<string, Schema>]> = 
       limit: {
         type: 'integer',
         minimum: 1,
-        maximum: 40,
+        maximum: 60,
       },
       scope: {
         enum: ['core', 'mcp', 'all'],
@@ -606,7 +657,7 @@ export function discoverTools(
       executionGranted: false,
     };
   };
-  const limit = Number(request.args?.limit ?? 40);
+  const limit = Number(request.args?.limit ?? 60);
   return {
     tools: entries.slice(0, limit).map(describe),
     total: entries.length,
