@@ -27,7 +27,6 @@ import {
   PanelRightClose,
   Paperclip,
   Plus,
-  Search,
   Settings2,
   Square,
   X,
@@ -56,7 +55,6 @@ import {
   AlertTriangle,
   SlidersHorizontal,
   CalendarClock,
-  LayoutDashboard,
 } from './icons';
 import { lazyScreen } from './lazy-screen';
 import type { DocumentAttachment, DocumentForm } from './document-tool-app';
@@ -104,8 +102,6 @@ import { toolRequests, visibleStream, type ToolTab, type ToolRequest } from './t
 import { isImageRequest, imageModels } from './image-routing';
 import type { WorkMode, Workflow } from './types';
 import { WorkPlanCard, WORKFLOW_LABELS } from './work-plan';
-import { AgentManager } from './agent-manager-view';
-import { needsYouCount } from './agent-manager';
 import { WorkAssistantActivity, WorkAssistantGuide, updateWorkActions, workActionsFromTrace } from './work-assistant';
 import { ChatMarkdown } from './chat-markdown';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
@@ -130,6 +126,7 @@ import type { WorkAction } from './types';
 import { locale, setLanguage, t, teamName } from './i18n';
 import { startersFor, starterTag, starterText } from './starters';
 import { MorningBriefCard } from './morning-brief';
+import { initialSeen, needsYouCount, taskAlert, TASK_ALERT_LABELS, TASK_SEEN_KEY } from './task-alerts';
 
 const ReceiptApp = lazyScreen(async () => ({ default: (await import('./receipt')).ReceiptApp }));
 const DocumentTools = lazyScreen(async () => ({ default: (await import('./document-tool-app')).DocumentTools }));
@@ -268,7 +265,7 @@ export default function App() {
   const [authCode, setAuthCode] = useState<{ id: string; code: string } | null>(null);
   const [plan, setPlan] = useState<(PlanStep & { state: string })[]>([]);
   const [workActions, setWorkActions] = useState<Record<string, WorkAction[]>>({});
-  const [view, setView] = useState<'chat' | 'manager' | 'receipt' | 'skills' | 'documents' | 'media' | 'schedules'>('chat');
+  const [view, setView] = useState<'chat' | 'receipt' | 'skills' | 'documents' | 'media' | 'schedules'>('chat');
   const navigate = (next: typeof view) => {
     if (
       guardSettingsExit(() => {
@@ -360,6 +357,30 @@ export default function App() {
   const sendInFlight = useRef(false),
     conversationEnd = useRef<HTMLDivElement>(null);
   const session = snapshot?.sessions.find(s => s.id === selected);
+  // Per task, the updatedAt the employee last saw with the task open: finished and stopped tasks show a dot until then.
+  const [seen, setSeen] = useState<Record<string, string>>();
+  useEffect(() => {
+    if (!snapshot) return;
+    let next = seen;
+    if (!next) {
+      let stored: string | null = null;
+      try {
+        stored = localStorage.getItem(TASK_SEEN_KEY);
+      } catch {
+        // Without storage the marks last for this session.
+      }
+      next = initialSeen(stored, snapshot.sessions);
+    }
+    if (session && view === 'chat' && !settings && next[session.id] !== session.updatedAt)
+      next = { ...next, [session.id]: session.updatedAt };
+    if (next === seen) return;
+    setSeen(next);
+    try {
+      localStorage.setItem(TASK_SEEN_KEY, JSON.stringify(next));
+    } catch {
+      // The dots still clear for this session.
+    }
+  }, [snapshot, session, view, settings, seen]);
   useEffect(() => {
     if (session?.documentTemplate) {
       setFormat('docx');
@@ -530,16 +551,16 @@ export default function App() {
           setSettingsPage('credentials');
           setSettings(true);
         }
-        if (event.type === 'approval' && event.approval) {
-          setToolApprovals(list => [...list.filter(a => a.id !== event.approval!.id), event.approval!]);
-          // A task working in the background stops until the employee answers; say so when they are in another app.
+        if ((event.type === 'approval' && event.approval) || (event.type === 'question' && event.question))
+          // Another window has focus: the task waiting on the employee says so outside the app, like a finished task.
           if (!document.hasFocus() && typeof Notification !== 'undefined' && Notification.permission !== 'denied')
             try {
-              new Notification('STeP Desktop', { body: t('มีงานรอคุณอนุญาต'), silent: true });
+              new Notification('STeP Desktop', { body: t(event.approval ? 'มีงานรอคุณอนุญาต' : 'มีงานรอคุณตอบ'), silent: true });
             } catch {
               /* Notifications are optional. */
             }
-        }
+        if (event.type === 'approval' && event.approval)
+          setToolApprovals(list => [...list.filter(a => a.id !== event.approval!.id), event.approval!]);
         if (event.type === 'approval-close') setToolApprovals(list => list.filter(a => a.id !== event.approvalId));
         if (event.type === 'question' && event.question)
           setQuestions(list => [...list.filter(q => q.id !== event.question!.id), event.question!]);
@@ -1279,8 +1300,6 @@ export default function App() {
     });
   }
   const providerName = (c?: Connection) => (c ? connectionName(c) : '');
-  // Tasks waiting on the employee's answer or permission, counted on the task overview's menu entry.
-  const needsYou = snapshot ? needsYouCount(snapshot.sessions, questions, toolApprovals) : 0;
   // A run that waits on the employee's answer or permission says so, instead of "working".
   const taskStatus = (s: { id: string; status: string }) =>
     questions.some(q => q.sessionId === s.id)
@@ -1288,6 +1307,12 @@ export default function App() {
       : toolApprovals.some(a => a.sessionId === s.id)
         ? t('รอคุณอนุญาต')
         : statusText[s.status] || s.status;
+  // The notification dot of each task in the list (src/task-alerts.ts); the open task needs none.
+  const alertOf = (s: Session) => {
+    const alert = taskAlert(s, questions, toolApprovals, seen ? seen[s.id] : s.updatedAt);
+    return selected === s.id && view === 'chat' && alert !== 'needs-you' && alert !== 'running' ? undefined : alert;
+  };
+  const needsYou = snapshot ? needsYouCount(snapshot.sessions, questions, toolApprovals) : 0;
   const setTheme = (theme: string) =>
     action(async () => {
       await api!.call('settings', { assistant: snapshot!.settings.assistant, team: snapshot!.settings.team, theme });
@@ -1348,10 +1373,6 @@ export default function App() {
     schedules: () => {
       setSettings(false);
       navigate('schedules');
-    },
-    manager: () => {
-      setSettings(false);
-      navigate('manager');
     },
     receipt: () => {
       setSettings(false);
@@ -1477,9 +1498,7 @@ export default function App() {
             ? t('ศูนย์รวม Skill')
             : view === 'schedules'
               ? t('งานตั้งเวลา')
-              : view === 'manager'
-                ? t('ศูนย์ควบคุมงาน')
-                : session?.title || t('เริ่มต้นงานที่อยากทำ');
+              : session?.title || t('เริ่มต้นงานที่อยากทำ');
   const brandSymbol = (
     <span className="brand-symbol" role="img" aria-label="STeP">
       <img className="on-light" src={symbolColour} alt="" />
@@ -1504,6 +1523,7 @@ export default function App() {
         showRight={!settings && view === 'chat'}
         theme={snapshot.settings.theme}
         feedback={snapshot.policy?.features.feedback !== false}
+        search={fullSidebar ? { value: search, onChange: setSearch } : undefined}
       />
       <div className="app" style={{ '--artifact-width': `${width}px` } as React.CSSProperties}>
         {!fullSidebar && (
@@ -1538,25 +1558,6 @@ export default function App() {
             </div>
             <button className="new-work" data-tour="new-work" onClick={() => void action(create)}>
               <Plus size={18} /> {t('เริ่มงานใหม่')}
-            </button>
-            <label className="search">
-              <Search size={16} />
-              <input placeholder={t('ค้นหางานหรือเนื้อหา')} value={search} onChange={e => setSearch(e.target.value)} />
-              <button className="icon palette-hint" aria-label={t('เปิดคำสั่ง')} onClick={() => setPalette(true)}>
-                {shortcut}
-              </button>
-            </label>
-            <button
-              className={'manager-entry' + (view === 'manager' && !settings ? ' active' : '')}
-              aria-label={needsYou ? `${t('ศูนย์ควบคุมงาน')} (${needsYou})` : undefined}
-              onClick={() => {
-                setSettings(false);
-                navigate('manager');
-              }}
-            >
-              <LayoutDashboard size={16} />
-              <span>{t('ศูนย์ควบคุมงาน')}</span>
-              {!!needsYou && <span className="count attention">{needsYou}</span>}
             </button>
             <div className="session-filter" role="tablist" aria-label={t('กรองงาน')}>
               {(
@@ -1614,6 +1615,14 @@ export default function App() {
                             {s.project || s.team.toUpperCase() || t('ทุกทีม')} · {taskStatus(s)}
                           </small>
                         </button>
+                        {alertOf(s) && (
+                          <span
+                            className={'task-alert ' + alertOf(s)}
+                            role="img"
+                            aria-label={t(TASK_ALERT_LABELS[alertOf(s)!])}
+                            title={t(TASK_ALERT_LABELS[alertOf(s)!])}
+                          />
+                        )}
                         <span className="session-actions">
                           <button
                             className="icon"
@@ -1883,9 +1892,7 @@ export default function App() {
                           ? t('ค้นหา Skill และดูว่ารายการใดพร้อมใช้')
                           : view === 'schedules'
                             ? t('ให้ผู้ช่วยทำงานซ้ำตามเวลา ผลเป็นร่างให้คุณตรวจ')
-                            : view === 'manager'
-                              ? t('ทุกงานของผู้ช่วย เรียงตามสิ่งที่ต้องทำต่อ')
-                              : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
+                            : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
               </small>
             </div>
             {!settings && view === 'chat' && (
@@ -1989,25 +1996,7 @@ export default function App() {
               </p>
             </ConfirmDialog>
           )}
-          {settings ? null : view === 'receipt' || view === 'documents' || view === 'media' ? null : view === 'manager' ? (
-            <AgentManager
-              sessions={snapshot.sessions}
-              questions={questions}
-              approvals={toolApprovals}
-              onOpen={id =>
-                void action(async () => {
-                  navigate('chat');
-                  await selectSession(id);
-                })
-              }
-              onNew={() =>
-                void action(async () => {
-                  navigate('chat');
-                  await create();
-                })
-              }
-            />
-          ) : view === 'schedules' ? (
+          {settings ? null : view === 'receipt' || view === 'documents' || view === 'media' ? null : view === 'schedules' ? (
             <ScheduledTasks
               api={api}
               connections={snapshot.connections}

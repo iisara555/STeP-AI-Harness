@@ -6,7 +6,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-- Add **ศูนย์ควบคุมงาน**, a task overview in the style of Antigravity's Agent Manager: every assistant task in one place, grouped as waiting on you (a question, a permission or missing information), running (with how many of the 3 parallel slots are in use), done and ready to review (with plan progress) and stopped or failed. Opening a task goes to its chat; a new task can be started from the page. The sidebar entry and the folded rail icon show how many tasks wait on the employee, and a permission request from a background task raises a desktop notification while the app is not in front.
+- Show a notification dot on each task in the task list: red while it waits on the employee's answer or permission, yellow while it runs, green when it finished and blue when it did not, until the employee opens it. The folded task list counts the tasks waiting on the employee, and a desktop notification says when a task asks for an answer or permission while another window has focus. Task search moves to the title bar while the task list is open.
 - Tighten the administrator allowlists added in 0.6.23. `permission.allowedCommands` now runs a command without asking only when it holds words, paths, flags, file globs and plain quotes, so PowerShell grouping such as `(...)` or `@(...)` inside an allowed prefix asks as usual. `permission.allowedDomains` skips only the per-site question: with privacy checks on, the URL privacy question still shows the address before any network access.
 
 ## Desktop v0.6.23 (2026-10-29)

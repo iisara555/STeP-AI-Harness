@@ -11,9 +11,6 @@ with a short wiggle, written in the same shape as the copied icons.
 `calendar-clock.tsx` (งานตั้งเวลา) is not from lucide-animated either: the Lucide calendar-clock drawing whose clock hand
 sweeps once, in the same shape.
 
-`layout-dashboard.tsx` (ศูนย์ควบคุมงาน) is not from lucide-animated either: the Lucide layout-dashboard drawing with a
-short press, in the same shape.
-
 The rest of the renderer imports Lucide drawings through `../icons.tsx`. This shared adapter plays one bounded
 movement on the nearest control's pointer hover or keyboard focus without changing the drawing, SVG props or hit
 target. Decorative icons and disabled controls stay still; loading spinners keep their existing activity behavior.

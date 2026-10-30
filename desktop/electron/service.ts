@@ -41,7 +41,6 @@ import { selfContainedText } from './text-intent';
 import { selectDiscovery } from './discovery';
 import { highConfidenceSkill, prepareSkillSelection } from './skill-selection';
 import { parseDocumentOutput } from '../src/document-output';
-import { PARALLEL_RUNS } from '../src/agent-manager';
 import { markdownDocument, documentText } from '../src/draft';
 import { documentTarget, patchContract, applyDocumentPatch } from './document-patch';
 import {
@@ -57,8 +56,7 @@ export { fence, section } from './prompt';
 export { RETRYABLE_CODES, RETRY_DELAYS_MS } from './retry';
 
 export const STEP_TIMEOUT_MS = 600_000;
-/** Shared with the renderer's task overview (src/agent-manager.ts), which shows how many run at once. */
-export const MAX_PARALLEL_RUNS = PARALLEL_RUNS;
+export const MAX_PARALLEL_RUNS = 3;
 // Failures that usually pass on their own: a dropped connection, a busy service, a runtime that exited.
 const TRACE_LIMIT = 20;
 // Chat keeps the conversation, like any chat app: recent turns and every file sent in it, within these budgets.

@@ -201,6 +201,31 @@ a,
   color: var(--muted);
   font-size: 12px;
 }
+/* With the task list open, the bar holds the task search; the shortcut opens the command palette (src/titlebar.tsx). */
+.titlebar-search {
+  -webkit-app-region: no-drag;
+  display: flex;
+  align-items: center;
+  cursor: text;
+}
+.titlebar-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font-size: 12px;
+  outline: none;
+}
+.titlebar-search:focus-within {
+  border-color: var(--line-strong);
+}
+.titlebar-search .titlebar-palette {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
 .titlebar-command span {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -570,21 +595,6 @@ a,
   justify-content: flex-start;
   padding: 10px 13px;
   margin-bottom: 17px;
-}
-.search {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  color: var(--muted);
-  padding: 0 7px;
-  margin-bottom: 17px;
-}
-.search input {
-  border: 0;
-  background: transparent;
-  width: 100%;
-  padding: 6px 0;
-  font-size: 13px;
 }
 nav {
   display: flex;
@@ -2049,6 +2059,44 @@ nav button,
   color: var(--muted);
   font-size: 11px;
 }
+/* A task's notification (src/task-alerts.ts): waiting on the employee, running, or finished or stopped and not opened
+   yet. It gives way to the task's buttons on hover. */
+.task-alert {
+  flex-shrink: 0;
+  align-self: center;
+  width: 9px;
+  height: 9px;
+  margin: 0 12px 0 4px;
+  border-radius: 50%;
+}
+.task-alert.needs-you {
+  background: var(--danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 20%, transparent);
+}
+.task-alert.running {
+  background: var(--accent);
+  animation: task-alert-pulse 1.4s ease-in-out infinite;
+}
+.task-alert.done {
+  background: var(--alert-done);
+}
+.task-alert.stopped {
+  background: var(--alert-stopped);
+}
+.session:hover .task-alert,
+.session:focus-within .task-alert {
+  display: none;
+}
+@keyframes task-alert-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .task-alert.running {
+    animation: none;
+  }
+}
 .session-actions {
   display: none;
   align-items: center;
@@ -2071,15 +2119,6 @@ nav button,
   width: 100%;
   margin-bottom: 3px;
   font-size: 13px;
-}
-.search {
-  position: relative;
-}
-.palette-hint {
-  font-size: 11px;
-  gap: 2px;
-  padding: 3px 5px;
-  border: 1px solid var(--line);
 }
 .thinking {
   margin-top: 10px;
@@ -3238,15 +3277,6 @@ nav .count {
   font-size: 11px;
   color: var(--muted);
 }
-.count.attention {
-  min-width: 18px;
-  padding: 0 5px;
-  border-radius: 9px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 700;
-  text-align: center;
-}
 .composer {
   position: relative;
 }
@@ -3965,32 +3995,6 @@ nav .count {
 }
 
 /* Task list filter: one compact row so the list itself gets the height. */
-/* ศูนย์ควบคุมงาน above the task filters, with the count of tasks waiting on the employee (src/agent-manager-view.tsx). */
-.manager-entry {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  margin-bottom: 10px;
-  padding: 7px 10px;
-  font-size: 13px;
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-.manager-entry:hover {
-  background: var(--hover);
-}
-.manager-entry.active {
-  background: var(--selected);
-  border-color: var(--line-strong);
-}
-.manager-entry .count {
-  margin-left: auto;
-  font-size: 11px;
-}
 .session-filter {
   display: flex;
   gap: 4px;
@@ -5166,7 +5170,7 @@ nav button:disabled {
   color: var(--muted);
   border-radius: 9px;
 }
-/* Tasks waiting on the employee, on the task overview's rail icon (src/sidebar-rail.tsx). */
+/* Tasks waiting on the employee, on the task list's rail icon (src/sidebar-rail.tsx). */
 .rail-badge {
   position: absolute;
   top: 3px;
@@ -5175,8 +5179,8 @@ nav button:disabled {
   height: 16px;
   padding: 0 4px;
   border-radius: 8px;
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--danger);
+  color: var(--paper);
   font-size: 10px;
   font-weight: 700;
   line-height: 16px;
