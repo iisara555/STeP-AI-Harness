@@ -6,6 +6,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- List what an answer did in Google Workspace under it ("สิ่งที่ทำใน Google Workspace"): each completed write, such as a created or edited Doc/Sheet/Slides/Form, a sent email or draft, a Calendar event, a Task, a Chat message, a Drive share or an Apps Script run, with Google's name for the item and an Open button. Links are opened only in fixed Google page shapes built from an id; email subjects and bodies are not kept. A run that fails or is cancelled after a write still lists it on its status message. Nothing new is sent to the AI and no new Google scope is requested.
 - Tighten the administrator allowlists added in 0.6.23. `permission.allowedCommands` now runs a command without asking only when it holds words, paths, flags, file globs and plain quotes, so PowerShell grouping such as `(...)` or `@(...)` inside an allowed prefix asks as usual. `permission.allowedDomains` skips only the per-site question: with privacy checks on, the URL privacy question still shows the address before any network access.
 
 ## Desktop v0.6.23 (2026-10-29)

@@ -15,6 +15,7 @@ import { receiptPacketEn } from './receipt-packet-en';
 import { afpPaymentVoucherEn } from './afp-payment-voucher-en';
 import { workAssistantEn } from './work-assistant-en';
 import { afpEvidenceEn } from './afp-evidence-en';
+import { googleChangesEn } from './google-changes-en';
 export const en: Record<string, string> = {
   'ผู้ช่วยตรวจไฟล์และเว็บ แสดงลำดับขั้นตอนที่ทำจริง อ่านไฟล์ เว็บ และข้อมูล Google โดยแก้ไฟล์เป็นร่างรอตรวจ':
     'File and web assistant shows actual tool steps, reads files, websites and Google data, and stages file edits for review',
@@ -3171,5 +3172,6 @@ export const en: Record<string, string> = {
   ...receiptPacketEn,
   ...afpPaymentVoucherEn,
   ...workAssistantEn,
+  ...googleChangesEn,
   ...afpEvidenceEn,
 };
