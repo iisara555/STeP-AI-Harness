@@ -2064,17 +2064,18 @@ nav button,
 .task-alert {
   flex-shrink: 0;
   align-self: center;
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   margin: 0 12px 0 4px;
   border-radius: 50%;
 }
 .task-alert.needs-you {
-  background: var(--danger);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 20%, transparent);
+  background: var(--alert-needs-you);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--alert-needs-you) 22%, transparent);
 }
 .task-alert.running {
   background: var(--accent);
+  box-shadow: inset 0 0 0 1.5px var(--alert-running-ring);
   animation: task-alert-pulse 1.4s ease-in-out infinite;
 }
 .task-alert.done {
@@ -2089,7 +2090,7 @@ nav button,
 }
 @keyframes task-alert-pulse {
   50% {
-    opacity: 0.35;
+    opacity: 0.45;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -5179,7 +5180,7 @@ nav button:disabled {
   height: 16px;
   padding: 0 4px;
   border-radius: 8px;
-  background: var(--danger);
+  background: var(--alert-needs-you);
   color: var(--paper);
   font-size: 10px;
   font-weight: 700;

@@ -132,6 +132,8 @@ try {
   await page.keyboard.press('Enter');
   const running = sidebar.locator('.task-alert.running');
   await expect(running).toHaveCount(1, { timeout: 30000 });
+  await page.mouse.move(900, 400);
+  await sidebar.screenshot({ path: join(out, 'running.png') });
   await task('ตรวจใบเสร็จเดือนตุลาคม').locator('.session-open').click();
   await page.mouse.move(900, 400);
   release();
@@ -147,9 +149,17 @@ try {
   await expect(search).toHaveValue('');
   await expect(sidebar.locator('.session')).toHaveCount(4);
 
+  // The dots keep their meaning in the dark theme.
+  await page.evaluate(() => window.step.call('settings', { assistant: 'STeP Mate', team: 'cc', theme: 'dark' }));
+  await page.evaluate(() => localStorage.setItem('step.taskSeen', '{}'));
+  await page.reload();
+  await expect(sidebar.locator('.task-alert.needs-you')).toHaveCount(1);
+  await expect(sidebar.locator('.task-alert.stopped')).toHaveCount(1);
+  await page.mouse.move(900, 400);
+  await page.screenshot({ path: join(out, 'dots-dark.png') });
+
   // Folded to icons on a narrow dark window, the task list icon counts the tasks waiting on the employee.
   await page.setViewportSize({ width: 760, height: 860 });
-  await page.evaluate(() => window.step.call('settings', { assistant: 'STeP Mate', team: 'cc', theme: 'dark' }));
   await page.reload();
   await expect(sidebar).toHaveClass(/rail/);
   await expect(page.locator('header.titlebar').getByRole('button', { name: 'ค้นหางานและคำสั่ง' })).toBeVisible();
