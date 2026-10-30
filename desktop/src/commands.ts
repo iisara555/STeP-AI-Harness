@@ -4,6 +4,7 @@ import { t } from './i18n';
 export const COMMANDS = [
   ['palette', 'เปิดคำสั่ง', 'Mod+k'],
   ['new', 'เริ่มงานใหม่', 'Mod+Alt+n'],
+  ['manager', 'ศูนย์ควบคุมงาน', ''],
   ['usage', 'ดูการใช้งาน AI', 'Mod+Shift+u'],
   ['memory', 'ดูและแก้ไขความจำ', 'Mod+Shift+m'],
   ['vault', 'บัญชีและบริการ', ''],

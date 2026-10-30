@@ -3238,6 +3238,15 @@ nav .count {
   font-size: 11px;
   color: var(--muted);
 }
+.count.attention {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+  text-align: center;
+}
 .composer {
   position: relative;
 }
@@ -3956,6 +3965,32 @@ nav .count {
 }
 
 /* Task list filter: one compact row so the list itself gets the height. */
+/* ศูนย์ควบคุมงาน above the task filters, with the count of tasks waiting on the employee (src/agent-manager-view.tsx). */
+.manager-entry {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 7px 10px;
+  font-size: 13px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.manager-entry:hover {
+  background: var(--hover);
+}
+.manager-entry.active {
+  background: var(--selected);
+  border-color: var(--line-strong);
+}
+.manager-entry .count {
+  margin-left: auto;
+  font-size: 11px;
+}
 .session-filter {
   display: flex;
   gap: 4px;
@@ -5120,6 +5155,7 @@ nav button:disabled {
   margin: 0 0 14px;
 }
 .rail-button {
+  position: relative;
   width: 40px;
   height: 40px;
   padding: 0;
@@ -5129,6 +5165,22 @@ nav button:disabled {
   background: transparent;
   color: var(--muted);
   border-radius: 9px;
+}
+/* Tasks waiting on the employee, on the task overview's rail icon (src/sidebar-rail.tsx). */
+.rail-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
 }
 .rail-button:hover {
   background: var(--hover);

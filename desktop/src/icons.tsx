@@ -38,6 +38,7 @@ import {
   IndentIncrease as StillIndentIncrease,
   Italic as StillItalic,
   KeyRound as StillKeyRound,
+  LayoutDashboard as StillLayoutDashboard,
   Lightbulb as StillLightbulb,
   List as StillList,
   ListChecks as StillListChecks,
@@ -205,6 +206,7 @@ export const Italic = /* @__PURE__ */ animated(StillItalic, 'Italic', 'pulse');
 export const KeyRound = /* @__PURE__ */ animated(StillKeyRound, 'KeyRound', 'turn');
 export const Lightbulb = /* @__PURE__ */ animated(StillLightbulb, 'Lightbulb', 'pulse');
 export const List = /* @__PURE__ */ animated(StillList, 'List', 'pulse');
+export const LayoutDashboard = /* @__PURE__ */ animated(StillLayoutDashboard, 'LayoutDashboard', 'pulse');
 export const ListChecks = /* @__PURE__ */ animated(StillListChecks, 'ListChecks', 'pulse');
 export const ListOrdered = /* @__PURE__ */ animated(StillListOrdered, 'ListOrdered', 'pulse');
 export const LockKeyhole = /* @__PURE__ */ animated(StillLockKeyhole, 'LockKeyhole', 'pulse');

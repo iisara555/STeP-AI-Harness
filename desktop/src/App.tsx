@@ -56,6 +56,7 @@ import {
   AlertTriangle,
   SlidersHorizontal,
   CalendarClock,
+  LayoutDashboard,
 } from './icons';
 import { lazyScreen } from './lazy-screen';
 import type { DocumentAttachment, DocumentForm } from './document-tool-app';
@@ -103,6 +104,8 @@ import { toolRequests, visibleStream, type ToolTab, type ToolRequest } from './t
 import { isImageRequest, imageModels } from './image-routing';
 import type { WorkMode, Workflow } from './types';
 import { WorkPlanCard, WORKFLOW_LABELS } from './work-plan';
+import { AgentManager } from './agent-manager-view';
+import { needsYouCount } from './agent-manager';
 import { WorkAssistantActivity, WorkAssistantGuide, updateWorkActions, workActionsFromTrace } from './work-assistant';
 import { ChatMarkdown } from './chat-markdown';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
@@ -265,7 +268,7 @@ export default function App() {
   const [authCode, setAuthCode] = useState<{ id: string; code: string } | null>(null);
   const [plan, setPlan] = useState<(PlanStep & { state: string })[]>([]);
   const [workActions, setWorkActions] = useState<Record<string, WorkAction[]>>({});
-  const [view, setView] = useState<'chat' | 'receipt' | 'skills' | 'documents' | 'media' | 'schedules'>('chat');
+  const [view, setView] = useState<'chat' | 'manager' | 'receipt' | 'skills' | 'documents' | 'media' | 'schedules'>('chat');
   const navigate = (next: typeof view) => {
     if (
       guardSettingsExit(() => {
@@ -527,8 +530,16 @@ export default function App() {
           setSettingsPage('credentials');
           setSettings(true);
         }
-        if (event.type === 'approval' && event.approval)
+        if (event.type === 'approval' && event.approval) {
           setToolApprovals(list => [...list.filter(a => a.id !== event.approval!.id), event.approval!]);
+          // A task working in the background stops until the employee answers; say so when they are in another app.
+          if (!document.hasFocus() && typeof Notification !== 'undefined' && Notification.permission !== 'denied')
+            try {
+              new Notification('STeP Desktop', { body: t('มีงานรอคุณอนุญาต'), silent: true });
+            } catch {
+              /* Notifications are optional. */
+            }
+        }
         if (event.type === 'approval-close') setToolApprovals(list => list.filter(a => a.id !== event.approvalId));
         if (event.type === 'question' && event.question)
           setQuestions(list => [...list.filter(q => q.id !== event.question!.id), event.question!]);
@@ -1268,6 +1279,8 @@ export default function App() {
     });
   }
   const providerName = (c?: Connection) => (c ? connectionName(c) : '');
+  // Tasks waiting on the employee's answer or permission, counted on the task overview's menu entry.
+  const needsYou = snapshot ? needsYouCount(snapshot.sessions, questions, toolApprovals) : 0;
   // A run that waits on the employee's answer or permission says so, instead of "working".
   const taskStatus = (s: { id: string; status: string }) =>
     questions.some(q => q.sessionId === s.id)
@@ -1335,6 +1348,10 @@ export default function App() {
     schedules: () => {
       setSettings(false);
       navigate('schedules');
+    },
+    manager: () => {
+      setSettings(false);
+      navigate('manager');
     },
     receipt: () => {
       setSettings(false);
@@ -1460,7 +1477,9 @@ export default function App() {
             ? t('ศูนย์รวม Skill')
             : view === 'schedules'
               ? t('งานตั้งเวลา')
-              : session?.title || t('เริ่มต้นงานที่อยากทำ');
+              : view === 'manager'
+                ? t('ศูนย์ควบคุมงาน')
+                : session?.title || t('เริ่มต้นงานที่อยากทำ');
   const brandSymbol = (
     <span className="brand-symbol" role="img" aria-label="STeP">
       <img className="on-light" src={symbolColour} alt="" />
@@ -1497,6 +1516,7 @@ export default function App() {
             view={view}
             settings={settings}
             receiptBusy={receiptBusy}
+            needsYou={needsYou}
             onNew={() => void action(create)}
             onSearch={() => setPalette(true)}
             onTasks={() => commandRef.current.left?.()}
@@ -1526,6 +1546,18 @@ export default function App() {
                 {shortcut}
               </button>
             </label>
+            <button
+              className={'manager-entry' + (view === 'manager' && !settings ? ' active' : '')}
+              aria-label={needsYou ? `${t('ศูนย์ควบคุมงาน')} (${needsYou})` : undefined}
+              onClick={() => {
+                setSettings(false);
+                navigate('manager');
+              }}
+            >
+              <LayoutDashboard size={16} />
+              <span>{t('ศูนย์ควบคุมงาน')}</span>
+              {!!needsYou && <span className="count attention">{needsYou}</span>}
+            </button>
             <div className="session-filter" role="tablist" aria-label={t('กรองงาน')}>
               {(
                 [
@@ -1851,7 +1883,9 @@ export default function App() {
                           ? t('ค้นหา Skill และดูว่ารายการใดพร้อมใช้')
                           : view === 'schedules'
                             ? t('ให้ผู้ช่วยทำงานซ้ำตามเวลา ผลเป็นร่างให้คุณตรวจ')
-                            : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
+                            : view === 'manager'
+                              ? t('ทุกงานของผู้ช่วย เรียงตามสิ่งที่ต้องทำต่อ')
+                              : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
               </small>
             </div>
             {!settings && view === 'chat' && (
@@ -1955,7 +1989,25 @@ export default function App() {
               </p>
             </ConfirmDialog>
           )}
-          {settings ? null : view === 'receipt' || view === 'documents' || view === 'media' ? null : view === 'schedules' ? (
+          {settings ? null : view === 'receipt' || view === 'documents' || view === 'media' ? null : view === 'manager' ? (
+            <AgentManager
+              sessions={snapshot.sessions}
+              questions={questions}
+              approvals={toolApprovals}
+              onOpen={id =>
+                void action(async () => {
+                  navigate('chat');
+                  await selectSession(id);
+                })
+              }
+              onNew={() =>
+                void action(async () => {
+                  navigate('chat');
+                  await create();
+                })
+              }
+            />
+          ) : view === 'schedules' ? (
             <ScheduledTasks
               api={api}
               connections={snapshot.connections}

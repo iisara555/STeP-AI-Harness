@@ -5,6 +5,7 @@ import {
   Blocks,
   CalendarClock,
   FileText,
+  LayoutDashboard,
   LoaderCircle,
   Megaphone,
   MessageSquare,
@@ -18,6 +19,7 @@ import { t } from './i18n';
 import { BlocksIcon } from './animated-icons/blocks';
 import { CalendarClockIcon } from './animated-icons/calendar-clock';
 import { FileTextIcon } from './animated-icons/file-text';
+import { LayoutDashboardIcon } from './animated-icons/layout-dashboard';
 import { MegaphoneIcon } from './animated-icons/megaphone';
 import { MessageSquareIcon } from './animated-icons/message-square';
 import { PlusIcon } from './animated-icons/plus';
@@ -38,6 +40,7 @@ function RailButton({
   className = '',
   tour,
   busy,
+  badge,
   onClick,
 }: {
   icon: AnimatedIcon;
@@ -47,6 +50,8 @@ function RailButton({
   className?: string;
   tour?: string;
   busy?: ReactNode;
+  /** A count of things waiting on the employee, shown on the icon. */
+  badge?: number;
   onClick: () => void;
 }) {
   const reduced = useReducedMotion();
@@ -57,7 +62,7 @@ function RailButton({
     <button
       className={`rail-button ${className}`}
       data-tour={tour}
-      aria-label={label}
+      aria-label={badge ? `${label} (${badge})` : label}
       data-tip={label}
       onClick={onClick}
       onMouseEnter={start}
@@ -66,6 +71,11 @@ function RailButton({
       onBlur={stop}
     >
       {busy || (reduced ? <StillIcon size={size} className="rail-icon" /> : <Icon ref={icon} size={size} className="rail-icon" />)}
+      {!!badge && (
+        <span className="rail-badge" aria-hidden="true">
+          {badge > 9 ? '9+' : badge}
+        </span>
+      )}
     </button>
   );
 }
@@ -101,6 +111,7 @@ export function SidebarRail({
   view,
   settings,
   receiptBusy,
+  needsYou = 0,
   onNew,
   onSearch,
   onTasks,
@@ -114,10 +125,12 @@ export function SidebarRail({
   view: string;
   settings: boolean;
   receiptBusy: boolean;
+  /** Tasks waiting on the employee (src/agent-manager.ts), counted on the task overview's icon. */
+  needsYou?: number;
   onNew: () => void;
   onSearch: () => void;
   onTasks: () => void;
-  onView: (view: 'documents' | 'media' | 'skills' | 'schedules' | 'receipt') => void;
+  onView: (view: 'manager' | 'documents' | 'media' | 'skills' | 'schedules' | 'receipt') => void;
   onSettings: () => void;
   onProfile: () => void;
 }) {
@@ -144,6 +157,14 @@ export function SidebarRail({
         />
         <RailButton icon={SearchIcon} stillIcon={Search} label={t('ค้นหางาน')} onClick={onSearch} />
         <RailButton icon={MessageSquareIcon} stillIcon={MessageSquare} label={t('งานทั้งหมด')} onClick={onTasks} />
+        <RailButton
+          icon={LayoutDashboardIcon}
+          stillIcon={LayoutDashboard}
+          className={view === 'manager' && !settings ? 'nav-active' : ''}
+          label={t('ศูนย์ควบคุมงาน')}
+          badge={needsYou}
+          onClick={() => onView('manager')}
+        />
         <span className="rail-divider" aria-hidden="true" />
         <nav aria-label={t('เครื่องมือ')}>
           {tools.map(([id, label, Icon, StillIcon]) => (
