@@ -419,6 +419,13 @@
   background: var(--selected);
   color: var(--text);
 }
+/* The one action that moves an answer forward has a name; copy and feedback stay icons. */
+.message-actions .message-open {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  gap: 5px;
+}
 .message-actions .tool-request {
   border: 1px solid var(--line);
   color: var(--accent-ink);

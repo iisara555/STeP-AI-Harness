@@ -1158,10 +1158,12 @@ nav button,
   flex: 1;
 }
 .send {
-  padding: 6px;
-  border-radius: 8px;
-  width: 30px;
-  height: 30px;
+  /* The main action of the composer: round, and the largest button on its row. */
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
 }
 .stop {
   background: var(--danger);
@@ -1330,7 +1332,10 @@ nav button,
 .artifact-footer select {
   margin-left: auto;
   font-size: 12px;
-  max-width: 85px;
+  /* Wide enough for the whole format name ("Word (.docx)"); it gives way before the buttons do. */
+  field-sizing: content;
+  min-width: 0;
+  max-width: 150px;
 }
 .artifact-footer button {
   font-size: 12px;
@@ -3449,8 +3454,8 @@ nav .count {
   line-height: 1.65;
 }
 .skill-command {
-  font-size: 11.5px;
-  color: var(--accent-ink);
+  font-size: 11px;
+  color: var(--muted);
 }
 .skill-card > button {
   align-self: flex-start;
@@ -3876,17 +3881,36 @@ nav .count {
   color: var(--muted);
 }
 /* Tools folded: one row of icon buttons with tooltips, so the task list above keeps the height. */
+/* Each icon carries a short name underneath, so a new employee does not have to guess which one is the receipt check. */
 .tools-nav.icons {
   flex-direction: row;
-  flex-wrap: wrap;
-  gap: 4px;
+  flex-wrap: nowrap;
+  gap: 2px;
 }
 .tools-nav.icons button {
   position: relative;
   flex: 1 1 0;
+  flex-direction: column;
   justify-content: center;
-  padding: 8px 0;
-  min-width: 32px;
+  gap: 2px;
+  padding: 6px 0 4px;
+  min-width: 0;
+}
+.nav-short {
+  display: none;
+}
+.tools-nav.icons .nav-short {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--muted);
+}
+.tools-nav.icons .nav-active .nav-short {
+  color: var(--text);
 }
 .tools-nav.icons .nav-label {
   position: absolute;
@@ -4441,8 +4465,23 @@ nav .count {
 }
 .composer-dock .work-plan {
   margin: 0;
-  max-height: 34vh;
+}
+/* Only the task list scrolls; the run buttons and their limits below it stay in view however long the plan is. */
+.composer-dock .work-plan ol {
+  max-height: 24vh;
   overflow: auto;
+}
+/* A finished task shrinks to one line so the tasks still to do come into view. */
+.work-plan li.done > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.work-plan li.done small:not(.work-plan-comment) {
+  display: inline;
+}
+.work-plan li.done small:not(.work-plan-comment)::before {
+  content: ' · ';
 }
 .tool-question {
   border: 1px solid var(--accent);
@@ -5986,10 +6025,21 @@ input[type='radio'] {
 .wizard-body h1:focus {
   outline: none;
 }
-/* Minimum readable size for the sidebar tagline and the team line under the name. */
+/* Minimum readable size for the sidebar tagline and the team line under the name. One line always: in a narrow
+   sidebar the letters close up instead of the tagline breaking in two. */
 .brand-tagline {
   font-size: 11px !important;
   letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+@media (max-width: 1000px) {
+  .brand-tagline {
+    letter-spacing: 0.03em;
+  }
+  /* Too narrow for the names under the tool icons: the tooltips name them. */
+  .tools-nav.icons .nav-short {
+    display: none;
+  }
 }
 .profile small {
   font-size: 11px;
@@ -6492,6 +6542,11 @@ body:has(.dialog-backdrop) .toasts {
 .sessions .session.selected .session-actions {
   background: linear-gradient(90deg, transparent, var(--selected) 14px);
 }
+/* While the buttons show, the status line ends in an ellipsis before them instead of being cut mid-word. */
+.sessions .session:hover .session-open small,
+.sessions .session:focus-within .session-open small {
+  max-width: calc(100% - 72px);
+}
 /* Small targets: the version number and folded sections are at least 24px tall. */
 .version-line {
   min-height: 24px;
@@ -6829,4 +6884,126 @@ summary {
   background: transparent;
   box-shadow: none;
   border-bottom: 3px solid var(--accent);
+}
+/* UX/UI review fixes, part 3: first-run setup and Settings. */
+/* Setup: the picker's heading is the step title, without a frame around it. */
+.wizard .ai-connect-step {
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.wizard .ai-connect-step > h1 {
+  margin: 0 0 12px;
+}
+/* Organisation functions, administrator fields and the developer pilot stay in Settings, out of the first run. */
+.wizard .ai-organization-capabilities,
+.wizard .ai-developer-options,
+.wizard .provider-picker + p {
+  display: none;
+}
+/* Skipping is the quiet way out, so it does not look like the optional customise link. */
+.wizard-actions .wizard-skip {
+  color: var(--muted);
+}
+/* How a service connects is a plain label under its name, not a second button on the card. */
+.provider-tile-head {
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 2px;
+}
+.provider-kind,
+.provider-kind.account {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-weight: 400;
+}
+/* The terms list fades at its lower edge, so it reads as scrollable rather than cut off. */
+.terms ul {
+  padding-bottom: 20px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+}
+/* Settings: tabs at the top, then a compact search; the section title is in the tab. */
+.settings-content > .settings-tabs {
+  margin-top: 0;
+}
+.settings-content > .settings-hero {
+  min-height: 0;
+  margin: 14px 0 4px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+.settings-content > .settings-hero > p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.settings-content > .settings-hero .settings-search {
+  flex: 1 1 280px;
+  max-width: 420px;
+  margin: 0;
+}
+.settings-content > .settings-hero .settings-search-results {
+  flex-basis: 100%;
+}
+.settings-content > .settings-hero .settings-illustration {
+  margin-left: auto;
+}
+/* Language and theme choices use the soft selected state, like other choices in the app. */
+.theme-options button.active {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-color: var(--accent-ink);
+}
+/* The policy summary is read-only text, so it should not look like a text box. */
+.settings-content .pilot-note {
+  border: 0;
+  border-left: 3px solid var(--accent-ink);
+  border-radius: 0;
+  background: transparent;
+  padding: 2px 0 2px 12px;
+}
+.policy-badge.off {
+  color: var(--text);
+  background: var(--selected);
+}
+.privacy-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.privacy-heading .policy-badge {
+  font-weight: 400;
+}
+/* The account's tools sit in their own block under its test result. */
+.connection-tools {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.connection-tools h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.connection-tools .ai-capability-list {
+  margin-top: 4px;
+}
+/* UX review: every tool page starts its content on the same left edge as the page title and caps its width at 1100px,
+   instead of each page centring or indenting on its own. */
+.main-pane .document-tools,
+.main-pane .internal-media,
+.main-pane .schedules,
+.main-pane .receipt-app,
+.main-pane .skills-hub {
+  padding-top: 22px;
+  padding-left: 28px;
+  padding-right: max(28px, calc(100% - 1128px));
+}
+.main-pane .document-form,
+.main-pane .media-workspace {
+  margin-left: 0;
+  margin-right: 0;
 }

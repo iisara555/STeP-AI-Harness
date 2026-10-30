@@ -112,10 +112,20 @@
   align-content: start;
   text-align: left;
   padding: 12px 14px;
-  border: 1px dashed var(--line-strong);
+  /* A solid card with its own "use" line: a dashed outline read as an empty or unavailable slot. */
+  border: 1px solid var(--line);
   border-radius: 10px;
-  background: transparent;
+  background: var(--paper);
   color: var(--text);
+}
+.schedule-template-use {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-ink);
 }
 .schedule-template:hover:not(:disabled) {
   background: var(--hover);

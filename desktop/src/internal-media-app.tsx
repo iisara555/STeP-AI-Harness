@@ -263,8 +263,12 @@ export function InternalMedia({
               {t('คัดลอก Prompt')}
             </button>
           </div>
-          <textarea readOnly rows={16} aria-label={t('Prompt พร้อมใช้')} value={result.prompt} />
+          {/* The layout sketch is what staff check; the English prompt is for the image tool, so it sits below, short. */}
           <MediaPreview state={state} />
+          <label className="media-prompt-text">
+            <span className="small muted">{t('Prompt ภาษาอังกฤษที่จะคัดลอกไปใช้ ไม่ต้องแก้ก็ใช้ได้')}</span>
+            <textarea readOnly rows={5} aria-label={t('Prompt พร้อมใช้')} value={result.prompt} />
+          </label>
           <p className="small muted">
             {t('Simple · Service · Sincere · เหลือง #FFC709 · ดำ #231F20 · ห้าม AI สร้างโลโก้ทุกชนิด ตรวจตัวสะกดและความถูกต้องก่อนใช้จริง')}
           </p>

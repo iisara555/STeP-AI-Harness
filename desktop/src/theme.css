@@ -76,7 +76,7 @@
   --on-danger: #231f20;
   --disabled-bg: #37312f;
   --disabled-text: #ada6a0;
-  --disabled-line: #4e4745;
+  --disabled-line: #5c5452;
   --syntax-keyword: #c678dd;
   --syntax-string: #98c379;
   --syntax-number: #d19a66;
@@ -114,7 +114,7 @@
     --on-danger: #231f20;
     --disabled-bg: #37312f;
     --disabled-text: #ada6a0;
-    --disabled-line: #4e4745;
+    --disabled-line: #5c5452;
     --syntax-keyword: #c678dd;
     --syntax-string: #98c379;
     --syntax-number: #d19a66;
