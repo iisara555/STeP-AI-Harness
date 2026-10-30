@@ -40,7 +40,7 @@ import { sanitizeModelOutput, evaluateOutputQuality, buildRepairPrompt } from '.
 import { autoEffort, modelOption, taskSize } from './effort';
 import { selfContainedText } from './text-intent';
 import { selectDiscovery } from './discovery';
-import { highConfidenceSkill, prepareSkillSelection } from './skill-selection';
+import { highConfidenceSkill, prepareSkillSelection, shouldRunModelSkillSelection } from './skill-selection';
 import { parseDocumentOutput } from '../src/document-output';
 import { GOOGLE_CHANGE_LIMIT, type GoogleChange } from '../src/google-changes';
 import { markdownDocument, documentText } from '../src/draft';
@@ -954,7 +954,14 @@ export class WorkService {
             ? previous
             : highConfidenceSkill(routed, skillRegistry, session.originalQuery);
         if (chosen) trace.skillSelection = { method: chosen === previous ? 'previous' : 'router', skill: chosen };
-        else {
+        else if (
+          shouldRunModelSkillSelection(
+            routed,
+            session.originalQuery,
+            incomingSource || (continuing || revising || retrying ? masked(session.files?.at(-1)?.text || '') : ''),
+            (known[0]?.score || 0) >= STRONG_MATCH,
+          )
+        ) {
           const selection = prepareSkillSelection(
             skillRegistry,
             session.originalQuery,
@@ -977,6 +984,7 @@ export class WorkService {
               signal: controller.signal,
               system: selection.system,
               jsonSchema: selection.schema,
+              effort: autoEffort(modelOption(selectedConnection)?.efforts, 'small'),
               emit: () => {},
               onUsage: count => {
                 counted = combineUsage(counted, count, 'max');
@@ -1432,6 +1440,7 @@ export class WorkService {
                   ...runtime.context,
                   signal: controller.signal,
                   system: summarySystem,
+                  effort: autoEffort(modelOption(selectedConnection)?.efforts, 'small'),
                   emit: delta => {
                     if (delta && call.ttftMs === undefined) call.ttftMs = Date.now() - calledAt;
                   },
@@ -1728,6 +1737,7 @@ export class WorkService {
             ...runtime.context,
             signal: controller.signal,
             system: draftingTool ? documentToolRule(draftingTool.id, Boolean(session.documentTemplate)) : CHAT_RULES,
+            effort: autoEffort(modelOption(selectedConnection)?.efforts, 'small'),
             emit: () => {},
             onUsage: count => {
               counted = combineUsage(counted, count, 'max');
@@ -1787,6 +1797,7 @@ export class WorkService {
             signal: controller.signal,
             system: ANSWER_CHECK_SYSTEM,
             jsonSchema: ANSWER_CHECK_SCHEMA,
+            effort: autoEffort(modelOption(selectedConnection)?.efforts, 'small'),
             emit: () => {},
             onUsage: count => {
               counted = combineUsage(counted, count, 'max');
