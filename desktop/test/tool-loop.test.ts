@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ToolLoop, TOOL_RULES, type LoopHost } from '../electron/tool-loop';
+import { ToolLoop, TOOL_RULES, toolRemediationHint, type LoopHost } from '../electron/tool-loop';
 import { compact } from '../electron/compact';
 import { errorText } from '../src/messages';
 import { brokenRequests, loopRequests } from '../src/tools';
@@ -711,4 +711,40 @@ test('a file request whose JSON broke is sent back to the AI with the reason ins
   assert.match(prompts[1], /could not be read and nothing was run/);
   assert.deepEqual(written, ['deck.html:<html lang="th">\n<body></body></html>']);
   assert.equal(result, replies[2]);
+});
+
+test('Hermes-style toolRemediationHint provides actionable recovery hints for failure codes', () => {
+  assert.match(toolRemediationHint('patch', 'OLD_STRING_NOT_FOUND') || '', /old_string was not found.*files\(action=read\)/i);
+  assert.match(toolRemediationHint('patch', 'AMBIGUOUS_MATCH') || '', /matches multiple locations.*surrounding lines/i);
+  assert.match(toolRemediationHint('files', 'FILE_NOT_FOUND') || '', /does not exist.*search_files/i);
+  assert.match(toolRemediationHint('terminal', 'TOOL_DENIED') || '', /denied by policy.*proceed within current permissions/i);
+  assert.match(toolRemediationHint('search_files', 'SEARCH_CHANGED') || '', /cursor expired.*fresh search/i);
+  assert.equal(toolRemediationHint('custom', 'UNKNOWN_CUSTOM_CODE'), undefined);
+});
+
+test('ToolLoop provides remediation hints and reflection guidance when a tool fails', async () => {
+  let calls = 0;
+  const loop = new ToolLoop(
+    host({
+      execute: async r => {
+        if (r.tool === 'patch') throw new Error('OLD_STRING_NOT_FOUND');
+        return 'success';
+      },
+    }),
+  );
+  const prompts: string[] = [];
+  const answer = await loop.run(
+    'Edit file',
+    async prompt => {
+      prompts.push(prompt);
+      if (++calls === 1) return request('patch', 'file.txt', { old_string: 'missing', new_string: 'new' });
+      return 'Retried with correct content';
+    },
+    signal(),
+  );
+  assert.equal(answer, 'Retried with correct content');
+  assert.equal(prompts.length, 2);
+  assert.match(prompts[1], /OLD_STRING_NOT_FOUND/);
+  assert.match(prompts[1], /files\(action=read\)/);
+  assert.match(prompts[1], /reflect briefly in one sentence on the reason before correcting/i);
 });
