@@ -18,6 +18,7 @@ import { afpEvidenceEn } from './afp-evidence-en';
 import { planCommentsEn } from './plan-comments-en';
 import { taskAlertsEn } from './task-alerts-en';
 import { uxToolsEn } from './ux-tools-en';
+import { uxReviewEn } from './ux-review-en';
 import { googleChangesEn } from './google-changes-en';
 export const en: Record<string, string> = {
   'ผู้ช่วยตรวจไฟล์และเว็บ แสดงลำดับขั้นตอนที่ทำจริง อ่านไฟล์ เว็บ และข้อมูล Google โดยแก้ไฟล์เป็นร่างรอตรวจ':
@@ -302,6 +303,7 @@ export const en: Record<string, string> = {
   ...planCommentsEn,
   ...taskAlertsEn,
   ...uxToolsEn,
+  ...uxReviewEn,
   'กดเข้าสู่ระบบเว็บอย่าง STeP MBS ให้เองหลังกรอกบัญชีจาก Vault ไม่ต้องสลับไปกดเอง':
     'After filling a saved Vault account, the app presses sign in itself on sites like STeP MBS',
   'งานตั้งเวลาแสดงรอบถัดไป บัญชี AI และโฟลเดอร์ก่อนบันทึก พร้อมคำแนะนำเมื่อทำงานไม่สำเร็จ':
