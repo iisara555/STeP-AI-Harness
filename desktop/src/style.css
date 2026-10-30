@@ -3454,8 +3454,8 @@ nav .count {
   line-height: 1.65;
 }
 .skill-command {
-  font-size: 11.5px;
-  color: var(--accent-ink);
+  font-size: 11px;
+  color: var(--muted);
 }
 .skill-card > button {
   align-self: flex-start;
@@ -6867,4 +6867,21 @@ summary {
   .settings-content .form-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* UX review: every tool page starts its content on the same left edge as the page title and caps its width at 1100px,
+   instead of each page centring or indenting on its own. */
+.main-pane .document-tools,
+.main-pane .internal-media,
+.main-pane .schedules,
+.main-pane .receipt-app,
+.main-pane .skills-hub {
+  padding-top: 22px;
+  padding-left: 28px;
+  padding-right: max(28px, calc(100% - 1128px));
+}
+.main-pane .document-form,
+.main-pane .media-workspace {
+  margin-left: 0;
+  margin-right: 0;
 }

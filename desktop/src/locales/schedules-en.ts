@@ -43,7 +43,8 @@ export const schedulesEn: Record<string, string> = {
     'Your administrator has not turned on scheduled tasks on this computer. Contact them if you need it',
   'เชื่อมต่อบัญชี AI ก่อน แล้วจึงสร้างงานตั้งเวลาได้': 'Connect an AI account first, then you can create scheduled tasks',
   งานของฉัน: 'My tasks',
-  'ยังไม่มีงานตั้งเวลา เริ่มจากแม่แบบด้านล่างหรือกด "งานใหม่"': 'No scheduled tasks yet. Start from a template below or press "New task"',
+  'ยังไม่มีงานตั้งเวลา เริ่มจากแม่แบบด้านล่างหรือกด "ตั้งเวลางานใหม่"':
+    'No scheduled tasks yet. Start from a template below or press "New scheduled task"',
   'รอบถัดไป {0}': 'Next run {0}',
   พักไว้: 'Paused',
   'ล่าสุด {0} · {1}': 'Last {0} · {1}',

@@ -1433,33 +1433,43 @@ export default function App() {
     window.addEventListener('keydown', listener);
     return () => window.removeEventListener('keydown', listener);
   }, []);
+  const recentSessions = snapshot ? [...snapshot.sessions].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) : [];
   const paletteItems: PaletteItem[] = snapshot
-    ? commandPalette(commands, snapshot.settings.keybindings || {}, [
-        ...routedSkills.map(s => ({
-          id: 'skill-' + s.name,
-          group: 'Skill',
-          label: t('ใช้ Skill: ') + s.title,
-          hint: '/' + s.name,
-          run: () => useSkill(s.name),
-        })),
-        ...(connection?.models || []).map(m => ({
-          id: 'model-' + m.id,
-          group: t('โมเดล'),
-          label: t('ใช้ ') + m.label,
-          hint: m.id === currentModel ? t('ใช้อยู่') : providerName(connection),
-          run: () => action(() => chooseModel(m.id)),
-        })),
-        ...[...snapshot.sessions]
-          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-          .slice(0, 50)
-          .map(s => ({
+    ? commandPalette(
+        commands,
+        snapshot.settings.keybindings || {},
+        [
+          ...routedSkills.map(s => ({
+            id: 'skill-' + s.name,
+            group: 'Skill',
+            label: t('ใช้ Skill: ') + s.title,
+            hint: '/' + s.name,
+            run: () => useSkill(s.name),
+          })),
+          ...(connection?.models || []).map(m => ({
+            id: 'model-' + m.id,
+            group: t('โมเดล'),
+            label: t('ใช้ ') + m.label,
+            hint: m.id === currentModel ? t('ใช้อยู่') : providerName(connection),
+            run: () => action(() => chooseModel(m.id)),
+          })),
+          ...recentSessions.slice(5, 50).map(s => ({
             id: 'session-' + s.id,
             group: t('งาน'),
             label: s.title,
             hint: s.project || statusText[s.status],
             run: () => action(() => selectSession(s.id)),
           })),
-      ])
+        ],
+        // The palette says it finds tasks too, so the latest five come first, above the commands.
+        recentSessions.slice(0, 5).map(s => ({
+          id: 'session-' + s.id,
+          group: t('งานล่าสุด'),
+          label: s.title,
+          hint: s.project || statusText[s.status],
+          run: () => action(() => selectSession(s.id)),
+        })),
+      )
     : [];
   const elapsed = running && startedAt ? formatElapsed(now - startedAt) : '';
   // The newest answer keeps its copy and feedback buttons in view; older ones show them on hover, as in other AI apps.

@@ -12,7 +12,7 @@ export const COMMANDS = [
   ['automations', 'เครื่องมือเพิ่มเติม (MCP และ Docker)', ''],
   ['settings', 'การตั้งค่า', 'Mod+,'],
   ['keyboard', 'คีย์ลัดแป้นพิมพ์', ''],
-  ['packs', 'Skill Packs', ''],
+  ['packs', 'ชุด Skill ที่ติดตั้ง (Skill Packs)', ''],
   ['tour', 'ดูทัวร์แนะนำอีกครั้ง', ''],
   ['feedback', 'แจ้งปัญหา / เสนอแนะ', ''],
   ['whats-new', 'มีอะไรใหม่ในรุ่นนี้', ''],
@@ -92,8 +92,11 @@ export function commandPalette(
   actions: Partial<Record<CommandId, () => void>>,
   bindings: Keybindings,
   dynamic: PaletteItem[],
+  /** Items listed before the commands, such as the most recent tasks. */
+  first: PaletteItem[] = [],
 ): PaletteItem[] {
   return [
+    ...first,
     // "Open commands" would only reopen the palette the person is already in.
     ...COMMANDS.filter(([id]) => id !== 'palette' && actions[id]).map(([id, label, fallback]) => ({
       id,
