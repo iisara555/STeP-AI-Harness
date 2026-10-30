@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import type { ProviderAdapter, ProviderContext } from './providers';
 import { providerSessionKey, recoverSessionTurn, retainedSdkError, type ProviderSession } from './providers';
+import { jsonSchemaInstruction } from './json-schema';
 import type { Connection, ModelOption } from '../src/types';
 
 export class CopilotAdapter implements ProviderAdapter {
@@ -118,7 +119,13 @@ export class CopilotAdapter implements ProviderAdapter {
         remoteSession: 'off',
         streaming: true,
         infiniteSessions: { enabled: false },
-        systemMessage: { mode: 'replace', content: context.system || 'Produce a text draft only. No tools or external actions.' },
+        systemMessage: {
+          mode: 'replace',
+          content: [
+            context.system || 'Produce a text draft only. No tools or external actions.',
+            ...(context.jsonSchema ? [jsonSchemaInstruction(context.jsonSchema)] : []),
+          ].join('\n\n'),
+        },
         onPermissionRequest: async () => ({ kind: 'denied-interactively-by-user' }),
         onUserInputRequest: async () => {
           throw new Error('PROVIDER_TOOL_DENIED');

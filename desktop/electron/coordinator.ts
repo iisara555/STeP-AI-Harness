@@ -2,6 +2,7 @@ import { Store } from './store';
 import { WorkService, MAX_PARALLEL_RUNS } from './service';
 import type { Policy } from './policy';
 import { section } from './prompt';
+import { extractStructuredJson } from './json-schema';
 import { tm } from './i18n';
 
 export type Subtask = { id: string; query: string; dependsOn: string[]; skill?: string };
@@ -62,7 +63,7 @@ export function playbookTasks(steps: any[]): Subtask[] {
   });
 }
 function parsePlan(text: string): Subtask[] {
-  const source = /```(?:json)?\s*\n([\s\S]*?)```/.exec(text)?.[1] || text;
+  const source = extractStructuredJson(text);
   let raw: any;
   try {
     raw = JSON.parse(source);
@@ -75,10 +76,16 @@ function parsePlan(text: string): Subtask[] {
       typeof t.id !== 'string' ||
       typeof t.query !== 'string' ||
       !Array.isArray(t.dependsOn) ||
-      t.dependsOn.some((d: unknown) => typeof d !== 'string')
+      t.dependsOn.some((d: unknown) => typeof d !== 'string') ||
+      (t.skill !== undefined && t.skill !== null && typeof t.skill !== 'string')
     )
       throw new Error('COORDINATOR_PLAN_INVALID');
-    return { id: t.id, query: t.query, dependsOn: t.dependsOn };
+    return {
+      id: t.id,
+      query: t.query,
+      dependsOn: t.dependsOn,
+      ...(typeof t.skill === 'string' && t.skill.trim() ? { skill: t.skill.trim() } : {}),
+    };
   });
   dependencyWaves(tasks);
   return tasks;
@@ -177,6 +184,15 @@ export class Coordinator {
             source,
           ),
         );
+        for (const task of tasks) {
+          const subRoute = await this.route(task.query, parent.team);
+          const subContract = subRoute?.routingContract;
+          if (subContract?.authority?.status !== 'ALLOW' || ['BLOCK', 'ESCALATE'].includes(subContract?.mode))
+            throw new Error('AUTHORITY_REVIEW_REQUIRED');
+          if (!task.skill && subContract?.mode === 'SKILL' && typeof subContract?.skill === 'string') {
+            task.skill = subContract.skill;
+          }
+        }
       }
       check();
       if (!(await this.approve(id, tasks, controller.signal))) throw new Error('CANCELLED');

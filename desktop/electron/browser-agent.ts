@@ -178,19 +178,22 @@ export class AgentBrowser {
    */
   private async settle(entry: Entry, signal: AbortSignal) {
     const id = entry.contents.id,
-      start = Date.now();
-    while (Date.now() - start < 4000) {
+      start = Date.now(),
+      alreadyIdle = !this.inflight.get(id) && Date.now() - (this.busyAt.get(id) || 0) >= 500;
+    while (!alreadyIdle && Date.now() - start < 4000) {
       if (signal.aborted) throw new Error('CANCELLED');
       if (!this.inflight.get(id) && Date.now() - (this.busyAt.get(id) || 0) >= 500) break;
       await new Promise(resolve => setTimeout(resolve, 100));
     }
+    const quietMs = alreadyIdle ? 80 : 300;
+    const limitMs = alreadyIdle ? 500 : 2000;
     await this.script(
       entry,
       `new Promise(resolve => {
         let quiet; const done = () => { observer.disconnect(); clearTimeout(quiet); clearTimeout(limit); resolve(true); };
-        const observer = new MutationObserver(() => { clearTimeout(quiet); quiet = setTimeout(done, 300); });
+        const observer = new MutationObserver(() => { clearTimeout(quiet); quiet = setTimeout(done, ${quietMs}); });
         observer.observe(document.documentElement, {subtree:true, childList:true, attributes:true, characterData:true});
-        quiet = setTimeout(done, 300); const limit = setTimeout(done, 2000);
+        quiet = setTimeout(done, ${quietMs}); const limit = setTimeout(done, ${limitMs});
       })`,
       signal,
     );
@@ -506,7 +509,75 @@ export class AgentBrowser {
         return { closed: true };
       }
       if (action === 'read') return await this.snapshot(request.input, entry, context.signal);
-      const { snapshot, ref } = request.args || {};
+      const { snapshot, ref, fields } = request.args || {};
+      if (action === 'fill' && fields !== undefined) {
+        if (
+          typeof snapshot !== 'string' ||
+          ref !== undefined ||
+          request.content !== undefined ||
+          !Array.isArray(fields) ||
+          fields.length < 1 ||
+          fields.length > 12
+        )
+          throw new Error('INVALID_INPUT');
+        const seenRefs = new Set<string>();
+        const normalizedFields = fields.map((item: any) => {
+          if (!item || typeof item !== 'object') throw new Error('INVALID_INPUT');
+          const fieldRef = item.ref;
+          const fieldVal = item.value;
+          if (typeof fieldRef !== 'string' || !/^e\d{1,3}$/.test(fieldRef)) throw new Error('INVALID_BROWSER_TARGET');
+          if (typeof fieldVal !== 'string' || fieldVal.length > 4000 || seenRefs.has(fieldRef)) throw new Error('INVALID_INPUT');
+          seenRefs.add(fieldRef);
+          context.review(fieldVal);
+          return { ref: fieldRef, value: fieldVal };
+        });
+        const batchSelection = `const state=globalThis.__stepBrowser;
+          if(!state || state.dirty || state.snapshot!==${JSON.stringify(snapshot)} || state.url!==location.href) return {error:'BROWSER_STALE_TARGET'};
+          const items=${JSON.stringify(normalizedFields)};
+          const targets=[];
+          for (const item of items) {
+            const target=state.refs.get(item.ref); const el=target?.el;
+            if(!el || !el.isConnected || !visible(el) || sensitive(el) || el.disabled || fingerprint(el)!==target.fingerprint) return {error:'BROWSER_STALE_TARGET'};
+            targets.push({el, label:label(el), value:item.value});
+          }`;
+        const batchInfo = await this.script(
+          entry,
+          `(() => {${helpers}${batchSelection} return {url:location.href, labels:targets.map(t => t.label)};})()`,
+          context.signal,
+        );
+        if (batchInfo.error) throw new Error(batchInfo.error);
+        context.review(batchInfo.url + '\n' + batchInfo.labels.join('\n'));
+        const summaryLines = normalizedFields.map((f, i) => `${batchInfo.labels[i]}: ${f.value}`).join('\n');
+        if (
+          !context.routine?.() &&
+          !(await context.approve(
+            tm('ให้ผู้ช่วยกรอกข้อมูลนี้?'),
+            batchInfo.url + '\n' + summaryLines + tm('\nการกระทำนี้อาจส่งข้อมูลหรือยืนยันรายการบนเว็บ ตรวจหน้าเว็บในแท็บเว็บก่อนอนุมัติ'),
+          ))
+        )
+          throw new Error('BROWSER_ACTION_DECLINED');
+        await context.check();
+        const batchResult = await this.script(
+          entry,
+          `(() => {${helpers}${batchSelection}
+          for (const t of targets) {
+            const el = t.el;
+            if(!(el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && ['text','search','email','url','tel','number'].includes(el.type))) || el.readOnly) return {error:'BROWSER_NOT_EDITABLE'};
+          }
+          state.observer.disconnect(); state.controller.abort(); globalThis.__stepBrowser=null;
+          for (const t of targets) {
+            const el = t.el;
+            const proto=el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+            Object.getOwnPropertyDescriptor(proto,'value').set.call(el,t.value);
+            el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true}));
+          }
+          return {performed:true,action:'fill',count:targets.length,readAgain:true};
+        })()`,
+          context.signal,
+        );
+        if (batchResult.error) throw new Error(batchResult.error);
+        return batchResult;
+      }
       if (typeof snapshot !== 'string' || typeof ref !== 'string' || !/^e\d{1,3}$/.test(ref)) throw new Error('INVALID_BROWSER_TARGET');
       const value = action === 'fill' ? request.content : '';
       if (typeof value !== 'string' || value.length > 4000) throw new Error('INVALID_INPUT');

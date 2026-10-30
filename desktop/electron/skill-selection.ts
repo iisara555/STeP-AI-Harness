@@ -1,3 +1,5 @@
+import { extractStructuredJson } from './json-schema';
+
 /** Select procedures before answering; catalog text and task data never grant execution permissions. */
 type Entry = { name: string; description?: string; status?: string };
 
@@ -8,14 +10,33 @@ export function highConfidenceSkill(routed: any, entries: Entry[], query: string
   // The router excludes this candidate unless it detects a Workspace operation (including narrow personal
   // calendar/mail/task questions). Reuse that decision; WorkService still checks authority and readiness.
   if (name === 'google-workspace' && routed.routingConfidence.reason === 'direct-trigger-and-intent-with-clear-margin') return name;
-  // HIGH is a ranking tier, not calibrated semantic certainty. Only an explicit procedure name skips model selection.
   const canonical = (value: string) =>
     value
       .normalize('NFKC')
       .toLowerCase()
       .replace(/[^\p{L}\p{N}]+/gu, ' ')
       .trim();
-  return ` ${canonical(query)} `.includes(` ${canonical(name)} `) ? name : undefined;
+  if (` ${canonical(query)} `.includes(` ${canonical(name)} `)) return name;
+  // Fast-path when the router matched explicit domain trigger phrase(s) + action intent with a clear margin,
+  // avoiding a redundant LLM selection round-trip on unambiguous Thai/English procedure requests.
+  const top = routed.ranked?.[0] || routed.candidateSkills?.[0];
+  const triggers: string[] = Array.isArray(top?.matchedTriggers) ? top.matchedTriggers : [];
+  const reason = String(routed.routingConfidence?.reason || '');
+  const margin = Number(routed.routingConfidence?.margin ?? 0);
+  const strongTrigger = triggers.length >= 2 || triggers.some(t => String(t).trim().length >= 5);
+  const infoLookup = /มีขั้นตอนอะไร|ระเบียบอะไร|คืออะไร|อยู่ที่ไหน|ติดต่อใคร/.test(query);
+  if (
+    !infoLookup &&
+    strongTrigger &&
+    Number(top?.breakdown?.intent ?? 0) > 0 &&
+    Number(top?.score ?? 0) >= 0.55 &&
+    (reason === 'raw-score-high' ||
+      (reason === 'direct-trigger-and-intent-with-clear-margin' && margin >= 0.2) ||
+      reason === 'direct-trigger-and-intent-with-dominant-trigger-evidence')
+  ) {
+    return name;
+  }
+  return undefined;
 }
 
 /** Only metadata enters selection. References, scripts, history and credentials are not discovered here. */
@@ -53,7 +74,7 @@ export function prepareSkillSelection(entries: Entry[], query: string, source: s
     parse(reply: string): string | null | undefined {
       if (reply.length > 4000) return undefined;
       try {
-        const text = reply.trim().replace(/^```json\s*\n([\s\S]*?)\n```$/, '$1');
+        const text = extractStructuredJson(reply);
         const value = JSON.parse(text);
         if (!value || typeof value !== 'object' || typeof value.reason !== 'string') return undefined;
         if (Object.keys(value).some(key => !['skillId', 'reason'].includes(key))) return undefined;

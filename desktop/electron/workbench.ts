@@ -147,30 +147,59 @@ export class Workbench {
     });
   }
   async patch(input: string, args: Record<string, unknown>) {
-    const old = args.old_string,
-      replacement = args.new_string,
-      expected = args.expectedHash;
-    if (
-      typeof old !== 'string' ||
-      !old ||
-      old.length > 200000 ||
-      typeof replacement !== 'string' ||
-      replacement.length > 200000 ||
-      old === replacement ||
-      (expected !== undefined && (typeof expected !== 'string' || !/^[a-f0-9]{64}$/.test(expected)))
-    )
-      throw new Error('INVALID_INPUT');
+    const expected = args.expectedHash;
+    if (expected !== undefined && (typeof expected !== 'string' || !/^[a-f0-9]{64}$/.test(expected))) throw new Error('INVALID_INPUT');
+    let hunks: { old_string: string; new_string: string }[];
+    if (args.edits !== undefined) {
+      if (
+        args.old_string !== undefined ||
+        args.new_string !== undefined ||
+        !Array.isArray(args.edits) ||
+        args.edits.length < 1 ||
+        args.edits.length > 20
+      )
+        throw new Error('INVALID_INPUT');
+      hunks = args.edits.map((item: any) => {
+        if (!item || typeof item !== 'object') throw new Error('INVALID_INPUT');
+        return { old_string: item.old_string, new_string: item.new_string };
+      });
+    } else {
+      hunks = [{ old_string: args.old_string as string, new_string: args.new_string as string }];
+    }
+    for (const h of hunks) {
+      if (
+        typeof h.old_string !== 'string' ||
+        !h.old_string ||
+        h.old_string.length > 200000 ||
+        typeof h.new_string !== 'string' ||
+        h.new_string.length > 200000 ||
+        h.old_string === h.new_string
+      )
+        throw new Error('INVALID_INPUT');
+    }
     const root = await this.root(),
       bytes = await this.bytes(input, 200000),
       before = bytes.toString('utf8');
     if (bytes.includes(0) || !Buffer.from(before).equals(bytes)) throw new Error('FILE_BINARY');
     const hash = digest(bytes);
     if (expected !== undefined && expected !== hash) throw new Error('FILE_CONFLICT');
-    const index = before.indexOf(old);
-    if (index < 0) throw new Error('PATCH_NO_MATCH');
-    if (before.indexOf(old, index + 1) >= 0) throw new Error('PATCH_AMBIGUOUS');
-    const after = before.slice(0, index) + replacement + before.slice(index + old.length),
-      output = Buffer.from(after);
+    const spans = hunks
+      .map(h => {
+        const index = before.indexOf(h.old_string);
+        if (index < 0) throw new Error('PATCH_NO_MATCH');
+        if (before.indexOf(h.old_string, index + 1) >= 0) throw new Error('PATCH_AMBIGUOUS');
+        return { start: index, end: index + h.old_string.length, replacement: h.new_string };
+      })
+      .sort((a, b) => a.start - b.start);
+    for (let i = 1; i < spans.length; i++) {
+      if (spans[i].start < spans[i - 1].end) throw new Error('PATCH_AMBIGUOUS');
+    }
+    let after = before;
+    for (let i = spans.length - 1; i >= 0; i--) {
+      const span = spans[i];
+      after = after.slice(0, span.start) + span.replacement + after.slice(span.end);
+    }
+    const output = Buffer.from(after);
     if (output.includes(0) || output.toString('utf8') !== after) throw new Error('FILE_BINARY');
     if (output.length > 200000) throw new Error('FILE_LIMIT');
     if (root !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
@@ -187,18 +216,47 @@ export class Workbench {
   async diagnostics(input: string, signal: AbortSignal, workerPath: string) {
     if (!/\.(?:[cm]?[jt]sx?)$/i.test(input)) throw new Error('CODE_LANGUAGE_UNSUPPORTED');
     const root = await this.root(),
-      files: { path: string; text: string; hash: string }[] = [],
+      files: { path: string; text: string; hash: string; diskHash: string }[] = [],
       pending = [input];
+    const stagedByPath = new Map<string, FileChange>();
+    for (const c of this.store.list<FileChange>('change')) {
+      if (c.root !== root) continue;
+      if (!c.binary || Buffer.from(c.binary, 'base64').toString('utf8') === c.after) {
+        stagedByPath.set(c.path.split('\\').join('/'), c);
+      }
+    }
     const seen = new Set<string>();
     let missing = 0,
-      size = 0;
+      size = 0,
+      stagedOverlay = false;
     while (pending.length && files.length < 20 && size < 1_000_000) {
       if (signal.aborted) throw new Error('CANCELLED');
       const next = pending.shift()!;
-      let file: string, bytes: Buffer;
+      let file: string,
+        bytes: Buffer,
+        diskHash = '';
       try {
-        file = await this.path(next);
-        bytes = await this.bytes(next, 200000);
+        file = await this.path(next, true);
+        const relName = relative(root, file).split('\\').join('/');
+        const staged = stagedByPath.get(relName);
+        try {
+          const diskBytes = await this.bytes(next, 200000);
+          diskHash = digest(diskBytes);
+          if (staged && staged.hash === diskHash) {
+            bytes = Buffer.from(staged.after, 'utf8');
+            stagedOverlay = true;
+          } else {
+            bytes = diskBytes;
+          }
+        } catch (diskErr: any) {
+          if (diskErr?.code === 'ENOENT' && staged && staged.hash === 'missing') {
+            bytes = Buffer.from(staged.after, 'utf8');
+            diskHash = 'missing';
+            stagedOverlay = true;
+          } else {
+            throw diskErr;
+          }
+        }
       } catch (error) {
         if (!files.length) throw error;
         missing++;
@@ -214,7 +272,7 @@ export class Workbench {
       }
       const text = bytes.toString('utf8');
       size += bytes.length;
-      files.push({ path: name, text, hash: digest(bytes) });
+      files.push({ path: name, text, hash: digest(bytes), diskHash });
       const imports = [...text.matchAll(/(?:from\s*|import\s*\(?|require\s*\()\s*['"](\.[^'"\n]+)['"]/g)].slice(0, 30);
       for (const match of imports) {
         const stem = resolve(dirname(file), match[1]);
@@ -225,9 +283,12 @@ export class Workbench {
           ...['.ts', '.tsx', '.js', '.jsx', '/index.ts', '/index.js'].map(ext => stem + ext),
         ]) {
           try {
-            const allowed = await this.path(candidate),
-              stat = await lstat(allowed);
-            if (stat.isFile() && /\.[cm]?[jt]sx?$/i.test(candidate)) {
+            const allowed = await this.path(candidate, true);
+            const relCandidate = relative(root, allowed).split('\\').join('/');
+            const existsOnDisk = await lstat(allowed)
+              .then(s => s.isFile())
+              .catch(() => false);
+            if ((existsOnDisk || stagedByPath.has(relCandidate)) && /\.[cm]?[jt]sx?$/i.test(candidate)) {
               pending.push(relative(root, allowed));
               found = true;
               break;
@@ -241,11 +302,22 @@ export class Workbench {
     }
     const result = await codeDiagnostics(files, files[0].path, signal, workerPath);
     if (root !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
-    for (const file of files) if (digest(await this.bytes(file.path, 200000)) !== file.hash) throw new Error('FILE_CONFLICT');
+    for (const file of files) {
+      if (file.diskHash === 'missing') {
+        const nowExists = await lstat(resolve(root, file.path)).then(
+          () => true,
+          () => false,
+        );
+        if (nowExists) throw new Error('FILE_CONFLICT');
+      } else if (digest(await this.bytes(file.path, 200000)) !== file.diskHash) {
+        throw new Error('FILE_CONFLICT');
+      }
+    }
     return {
       ...result,
       path: files[0].path,
       files: files.length,
+      ...(stagedOverlay ? { stagedOverlay: true } : {}),
       incomplete: result.incomplete || Boolean(missing || pending.length),
       note: 'Local language-service snapshot only. Project configuration, external dependencies and project tests require their own checks.',
     };

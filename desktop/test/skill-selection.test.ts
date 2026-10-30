@@ -301,3 +301,21 @@ test('personal Workspace questions load the procedure without a separate model s
     assert.notEqual(highConfidenceSkill(routed, [{ name: 'google-workspace', status: 'routed' }], query), 'google-workspace');
   }
 });
+
+test('calibrated Thai trigger+intent queries fast-path via router and preload skill templates and examples', async () => {
+  const f = fixture();
+  try {
+    await f.service.run(f.session.id, 'ทำ Pre-mortem โครงการพัฒนาแพลตฟอร์ม', 'รายละเอียดโครงการจำลอง', true, undefined, 'chat');
+    const done = f.store.session(f.session.id);
+    assert.equal(done.runs!.at(-1)!.route, 'skill:project-pre-mortem');
+    assert.equal(done.runs!.at(-1)!.skillSelection?.method, 'router');
+    assert.deepEqual(
+      f.calls.map(c => c.selection),
+      [false],
+    );
+    assert.match(f.calls[0].system, /<skill_resource_manifest skill="project-pre-mortem">/);
+    assert.match(f.calls[0].system, /<skill_template path="templates\/pre-mortem-matrix-template\.md"/);
+  } finally {
+    f.store.close();
+  }
+});

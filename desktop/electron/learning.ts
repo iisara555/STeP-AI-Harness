@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { Store } from './store';
 import { safeMemory, stableMemory } from './memory';
+import { tokenizeSearchText } from './skill-resources';
 import { overlap } from '../src/learning-curator';
 import type {
   LessonContent,
@@ -211,36 +212,62 @@ export class Learning {
     return matched;
   }
   relevant(query: string) {
-    const selected: { id: string; revision: number; name: string; text: string; type: string; scope: string }[] = [];
-    let chars = 0;
-    for (const lesson of this.snapshot().lessons) {
+    const queryLower = query.toLowerCase();
+    const queryTokens = new Set(tokenizeSearchText(query));
+    const candidates: {
+      index: number;
+      score: number;
+      entry: { id: string; revision: number; name: string; text: string; type: string; scope: string };
+    }[] = [];
+    for (const [index, lesson] of this.snapshot().lessons.entries()) {
       const revision = current(lesson),
         content = revision.content;
       if (!content) continue;
-      if (
-        content.kind === 'procedure' &&
-        !content.trigger
+      let score = 0;
+      if (content.kind === 'procedure') {
+        const triggers = content.trigger
           .split(/[,\n]/)
           .map(s => s.trim().toLowerCase())
-          .filter(t => t.length >= 2)
-          .some(t => query.toLowerCase().includes(t))
-      )
-        continue;
+          .filter(t => t.length >= 2);
+        const matchedTriggers = triggers.filter(t => {
+          if (queryLower.includes(t)) return true;
+          const parts = tokenizeSearchText(t);
+          return parts.length >= 2 && parts.every(p => queryTokens.has(p));
+        });
+        if (!matchedTriggers.length) continue;
+        score = Math.max(...matchedTriggers.map(t => t.length));
+      }
       try {
         this.content(content);
       } catch {
         continue;
       }
-      if (selected.length >= 5 || chars + content.text.length > 8000) continue;
-      chars += content.text.length;
-      selected.push({
-        id: lesson.id,
-        revision: revision.revision,
-        name: content.name,
-        text: content.text,
-        type: content.kind,
-        scope: 'workspace-team',
+      const lessonTokens = tokenizeSearchText(`${content.name} ${content.text}`);
+      for (const tok of lessonTokens) {
+        if (queryTokens.has(tok)) score += 1;
+      }
+      candidates.push({
+        index,
+        score,
+        entry: {
+          id: lesson.id,
+          revision: revision.revision,
+          name: content.name,
+          text: content.text,
+          type: content.kind,
+          scope: 'workspace-team',
+        },
       });
+    }
+    if (candidates.length > 5) {
+      candidates.sort((a, b) => b.score - a.score || a.index - b.index);
+    }
+    const selected: { id: string; revision: number; name: string; text: string; type: string; scope: string }[] = [];
+    let chars = 0;
+    for (const { entry } of candidates) {
+      if (selected.length >= 5 || chars + entry.text.length > 8000) continue;
+      chars += entry.text.length;
+      selected.push(entry);
     }
     return selected;
   }

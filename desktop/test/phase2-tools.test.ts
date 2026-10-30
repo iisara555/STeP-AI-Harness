@@ -1966,3 +1966,46 @@ test('terminal waitMsBeforeAsync completes fast commands inline in a single turn
     await rm(f.root, { recursive: true, force: true });
   }
 });
+
+test('patch supports atomic multi-hunk args.edits and code_diagnostics typechecks staged changes before apply', async () => {
+  const f = await fixture('ask');
+  try {
+    await writeFile(join(f.root, 'calc.ts'), 'export const a: number = 1;\nexport const b: number = 2;\nexport const sum = a + b;\n');
+    const patched = (await f.tools.execute(
+      {
+        tool: 'patch',
+        input: 'calc.ts',
+        args: {
+          edits: [
+            { old_string: 'export const a: number = 1;', new_string: 'export const a: number = 10;' },
+            { old_string: 'export const b: number = 2;', new_string: "export const b: number = 'bad' as any as string;" },
+          ],
+        },
+      },
+      f.scope,
+    )) as any;
+    assert.equal(patched.status, 'staged-for-human-review');
+    const change = f.workbench.change(patched.id);
+    assert.match(change.after, /a: number = 10/);
+    assert.match(change.after, /'bad'/);
+
+    // Stage a real type error in calc.ts while disk file is still valid
+    await f.tools.execute(
+      {
+        tool: 'patch',
+        input: 'calc.ts',
+        args: {
+          edits: [{ old_string: 'export const a: number = 1;', new_string: "export const a: number = 'not-a-number';" }],
+        },
+      },
+      f.scope,
+    );
+    const diag = (await f.tools.execute({ tool: 'code_diagnostics', input: 'calc.ts' }, f.scope)) as any;
+    assert.equal(diag.stagedOverlay, true);
+    assert.ok(diag.diagnostics.length >= 1, 'code_diagnostics sees the staged type error on ask-mode overlay');
+  } finally {
+    await f.workbench.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});

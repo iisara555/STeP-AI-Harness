@@ -25,6 +25,7 @@ import { mainLocale, tm } from './i18n';
 import type { Store } from './store';
 import { readHistory, searchHistory } from './session-history';
 import { GoogleReadConsent } from './google-read-consent';
+import { discoverSkillResources } from './skill-resources';
 
 // What the employee reads on the status line while a tool runs, in plain words instead of the tool's name.
 const TOOL_ACTIVITY: Record<string, string> = {
@@ -849,7 +850,8 @@ export class DesktopTools {
             await check();
             return scope.search(approved);
           case 'skill': {
-            if (a.action === 'catalog' && a.resource !== undefined) throw new Error('INVALID_INPUT');
+            if (a.action === 'catalog' && (a.resource !== undefined || a.resources !== undefined)) throw new Error('INVALID_INPUT');
+            if (a.resource !== undefined && a.resources !== undefined) throw new Error('INVALID_INPUT');
             if (a.action === 'catalog')
               return {
                 entries: ((await this.harness.catalog?.()) || [])
@@ -884,22 +886,55 @@ export class DesktopTools {
                 await scope.googleReads?.recordDiscovery(r, JSON.stringify(value));
               return value;
             };
-            if (a.resource !== undefined) {
+            const readSkillResource = async (resPath: unknown) => {
               // Resources remain scoped to the routed Skill, never arbitrary harness files or executable scripts.
-              if (typeof a.resource !== 'string' || !/^(references|examples|templates)\/[A-Za-z0-9][A-Za-z0-9_/-]*\.md$/.test(a.resource))
+              if (
+                typeof resPath !== 'string' ||
+                resPath.includes('..') ||
+                !/^(references|examples|templates)\/[A-Za-z0-9][A-Za-z0-9_./-]*\.md$/.test(resPath)
+              )
                 throw new Error('INVALID_SKILL_RESOURCE');
               const base = await realpath(resolve(this.harness.root, dirname(meta.path)));
-              const path = resolve(base, a.resource);
+              const path = resolve(base, resPath);
               const actual = await realpath(path);
               const within = relative(base, actual);
               if (isAbsolute(within) || within.startsWith('..')) throw new Error('INVALID_SKILL_RESOURCE');
-              return instruction({ id: target, resource: a.resource, route: c, text: await this.context(path, base) });
+              return this.context(path, base);
+            };
+            if (a.resources !== undefined) {
+              if (!Array.isArray(a.resources) || a.resources.length < 1 || a.resources.length > 4) throw new Error('INVALID_INPUT');
+              const items = await Promise.all(
+                a.resources.map(async item => ({ resource: String(item), text: await readSkillResource(item) })),
+              );
+              return instruction({
+                id: target,
+                resources: items,
+                route: c,
+                text: items.map(item => `## ${item.resource}\n${item.text}`).join('\n\n'),
+              });
+            }
+            if (a.resource !== undefined) {
+              return instruction({ id: target, resource: a.resource, route: c, text: await readSkillResource(a.resource) });
             }
             const paths = [
               meta.path,
               ...(meta.mandatoryReferences || []).map((ref: any) => (typeof ref === 'string' ? ref : ref.path)).filter(Boolean),
             ];
-            return instruction({ id: target, route: c, text: (await Promise.all(paths.map((p: string) => this.context(p)))).join('\n\n') });
+            const resCatalog = await discoverSkillResources(this.harness.root, meta.path).catch(() => ({
+              templates: [],
+              examples: [],
+              references: [],
+            }));
+            return instruction({
+              id: target,
+              route: c,
+              text: (await Promise.all(paths.map((p: string) => this.context(p)))).join('\n\n'),
+              availableResources: {
+                templates: resCatalog.templates.map(item => item.path),
+                examples: resCatalog.examples.map(item => item.path),
+                references: resCatalog.references.map(item => item.path),
+              },
+            });
           }
           case 'session_search': {
             if (!this.history) throw new Error('TOOL_UNAVAILABLE');
@@ -933,6 +968,13 @@ export class DesktopTools {
             if (!ref?.path || ref.status === 'unregistered') throw new Error('REFERENCE_UNAVAILABLE');
             const text = await this.context(ref.path);
             if (a.action === 'outline') return { id: ref.id, title: ref.title, sections: documentHeadings(text) };
+            if (a.sections !== undefined) {
+              if (!Array.isArray(a.sections) || a.sections.length < 1 || a.sections.length > 5) throw new Error('INVALID_INPUT');
+              const parts = a.sections
+                .map(sec => (typeof sec === 'string' && sec.trim() ? documentSection(text, sec) : undefined))
+                .filter((sec): sec is string => Boolean(sec));
+              return parts.length ? { ...ref, sections: a.sections, text: parts.join('\n\n') } : { ...ref, text };
+            }
             const part = typeof a.section === 'string' && a.section.trim() ? documentSection(text, a.section) : undefined;
             return part ? { ...ref, section: a.section, text: part } : { ...ref, text };
           }
