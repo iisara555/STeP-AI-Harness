@@ -1,7 +1,7 @@
 import { constants } from 'node:fs';
 import { searchWorkspace } from './file-search';
-import { readdir, readFile, realpath, lstat, writeFile, open } from 'node:fs/promises';
-import { resolve, relative, isAbsolute, dirname } from 'node:path';
+import { readdir, realpath, lstat, writeFile, open, rename, unlink } from 'node:fs/promises';
+import { resolve, relative, isAbsolute, dirname, basename, join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { spawn, execFile, type ChildProcess } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -32,8 +32,31 @@ export function browserUrl(input: string) {
   if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || input.length > 2000) throw new Error('INVALID_URL');
   return url.href;
 }
+// One queue per real file: two approved changes to the same file never write at the same time, and the second
+// one rechecks the file's hash after the first has finished (FILE_CONFLICT when it changed).
+const fileQueues = new Map<string, Promise<unknown>>();
+const fileKey = (path: string) => (process.platform === 'win32' || process.platform === 'darwin' ? path.toLowerCase() : path);
+function oneAtATime<T>(path: string, run: () => Promise<T>): Promise<T> {
+  const key = fileKey(path),
+    next = (fileQueues.get(key) ?? Promise.resolve()).then(run, run),
+    tail = next.then(
+      () => {},
+      () => {},
+    );
+  fileQueues.set(key, tail);
+  void tail.then(() => {
+    if (fileQueues.get(key) === tail) fileQueues.delete(key);
+  });
+  return next;
+}
+// Replacing in place can fail where renaming over the file is refused (another program holds it open on Windows, or
+// the folder is not writable); those cases fall back to the in-place write, which still runs inside the file's queue.
+const REPLACE_FALLBACK = ['EPERM', 'EACCES', 'EBUSY', 'EXDEV', 'ENOTSUP', 'EROFS'];
 const CODE_EXTENSIONS = ['ts', 'tsx', 'mts', 'cts', 'js', 'jsx', 'mjs', 'cjs'];
 const CODE_SYMBOL_FILES = 50;
+const CODE_REFERENCE_FILES = 30;
+const CODE_SEARCH_PARTIAL = (limit: number) =>
+  `Partial result: the search stopped at its limit (${limit} code files), so a symbol that is not listed may still exist. Narrow it with a folder or file path.`;
 export class Workbench {
   executionAllowed: () => void = () => {};
   private children = new Map<string, ChildProcess>();
@@ -230,12 +253,12 @@ export class Workbench {
     return this.stageBytes(input, output, before, after, hash);
   }
   async read(input: string) {
-    const path = await this.path(input),
-      info = await lstat(path);
-    if (!info.isFile() || info.size > 200000) throw new Error('FILE_LIMIT');
-    const buffer = await readFile(path);
+    // Read through bytes(): the file is opened without following a link and must be the same file that was checked
+    // inside the workspace, so a path swapped for a link (or a swapped parent folder) between the check and the read
+    // fails instead of returning the link target's content.
+    const buffer = await this.bytes(input, 200000);
     if (buffer.includes(0)) throw new Error('FILE_BINARY');
-    return { path: relative(await this.root(), path), text: buffer.toString('utf8') };
+    return { path: relative(await this.root(), await this.path(input)), text: buffer.toString('utf8') };
   }
   async codeSymbols(input: string, args: Record<string, unknown> = {}) {
     const root = await this.root();
@@ -256,7 +279,13 @@ export class Workbench {
             if (kind && kind !== 'all' && s.kind !== kind) return false;
             return true;
           });
-          return { total: filtered.length, symbols: filtered.slice(0, limit), scannedFiles: 1, truncated: false };
+          return { total: filtered.length, symbols: filtered.slice(0, limit), scannedFiles: 1, truncated: false } as {
+            total: number;
+            symbols: typeof filtered;
+            scannedFiles: number;
+            truncated: boolean;
+            note?: string;
+          };
         }
       } catch (e: any) {
         if (e.message !== 'INVALID_PATH') throw e;
@@ -277,9 +306,16 @@ export class Workbench {
     const files: { path: string; text: string }[] = [];
     let truncated = false;
     for (const extension of CODE_EXTENSIONS) {
-      if (files.length >= CODE_SYMBOL_FILES) break;
       const found = await this.searchFiles(folder, { target: 'files', pattern: `**/*.${extension}`, maxFiles: 1000, maxResults: 500 });
-      truncated ||= Boolean(found.truncated);
+      if (files.length >= CODE_SYMBOL_FILES) {
+        // The file limit was reached on an earlier extension: any file of this one was not read.
+        if (found.total) {
+          truncated = true;
+          break;
+        }
+        continue;
+      }
+      truncated ||= Boolean(found.truncated || found.nextCursor);
       for (const item of found.matches) {
         if (files.length >= CODE_SYMBOL_FILES) {
           truncated = true;
@@ -294,35 +330,59 @@ export class Workbench {
       }
     }
 
-    return { ...searchSymbolsInFiles(files, { query, kind, limit }), scannedFiles: files.length, truncated };
+    return {
+      ...searchSymbolsInFiles(files, { query, kind, limit }),
+      scannedFiles: files.length,
+      fileLimit: CODE_SYMBOL_FILES,
+      truncated,
+      ...(truncated ? { note: CODE_SEARCH_PARTIAL(CODE_SYMBOL_FILES) } : {}),
+    };
   }
 
   async codeReferences(input: string, args: Record<string, unknown> = {}) {
     const symbol = (typeof args.symbol === 'string' && args.symbol.trim()) || input.trim();
     if (!symbol) throw new Error('INVALID_INPUT');
 
-    const searchRes = await this.searchFiles('.', {
-      target: 'content',
-      pattern: symbol,
-      maxFiles: 30,
-      maxResults: 100,
-    });
-
+    // Search code files only (one glob per extension), so documents and data files never use up the file limit.
     const seen = new Set<string>();
     const files: { path: string; text: string }[] = [];
-
-    for (const m of searchRes.matches) {
-      if (seen.has(m.path)) continue;
-      seen.add(m.path);
-      try {
-        const buffer = await this.bytes(m.path, 200000);
-        files.push({ path: m.path, text: buffer.toString('utf8') });
-      } catch {
-        // Skip unreadable files
+    let truncated = false,
+      searchedFiles = 0;
+    for (const extension of CODE_EXTENSIONS) {
+      if (truncated && files.length >= CODE_REFERENCE_FILES) break;
+      const searchRes = await this.searchFiles('.', {
+        target: 'content',
+        pattern: symbol,
+        glob: `**/*.${extension}`,
+        maxFiles: 1000,
+        maxResults: 500,
+      });
+      searchedFiles += searchRes.scannedFiles;
+      truncated ||= Boolean(searchRes.truncated || searchRes.nextCursor);
+      for (const m of searchRes.matches) {
+        if (seen.has(m.path)) continue;
+        if (files.length >= CODE_REFERENCE_FILES) {
+          truncated = true;
+          break;
+        }
+        seen.add(m.path);
+        try {
+          const buffer = await this.bytes(m.path, 200000);
+          files.push({ path: m.path, text: buffer.toString('utf8') });
+        } catch {
+          // Skip unreadable files
+        }
       }
     }
 
-    return findReferencesInFiles(files, symbol);
+    return {
+      ...findReferencesInFiles(files, symbol),
+      scannedFiles: files.length,
+      searchedFiles,
+      fileLimit: CODE_REFERENCE_FILES,
+      truncated,
+      ...(truncated ? { note: CODE_SEARCH_PARTIAL(CODE_REFERENCE_FILES) } : {}),
+    };
   }
 
   /** Runs approved REPL code in this task's session thread (`workerPath` is `repl-worker.cjs`). */
@@ -627,6 +687,12 @@ export class Workbench {
   async apply(id: string) {
     const change = this.change(id);
     if (change.root !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
+    return oneAtATime(await this.path(change.path, true), () => this.applyNow(id));
+  }
+  private async applyNow(id: string) {
+    // Read the change again inside the queue: the same change applied twice runs once.
+    const change = this.change(id);
+    if (change.root !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
     const path = await this.path(change.path, true);
     let hash = 'missing';
     try {
@@ -676,20 +742,85 @@ export class Workbench {
           throw new Error('FILE_CONFLICT');
         if (change.root !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
         const output = change.binary ? Buffer.from(change.binary, 'base64') : Buffer.from(change.after);
-        // Explicit position avoids the read cursor and truncates only after preconditions hold.
-        let written = 0;
-        while (written < output.length) {
-          const result = await handle.write(output, written, output.length - written, written);
-          if (!result.bytesWritten) throw new Error('FILE_CONFLICT');
-          written += result.bytesWritten;
+        let replaced = false;
+        try {
+          replaced = await this.replace(path, change.path, output, stat);
+        } catch (e: any) {
+          if (!REPLACE_FALLBACK.includes(e?.code)) throw e;
         }
-        await handle.truncate(output.length);
+        if (!replaced) {
+          // Explicit position avoids the read cursor and truncates only after preconditions hold.
+          let written = 0;
+          while (written < output.length) {
+            const result = await handle.write(output, written, output.length - written, written);
+            if (!result.bytesWritten) throw new Error('FILE_CONFLICT');
+            written += result.bytesWritten;
+          }
+          await handle.truncate(output.length);
+        }
       } finally {
         await handle.close();
       }
     }
     this.store.remove('change', id);
     return { path: change.path, snapshotId: change.snapshotId };
+  }
+  /**
+   * Writes the new content to a temporary file next to the original, then renames it over the original, so a reader
+   * sees the old or the new file and never a half-written one. The original's permission bits are kept. Returns true
+   * when the file was replaced; an error with a REPLACE_FALLBACK code lets the caller write in place instead.
+   */
+  private async replace(
+    path: string,
+    input: string,
+    output: Buffer,
+    expected: { dev: number; ino: number; mtimeMs: number; size: number; mode: number },
+  ) {
+    const temp = join(dirname(path), `.${basename(path).slice(0, 80)}.${randomUUID()}.step-tmp`),
+      mode = expected.mode & 0o777;
+    const out = await open(temp, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW || 0), mode);
+    let renamed = false;
+    try {
+      try {
+        let written = 0;
+        while (written < output.length) {
+          const result = await out.write(output, written, output.length - written, written);
+          if (!result.bytesWritten) throw new Error('FILE_CONFLICT');
+          written += result.bytesWritten;
+        }
+        // The process umask may have narrowed the mode given to open().
+        if (process.platform !== 'win32') await out.chmod(mode);
+        await out.sync();
+      } finally {
+        await out.close();
+      }
+      // Last check before the swap: the path is still the file whose hash was checked, unchanged.
+      await this.path(input);
+      const current = await lstat(path);
+      if (
+        current.isSymbolicLink() ||
+        current.dev !== expected.dev ||
+        current.ino !== expected.ino ||
+        current.mtimeMs !== expected.mtimeMs ||
+        current.size !== expected.size
+      )
+        throw new Error('FILE_CONFLICT');
+      // Windows refuses to rename over a file that another handle (a reader, an indexer, antivirus) has open; a
+      // short retry rides out a brief one before the caller falls back to writing in place.
+      for (let attempt = 0; ; attempt++) {
+        try {
+          await rename(temp, path);
+          break;
+        } catch (e: any) {
+          if (process.platform !== 'win32' || attempt >= 4 || !['EPERM', 'EACCES', 'EBUSY'].includes(e?.code)) throw e;
+          await new Promise(r => setTimeout(r, 25 * (attempt + 1)));
+        }
+      }
+      renamed = true;
+      return true;
+    } finally {
+      if (!renamed) await unlink(temp).catch(() => {});
+    }
   }
   async changes() {
     const root = await this.root();

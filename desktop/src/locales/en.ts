@@ -1468,6 +1468,8 @@ export const en: Record<string, string> = {
   'รูปแบบความจำไม่ถูกต้อง กรุณาตรวจชื่อ ข้อความ ความสำคัญ และอายุความจำ':
     'Invalid memory format. Check the name, text, importance and lifetime',
   ไม่พบความจำในขอบเขตที่เลือก: 'No memories found in the selected scope',
+  'ความจำนี้ถูกแก้จากที่อื่นระหว่างที่คุณแก้ไข กรุณาปิดแล้วเปิดหน้าความจำเพื่อดูฉบับล่าสุดก่อนแก้อีกครั้ง':
+    'This memory was changed elsewhere while you were editing it. Close and reopen Memory to see the latest version before editing again.',
   ผู้ดูแลยังไม่เปิดความจำร่วมสำหรับทีมนี้: "Your admin hasn't enabled shared memory for this team",
   'ผู้ดูแลยังไม่อนุญาตการส่งภาพต้นฉบับให้ AI': "Your admin doesn't allow sending source images to the AI",
   'การเชื่อมต่อ AI นี้ยังไม่รับภาพ (รวมถึง PDF สแกน) เลือกโมเดลที่อ่านภาพได้ หรือใช้ไฟล์ต้นฉบับที่มีข้อความ':
