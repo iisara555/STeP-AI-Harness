@@ -150,7 +150,7 @@ export async function installAntigravityCli(
     } catch (error) {
       await rm(staged, { force: true });
       throw new Error(
-        error instanceof Error && ['CANCELLED', 'ANTIGRAVITY_UPDATE_REQUIRED'].includes(error.message)
+        error instanceof Error && ['CANCELLED', 'ANTIGRAVITY_UPDATE_REQUIRED', 'ANTIGRAVITY_VERSION_UNTESTED'].includes(error.message)
           ? error.message
           : 'ANTIGRAVITY_INSTALL_FAILED',
       );
@@ -485,7 +485,7 @@ export async function openAntigravitySignIn(executable: string, cwd: string) {
   return () => {};
 }
 
-/** True when `executable` answers as Antigravity 1.2.14+ (checked in an isolated home so nothing else starts). */
+/** True when `executable` answers as an Antigravity version STeP works with, 1.2.14 up to 1.4 (checked in an isolated home so nothing else starts). */
 export async function antigravityCurrent(executable: string, cwd: string, signal?: AbortSignal) {
   await mkdir(cwd, { recursive: true });
   const home = await antigravityHome({ cwd, env: process.env });
