@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { WorkService, type Harness } from '../electron/service';
-import { autoEffort, modelOption, taskSize, type TaskSignals } from '../electron/effort';
+import { autoEffort, effortInModel, modelOption, taskSize, type TaskSignals } from '../electron/effort';
 import { defaultPolicy } from '../electron/policy';
 import { Store } from '../electron/store';
 import type { Connection } from '../src/types';
@@ -44,6 +44,19 @@ test('only levels the model offers are picked; a medium task keeps the model def
   assert.equal(modelOption({ model: '', models })?.id, 'b', 'the provider default model when none is chosen');
   assert.equal(modelOption({ model: 'zzz', models }), undefined);
   assert.equal(defaultPolicy().features.autoEffort, true);
+});
+
+test('Antigravity ids that already name a level offer no extra levels', () => {
+  for (const id of ['gemini-3.8-flash-medium', 'gemini-3.8-flash-high', 'gemini-x-low', 'gemini-x-xhigh', 'gemini-x-max'])
+    assert.ok(effortInModel(id), id);
+  for (const id of ['gemini-3.8-flash', 'gemini-4-argon', 'gemini-highlight', '', undefined]) assert.ok(!effortInModel(id), String(id));
+  const leveled = modelOption({ provider: 'antigravity', model: 'gemini-3.8-flash-medium' });
+  assert.equal(leveled?.efforts, undefined, 'no made-up levels, so auto effort sends none');
+  assert.equal(autoEffort(leveled?.efforts, 'small'), undefined);
+  assert.deepEqual(
+    modelOption({ provider: 'antigravity', model: 'gemini-3.8-flash' })?.efforts?.map(e => e.id),
+    ['low', 'medium', 'high'],
+  );
 });
 
 async function effortsFor(run: { text: string; mode: 'chat' | 'draft'; chosen?: string; auto?: boolean }) {
