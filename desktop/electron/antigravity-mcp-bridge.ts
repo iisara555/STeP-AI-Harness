@@ -31,6 +31,13 @@ export type GovernedBridgeResponse = {
   hint?: string;
 };
 
+/**
+ * How long one bridge call may take, approvals included: just under agy's default 180-second MCP tool timeout, so the
+ * model gets STeP's BRIDGE_TIMEOUT instead of agy's. The socket then closes, which cancels the host call (and an
+ * approval still open) so nothing runs after the model was told it failed.
+ */
+export const BRIDGE_CALL_MS = 170_000;
+
 export type GovernedBridgeExecutor = (request: LoopRequest, signal: AbortSignal) => Promise<GovernedBridgeResponse>;
 
 const GOVERNED_BRIDGE_TOOL_NAMES = new Set([
@@ -97,7 +104,7 @@ export class AntigravityMcpBridge {
       `const callBridge = args => new Promise((resolve, reject) => {`,
       `  const socket = connect(endpoint);`,
       `  let text = '';`,
-      `  socket.setTimeout(60000, () => socket.destroy(new Error('BRIDGE_TIMEOUT')));`,
+      `  socket.setTimeout(${BRIDGE_CALL_MS}, () => socket.destroy(new Error('BRIDGE_TIMEOUT')));`,
       `  socket.on('connect', () => socket.write(JSON.stringify({ token, arguments: args || {} }) + '\\n'));`,
       `  socket.on('error', reject);`,
       `  socket.on('data', chunk => {`,
@@ -144,7 +151,10 @@ export class AntigravityMcpBridge {
       socket.once('close', () => this.sockets.delete(socket));
       let buffer = '';
       let handled = false;
-      socket.setTimeout(60_000, () => socket.destroy());
+      // A caller that goes away (timeout, agy stopped) cancels its host call.
+      const gone = new AbortController();
+      socket.once('close', () => gone.abort());
+      socket.setTimeout(BRIDGE_CALL_MS + 5_000, () => socket.destroy());
       socket.on('error', () => {});
       socket.on('data', chunk => {
         if (handled) return;
@@ -157,7 +167,7 @@ export class AntigravityMcpBridge {
         const nl = buffer.indexOf('\n');
         if (nl < 0) return;
         handled = true;
-        void this.handleLine(buffer.slice(0, nl)).then(response => {
+        void this.handleLine(buffer.slice(0, nl), gone.signal).then(response => {
           if (!socket.destroyed) socket.end(JSON.stringify(response) + '\n');
         });
       });
@@ -185,8 +195,8 @@ export class AntigravityMcpBridge {
   }
 
   /** Direct in-process validation and dispatch using the exact same rules as socket calls. */
-  async invoke(rawArgs: unknown): Promise<GovernedBridgeResponse> {
-    if (this.closed || this.signal?.aborted) return { ok: false, code: 'CANCELLED' };
+  async invoke(rawArgs: unknown, caller?: AbortSignal): Promise<GovernedBridgeResponse> {
+    if (this.closed || this.signal?.aborted || caller?.aborted) return { ok: false, code: 'CANCELLED' };
     try {
       validateToolRequest(rawArgs);
       const req = rawArgs as LoopRequest;
@@ -198,7 +208,7 @@ export class AntigravityMcpBridge {
           ...(req.content !== undefined ? { content: req.content } : {}),
           ...(req.args ? { args: req.args } : {}),
         },
-        this.signal || new AbortController().signal,
+        AbortSignal.any([this.signal, caller].filter((signal): signal is AbortSignal => Boolean(signal))),
       );
     } catch (error) {
       const code = /^[A-Z_]+$/.test((error as Error)?.message || '') ? (error as Error).message : 'INVALID_INPUT';
@@ -211,7 +221,7 @@ export class AntigravityMcpBridge {
     }
   }
 
-  private async handleLine(line: string): Promise<GovernedBridgeResponse> {
+  private async handleLine(line: string, caller: AbortSignal): Promise<GovernedBridgeResponse> {
     let envelope: { token?: unknown; arguments?: unknown; request?: unknown };
     try {
       envelope = JSON.parse(line);
@@ -221,7 +231,7 @@ export class AntigravityMcpBridge {
     if (!envelope || typeof envelope !== 'object' || !sameToken(this.token, envelope.token)) {
       return { ok: false, code: 'TOOL_DENIED' };
     }
-    return this.invoke(envelope.arguments ?? envelope.request);
+    return this.invoke(envelope.arguments ?? envelope.request, caller);
   }
 
   async close() {

@@ -8,6 +8,8 @@
  * in the answer. Before the 2026-10-31 permission fix, deny mcp(*) refused this call.
  * Check 2 (native tools stay off): agy is asked to read a file outside its workspace with its own file tool; passes
  * when that file's marker never appears in the answer.
+ * Check 3 (chat wiring): the same call made through a tool loop, as a chat with policy `features.antigravityNativeBridge`
+ * does: passes when the loop's host ran it and only the masked text (never the raw marker) reached the answer.
  * agy is only ever started through an isolated home (never run agy by hand with the real home: it updates itself).
  */
 import { randomBytes } from 'node:crypto';
@@ -18,6 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { AntigravityAdapter, antigravityHome, antigravityModels, checkAntigravity, runAntigravity } from '../electron/antigravity';
 import type { GovernedBridgeExecutor } from '../electron/antigravity-mcp-bridge';
 import { ProviderSession } from '../electron/providers';
+import { ToolLoop } from '../electron/tool-loop';
 import type { Connection } from '../src/types';
 
 const marker = () => 'STEP-PROBE-' + randomBytes(6).toString('hex').toUpperCase();
@@ -92,6 +95,41 @@ export async function runBridgeProbe(options: { executable: string; model?: stri
       },
     );
 
+    // Check 3: the call through a tool loop, as a chat with the policy feature does. The host masks the raw marker.
+    const raw = marker(),
+      masked = marker();
+    const loopCalls: string[] = [];
+    let loopAnswer: string | undefined, loopError: string | undefined;
+    const loop = new ToolLoop({
+      enabled: () => true,
+      check: async () => {},
+      readOnly: () => true,
+      execute: async request => {
+        loopCalls.push(request.tool);
+        return { path: '.', entries: [{ name: `${raw}.txt`, path: `${raw}.txt`, directory: false }] };
+      },
+      outgoing: async text => text.split(raw).join(masked),
+    });
+    const session = new ProviderSession();
+    try {
+      loopAnswer = await loop.run(
+        'Call the MCP tool step_host (server step_host, tool step_host) once with the arguments {"tool":"files","input":"."}. Use the MCP tool call itself: do not write a step-tool block or any JSON in your reply. Then reply with exactly the file names it returned, nothing else.',
+        prompt =>
+          new AntigravityAdapter().run(prompt, connection, {
+            ...base,
+            signal: options.signal,
+            emit: () => {},
+            nativeBridge: (request, signal) => loop.bridge(request, signal),
+            session,
+          }),
+        options.signal,
+      );
+    } catch (error) {
+      loopError = code(error);
+    } finally {
+      await session.closeAndWait();
+    }
+
     return {
       version: version.trim().slice(0, 40),
       model,
@@ -110,6 +148,13 @@ export async function runBridgeProbe(options: { executable: string; model?: stri
         error: second.error,
         pass: !second.answer?.includes(hidden),
       },
+      toolLoop: {
+        hostCalls: loopCalls.length,
+        maskedInAnswer: Boolean(loopAnswer?.includes(masked)),
+        rawInAnswer: Boolean(loopAnswer?.includes(raw)),
+        error: loopError,
+        pass: loopCalls.includes('files') && Boolean(loopAnswer?.includes(masked)) && !loopAnswer?.includes(raw),
+      },
     };
   } finally {
     await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
@@ -124,13 +169,13 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     console.error('ใช้: npx tsx scripts/probe-antigravity-bridge.ts --agy <path-to-agy> [--model <gemini-model>]');
     process.exitCode = 1;
   } else {
-    console.log('กำลังทดสอบ step_host bridge กับ agy ที่ลงชื่อเข้าใช้ไว้ (ข้อมูลสังเคราะห์ อาจใช้โควตาของบัญชี 2 คำขอ)');
+    console.log('กำลังทดสอบ step_host bridge กับ agy ที่ลงชื่อเข้าใช้ไว้ (ข้อมูลสังเคราะห์ อาจใช้โควตาของบัญชี 3 คำขอ)');
     const cancel = new AbortController();
     process.once('SIGINT', () => cancel.abort());
     try {
       const report = await runBridgeProbe({ executable, model: value('--model'), signal: cancel.signal });
       console.log(JSON.stringify(report, null, 2));
-      process.exitCode = report.bridge.pass && report.nativeRead.pass ? 0 : 2;
+      process.exitCode = report.bridge.pass && report.nativeRead.pass && report.toolLoop.pass ? 0 : 2;
     } catch (error) {
       // No native stderr, account details, tokens or raw model output in the report.
       console.error(code(error));

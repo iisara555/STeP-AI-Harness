@@ -52,7 +52,7 @@ createInterface({input:process.stdin}).on('line',async line=>{
   if(kind==='native-bridge-other-server' && hasMcp) return step('call_mcp_tool',{ServerName:'other',ToolName:'step_host',Arguments:{tool:'files',input:'.'}});
   if(kind==='native-bridge-other-read' && hasMcp) return step('view_file',{AbsolutePath:process.env.HOME+'/.gemini/antigravity-cli/mcp/step_host/other.json'});
   if(kind==='native-bridge-search' && hasMcp) return step('search_web',{query:'synthetic'});
-  if(kind==='native-bridge' && hasMcp){
+  if((kind==='native-bridge'||kind==='native-bridge-then-search') && hasMcp){
     // Like agy 1.3.2: Deny > Ask > Allow, mcp(*) matches every MCP tool, and headless strict auto-denies every MCP
     // call whatever the allow list says. Before call_mcp_tool the model reads agy's own schema file, which
     // read_file(*) refuses.
@@ -79,6 +79,7 @@ createInterface({input:process.stdin}).on('line',async line=>{
     rl.close();
     child.stdin.end();
     child.kill();
+    if(kind==='native-bridge-then-search') return step('search_web',{query:'synthetic'});
     const text=called.result?.content?.[0]?.text||'';
     const ans='bridge:'+listed.result.tools[0].name+':'+text;
     send({event:'step_update',step_update:{conversation_id:'conv',step_type:'agent_response',text_delta:ans}});
@@ -419,6 +420,28 @@ test('native MCP bridge executes governed host tools over local IPC and rejects 
     }
   }
 
+  // After a bridge call reached the host, a later native step fails the run instead of a text-only retry that could
+  // repeat the call's effect.
+  const after = await fixture('native-bridge-then-search');
+  try {
+    const hostCalls: unknown[] = [];
+    await assert.rejects(
+      new AntigravityAdapter().run('Stage then search', after.connection, {
+        ...after.context,
+        nativeBridge: async request => {
+          hostCalls.push(request);
+          return { ok: true };
+        },
+      }),
+      { message: 'TOOL_DENIED' },
+    );
+    assert.equal(hostCalls.length, 1);
+    assert.equal((await after.calls()).filter(c => c.start).length, 1, 'no text-only retry');
+  } finally {
+    await after.session.closeAndWait();
+    await after.close();
+  }
+
   // Direct bridge unit check: invalid token and invalid tool request fail closed.
   const bridgeHome = await mkdtemp(join(tmpdir(), 'step-agy-bridge-'));
   const bridge = new AntigravityMcpBridge(async req => ({ ok: true, result: { echoed: req.tool } }));
@@ -451,6 +474,34 @@ test('native MCP bridge executes governed host tools over local IPC and rejects 
   } finally {
     await bridge.close();
     await rm(bridgeHome, { recursive: true, force: true });
+  }
+});
+
+test('a bridge caller that goes away cancels its host call, an approval still open included', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'step-agy-bridge-cancel-'));
+  let started!: () => void;
+  const running = new Promise<void>(done => (started = done));
+  let cancelled!: () => void;
+  const stopped = new Promise<void>(done => (cancelled = done));
+  // Stands in for a host call waiting on the employee's approval.
+  const bridge = new AntigravityMcpBridge(async (_request, signal) => {
+    started();
+    await new Promise<void>(done => signal.addEventListener('abort', () => done(), { once: true }));
+    cancelled();
+    return { ok: false, code: 'CANCELLED' };
+  });
+  const cfg = await bridge.start(home);
+  try {
+    const net = await import('node:net');
+    const sock = net.createConnection(cfg.endpoint);
+    sock.on('error', () => {});
+    sock.on('connect', () => sock.write(JSON.stringify({ token: bridge.token, arguments: { tool: 'files', input: 'a.txt' } }) + '\n'));
+    await running;
+    sock.destroy();
+    await stopped;
+  } finally {
+    await bridge.close();
+    await rm(home, { recursive: true, force: true });
   }
 });
 
@@ -496,6 +547,7 @@ test('the real-agy bridge probe passes against a CLI that applies agy permission
     assert.equal(report.version, '1.3.2');
     assert.equal(report.bridge.pass, true, JSON.stringify(report));
     assert.equal(report.nativeRead.pass, true);
+    assert.equal(report.toolLoop.pass, true, JSON.stringify(report.toolLoop));
   } finally {
     await f.session.closeAndWait();
     await f.close();
