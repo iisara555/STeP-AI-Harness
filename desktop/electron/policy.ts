@@ -44,6 +44,7 @@ export const FEATURES = [
   'receiptVision',
   'autoUpdate',
   'claudeSubscription',
+  'antigravityNativeBridge',
   'learningReview',
   'ocrTrial',
   'answerCheck',
@@ -225,6 +226,10 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // and each employee signs in to their own Claude account on Anthropic's page. Off until Anthropic confirms how its
   // Claude Code terms apply (docs/claude-subscription.md); pilot machines turn it on in the managed policy.
   claudeSubscription: false,
+  // Antigravity chats call STeP tools through the governed step_host MCP bridge inside one agy turn, instead of a
+  // step-tool text block and a new turn per tool. Every call still goes through the same permission, consent and
+  // privacy checks. Off until the owner has piloted it on a signed-in device (docs/antigravity-adapter.md).
+  antigravityNativeBridge: false,
   // The demo release offers the developer switch on every machine. Each developer must still opt in locally.
   developmentMode: true,
   // A background review after every 10 user turns drafts lessons into the Learning Inbox (proposals only), as Hermes
