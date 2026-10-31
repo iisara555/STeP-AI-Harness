@@ -142,6 +142,23 @@ test('Antigravity uses native NDJSON, isolated system instructions and one usage
   }
 });
 
+test('a model id that already names its level never gets an extra --effort (agy rejects the pair)', async () => {
+  const f = await fixture();
+  try {
+    const leveled = { ...f.connection, model: 'gemini-3.8-flash-medium' };
+    assert.equal(await adapter('antigravity').run('Synthetic request', leveled, { ...f.context, effort: 'low' }), 'สวัสดีครับ');
+    const plain = { ...f.connection, model: 'gemini-test' };
+    assert.equal(await adapter('antigravity').run('Synthetic request', plain, { ...f.context, effort: 'low' }), 'สวัสดีครับ');
+    const runs = (await f.calls()).filter(c => c.args?.includes('--input-format'));
+    assert.equal(runs.length, 2);
+    assert.equal(runs[0].args[runs[0].args.indexOf('--model') + 1], 'gemini-3.8-flash-medium');
+    assert.ok(!runs[0].args.includes('--effort'), 'the level is already in the model id');
+    assert.deepEqual(runs[1].args.slice(runs[1].args.indexOf('--effort'), runs[1].args.indexOf('--effort') + 2), ['--effort', 'low']);
+  } finally {
+    await f.close();
+  }
+});
+
 test('a blocked native tool gets one fresh text-only attempt, with no failed text or tool arguments exposed', async () => {
   const f = await fixture('recover-chat');
   try {
