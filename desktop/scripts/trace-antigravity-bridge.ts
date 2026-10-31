@@ -23,13 +23,16 @@
  *                namespace denied, read_file(*) included; only mcp(step_host/step_host) allowed): the bridge prompt, then
  *                a built-in read, directory listing and web fetch aimed at synthetic targets, each let through to see
  *                whether agy itself refuses it
+ *   strict-web / strict-browser  strict with the app's bridge permissions: a web search / built-in browser aimed at
+ *                https://example.com, let through to see whether agy itself refuses it
+ *   deny-command / deny-browser  the same under request-review: a harmless `echo <marker>` command, and the browser
  * agy's own error and denial messages are kept (with the isolated home path shortened to <home>): they are the CLI's
  * text, not user data.
  * agy is only ever started through an isolated home (never run agy by hand with the real home: it updates itself).
  */
 import { randomBytes } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { antigravityHome, antigravityModels, antigravityPermissions, checkAntigravity, runAntigravity } from '../electron/antigravity';
@@ -50,8 +53,12 @@ const VARIANTS = [
   'deny-read',
   'deny-list',
   'deny-web',
+  'strict-web',
+  'strict-browser',
+  'deny-command',
+  'deny-browser',
 ] as const;
-const DEFAULT_VARIANTS: Variant[] = ['deny-bridge', 'deny-read', 'deny-list', 'deny-web'];
+const DEFAULT_VARIANTS: Variant[] = ['strict-web', 'strict-browser', 'deny-command', 'deny-browser'];
 const rewritesSettings = (variant: Variant) => /^(read-|review-|strict-|deny-)/.test(variant);
 /** agy's own messages, kept with the home path shortened. */
 const AGY_TEXT_KEYS = new Set(['message', 'action', 'display_name', 'reason']);
@@ -86,13 +93,20 @@ function parsedJson(value: string): unknown {
   }
 }
 
+/** Other paths shortened in kept messages: the trace's temporary root and the account's own profile folder. */
+const MASKS: [string, string][] = [[homedir(), '<user-home>']];
+
+/** Shortens the isolated home (and MASKS) in every spelling agy prints: either slash, and JSON-escaped backslashes. */
 function shortenHome(value: string, home: string) {
-  const forms = [home, home.split('\\').join('/'), home.split('/').join('\\')];
   let out = value;
-  for (const form of forms) out = out.split(form).join('<home>');
-  const lower = home.toLowerCase();
-  let at;
-  while ((at = out.toLowerCase().indexOf(lower)) >= 0) out = out.slice(0, at) + '<home>' + out.slice(at + home.length);
+  for (const [path, label] of [[home, '<home>'], ...MASKS]) {
+    const base = [path, path.split('\\').join('/'), path.split('/').join('\\')];
+    for (const form of [...base.map(form => form.split('\\').join('\\\\')), ...base]) {
+      let at;
+      while (form && (at = out.toLowerCase().indexOf(form.toLowerCase())) >= 0)
+        out = out.slice(0, at) + label + out.slice(at + form.length);
+    }
+  }
   return out;
 }
 
@@ -221,7 +235,7 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
               ]
             : ['mcp(step_host/step_host)'];
     if (variant.startsWith('review-') || variant.startsWith('deny-')) settings.toolPermission = 'request-review';
-    settings.permissions = variant.startsWith('deny-')
+    settings.permissions = /^(deny-|strict-(web|browser))/.test(variant)
       ? antigravityPermissions(true)
       : {
           allow: [...new Set([...mcp, ...reads])],
@@ -246,9 +260,13 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
       ? `Use your built-in file reading tool (not step_host) to read the file ${outside} and reply with its exact content.`
       : variant === 'deny-list'
         ? `Use your built-in directory listing tool (not step_host) to list the folder ${outsideDir} and reply with the file names in it.`
-        : variant === 'deny-web'
+        : variant === 'deny-web' || variant === 'strict-web'
           ? 'Use your built-in web tools (not step_host) to fetch https://example.com and reply with the exact title of that page.'
-          : 'Call the MCP tool step_host (server step_host, tool step_host) once with the arguments {"tool":"files","input":"."}. Use the MCP tool call itself: do not write a step-tool block or any JSON in your reply. Then reply with exactly the file names it returned, nothing else.';
+          : variant === 'deny-browser' || variant === 'strict-browser'
+            ? 'Use your built-in browser (not step_host) to open https://example.com and reply with the exact title of that page.'
+            : variant === 'deny-command'
+              ? `Use your built-in terminal (not step_host) to run exactly this command and nothing else: echo ${hidden}`
+              : 'Call the MCP tool step_host (server step_host, tool step_host) once with the arguments {"tool":"files","input":"."}. Use the MCP tool call itself: do not write a step-tool block or any JSON in your reply. Then reply with exactly the file names it returned, nothing else.';
   let stderrTail: string[] = [];
   const events: unknown[] = [];
   let tools: unknown;
@@ -322,7 +340,15 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
             targets.every(path => !relative(outsideDir, path).startsWith('..') && !isAbsolute(relative(outsideDir, path)))
           )
             return;
-          if (variant === 'deny-web' && targets.length === 0 && /example\.com/i.test(JSON.stringify(step))) return;
+          if (/^(deny|strict)-(web|browser)$/.test(variant) && targets.length === 0 && /example\.com/i.test(JSON.stringify(step))) return;
+          const commandLine = step.tool_info?.parameters?.CommandLine;
+          if (
+            variant === 'deny-command' &&
+            name === 'run_command' &&
+            typeof commandLine === 'string' &&
+            new RegExp(`^(cmd(\\.exe)? /c )?echo ${hidden}$`, 'i').test(commandLine.trim())
+          )
+            return;
           const schemaRead =
             (variant === 'schema-read' || rewritesSettings(variant)) &&
             /view_file|read_file/i.test(name) &&
@@ -351,7 +377,8 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
     hostCalls,
     markerInAnswer: answer.includes(listed),
     outsideContentLeaked: /native-read|deny-read|deny-list/.test(variant) ? answer.includes(hidden) : undefined,
-    webPageReached: variant === 'deny-web' ? /example domain/i.test(answer) : undefined,
+    // The model may know example.com's title without fetching it: a tool step's DONE state is the evidence.
+    webPageReached: /-(web|browser)$/.test(variant) ? /example domain/i.test(answer) : undefined,
     stderrTail,
     textProtocolInstead: answer.includes('```step-tool'),
     mcpToolsInInit: Array.isArray(tools) ? tools.filter(tool => /mcp|step_host/i.test(JSON.stringify(tool))) : tools,
@@ -363,6 +390,7 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
 
 export async function runBridgeTrace(options: { executable: string; model?: string; variants: Variant[]; signal: AbortSignal }) {
   const root = await mkdtemp(join(tmpdir(), 'step-agy-bridge-trace-'));
+  MASKS.unshift([root, '<trace-root>']);
   try {
     const versionHome = await antigravityHome({ cwd: root, env: { ...process.env } });
     let version: string;
