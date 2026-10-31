@@ -20,10 +20,10 @@ test('receipt Gemini API selection is independent of chat and excludes unavailab
     assert.equal(receiptGeminiConnection([{ ...api, ...bad } as Connection]), undefined);
 });
 
-test('receipt reading capabilities distinguish text-only Antigravity from Gemini image input', () => {
+test('receipt reading capabilities: Gemini and Antigravity read images, compatible and Copilot get text', () => {
   const policy = defaultPolicy();
   policy.receiptLocalOnly = false;
-  assert.deepEqual(receiptReadingMode(policy, 'antigravity'), { vision: false, textOnly: true });
+  assert.deepEqual(receiptReadingMode(policy, 'antigravity'), { vision: true, textOnly: false });
   assert.deepEqual(receiptReadingMode(policy, 'gemini'), { vision: true, textOnly: false });
   for (const provider of ['compatible', 'copilot'])
     assert.deepEqual(receiptReadingMode(policy, provider), { vision: false, textOnly: true });

@@ -23,6 +23,6 @@ export function receiptGeminiConnection(connections: Connection[], preferredId?:
 export function receiptReadingMode(policy: Pick<Policy, 'features' | 'checks' | 'receiptLocalOnly'>, provider?: string) {
   if (policy.receiptLocalOnly !== false) return { vision: false, textOnly: false };
   const permitted = policy.features.vision && policy.features.receiptVision && !policy.checks.privacy;
-  const capable = !provider || ['openai', 'claude', 'gemini'].includes(provider);
+  const capable = !provider || ['openai', 'claude', 'gemini', 'antigravity'].includes(provider);
   return { vision: permitted && capable, textOnly: Boolean(provider) && !(permitted && capable) };
 }

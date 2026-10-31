@@ -28,7 +28,9 @@ function blankPdf(count) {
   return Buffer.from(out, 'latin1');
 }
 const home = await mkdtemp(join(tmpdir(), 'step-antigravity-smoke-'));
-await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ receiptLocalOnly: false }));
+// Antigravity can read receipt images now; this smoke keeps the OCR-text receipt flow covered by turning receipt image
+// reading off in policy (receipt-status.test.ts covers the image-capable mode).
+await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ receiptLocalOnly: false, features: { receiptVision: false } }));
 const executable = join(home, 'agy.mjs');
 const marker = join(home, 'unsafe');
 const calls = join(home, 'calls');
@@ -131,6 +133,18 @@ try {
   const scanned = await page.evaluate(id => window.step.call('attach', { id }), task.id);
   assert.equal(scanned.usable, true, JSON.stringify(scanned));
   assert.equal(scanned.vision, true);
+  // A picture picked with the general attach button goes as the picture too, not as local OCR text.
+  const photo = join(home, 'photo.png');
+  await writeFile(
+    photo,
+    Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jhS0AAAAASUVORK5CYII=', 'base64'),
+  );
+  await app.evaluate(({ dialog }, file) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
+  }, photo);
+  const picture = await page.evaluate(id => window.step.call('attach', { id }), task.id);
+  assert.equal(picture.usable, true, JSON.stringify(picture));
+  assert.equal(picture.vision, true);
   const folder = join(home, 'ocr'),
     python = process.platform === 'win32' ? join(folder, '.venv', 'Scripts', 'python.exe') : join(folder, '.venv', 'bin', 'python');
   await mkdir(dirname(python), { recursive: true });
@@ -247,7 +261,7 @@ try {
       ),
     connection.id,
   );
-  assert.match(denied, /VISION_UNAVAILABLE/);
+  assert.match(denied, /VISION_DISABLED/);
   assert.deepEqual(await app.evaluate(() => globalThis.receiptDialogs), ['ให้ AI ช่วยกรองผล OCR']);
   // The simplified page has no advanced reread controls. Exercise a delayed automatic mapping instead:
   // human corrections entered while the native provider is working must survive its eventual suggestions.
