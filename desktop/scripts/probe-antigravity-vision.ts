@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
-import { ANTIGRAVITY_DENY, antigravityHome, antigravityModels, runAntigravity } from '../electron/antigravity';
+import { ANTIGRAVITY_DENY, AntigravityAdapter, antigravityHome, antigravityModels, runAntigravity } from '../electron/antigravity';
 import type { Connection } from '../src/types';
 import { explainRuntimeFailure, scrub } from '../electron/diagnostics';
 
@@ -348,12 +348,47 @@ export async function runProbe(options: {
   }
 }
 
+const APP_PROMPT = `Identify each shape and its color in the attached image in reading order: top row left to right, then bottom row left to right. Return only JSON {"cells":[{"color":"...","shape":"..."}, ...]}. Use color names red, blue, green, yellow, purple or orange, and shape names circle, square or triangle. If you cannot see the image, return {"error":"image_unavailable"}; do not guess.`;
+
+/**
+ * The same random challenge through the app's own path: AntigravityAdapter with the picture as an attachment
+ * (`context.images`), its isolated home, image server, permissions and step checks. Only the answer is checked.
+ */
+export async function runAppProbe(options: { executable: string; model?: string; signal?: AbortSignal }) {
+  if (options.model !== undefined && !/^gemini-[\w.-]{1,93}$/.test(options.model)) throw new Error('INVALID_MODEL');
+  const challenge = createChallenge();
+  const root = await mkdtemp(join(tmpdir(), 'step-image-app-probe-'));
+  try {
+    const base = { cwd: root, env: { ...process.env } };
+    const model = options.model || (await antigravityModels({ executable: options.executable } as Connection, base))[0]?.id;
+    if (!model) throw new Error('MODEL_NOT_AVAILABLE');
+    const connection: Connection = {
+      id: 'agy-image-app-probe',
+      provider: 'antigravity',
+      mode: 'subscription',
+      model,
+      executable: options.executable,
+      ready: true,
+      note: '',
+    };
+    const answer = await new AntigravityAdapter().run(APP_PROMPT, connection, {
+      ...base,
+      signal: options.signal ?? new AbortController().signal,
+      emit: () => {},
+      images: [{ mime: 'image/png', data: challenge.png.toString('base64') }],
+    });
+    return { mode: 'app', model, visualAnswerCorrect: matchesImage(answer, challenge.cells) };
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const executable = args[args.indexOf('--agy') + 1];
   const model = args.includes('--model') ? args[args.indexOf('--model') + 1] : undefined;
   if (!args.includes('--agy') || !executable || (args.includes('--model') && !model)) {
-    console.error('ใช้: npx tsx scripts/probe-antigravity-vision.ts --agy <path-to-agy> [--model <gemini-model>]');
+    console.error('ใช้: npx tsx scripts/probe-antigravity-vision.ts --agy <path-to-agy> [--model <gemini-model>] [--app]');
     process.exitCode = 1;
   } else {
     console.log('กำลังทดสอบภาพสังเคราะห์ผ่านบัญชี Antigravity ที่ลงชื่อเข้าใช้ไว้ อาจใช้โควตาของบัญชี');
@@ -361,7 +396,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     process.once('SIGINT', () => cancel.abort());
     process.once('SIGTERM', () => cancel.abort());
     try {
-      const report = await runProbe({ executable, model, signal: cancel.signal });
+      const report = args.includes('--app')
+        ? await runAppProbe({ executable, model, signal: cancel.signal })
+        : await runProbe({ executable, model, signal: cancel.signal });
       console.log(JSON.stringify(report, null, 2));
       process.exitCode = report.visualAnswerCorrect ? 0 : 2;
     } catch (error) {
