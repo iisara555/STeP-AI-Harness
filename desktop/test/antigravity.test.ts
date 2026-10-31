@@ -395,11 +395,17 @@ test('Antigravity cancellation and timeout terminate the process before cleanup'
   }
 });
 
-test('Antigravity rejects images, search, API auth and non-Gemini models without spawning', async () => {
+test('Antigravity rejects unsupported images, search, API auth and non-Gemini models without spawning', async () => {
   const f = await fixture();
   try {
     for (const [connection, context, code] of [
-      [f.connection, { ...f.context, images: [{ mime: 'image/png', data: 'synthetic' }] }, 'VISION_UNAVAILABLE'],
+      [f.connection, { ...f.context, images: [{ mime: 'image/gif', data: 'c3ludGhldGlj' }] }, 'VISION_UNAVAILABLE'],
+      [f.connection, { ...f.context, images: [{ mime: 'image/png', data: 'not base64!' }] }, 'VISION_UNAVAILABLE'],
+      [
+        f.connection,
+        { ...f.context, images: Array.from({ length: 21 }, () => ({ mime: 'image/png', data: 'c3ludGhldGlj' })) },
+        'VISION_UNAVAILABLE',
+      ],
       [f.connection, { ...f.context, webSearch: true }, 'WEB_SEARCH_UNAVAILABLE'],
       [{ ...f.connection, model: 'claude-other' }, f.context, 'MODEL_NOT_AVAILABLE'],
       [{ ...f.connection, mode: 'api' }, f.context, 'INVALID_CONNECTION'],
