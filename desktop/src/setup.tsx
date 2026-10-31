@@ -36,7 +36,7 @@ const styles: { id: Personality; label: string; tone: string; sample: (user: str
     sample: (u, a) => (u ? t('{0} จะคุยกับคุณ{1}ตามสไตล์ที่กำหนดไว้ครับ', a, u) : t('{0} จะคุยกับคุณตามสไตล์ที่กำหนดไว้ครับ', a)),
   },
 ];
-const steps = ['ต้อนรับ', 'เกี่ยวกับคุณ', 'ผู้ช่วย AI', 'เชื่อมต่อ AI', 'โฟลเดอร์และส่วนเสริม', 'เสร็จสิ้น'];
+const steps = ['ต้อนรับ', 'เกี่ยวกับคุณ', 'ผู้ช่วย AI', 'เชื่อมต่อ AI', 'โฟลเดอร์และส่วนเสริม', 'ข้อตกลง'];
 const assistantPresets = ['STeP Mate', 'น้องสเต็ป'];
 
 export function SetupWizard({
@@ -267,8 +267,8 @@ export function SetupWizard({
 
         {step === 3 && (
           <section className="wizard-body">
-            <h1>{t('เชื่อมต่อ AI')}</h1>
-            <AIConnections snapshot={snapshot} call={call} refresh={refresh} onError={onError} onBusy={setBusy} headingLevel={2} />
+            {/* The picker's own heading is the step title, so the step does not repeat "เชื่อมต่อ AI" above it. */}
+            <AIConnections snapshot={snapshot} call={call} refresh={refresh} onError={onError} onBusy={setBusy} headingLevel={1} />
           </section>
         )}
 
@@ -298,7 +298,7 @@ export function SetupWizard({
           )}
           {/* On the connect step "do it later" already moves on, so a second skip link would only compete with it. */}
           {step < 5 && !(step === 3 && !ready) && (
-            <button className="text-link" disabled={Boolean(busy)} onClick={skip}>
+            <button className="text-link wizard-skip" disabled={Boolean(busy)} onClick={skip}>
               {t('ข้าม ตั้งค่าทีหลัง')}
             </button>
           )}

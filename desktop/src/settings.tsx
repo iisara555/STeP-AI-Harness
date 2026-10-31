@@ -1,10 +1,23 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Building2, Check, FileSearch, FolderOpen, KeyRound, Minus, Monitor, Moon, Settings2, ShieldCheck, Sparkles, Sun } from './icons';
+import {
+  Building2,
+  Check,
+  FileSearch,
+  FolderOpen,
+  KeyRound,
+  Minus,
+  Monitor,
+  Moon,
+  Settings2,
+  ShieldCheck,
+  Sparkles,
+  Sun,
+  UserRound,
+} from './icons';
 import { AIConnections } from './ai-connections';
 import { CredentialSettings } from './credential-settings';
 import { DeveloperDiagnostics } from './developer-diagnostics';
 import { shortcut, explainError } from './messages';
-import teamworkArt from './assets/illustrations/teamwork.png';
 import { SectionArt } from './illustration';
 import { Avatar, pickableAvatars } from './avatars';
 import { initial } from './messages';
@@ -268,47 +281,8 @@ export function SettingsPanel({
   );
   return (
     <div className="settings-content" ref={panelRef}>
-      <div className={page === 'ai' ? 'settings-hero settings-hero-ai' : 'settings-hero'}>
-        <div>
-          <h1>{page === 'ai' ? t('เชื่อมต่อ AI') : pages.find(entry => entry[0] === page)?.[1]}</h1>
-          {page === 'general' && <p className="muted">{t('ดูและปรับโปรไฟล์ ผู้ช่วย และโฟลเดอร์ของคุณ')}</p>}
-          {page === 'developer' && <p className="muted">{t('เครื่องมือดูแลระบบสำหรับนักพัฒนาและผู้ดูแล')}</p>}
-        </div>
-        {page === 'ai' ? (
-          <SectionArt scene="connections" className="settings-illustration" />
-        ) : (
-          <img className="illustration settings-art" src={teamworkArt} alt="" />
-        )}
-      </div>
-      <label className="settings-search">
-        {t('ค้นหาการตั้งค่า')}
-        <input
-          type="search"
-          value={settingsSearch}
-          placeholder={t('เช่น ภาษา บัญชี Google หรือโฟลเดอร์')}
-          onChange={e => setSettingsSearch(e.target.value)}
-        />
-      </label>
-      {settingsSearch.trim() && (
-        <div className="settings-search-results" role="region" aria-label={t('ผลค้นหาการตั้งค่า')}>
-          {matchingPages.length ? (
-            matchingPages.map(([id, label]) => (
-              <button
-                className="quiet"
-                key={id}
-                onClick={() => {
-                  setPage(id);
-                  setSettingsSearch('');
-                }}
-              >
-                {label}
-              </button>
-            ))
-          ) : (
-            <p className="small">{t('ไม่พบหมวดที่ตรงกับคำค้น')}</p>
-          )}
-        </div>
-      )}
+      {/* Tabs first: the page title above already says Settings, so the section name lives in the tab and a hidden
+          heading for screen readers. Only the AI page keeps its small picture. */}
       <div className="settings-tabs" role="tablist" aria-label={t('หมวดการตั้งค่า')}>
         {pages.map(([id, label, Icon]) => (
           <button
@@ -325,13 +299,47 @@ export function SettingsPanel({
           </button>
         ))}
       </div>
+      <div className={page === 'ai' ? 'settings-hero settings-hero-ai' : 'settings-hero'}>
+        <h1 className="sr-only">{page === 'ai' ? t('เชื่อมต่อ AI') : pages.find(entry => entry[0] === page)?.[1]}</h1>
+        {page === 'developer' && <p className="muted">{t('เครื่องมือดูแลระบบสำหรับนักพัฒนาและผู้ดูแล')}</p>}
+        <label className="settings-search">
+          <span className="sr-only">{t('ค้นหาการตั้งค่า')}</span>
+          <input
+            type="search"
+            value={settingsSearch}
+            placeholder={t('ค้นหาการตั้งค่า เช่น ภาษา บัญชี Google')}
+            onChange={e => setSettingsSearch(e.target.value)}
+          />
+        </label>
+        {settingsSearch.trim() && (
+          <div className="settings-search-results" role="region" aria-label={t('ผลค้นหาการตั้งค่า')}>
+            {matchingPages.length ? (
+              matchingPages.map(([id, label]) => (
+                <button
+                  className="quiet"
+                  key={id}
+                  onClick={() => {
+                    setPage(id);
+                    setSettingsSearch('');
+                  }}
+                >
+                  {label}
+                </button>
+              ))
+            ) : (
+              <p className="small">{t('ไม่พบหมวดที่ตรงกับคำค้น')}</p>
+            )}
+          </div>
+        )}
+        {page === 'ai' && <SectionArt scene="connections" className="settings-illustration" />}
+      </div>
       {page === 'credentials' && <CredentialSettings call={call} onError={onError} onBusy={credentialBusy} requestedOrigin={vaultOrigin} />}
       {page === 'developer' && developerAccess && <DeveloperDiagnostics call={call} onError={onError} />}
       {page === 'general' && (
         <section className="settings-profile">
           <h2>{t('โปรไฟล์และทีม')}</h2>
           <div className="settings-profile-summary">
-            <Avatar id={avatar} fallback={initial(userName) || 'ST'} />
+            <Avatar id={avatar} fallback={initial(userName) || <UserRound size={20} />} />
             <button className="quiet" aria-expanded={avatarOpen} onClick={() => setAvatarOpen(!avatarOpen)}>
               {t('เปลี่ยนรูป')}
             </button>
@@ -351,7 +359,7 @@ export function SettingsPanel({
                   className="avatar-option"
                   onClick={() => setAvatar('')}
                 >
-                  <Avatar fallback={initial(userName) || 'ST'} />
+                  <Avatar fallback={initial(userName) || <UserRound size={20} />} />
                 </button>
                 {pickableAvatars(avatar).map((a, i) => (
                   <button
@@ -710,7 +718,12 @@ export function SettingsPanel({
               'คำขอ บทสนทนา ร่าง และข้อมูลจากไฟล์หรือเครื่องมือที่ใช้ตอบ อาจถูกส่งไปยังบริการ AI ที่เลือก การอ่านภาพขึ้นอยู่กับบัญชี นโยบาย และการยินยอม',
             )}
           </p>
-          <h3>{t('ก่อนส่ง ระบบตรวจอะไร')}</h3>
+          <h3 className="privacy-heading">
+            {t('ก่อนส่ง ระบบตรวจอะไร')}
+            <span className={snapshot.policy?.checks?.privacy ? 'policy-badge on' : 'policy-badge off'}>
+              {snapshot.policy?.checks?.privacy ? t('ตรวจข้อมูลเพิ่มเติม: เปิด') : t('ตรวจข้อมูลเพิ่มเติม: ปิด')}
+            </span>
+          </h3>
           <p>
             {snapshot.policy?.checks?.privacy
               ? t(
@@ -720,7 +733,12 @@ export function SettingsPanel({
                   'ปิดการตรวจข้อมูลส่วนบุคคลเพิ่มเติม: ข้อมูลส่วนบุคคลอาจถูกส่งตามต้นฉบับ แต่ยังกรองรหัสผ่านและข้อมูลรับรองที่ตรวจพบ ตรวจข้อมูลก่อนส่งทุกครั้ง',
                 )}
           </p>
-          <h3>{t('เมื่อไรจะถามยืนยัน')}</h3>
+          <h3 className="privacy-heading">
+            {t('เมื่อไรจะถามยืนยัน')}
+            {snapshot.policy && (
+              <span className="policy-badge on">{snapshot.policy.pilot === false ? t('ถามทุกครั้ง') : t('ถามเมื่อจำเป็น')}</span>
+            )}
+          </h3>
           <p>
             {t(
               'งานอ่าน Google ขออนุมัติครั้งเดียวต่อคำขอ งานส่ง แก้ไข หรือลบยืนยันแต่ละรายการ งานประจำวันใช้สิทธิ์ที่ตั้งไว้ ส่วนเครื่องมืออื่นทำตามนโยบายและโหมดที่เลือก ผู้ดูแลอาจกำหนดให้ถามทุกครั้ง',
@@ -754,12 +772,15 @@ export function SettingsPanel({
           />
         </section>
       )}
-      <div className="settings-save sticky" ref={footerRef}>
+      <div className={dirty ? 'settings-save sticky dirty' : 'settings-save sticky'} ref={footerRef}>
+        {/* Quiet until there is something to save: accounts, AI and policy apply at once and have nothing waiting here. */}
         <p className="small" role="status">
-          <span className="muted">{t('ทั่วไปและการแสดงผล')} · </span>
-          <span>
-            {dirty ? t('มีการเปลี่ยนแปลงที่ยังไม่บันทึก') : saved ? t('บันทึกการเปลี่ยนแปลงแล้ว') : t('ไม่มีการเปลี่ยนแปลงที่ยังไม่บันทึก')}
-          </span>
+          {(dirty || saved) && (
+            <>
+              <span className="muted">{t('ทั่วไปและการแสดงผล')} · </span>
+              <span>{dirty ? t('มีการเปลี่ยนแปลงที่ยังไม่บันทึก') : t('บันทึกการเปลี่ยนแปลงแล้ว')}</span>
+            </>
+          )}
         </p>
         {saveError !== undefined && (
           <p className="settings-save-error" role="alert">
