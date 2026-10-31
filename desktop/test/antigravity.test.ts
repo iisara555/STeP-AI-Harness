@@ -15,6 +15,7 @@ import {
 import { adapter, listModels } from '../electron/providers';
 import { signInAndTest, signOutManagedProvider } from '../electron/connect';
 import { checkRuntime } from '../electron/runtimes';
+import { antigravityCurrent } from '../electron/antigravity-install';
 import { ToolLoop } from '../electron/tool-loop';
 import type { Connection } from '../src/types';
 
@@ -437,6 +438,28 @@ test('Antigravity catalog is bounded to Gemini and does not imply account readin
     await assert.rejects(antigravityModels(old.connection, old.context), { message: 'ANTIGRAVITY_UPDATE_REQUIRED' });
   } finally {
     await old.close();
+  }
+  // agy 1.4 does not load STeP's isolated agent, so it is refused before any request instead of failing every turn.
+  for (const version of ['1.4.0', '1.4.12', '2.0.1']) {
+    const newer = await fixture('success', version);
+    try {
+      await assert.rejects(antigravityModels(newer.connection, newer.context), { message: 'ANTIGRAVITY_VERSION_UNTESTED' });
+      await assert.rejects(new AntigravityAdapter().run('Synthetic', newer.connection, newer.context), {
+        message: 'ANTIGRAVITY_VERSION_UNTESTED',
+      });
+      // Reconnecting sees it as not current, which installs STeP's own pinned agy.
+      assert.equal(await antigravityCurrent(newer.connection.executable, join(newer.root, 'check')), false);
+    } finally {
+      await newer.close();
+    }
+  }
+  for (const version of ['1.3.2', '1.3.99']) {
+    const tested = await fixture('success', version);
+    try {
+      assert.equal(await antigravityCurrent(tested.connection.executable, join(tested.root, 'check')), true);
+    } finally {
+      await tested.close();
+    }
   }
   for (const usage of [
     null,

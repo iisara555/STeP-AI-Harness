@@ -9,6 +9,8 @@ import { tm } from './i18n';
 export const connectNotes: Record<string, string> = {
   ANTIGRAVITY_RUNTIME_REQUIRED: 'ยังไม่พบ Antigravity CLI กดเชื่อมต่อเพื่อให้ STeP ติดตั้งให้',
   ANTIGRAVITY_UPDATE_REQUIRED: 'ต้องใช้ Antigravity CLI รุ่น 1.2.14 ขึ้นไป กดเชื่อมต่อเพื่อให้ STeP ติดตั้งรุ่นใหม่ให้',
+  ANTIGRAVITY_VERSION_UNTESTED:
+    'Antigravity CLI ในเครื่องเป็นรุ่นใหม่ (1.4 ขึ้นไป) ที่ยังใช้กับ STeP ไม่ได้ กดเชื่อมต่อ Antigravity อีกครั้ง STeP จะติดตั้งรุ่นที่ทดสอบแล้วไว้ใช้เอง โดยไม่แตะรุ่นของคุณ',
   ANTIGRAVITY_DOWNLOAD_FAILED: 'ดาวน์โหลด Antigravity CLI ไม่สำเร็จ ตรวจอินเทอร์เน็ตหรือการเข้าถึง storage.googleapis.com แล้วลองใหม่',
   ANTIGRAVITY_CHECKSUM_FAILED: 'ไฟล์ Antigravity CLI ที่ดาวน์โหลดไม่ตรงกับ checksum ทางการ จึงยกเลิกการติดตั้ง',
   ANTIGRAVITY_INSTALL_FAILED: 'ติดตั้ง Antigravity CLI ไม่ได้ ลองกดเชื่อมต่อใหม่ หรือติดตั้งเองตามคู่มือ',
