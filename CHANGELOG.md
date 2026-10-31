@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Keep Antigravity working when the employee's own Antigravity CLI updates itself to 1.4. agy 1.4 no longer loads STeP's isolated agent ("unknown agent step-draft"), so every request failed before its first turn. STeP now refuses agy 1.4 and later with a plain Thai note (`ANTIGRAVITY_VERSION_UNTESTED`), and connecting Antigravity again installs STeP's own pinned, checksum-verified 1.3.2, which it uses first; the employee's own agy is left as it is.
+
 ## Desktop v0.6.24 (2026-10-31)
 
 - Answer faster on Gemini and Antigravity. The Skill selection, answer check, summary and quality-repair calls use a small reasoning effort; a direct STeP knowledge question or a greeting with nothing attached and no drafting or review cue skips the Skill selection round trip; Antigravity structured JSON replies are read past a thinking block instead of failing with `INVALID_SKILL_SELECTION`.

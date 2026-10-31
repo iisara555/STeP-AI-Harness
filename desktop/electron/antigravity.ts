@@ -922,6 +922,8 @@ function fileStamp(executable: string) {
   }
 }
 
+/** agy major.minor from which STeP's isolated agent is not loaded (raise after a live check of a newer agy). */
+export const ANTIGRAVITY_TESTED_BELOW = [1, 4] as const;
 export async function checkAntigravity(executable: string, context: Pick<ProviderContext, 'cwd' | 'env'>, signal?: AbortSignal) {
   const stamp = fileStamp(executable);
   if (stamp && checked.get(executable) === stamp) {
@@ -937,6 +939,14 @@ export async function checkAntigravity(executable: string, context: Pick<Provide
     (Number(version[1]) === 1 && Number(version[2]) === 2 && Number(version[3]) < 14)
   )
     throw new Error('ANTIGRAVITY_UPDATE_REQUIRED');
+  // agy 1.4 refuses STeP's isolated agent ("unknown agent \"step-draft\" (no custom agents are available)", seen with
+  // 1.4.12 on Windows, 2026-10-31), so every request would fail before its first turn. A newer agy the employee installed
+  // (or that updated itself) is refused here; reconnecting installs STeP's own pinned copy, which is used first.
+  if (
+    Number(version[1]) > ANTIGRAVITY_TESTED_BELOW[0] ||
+    (Number(version[1]) === ANTIGRAVITY_TESTED_BELOW[0] && Number(version[2]) >= ANTIGRAVITY_TESTED_BELOW[1])
+  )
+    throw new Error('ANTIGRAVITY_VERSION_UNTESTED');
   if (stamp) checked.set(executable, stamp);
 }
 
