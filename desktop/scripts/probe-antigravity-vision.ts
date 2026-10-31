@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
 import { ANTIGRAVITY_DENY, antigravityHome, antigravityModels, runAntigravity } from '../electron/antigravity';
 import type { Connection } from '../src/types';
+import { explainRuntimeFailure, scrub } from '../electron/diagnostics';
 
 const COLORS = {
   red: [220, 25, 35],
@@ -248,8 +249,20 @@ export async function runProbe(options: {
             }
           } else if (event.event === 'result') {
             result = event.result;
-            if (!result || result.status !== 'SUCCESS' || result.conversation_id !== conversation || typeof result.response !== 'string')
-              throw new Error('PROBE_RESULT_INVALID');
+            if (!result || result.status !== 'SUCCESS' || result.conversation_id !== conversation || typeof result.response !== 'string') {
+              const raw = (event.result ?? {}) as { status?: unknown; error?: unknown };
+              const reason = typeof raw.error === 'string' ? scrub(raw.error).slice(0, 300) : '';
+              throw Object.assign(new Error('PROBE_RESULT_INVALID'), {
+                steps,
+                detail: {
+                  status: typeof raw.status === 'string' ? raw.status : typeof raw.status,
+                  code: explainRuntimeFailure([reason]),
+                  reason,
+                  sameConversation: result?.conversation_id === conversation,
+                  responseType: typeof result?.response,
+                },
+              });
+            }
           } else throw new Error('PROBE_STREAM_INVALID');
         },
       },
@@ -265,6 +278,10 @@ export async function runProbe(options: {
       visualAnswerCorrect: imageDelivered && matchesImage(result.response!, challenge.cells),
     };
   } catch (error) {
+    if (error && typeof error === 'object' && home) {
+      const evidence = JSON.parse(await readFile(join(home.env.HOME!, 'image-handoff.json'), 'utf8').catch(() => '{}'));
+      Object.assign(error, { imageCalls: evidence.calls ?? 0 });
+    }
     clean = !(error as { shutdownIncomplete?: boolean })?.shutdownIncomplete;
     throw error;
   } finally {
@@ -294,7 +311,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     } catch (error) {
       // No native stderr, account details, tokens or raw model output in the report.
       const code = error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'PROBE_FAILED';
-      console.error(code, (error as { steps?: string[] })?.steps?.join(',') ?? '');
+      const extra = error as { steps?: string[]; detail?: unknown; imageCalls?: number };
+      console.error(code, JSON.stringify({ toolSteps: extra?.steps, imageCalls: extra?.imageCalls, detail: extra?.detail }));
       process.exitCode = 1;
     }
   }
