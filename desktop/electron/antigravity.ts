@@ -24,6 +24,22 @@ const TOOL_RECOVERY_RULES = `The previous attempt was stopped because it request
 export const ANTIGRAVITY_DENY = ['read_file', 'write_file', 'read_url', 'execute_url', 'command', 'unsandboxed', 'mcp'].map(
   action => `${action}(*)`,
 );
+/** The one MCP tool the governed bridge exposes, as an agy permission rule. */
+export const STEP_HOST_PERMISSION = 'mcp(step_host/step_host)';
+
+/**
+ * The permissions written to each isolated agy settings file. agy evaluates Deny > Ask > Allow and `mcp(*)` matches
+ * every MCP tool, so a deny list holding `mcp(*)` would also refuse the bridge that the allow list names. With the
+ * bridge on, MCP is therefore left out of deny and only `step_host` is allowed. Any other MCP tool matches no rule:
+ * agy treats an unconfigured MCP call as Ask, which a headless run cannot answer and soft-denies. The isolated MCP
+ * config and the agent's `mcpServers` list only step_host, and the host stops the run on the first tool step that is
+ * not step_host (`TOOL_DENIED`). Without the bridge, every MCP tool stays denied.
+ */
+export function antigravityPermissions(bridge: boolean) {
+  return bridge
+    ? { allow: [STEP_HOST_PERMISSION], ask: [] as string[], deny: ANTIGRAVITY_DENY.filter(rule => rule !== 'mcp(*)') }
+    : { allow: [] as string[], ask: [] as string[], deny: ANTIGRAVITY_DENY };
+}
 
 /** The employee's real home, where agy keeps its sign-in. */
 function profileHome() {
@@ -91,11 +107,7 @@ export async function antigravityHome(
         toolPermission: 'strict',
         artifactReviewPolicy: 'asks-for-review',
         allowNonWorkspaceAccess: false,
-        permissions: {
-          allow: bridgeConfig ? ['mcp(step_host/step_host)'] : [],
-          ask: [],
-          deny: ANTIGRAVITY_DENY,
-        },
+        permissions: antigravityPermissions(Boolean(bridgeConfig)),
       }),
       { mode: 0o600 },
     );

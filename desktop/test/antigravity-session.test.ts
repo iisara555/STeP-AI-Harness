@@ -45,6 +45,12 @@ createInterface({input:process.stdin}).on('line',async line=>{
   if(kind==='tool' && turns===2) return send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'read_file'}});
   if(kind==='native-bridge-unapproved' && starts===1) return send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'bash'}});
   if(kind==='native-bridge' && hasMcp){
+    // Like agy: Deny > Ask > Allow, and mcp(*) matches every MCP tool, so a deny of mcp(*) soft-denies the bridge.
+    const policy=JSON.parse(fs.readFileSync(process.env.HOME+'/.gemini/antigravity-cli/settings.json','utf8')).permissions;
+    if(policy.deny.some(r=>r==='mcp(*)'||r==='mcp(step_host/*)'||r==='mcp(step_host/step_host)')||!policy.allow.includes('mcp(step_host/step_host)')){
+      const soft='soft-denied: mcp(step_host/step_host)';
+      return send({event:'result',result:{status:'SUCCESS',conversation_id:'conv',num_turns:turns,response:soft,usage:{input_tokens:5,output_tokens:5,total_tokens:10}}});
+    }
     send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'mcp:step_host:step_host'}});
     const {spawn}=await import('node:child_process');
     const child=spawn(hasMcp.command,hasMcp.args,{env:{...process.env,...hasMcp.env},stdio:['pipe','pipe','pipe']});
