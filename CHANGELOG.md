@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Fix the race conditions found in the 2026-10-31 audit of 0.6.24. Preparing a change no longer reads a file that another program swaps for a link (or whose folder it swaps) between the workspace check and the read, so content from outside the workspace cannot become a change's "before" text. Two changes saved to the same file at once no longer both report success over a mixed or truncated file: saves to one file run one at a time, the second rechecks the file and reports a conflict, and the new content replaces the file in one step (the permission bits and backup are kept; if Windows refuses the swap because another program holds the file, the old in-place write is used). Memories saved at the same time no longer pass the 200 limit, a folder already over 200 lists every memory, and an edit of a memory changed elsewhere reports a conflict. Antigravity no longer denies the governed `step_host` bridge it allows (`mcp(*)` in deny won over the step_host allow); every native action stays denied and other MCP tools stay refused. `code_symbols` and `code_references` say when a file limit cut the search, and `code_references` searches code files only.
+
 ## Desktop v0.6.24 (2026-10-31)
 
 - Answer faster on Gemini and Antigravity. The Skill selection, answer check, summary and quality-repair calls use a small reasoning effort; a direct STeP knowledge question or a greeting with nothing attached and no drafting or review cue skips the Skill selection round trip; Antigravity structured JSON replies are read past a thinking block instead of failing with `INVALID_SKILL_SELECTION`.
