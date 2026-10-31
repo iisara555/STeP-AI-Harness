@@ -6,14 +6,20 @@
  *
  *   npx tsx scripts/trace-antigravity-bridge.ts --agy <path-to-agy> [--model <gemini-model>] [--variant <name>]
  *
- * Variants (default: all three, about three model requests):
+ * Variants (default: the three read-* ones, about three model requests):
  *   baseline     stop at the first tool step that is not call_mcp_tool (what the app does today)
  *   schema-read  also let agy read files inside its own MCP schema folder (<home>/.gemini/antigravity-cli/mcp/step_host/)
  *   schema-up    stop like baseline, but give the step_host schema in the system prompt
+ *   read-exact   like schema-read, and agy's settings stop denying read_file(*) and allow reading exactly that schema
+ *                file (any other read matches no rule, which strict mode soft-denies in a headless run)
+ *   read-exact-mcp-any  read-exact, with every MCP tool allowed instead of only mcp(step_host/step_host)
+ *   read-folder  like read-exact, with the schema folder allowed as read_file(<folder>/*) and mcp(step_host/*)
+ * agy's own error and denial messages are kept (with the isolated home path shortened to <home>): they are the CLI's
+ * text, not user data.
  * agy is only ever started through an isolated home (never run agy by hand with the real home: it updates itself).
  */
 import { randomBytes } from 'node:crypto';
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,7 +27,10 @@ import { antigravityHome, antigravityModels, checkAntigravity, runAntigravity } 
 import { NATIVE_STEP_HOST_SCHEMA } from '../electron/antigravity-mcp-bridge';
 import type { Connection } from '../src/types';
 
-const VARIANTS = ['baseline', 'schema-read', 'schema-up'] as const;
+const VARIANTS = ['baseline', 'schema-read', 'schema-up', 'read-exact', 'read-exact-mcp-any', 'read-folder'] as const;
+const DEFAULT_VARIANTS: Variant[] = ['read-exact', 'read-exact-mcp-any', 'read-folder'];
+/** agy's own messages, kept with the home path shortened. */
+const AGY_TEXT_KEYS = new Set(['message', 'action', 'display_name', 'reason']);
 type Variant = (typeof VARIANTS)[number];
 const SAFE_VALUE_KEYS = new Set([
   'event',
@@ -37,6 +46,8 @@ const SAFE_VALUE_KEYS = new Set([
   'agent',
   'permission_mode',
   'model',
+  'ServerName',
+  'ToolName',
 ]);
 const code = (error: unknown) => (error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'TRACE_FAILED');
 
@@ -49,6 +60,16 @@ function parsedJson(value: string): unknown {
   } catch {
     return undefined;
   }
+}
+
+function shortenHome(value: string, home: string) {
+  const forms = [home, home.split('\\').join('/'), home.split('/').join('\\')];
+  let out = value;
+  for (const form of forms) out = out.split(form).join('<home>');
+  const lower = home.toLowerCase();
+  let at;
+  while ((at = out.toLowerCase().indexOf(lower)) >= 0) out = out.slice(0, at) + '<home>' + out.slice(at + home.length);
+  return out;
 }
 
 /** Replaces every value with its shape; keeps short identifiers under known keys and paths inside the isolated home. */
@@ -64,6 +85,7 @@ export function redact(value: unknown, home: string, key = '', depth = 0): unkno
   if (typeof value !== 'string') return value;
   const json = parsedJson(value);
   if (json !== undefined) return { '<json>': redact(json, home, key, depth + 1) };
+  if (AGY_TEXT_KEYS.has(key)) return shortenHome(value, home).slice(0, 800);
   const at = value.toLowerCase().indexOf(home.toLowerCase());
   if (at >= 0) {
     const rest = value.slice(at + home.length).replace(/^[\\/]+/, '');
@@ -136,6 +158,27 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
     },
   });
   const homeRoot = resolve(home.cwd, '..');
+  let permissions: unknown;
+  if (variant.startsWith('read-')) {
+    const settingsPath = join(homeRoot, '.gemini', 'antigravity-cli', 'settings.json');
+    const settings = JSON.parse(await readFile(settingsPath, 'utf8'));
+    const folder = join(homeRoot, '.gemini', 'antigravity-cli', 'mcp', 'step_host');
+    const reads =
+      variant === 'read-folder'
+        ? [`read_file(${folder}/*)`, `read_file(${folder}${sep}*)`]
+        : [`read_file(${join(folder, 'step_host.json')})`];
+    const mcp =
+      variant === 'read-exact-mcp-any' ? ['mcp(*)'] : variant === 'read-folder' ? ['mcp(step_host/*)'] : ['mcp(step_host/step_host)'];
+    settings.permissions = {
+      allow: [...new Set([...mcp, ...reads])],
+      ask: [],
+      deny: settings.permissions.deny.filter((rule: string) => rule !== 'read_file(*)' && rule !== 'mcp(*)'),
+    };
+    await writeFile(settingsPath, JSON.stringify(settings), { mode: 0o600 });
+    permissions = Object.fromEntries(
+      Object.entries(settings.permissions).map(([k, rules]) => [k, (rules as string[]).map(rule => shortenHome(rule, homeRoot))]),
+    );
+  }
   const events: unknown[] = [];
   let tools: unknown;
   let stoppedOn: unknown;
@@ -194,7 +237,7 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
           if (name === 'call_mcp_tool' || /step_host/.test(name)) return;
           const paths = pathsIn(step, homeRoot);
           const schemaRead =
-            variant === 'schema-read' &&
+            (variant === 'schema-read' || variant.startsWith('read-')) &&
             /view_file|read_file/i.test(name) &&
             paths.length > 0 &&
             paths.every(path => path !== undefined && /^\.gemini[\\/]antigravity-cli[\\/]mcp[\\/]step_host([\\/]|$)/i.test(path));
@@ -212,6 +255,7 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
   }
   return {
     variant,
+    permissions,
     outcome: error === 'TRACE_DONE' ? 'result' : error,
     stoppedOn,
     hostCalls,
@@ -264,7 +308,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       const report = await runBridgeTrace({
         executable,
         model: value('--model'),
-        variants: variant ? [variant as Variant] : [...VARIANTS],
+        variants: variant ? [variant as Variant] : DEFAULT_VARIANTS,
         signal: cancel.signal,
       });
       console.log(JSON.stringify(report, null, 2));
