@@ -11,11 +11,11 @@ const privacy: any = await import('../../src/modules/privacy/index.js');
 const catalog: any = await import('../../src/modules/skills/catalog.js');
 const root = resolve('..');
 
-function fixture(extra: Partial<Harness>, checkReply = '{"unsupported":[]}') {
+function fixture(extra: Partial<Harness>, checkReply = '{"unsupported":[]}', connection: Partial<Connection> = {}) {
   const store = new Store(':memory:');
-  store.put('connection', 'c', { id: 'c', provider: 'openai', model: 'fixture', ready: true } as Connection);
+  store.put('connection', 'c', { id: 'c', provider: 'openai', model: 'fixture', ready: true, ...connection } as Connection);
   store.put('settings', 'main', { workspace: tmpdir(), team: 'cc' });
-  const calls: { prompt: string; system: string; schema: boolean }[] = [];
+  const calls: { prompt: string; system: string; schema: boolean; model: string }[] = [];
   const harness: Harness = {
     root,
     route: (query, opts) => routing.queryStepRouter(query, { autoRoute: true, authorityChecks: true, ...opts }),
@@ -37,9 +37,9 @@ function fixture(extra: Partial<Harness>, checkReply = '{"unsupported":[]}') {
     async () => ({
       context: { cwd: tmpdir(), env: {} },
       adapter: {
-        run: async (prompt, _c, context) => {
+        run: async (prompt, c, context) => {
           const checking = /You check an AI answer/.test(context.system || '');
-          calls.push({ prompt, system: context.system || '', schema: Boolean(context.jsonSchema) });
+          calls.push({ prompt, system: context.system || '', schema: Boolean(context.jsonSchema), model: c.model });
           if (checking) return checkReply;
           context.emit('ติดต่อฝ่ายบุคคลทางอีเมลและโทรศัพท์ภายใน');
           return 'ติดต่อฝ่ายบุคคลทางอีเมลและโทรศัพท์ภายใน';
@@ -124,4 +124,28 @@ test('parseAnswerCheck accepts the JSON reply, trims items and caps them at five
   assert.equal(parseAnswerCheck(many)!.unsupported.length, 5);
   assert.equal(parseAnswerCheck('no json'), undefined);
   assert.equal(parseAnswerCheck('{"other":1}'), undefined);
+});
+
+test("on Antigravity, the answer check runs on the same model's -low id when agy lists it; the answer keeps the chosen model", async () => {
+  const models = ['gemini-3.8-flash-low', 'gemini-3.8-flash-medium', 'gemini-3.8-flash-high'].map(id => ({ id, label: id }));
+  for (const [listed, expected] of [
+    [models, 'gemini-3.8-flash-low'],
+    [models.slice(1), 'gemini-3.8-flash-medium'],
+  ] as const) {
+    const f = fixture({ answerCheck: () => true }, '{"unsupported":[]}', {
+      provider: 'antigravity',
+      mode: 'subscription',
+      model: 'gemini-3.8-flash-medium',
+      models: [...listed],
+    });
+    try {
+      await f.service.run(f.session.id, QUERY, '', true, undefined, 'chat');
+      const check = f.calls.find(c => /You check an AI answer/.test(c.system))!;
+      assert.equal(check.model, expected);
+      const answers = f.calls.filter(c => !/You check an AI answer/.test(c.system) && !c.schema);
+      assert.ok(answers.length && answers.every(c => c.model === 'gemini-3.8-flash-medium'), 'the answer keeps the chosen model');
+    } finally {
+      f.store.close();
+    }
+  }
 });

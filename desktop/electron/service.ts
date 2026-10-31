@@ -39,7 +39,7 @@ import { promptMetrics } from './prompt-metrics';
 import { extractStructuredJson } from './json-schema';
 import { selectSkillBundle } from './skill-resources';
 import { sanitizeModelOutput, evaluateOutputQuality, buildRepairPrompt } from './output-quality';
-import { autoEffort, modelOption, taskSize } from './effort';
+import { autoEffort, auxiliaryConnection, modelOption, taskSize } from './effort';
 import { selfContainedText } from './text-intent';
 import { selectDiscovery } from './discovery';
 import { highConfidenceSkill, prepareSkillSelection, shouldRunModelSkillSelection } from './skill-selection';
@@ -984,7 +984,7 @@ export class WorkService {
           let counted: TokenCount = { input: 0, output: 0, total: 0 };
           try {
             checkAbort();
-            const reply = await selectionRuntime.adapter.run(selection.prompt, connection, {
+            const reply = await selectionRuntime.adapter.run(selection.prompt, auxiliaryConnection(connection), {
               ...selectionRuntime.context,
               signal: controller.signal,
               system: selection.system,
@@ -1441,7 +1441,7 @@ export class WorkService {
               stepTrace.providerCalls!.push(call);
               try {
                 checkAbort();
-                const result = await runtime.adapter.run(summaryPrompt, connection, {
+                const result = await runtime.adapter.run(summaryPrompt, auxiliaryConnection(connection), {
                   ...runtime.context,
                   signal: controller.signal,
                   system: summarySystem,
@@ -1859,7 +1859,7 @@ export class WorkService {
         let counted: TokenCount = { input: 0, output: 0, total: 0 };
         try {
           checkAbort();
-          const reply = await runtime.adapter.run(checkPrompt, connection, {
+          const reply = await runtime.adapter.run(checkPrompt, auxiliaryConnection(connection), {
             ...runtime.context,
             signal: controller.signal,
             system: ANSWER_CHECK_SYSTEM,

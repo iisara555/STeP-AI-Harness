@@ -51,6 +51,20 @@ export function effortInModel(model?: string) {
   return /-(?:low|medium|high|xhigh|max)$/.test(model || '');
 }
 
+/**
+ * The connection for an auxiliary call (Skill selection, history summary, answer check). agy takes no `--effort` with
+ * an id that names its level, so for `gemini-3.8-flash-medium` (or -high, -xhigh, -max) these calls switch to the same
+ * model's `-low` id when agy lists it; otherwise the connection is unchanged. The answer itself keeps the chosen model.
+ */
+export function auxiliaryConnection<T extends Pick<Connection, 'model' | 'models'> & { provider?: Connection['provider'] }>(
+  connection: T,
+): T {
+  if (connection.provider !== 'antigravity') return connection;
+  const base = /^(.+)-(?:medium|high|xhigh|max)$/.exec(connection.model || '')?.[1];
+  const low = base && `${base}-low`;
+  return low && connection.models?.some(m => m.id === low) ? { ...connection, model: low } : connection;
+}
+
 const ANTIGRAVITY_DEFAULT_EFFORTS: EffortOption[] = [{ id: 'low' }, { id: 'medium' }, { id: 'high' }];
 
 /** The catalog entry of the model this connection will run, if the provider listed one. */
