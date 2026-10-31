@@ -805,7 +805,17 @@ export class Workbench {
         current.size !== expected.size
       )
         throw new Error('FILE_CONFLICT');
-      await rename(temp, path);
+      // Windows refuses to rename over a file that another handle (a reader, an indexer, antivirus) has open; a
+      // short retry rides out a brief one before the caller falls back to writing in place.
+      for (let attempt = 0; ; attempt++) {
+        try {
+          await rename(temp, path);
+          break;
+        } catch (e: any) {
+          if (process.platform !== 'win32' || attempt >= 4 || !['EPERM', 'EACCES', 'EBUSY'].includes(e?.code)) throw e;
+          await new Promise(r => setTimeout(r, 25 * (attempt + 1)));
+        }
+      }
       renamed = true;
       return true;
     } finally {

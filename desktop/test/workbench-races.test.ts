@@ -191,32 +191,79 @@ test('the same change applied twice at once is saved once', async () => {
   }
 });
 
-test('a reader during a save sees the old or the new file, never a mix', async () => {
-  const f = await fixture();
-  try {
-    const target = join(f.root, 'live.txt'),
-      versions = ['1'.repeat(190_000), '2'.repeat(120_000), '3'.repeat(180_000), '4'.repeat(100_000)];
-    await writeFile(target, versions[0]);
-    let saving = true;
-    const seen = new Set<string>();
-    const reader = (async () => {
-      while (saving) {
-        const text = await readFile(target, 'utf8').catch((e: NodeJS.ErrnoException) =>
-          e.code === 'ENOENT' ? 'ENOENT' : Promise.reject(e),
-        );
-        seen.add(text === 'ENOENT' ? text : text[0] + ':' + text.length);
-        await new Promise(r => setImmediate(r));
+test(
+  'a reader during a save sees the old or the new file, never a mix',
+  {
+    // Windows refuses to rename over a file another handle has open (this reader holds it most of the time), so the
+    // save retries briefly and then writes in place (REPLACE_FALLBACK); the next test covers that path everywhere.
+    skip: process.platform === 'win32' && 'Windows cannot rename over a file that is open; the in-place fallback is tested below',
+  },
+  async () => {
+    const f = await fixture();
+    try {
+      const target = join(f.root, 'live.txt'),
+        versions = ['1'.repeat(190_000), '2'.repeat(120_000), '3'.repeat(180_000), '4'.repeat(100_000)];
+      await writeFile(target, versions[0]);
+      let saving = true;
+      const seen = new Set<string>();
+      const reader = (async () => {
+        while (saving) {
+          const text = await readFile(target, 'utf8').catch((e: NodeJS.ErrnoException) =>
+            e.code === 'ENOENT' ? 'ENOENT' : Promise.reject(e),
+          );
+          seen.add(text === 'ENOENT' ? text : text[0] + ':' + text.length);
+          await new Promise(r => setImmediate(r));
+        }
+      })();
+      for (const next of [...versions.slice(1), ...versions]) {
+        const change = await f.tools.stage('live.txt', next);
+        await f.tools.apply(change.id);
       }
-    })();
-    for (const next of [...versions.slice(1), ...versions]) {
-      const change = await f.tools.stage('live.txt', next);
-      await f.tools.apply(change.id);
+      saving = false;
+      await reader;
+      const whole = new Set(versions.map(v => v[0] + ':' + v.length));
+      for (const value of seen) assert.ok(whole.has(value), `read ${value} is one complete version`);
+    } finally {
+      await f.close();
     }
-    saving = false;
-    await reader;
-    const whole = new Set(versions.map(v => v[0] + ':' + v.length));
-    for (const value of seen) assert.ok(whole.has(value), `read ${value} is one complete version`);
+  },
+);
+
+test('when the file cannot be replaced (e.g. held open on Windows) the save writes it in place, whole', async () => {
+  const f = await fixture();
+  const original = fsp.rename;
+  let refused = 0;
+  (fsp as any).rename = async (from: string, to: string) => {
+    if (String(from).endsWith('.step-tmp')) {
+      refused++;
+      throw Object.assign(new Error('synthetic refusal'), { code: 'EPERM' });
+    }
+    return original(from, to);
+  };
+  syncBuiltinESMExports();
+  try {
+    await writeFile(join(f.root, 'held.txt'), 'x'.repeat(150_000));
+    const shorter = 'y'.repeat(90_000);
+    const change = await f.tools.stage('held.txt', shorter);
+    await f.tools.apply(change.id);
+    assert.ok(refused >= 1);
+    assert.equal(await readFile(join(f.root, 'held.txt'), 'utf8'), shorter);
+    assert.deepEqual(
+      (await readdir(f.root)).filter(name => name.endsWith('.step-tmp')),
+      [],
+    );
+    // The queue still turns a second, stale change into a conflict on this path.
+    const stale = await f.tools.stage('held.txt', 'z'.repeat(10));
+    const other = await f.tools.stage('held.txt', 'w'.repeat(10));
+    const results = await Promise.allSettled([f.tools.apply(stale.id), f.tools.apply(other.id)]);
+    assert.deepEqual(
+      results.map(r => (r.status === 'fulfilled' ? 'ok' : r.reason.message)),
+      ['ok', 'FILE_CONFLICT'],
+    );
+    assert.equal(await readFile(join(f.root, 'held.txt'), 'utf8'), 'z'.repeat(10));
   } finally {
+    (fsp as any).rename = original;
+    syncBuiltinESMExports();
     await f.close();
   }
 });
