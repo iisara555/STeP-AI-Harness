@@ -4,7 +4,7 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-10-30_
+_Last updated: 2026-10-31_
 
 ## Latest release
 
@@ -54,6 +54,8 @@ _Last updated: 2026-10-30_
 - **Desktop v0.5.39** (2026-10-11) — published from PR #135 (`7f33d12`): managed/local Dev mode gates for Claude plan access, bounded cold fallback and idle prewarming cleanup. Windows x64 and macOS Apple silicon installers are published; Harness **0.7.7**. Intel Macs stay on 0.5.35. The audit fixes below are pull requests and are not in this release.
 
 ## In progress
+
+- **Antigravity image-input investigation (2026-10-31, developer probe only)**: official headless docs confirm stream-json accepts text only. Added a synthetic PNG → MCP image-content → native CLI acceptance probe, with exact color/shape/position checks and per-run isolation; it never receives employee files or an API key. See [findings, command and integration gates](antigravity-vision.md). Automated fixtures exercise the actual stdio MCP server, denied paths/tools, policy handshake, missing-image/wrong-answer cases, timeout/nonzero-exit cleanup. Validation: `npm ci`, Desktop formatting, full Desktop tests (1,102 passed, 2 platform skips), build and repository validator passed; all 10 probe tests passed again after the final argument-validation/test-timeout adjustment. Native Gemini acceptance remains pending: this environment has no signed-in `agy`. Desktop vision capability and receipt local-only policy remain unchanged; no version bump or release.
 
 - **Backend parity phases 2 and 3: code intelligence, a JavaScript REPL, artifacts and subagents (2026-10-31, source only, unreleased)**:
   - *Code intelligence (`desktop/electron/code-intelligence.ts`, `workbench.ts`, `tools.ts`, `src/tool-registry.ts`)*: `code_symbols` and `code_references` use the TypeScript compiler API to list declarations (functions, methods, classes, interfaces, types, enums, variables, constants) and to separate definitions from references. Review fix: without a file, `code_symbols` used a regex filename search that search_files rejects (`INVALID_INPUT`); it now runs one glob search per code extension (up to 50 files, `truncated` says when more exist) and a folder input limits the search to that folder. Tests: `code-intelligence.test.ts`, `workbench.test.ts`.
