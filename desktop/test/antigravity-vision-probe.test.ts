@@ -103,9 +103,10 @@ const kind=${JSON.stringify(kind)};
 if(process.argv.includes('--version')){console.log('1.3.2');process.exit(0);}
 fs.writeFileSync(${JSON.stringify(log)},process.env.HOME);
 const policy=JSON.parse(fs.readFileSync(path.join(process.env.HOME,'.gemini','antigravity-cli','settings.json')));
-assert.deepEqual(policy.permissions.allow,['mcp(step_image_probe/read_probe_image)']);
+assert.equal(policy.permissions.allow[0],'mcp(step_image_probe/read_probe_image)');
+for(const rule of policy.permissions.allow.slice(1))assert.ok(rule.startsWith('read_file(')&&rule.endsWith('brain/**)')&&rule.includes('antigravity-cli'));
 assert.equal(policy.permissions.deny.includes('mcp(*)'),false);
-for(const rule of ['read_file(*)','write_file(*)','read_url(*)','execute_url(*)','command(*)','unsandboxed(*)'])assert.ok(policy.permissions.deny.includes(rule));
+for(const rule of ['write_file(*)','read_url(*)','execute_url(*)','command(*)','unsandboxed(*)'])assert.ok(policy.permissions.deny.includes(rule));
 const send=x=>console.log(JSON.stringify(x));
 send({event:'init',conversation_id:'probe',init:{cwd:process.cwd(),agent:'step-draft',model:process.argv.at(-1),permission_mode:kind==='unsafe'?'always-proceed':'request-review',tools:['finish']}});
 createInterface({input:process.stdin}).on('line',async line=>{

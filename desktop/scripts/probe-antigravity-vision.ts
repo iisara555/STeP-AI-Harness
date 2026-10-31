@@ -107,6 +107,12 @@ function stepArguments(step: any): any {
 }
 
 /** agy saves an MCP image result under its conversation folder: `brain/<conversation>/.system_generated/steps/<n>/media_<n>.<ext>`. */
+/** Read rules for agy's brain folder in the isolated home, in both separator spellings. */
+export function brainReadRules(home: string) {
+  const brain = join(home, '.gemini', 'antigravity-cli', 'brain');
+  return [...new Set([brain, brain.replace(/\\/g, '/')])].map(path => `read_file(${path}/**)`);
+}
+
 export const mediaStepsDir = (home: string, conversation: string) =>
   join(home, '.gemini', 'antigravity-cli', 'brain', conversation, '.system_generated', 'steps');
 
@@ -173,10 +179,13 @@ export async function runProbe(options: {
         allowNonWorkspaceAccess: false,
         // Deny takes precedence over allow, even over a more specific tool name. The isolated catalog contains
         // only this server/tool; an unconfigured MCP call is Ask, which headless soft-denies. Native tools stay denied.
+        // agy saves the MCP image under its own brain folder and the model reads it back with view_file, which
+        // read_file(*) denied. Only reads under that folder are allowed; any other read matches no rule (Ask,
+        // soft-denied headless), and the host stops every view_file that is not this conversation's media file.
         permissions: {
-          allow: ['mcp(step_image_probe/read_probe_image)'],
+          allow: ['mcp(step_image_probe/read_probe_image)', ...brainReadRules(isolatedHome)],
           ask: [],
-          deny: ANTIGRAVITY_DENY.filter(rule => rule !== 'mcp(*)'),
+          deny: ANTIGRAVITY_DENY.filter(rule => rule !== 'mcp(*)' && rule !== 'read_file(*)'),
         },
       }),
       { mode: 0o600 },
@@ -198,6 +207,7 @@ export async function runProbe(options: {
     if (!model) throw new Error('MODEL_NOT_AVAILABLE');
     const schemaFile = join(isolatedHome, '.gemini', 'antigravity-cli', 'mcp', 'step_image_probe', 'read_probe_image.json');
     const steps: string[] = [];
+    const sequence: string[] = [];
     let conversation = '',
       result: { status?: string; conversation_id?: string; response?: string } | undefined;
     await runAntigravity(
@@ -251,13 +261,34 @@ export async function runProbe(options: {
             if (step.step_type === 'tool' || step.tool_name !== undefined || step.tool_call !== undefined || step.tool_info !== undefined) {
               const name = String(step.tool_name ?? step.tool_call?.name ?? step.tool_info?.name ?? '?');
               if (!steps.includes(name)) steps.push(name);
+              const args = stepArguments(step);
+              const viewed = typeof args?.AbsolutePath === 'string' ? resolve(args.AbsolutePath).toLowerCase() : undefined;
+              sequence.push(
+                [
+                  name,
+                  viewed === undefined
+                    ? undefined
+                    : viewed === resolve(schemaFile).toLowerCase()
+                      ? 'schema'
+                      : viewed.startsWith(resolve(mediaStepsDir(isolatedHome, conversation)).toLowerCase())
+                        ? 'media'
+                        : 'other',
+                  typeof step.state === 'string'
+                    ? step.state
+                    : typeof step.state === 'object'
+                      ? JSON.stringify(step.state).slice(0, 80)
+                      : undefined,
+                ]
+                  .filter(Boolean)
+                  .join(':'),
+              );
               if (!allowedProbeStep(step, schemaFile, mediaStepsDir(isolatedHome, conversation))) {
                 // Shape only: names, keys and paths relative to the isolated home, never argument values or content.
                 const args = stepArguments(step);
                 const path = typeof args?.AbsolutePath === 'string' ? resolve(args.AbsolutePath) : undefined;
                 const inHome = path?.toLowerCase().startsWith(resolve(isolatedHome).toLowerCase());
                 throw Object.assign(new Error('TOOL_DENIED'), {
-                  steps,
+                  steps: sequence,
                   refused: {
                     name,
                     stepKeys: Object.keys(step),
@@ -298,7 +329,7 @@ export async function runProbe(options: {
     return {
       version,
       model,
-      toolSteps: steps,
+      toolSteps: sequence,
       imageDelivered,
       visualAnswerCorrect: imageDelivered && matchesImage(result.response!, challenge.cells),
     };
