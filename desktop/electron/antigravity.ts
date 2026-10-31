@@ -8,6 +8,7 @@ import { scrub, explainRuntimeFailure } from './diagnostics';
 import type { Connection, ModelOption, VisionInput } from '../src/types';
 import { providerSessionKey, type ProviderAdapter, type ProviderContext, type ProviderSession, type TokenCount } from './providers';
 import { combineUsage } from './usage';
+import { effortInModel } from './effort';
 import { jsonSchemaInstruction, strictJsonSchema } from './json-schema';
 import { AntigravityMcpBridge, isGovernedBridgeTool, type GovernedBridgeExecutor } from './antigravity-mcp-bridge';
 import {
@@ -28,6 +29,8 @@ const invalidStream = (stage: string) =>
   Object.assign(new Error('PROVIDER_STREAM_INVALID'), { detail: [`Antigravity protocol: ${stage}`] });
 /** The `--effort` levels agy accepts (`agy --help`, 1.2.17 and 1.3.2). */
 export const ANTIGRAVITY_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
+/** `--effort`, unless the model id already names a level: agy refuses both together. */
+const effortArgs = (model: string | undefined, effort: string | undefined) => (effort && !effortInModel(model) ? ['--effort', effort] : []);
 const AGENT = 'step-draft';
 const TEXT_TRANSPORT_RULES = `Native tools are unavailable in this STeP connection, including finish, file access, commands, MCP and native web search. Return the host's requested text format, including JSON when required. If the host supplied tools, request only those tools using fenced step-tool JSON in your text, never native function calls. Do not invent current facts or claim a search was performed. For fresh information without supplied evidence, ask for a source or explain that live search requires a supported connection.`;
 const NATIVE_BRIDGE_RULES = `Built-in native tools (direct file access, shell commands, web search, web fetch, browser) are disabled. When the host supplies tools, call the governed MCP bridge with call_mcp_tool, ServerName "step_host", ToolName "step_host" and Arguments {"tool":"<name>","input":"<string>","content":"<optional>","args":{...}}, or emit a fenced step-tool JSON block. That is the whole schema: do not read a schema file first. Every tool call is checked by STeP host permissions, authority and privacy rules.`;
@@ -658,7 +661,7 @@ export async function prewarmAntigravity(connection: Connection, context: Provid
     '--print-timeout',
     '9m',
     ...(connection.model ? ['--model', connection.model] : []),
-    ...(context.effort ? ['--effort', context.effort] : []),
+    ...effortArgs(connection.model, context.effort),
   ];
   const running = runAntigravity(connection.executable, args, home, {
     timeoutMs: 60 * 60_000,
@@ -812,7 +815,7 @@ export class AntigravityAdapter implements ProviderAdapter {
       '--print-timeout',
       '9m',
       ...(connection.model ? ['--model', connection.model] : []),
-      ...(context.effort ? ['--effort', context.effort] : []),
+      ...effortArgs(connection.model, context.effort),
       ...extra,
     ];
   }

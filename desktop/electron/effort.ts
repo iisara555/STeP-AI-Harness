@@ -43,6 +43,14 @@ export function autoEffort(efforts: EffortOption[] | undefined, size: TaskSize) 
   return wanted && efforts?.some(e => e.id === wanted) ? wanted : undefined;
 }
 
+/**
+ * Antigravity model ids such as `gemini-3.8-flash-medium` already fix the reasoning level. agy rejects any extra
+ * `--effort` for them ("--model ... conflicts with --effort=low"), so such a model offers no levels and gets no flag.
+ */
+export function effortInModel(model?: string) {
+  return /-(?:low|medium|high|xhigh|max)$/.test(model || '');
+}
+
 const ANTIGRAVITY_DEFAULT_EFFORTS: EffortOption[] = [{ id: 'low' }, { id: 'medium' }, { id: 'high' }];
 
 /** The catalog entry of the model this connection will run, if the provider listed one. */
@@ -52,6 +60,6 @@ export function modelOption(
   if (!connection) return undefined;
   const found =
     connection.models?.find(m => m.id === connection.model) || (!connection.model ? connection.models?.find(m => m.isDefault) : undefined);
-  if (found?.efforts?.length || connection.provider !== 'antigravity' || !connection.model) return found;
+  if (found?.efforts?.length || connection.provider !== 'antigravity' || !connection.model || effortInModel(connection.model)) return found;
   return { id: connection.model, label: found?.label || connection.model, efforts: ANTIGRAVITY_DEFAULT_EFFORTS };
 }
