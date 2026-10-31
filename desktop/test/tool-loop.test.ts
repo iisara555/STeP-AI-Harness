@@ -713,13 +713,16 @@ test('a file request whose JSON broke is sent back to the AI with the reason ins
   assert.equal(result, replies[2]);
 });
 
-test('Hermes-style toolRemediationHint provides actionable recovery hints for failure codes', () => {
-  assert.match(toolRemediationHint('patch', 'OLD_STRING_NOT_FOUND') || '', /old_string was not found.*files\(action=read\)/i);
-  assert.match(toolRemediationHint('patch', 'AMBIGUOUS_MATCH') || '', /matches multiple locations.*surrounding lines/i);
-  assert.match(toolRemediationHint('files', 'FILE_NOT_FOUND') || '', /does not exist.*search_files/i);
-  assert.match(toolRemediationHint('terminal', 'TOOL_DENIED') || '', /denied by policy.*proceed within current permissions/i);
-  assert.match(toolRemediationHint('search_files', 'SEARCH_CHANGED') || '', /cursor expired.*fresh search/i);
-  assert.equal(toolRemediationHint('custom', 'UNKNOWN_CUSTOM_CODE'), undefined);
+test('Hermes-style toolRemediationHint covers the codes the host tools throw', () => {
+  assert.match(toolRemediationHint('patch', 'PATCH_NO_MATCH') || '', /not found exactly.*args\.action=read/i);
+  assert.match(toolRemediationHint('patch', 'PATCH_AMBIGUOUS') || '', /more than one place.*surrounding lines/i);
+  assert.match(toolRemediationHint('files', 'INVALID_PATH') || '', /workspace-relative path/i);
+  assert.match(toolRemediationHint('terminal', 'TOOL_DENIED') || '', /denied by policy.*continue within current permissions/i);
+  assert.match(toolRemediationHint('search_files', 'SEARCH_CHANGED') || '', /same arguments and no args\.cursor/i);
+  assert.doesNotMatch(toolRemediationHint('search_files', 'SEARCH_CHANGED') || '', /cursor=0/);
+  // Codes no host tool throws get no hint, rather than advice for a failure that cannot happen.
+  for (const unused of ['OLD_STRING_NOT_FOUND', 'PATCH_MISMATCH', 'AMBIGUOUS_MATCH', 'TOOL_TIMEOUT', 'UNKNOWN_CUSTOM_CODE'])
+    assert.equal(toolRemediationHint('custom', unused), undefined);
 });
 
 test('ToolLoop provides remediation hints and reflection guidance when a tool fails', async () => {
@@ -727,7 +730,7 @@ test('ToolLoop provides remediation hints and reflection guidance when a tool fa
   const loop = new ToolLoop(
     host({
       execute: async r => {
-        if (r.tool === 'patch') throw new Error('OLD_STRING_NOT_FOUND');
+        if (r.tool === 'patch') throw new Error('PATCH_NO_MATCH');
         return 'success';
       },
     }),
@@ -744,7 +747,7 @@ test('ToolLoop provides remediation hints and reflection guidance when a tool fa
   );
   assert.equal(answer, 'Retried with correct content');
   assert.equal(prompts.length, 2);
-  assert.match(prompts[1], /OLD_STRING_NOT_FOUND/);
-  assert.match(prompts[1], /files\(action=read\)/);
+  assert.match(prompts[1], /PATCH_NO_MATCH/);
+  assert.match(prompts[1], /args\.action=read/);
   assert.match(prompts[1], /reflect briefly in one sentence on the reason before correcting/i);
 });

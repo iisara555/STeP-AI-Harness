@@ -57,34 +57,29 @@ export type LoopHost = {
 const code = (e: unknown) => (e instanceof Error && /^[A-Z_]+$/.test(e.message) ? e.message : 'TOOL_FAILED');
 
 /**
- * Hermes-style actionable remediation guidance when a tool fails or is denied.
- * Provides targeted recovery hints to prevent models from repeating identical failing calls.
+ * Hermes-style actionable remediation guidance when a tool fails or is denied. Keys are the codes the host tools throw
+ * (patch, search_files, workspace paths, the consent gate and the tool loop), so a hint never names a code that cannot
+ * occur, and the advice only suggests arguments the tool accepts.
  */
 export function toolRemediationHint(_tool: string, failureCode: string, _request?: LoopRequest): string | undefined {
   switch (failureCode) {
-    case 'OLD_STRING_NOT_FOUND':
-    case 'PATCH_MISMATCH':
-      return 'The target text in old_string was not found in the file. Read the current file content first with files(action=read) to verify exact lines, whitespace, and indentation before patching.';
-    case 'AMBIGUOUS_MATCH':
-      return 'The old_string matches multiple locations in the file. Include more surrounding lines in old_string to make the match unique.';
-    case 'FILE_NOT_FOUND':
-    case 'ENOENT':
-      return 'The specified path does not exist in the workspace. Use files(action=list) or search_files to verify existing workspace paths before retrying.';
+    case 'PATCH_NO_MATCH':
+      return 'old_string was not found exactly in the file. Read the current file with files (args.action=read) and copy the exact lines, whitespace and indentation before patching again.';
+    case 'PATCH_AMBIGUOUS':
+      return 'old_string matches more than one place, or two edits overlap. Include more surrounding lines in old_string so it matches exactly one place.';
+    case 'INVALID_PATH':
+      return 'The path is outside the workspace or not allowed. Use a workspace-relative path; list folders with files (args.action=list) or find files with search_files (args.target=files).';
     case 'TOOL_DENIED':
-    case 'PERMISSION_DENIED':
-      return 'This tool action was denied by policy or user permission mode. Explain the situation to the employee and proceed within current permissions without retrying the denied call.';
+    case 'PATH_RULE_DENIED':
+      return 'This action was denied by policy or by the employee. Explain this to the employee and continue within current permissions; do not retry the denied call.';
     case 'INVALID_INPUT':
-    case 'INVALID_TOOL_REQUEST':
-      return 'The request arguments do not conform to the tool schema. Review required parameters in Tool Discovery before retrying.';
+      return 'The arguments do not match the tool schema. Check the required parameters with tool_describe before retrying.';
     case 'SEARCH_CHANGED':
-      return 'The search cursor expired or files changed during search. Start a fresh search from cursor=0 with search_files.';
+      return 'The files changed while paging search results. Run search_files again with the same arguments and no args.cursor.';
     case 'TOOL_OUTPUT_LIMIT':
-      return 'The output exceeded the size budget. Request a smaller range using offset and length pagination or narrower queries.';
-    case 'TOOL_TIMEOUT':
-    case 'COMMAND_TIMEOUT':
-      return 'The operation timed out. Use tasks(action=poll) or tasks(action=wait) to monitor background tasks rather than re-running the command.';
+      return 'The result exceeded the size budget. Ask for a smaller range with offset/length paging or a narrower query.';
     case 'TOOL_FAILED':
-      return 'The tool execution failed. Verify parameter types and workspace state before attempting an alternate approach.';
+      return 'The tool failed. Check the argument types and the workspace state before trying a different approach.';
     default:
       return undefined;
   }

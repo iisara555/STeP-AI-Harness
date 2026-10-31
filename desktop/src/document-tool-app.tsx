@@ -116,7 +116,8 @@ export function DocumentTools({
         }}
       >
         <header>
-          <h2>{t(profile.title)}</h2>
+          {/* The selected card above already names the document; the heading stays for screen readers. */}
+          <h2 className="sr-only">{t(profile.title)}</h2>
           <p className="small muted">
             {t('เว้นช่องเนื้อหาได้ AI จะช่วยขึ้นร่างจากต้นเรื่อง ส่วนข้อเท็จจริงและเงื่อนไขที่ต้องมีหลักฐานจะคงรอยืนยัน')}
           </p>

@@ -246,16 +246,29 @@ export function InternalMedia({
           </header>
           {/* Sticky: what is still missing and the copy button stay in view while the lower fields are filled. */}
           <div className="media-copy-bar">
-            <p role="status" aria-live="polite" className={result.ready ? 'small' : 'small media-audit-pending'}>
+            {/* The reason names the fields still empty and is tied to the button, so a disabled copy button explains itself. */}
+            <p id="media-copy-reason" role="status" aria-live="polite" className={result.ready ? 'small' : 'small media-audit-pending'}>
+              {!result.ready && <strong>{t('ยังคัดลอกไม่ได้:')} </strong>}
               {audit}
             </p>
-            <button type="button" className="primary" disabled={!result.ready} onClick={() => void copy(result.prompt)}>
+            <button
+              type="button"
+              className="primary"
+              disabled={!result.ready}
+              aria-describedby="media-copy-reason"
+              title={result.ready ? undefined : audit}
+              onClick={() => void copy(result.prompt)}
+            >
               <Copy size={16} />
               {t('คัดลอก Prompt')}
             </button>
           </div>
-          <textarea readOnly rows={16} aria-label={t('Prompt พร้อมใช้')} value={result.prompt} />
+          {/* The layout sketch is what staff check; the English prompt is for the image tool, so it sits below, short. */}
           <MediaPreview state={state} />
+          <label className="media-prompt-text">
+            <span className="small muted">{t('Prompt ภาษาอังกฤษที่จะคัดลอกไปใช้ ไม่ต้องแก้ก็ใช้ได้')}</span>
+            <textarea readOnly rows={5} aria-label={t('Prompt พร้อมใช้')} value={result.prompt} />
+          </label>
           <p className="small muted">
             {t('Simple · Service · Sincere · เหลือง #FFC709 · ดำ #231F20 · ห้าม AI สร้างโลโก้ทุกชนิด ตรวจตัวสะกดและความถูกต้องก่อนใช้จริง')}
           </p>
