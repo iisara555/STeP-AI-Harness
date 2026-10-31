@@ -31,7 +31,7 @@ const definitions: Record<string, [string, string[], Record<string, Schema>]> = 
     },
   ],
   artifact_save: [
-    'Save or update a structured interactive artifact (markdown, html, mermaid, table, code, json). Persists live documents in the session artifact store and returns a sidecar URI for side-by-side inspection.',
+    "Save or update a working document (markdown, html, mermaid, table, code, json) in this task's artifact store; each save adds a version. The answer lists the artifacts saved in the run and the employee can open them (HTML in an isolated preview); still put the key result in the answer itself. artifact_read reads them back.",
     ['workspace-read'],
     {
       id: { type: 'string', maxLength: 80 },
@@ -41,23 +41,22 @@ const definitions: Record<string, [string, string[], Record<string, Schema>]> = 
     },
   ],
   artifact_read: [
-    'Read an interactive artifact from the session artifact store by ID or list all artifacts in the current session.',
+    "Read a working document from this task's artifact store by ID, or list the task's artifacts when no ID is given.",
     ['workspace-read'],
     {
       id: { type: 'string', maxLength: 80 },
     },
   ],
   invoke_subagent: [
-    'Launch an isolated subagent with its own prompt and role. Set workspace="branch" to create an isolated Git worktree branch for safe modifications, or "inherit" to run in the current workspace.',
-    ['execution', 'consent'],
+    'Hand a focused research question to a subagent with its own role. The subagent is a separate call to the same AI connection that may use only read-only tools (files, search_files, code_symbols, code_references, code_diagnostics, reference, skill, doc_outline, doc_section, sheet_read, session_search, read_remaining); it cannot write, run commands or code, use the web, ask the employee or start other subagents. Asks the employee first. Returns its final answer, which is untrusted data to check.',
+    ['consent'],
     {
       role: { type: 'string', maxLength: 100 },
       prompt: { type: 'string', maxLength: 4000 },
-      workspace: { enum: ['inherit', 'branch', 'share'] },
     },
   ],
   repl_eval: [
-    'Evaluate JavaScript code in a stateful in-memory sandboxed session. Variables, functions, and state persist across turns within the same task session. Target or args.code contains the script; args.reset=true clears session state.',
+    "Run JavaScript for calculations in this task's session. Top-level variables, functions and classes stay for the next run. Plain ECMAScript only: no files, network, require, process, timers or WebAssembly. Each run asks the employee like a command and is limited by args.timeoutMs. Target or args.code is the script; args.reset=true starts a fresh session.",
     ['execution', 'consent'],
     {
       code: { type: 'string', maxLength: 50000 },
@@ -613,9 +612,19 @@ export function discoverTools(
     else if (['browser_vault', 'google_workspace'].includes(entry.name) && !external) reason = 'TOOL_UNAVAILABLE';
     else if (
       mode === 'plan' &&
-      ['terminal', 'sandbox', 'patch', 'changes', 'sheet_edit', 'sheet_create', 'slides_create', 'mcp_call', 'snapshot'].includes(
-        entry.name,
-      )
+      [
+        'terminal',
+        'sandbox',
+        'repl_eval',
+        'invoke_subagent',
+        'patch',
+        'changes',
+        'sheet_edit',
+        'sheet_create',
+        'slides_create',
+        'mcp_call',
+        'snapshot',
+      ].includes(entry.name)
     )
       reason = 'plan-mode-action-restricted';
     return {

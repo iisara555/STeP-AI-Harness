@@ -9,9 +9,9 @@ import { StringDecoder } from 'node:string_decoder';
 import { StreamOutput } from './stream-output';
 import { codeDiagnostics } from './code-diagnostics';
 import { searchSymbolsInFiles, extractSymbolsFromSource, findReferencesInFiles } from './code-intelligence';
-import { StatefulReplManager } from './stateful-repl';
+import { StatefulReplManager, type ReplResult } from './stateful-repl';
 import { ArtifactStore, type ArtifactKind } from './artifacts';
-import { SubagentManager, type SubagentWorkspaceMode } from './subagents';
+import { SubagentManager, type SubagentTask } from './subagents';
 import type { BackgroundTask, FileChange } from '../src/tools';
 import { taskAction } from '../src/tools';
 import type { WorkPlan, WorkTask } from '../src/types';
@@ -32,6 +32,8 @@ export function browserUrl(input: string) {
   if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || input.length > 2000) throw new Error('INVALID_URL');
   return url.href;
 }
+const CODE_EXTENSIONS = ['ts', 'tsx', 'mts', 'cts', 'js', 'jsx', 'mjs', 'cjs'];
+const CODE_SYMBOL_FILES = 50;
 export class Workbench {
   executionAllowed: () => void = () => {};
   private children = new Map<string, ChildProcess>();
@@ -254,32 +256,45 @@ export class Workbench {
             if (kind && kind !== 'all' && s.kind !== kind) return false;
             return true;
           });
-          return { total: filtered.length, symbols: filtered.slice(0, limit) };
+          return { total: filtered.length, symbols: filtered.slice(0, limit), scannedFiles: 1, truncated: false };
         }
       } catch (e: any) {
         if (e.message !== 'INVALID_PATH') throw e;
       }
     }
 
-    const searchRes = await this.searchFiles('.', {
-      target: 'files',
-      pattern: '.*\\.(?:[cm]?[jt]sx?)$',
-      regex: true,
-      maxFiles: 50,
-      maxResults: 50,
-    });
-
+    // Filename search takes globs (regex is content-only), so each code extension is one bounded glob search.
+    const folder =
+      input &&
+      input.trim() &&
+      (
+        await this.path(input)
+          .then(lstat, () => undefined)
+          .catch(() => undefined)
+      )?.isDirectory()
+        ? input
+        : '.';
     const files: { path: string; text: string }[] = [];
-    for (const item of searchRes.matches) {
-      try {
-        const buffer = await this.bytes(item.path, 200000);
-        files.push({ path: item.path, text: buffer.toString('utf8') });
-      } catch {
-        // Skip unreadable files
+    let truncated = false;
+    for (const extension of CODE_EXTENSIONS) {
+      if (files.length >= CODE_SYMBOL_FILES) break;
+      const found = await this.searchFiles(folder, { target: 'files', pattern: `**/*.${extension}`, maxFiles: 1000, maxResults: 500 });
+      truncated ||= Boolean(found.truncated);
+      for (const item of found.matches) {
+        if (files.length >= CODE_SYMBOL_FILES) {
+          truncated = true;
+          break;
+        }
+        try {
+          const buffer = await this.bytes(item.path, 200000);
+          files.push({ path: item.path, text: buffer.toString('utf8') });
+        } catch {
+          // Skip unreadable files
+        }
       }
     }
 
-    return searchSymbolsInFiles(files, { query, kind, limit });
+    return { ...searchSymbolsInFiles(files, { query, kind, limit }), scannedFiles: files.length, truncated };
   }
 
   async codeReferences(input: string, args: Record<string, unknown> = {}) {
@@ -310,12 +325,13 @@ export class Workbench {
     return findReferencesInFiles(files, symbol);
   }
 
-  repl(sessionId: string, code: string, reset = false, timeoutMs = 5000) {
+  /** Runs approved REPL code in this task's session thread (`workerPath` is `repl-worker.cjs`). */
+  async repl(sessionId: string, code: string, workerPath: string, reset = false, timeoutMs = 5000): Promise<ReplResult> {
     this.executionAllowed();
-    if (typeof code !== 'string') throw new Error('INVALID_INPUT');
-    const session = this.replManager.session(sessionId);
+    if (typeof code !== 'string' || code.length > 50000 || (!code.trim() && !reset)) throw new Error('INVALID_INPUT');
+    const session = this.replManager.session(sessionId, workerPath);
     if (reset) session.reset();
-    return session.eval(code, timeoutMs);
+    return code.trim() ? session.eval(code, timeoutMs) : ({ sessionId, output: '', executionMs: 0 } satisfies ReplResult);
   }
 
   saveArtifact(sessionId: string, id: string, title: string, kind: ArtifactKind, content: string) {
@@ -334,12 +350,10 @@ export class Workbench {
     return this.artifactStore.delete(sessionId, id);
   }
 
-  async invokeSubagent(sessionId: string, params: { role: string; prompt: string; workspace?: SubagentWorkspaceMode }) {
-    this.executionAllowed();
-    const root = await this.root();
-    return this.subagentManager.spawn(sessionId, root, params);
+  /** Starts a subagent for this task; `run` is the service's tool-limited delegate, so no subagent runs without one. */
+  invokeSubagent(sessionId: string, params: { role: string; prompt: string }, run: (task: SubagentTask) => Promise<string>) {
+    return this.subagentManager.spawn(sessionId, params, run);
   }
-
   async diagnostics(input: string, signal: AbortSignal, workerPath: string) {
     if (!/\.(?:[cm]?[jt]sx?)$/i.test(input)) throw new Error('CODE_LANGUAGE_UNSUPPORTED');
     const root = await this.root(),
@@ -967,6 +981,7 @@ export class Workbench {
     );
     await Promise.all([...this.children.keys()].map(id => this.cancel(id)));
     await Promise.all(pending);
+    this.replManager.close();
     this.disposed = true;
   }
 }

@@ -1,4 +1,5 @@
-import vm from 'node:vm';
+import { Worker } from 'node:worker_threads';
+import ts from 'typescript';
 
 export type ReplResult = {
   sessionId: string;
@@ -8,128 +9,152 @@ export type ReplResult = {
   executionMs: number;
 };
 
-function formatValue(value: unknown): string {
-  if (value === null) return 'null';
-  if (value === undefined) return 'undefined';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-    return String(value);
-  }
-  if (typeof value === 'function') {
-    return `[Function: ${value.name || 'anonymous'}]`;
-  }
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return String(value);
-  }
-}
+const LIMIT = 50_000;
 
 /**
- * Rewrites top-level 'const ' and 'let ' into 'var ' so that variables
- * attach to the context global object and remain accessible across turns.
+ * Rewrites top-level `let`/`const` declarations to `var` and top-level class declarations to `var Name = class Name`,
+ * so they become properties of the context global and stay available on the next turn. Only statements directly in
+ * the script body change: declarations inside blocks, functions or loops, and the text of strings, template literals
+ * and comments, are left exactly as written, because the edit positions come from the TypeScript parser.
  */
-function normalizeReplScript(code: string): string {
-  return code.replace(/(?:^|\n)\s*(const|let)\s+/g, (match, keyword) => match.replace(keyword, 'var'));
+export function persistentScript(code: string): string {
+  const file = ts.createSourceFile('repl.js', code, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  const edits: { start: number; end: number; text: string }[] = [];
+  for (const statement of file.statements) {
+    if (ts.isVariableStatement(statement)) {
+      const scoped = statement.declarationList.flags & ts.NodeFlags.BlockScoped;
+      if (scoped !== ts.NodeFlags.Let && scoped !== ts.NodeFlags.Const) continue;
+      const start = statement.declarationList.getStart(file);
+      edits.push({ start, end: start + (scoped === ts.NodeFlags.Const ? 5 : 3), text: 'var' });
+    } else if (ts.isClassDeclaration(statement) && statement.name && !statement.modifiers?.length) {
+      const start = statement.getStart(file);
+      edits.push({ start, end: start, text: `var ${statement.name.text} = ` }, { start: statement.end, end: statement.end, text: ';' });
+    }
+  }
+  let output = code;
+  for (const edit of edits.reverse()) output = output.slice(0, edit.start) + edit.text + output.slice(edit.end);
+  return output;
 }
 
+export const REPL_WORKER = 'repl-worker.cjs';
+
+/**
+ * A per-task JavaScript session for calculations, run by `repl-worker.cjs` in its own thread with a memory limit. It is
+ * not a security boundary (Node's vm module is not one), which is why repl_eval asks the employee before each run like a
+ * command. What it keeps out: the context holds no host object, function or module; WebAssembly is off; the script, its
+ * promise callbacks and all formatting of its result run under one time limit; and a thread that stops answering, runs
+ * out of memory or crashes is ended without touching the app, at the cost of the session's variables.
+ */
 export class StatefulReplSession {
-  private context: vm.Context;
-  private logs: string[] = [];
+  private worker?: Worker;
+  private queue: Promise<unknown> = Promise.resolve();
   readonly createdAt = Date.now();
 
-  constructor(public readonly sessionId: string) {
-    this.context = this.createSandbox();
+  constructor(
+    public readonly sessionId: string,
+    private workerPath: string,
+  ) {}
+
+  private start() {
+    const worker = new Worker(this.workerPath, {
+      execArgv: [],
+      stdout: true,
+      stderr: true,
+      resourceLimits: { maxOldGenerationSizeMb: 128, maxYoungGenerationSizeMb: 16, stackSizeMb: 4 },
+    });
+    worker.stdout.resume();
+    worker.stderr.resume();
+    // Out of memory or a crash arrives as 'error' and then 'exit'; the exit handler of the running request answers.
+    worker.on('error', () => {});
+    worker.once('exit', () => {
+      if (this.worker === worker) this.worker = undefined;
+    });
+    worker.unref();
+    this.worker = worker;
+    return worker;
   }
 
-  private createSandbox(): vm.Context {
-    this.logs = [];
-    const sandbox: Record<string, unknown> = {
-      console: {
-        log: (...args: unknown[]) => this.logs.push(args.map(formatValue).join(' ')),
-        error: (...args: unknown[]) => this.logs.push('[ERROR] ' + args.map(formatValue).join(' ')),
-        warn: (...args: unknown[]) => this.logs.push('[WARN] ' + args.map(formatValue).join(' ')),
-        info: (...args: unknown[]) => this.logs.push(args.map(formatValue).join(' ')),
-      },
-      Math,
-      JSON,
-      Date,
-      Buffer,
-      parseInt,
-      parseFloat,
-      isNaN,
-      isFinite,
-      encodeURI,
-      decodeURI,
-      encodeURIComponent,
-      decodeURIComponent,
-    };
+  private run(code: string, timeout: number) {
+    return new Promise<{ output?: string; result?: string; error?: string }>(resolve => {
+      const worker = this.worker || this.start();
+      let settled = false;
+      const finish = (reply: { output?: string; result?: string; error?: string }) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        worker.off('message', message);
+        worker.off('exit', exited);
+        resolve(reply);
+      };
+      const message = (reply: { output?: string; result?: string; error?: string }) => finish(reply);
+      const exited = () => finish({ error: 'The REPL stopped (out of memory or crashed); its variables were cleared.' });
+      // The worker enforces the limit itself. This backstop ends a thread that stops answering, for example near its
+      // memory limit, so the employee's task never waits on it.
+      const timer = setTimeout(() => {
+        finish({ error: `Script execution timed out after ${timeout}ms; the REPL was restarted and its variables were cleared.` });
+        this.stop();
+      }, timeout + 2000);
+      worker.on('message', message);
+      worker.once('exit', exited);
+      worker.postMessage({ code: persistentScript(code), timeout });
+    });
+  }
 
-    const ctx = vm.createContext(sandbox);
-    // Protect prototype against constructor escape
-    try {
-      vm.runInContext('try { this.constructor.constructor = undefined; } catch(e) {}', ctx);
-    } catch {
-      // Ignore in restrictive environments
-    }
-    return ctx;
+  eval(code: string, timeoutMs = 5000): Promise<ReplResult> {
+    const timeout = Math.min(Math.max(timeoutMs, 500), 10000);
+    const turn = this.queue.then(async () => {
+      const started = Date.now();
+      const reply = await this.run(code, timeout);
+      return {
+        sessionId: this.sessionId,
+        output: (reply.output || '').slice(0, LIMIT),
+        ...(reply.result !== undefined ? { result: reply.result.slice(0, LIMIT) } : {}),
+        ...(reply.error !== undefined ? { error: reply.error.slice(0, LIMIT) } : {}),
+        executionMs: Date.now() - started,
+      };
+    });
+    this.queue = turn.catch(() => {});
+    return turn;
+  }
+
+  /** Ends the thread; the next run starts a fresh session. */
+  stop() {
+    const worker = this.worker;
+    this.worker = undefined;
+    if (worker) void worker.terminate();
   }
 
   reset() {
-    this.context = this.createSandbox();
-  }
-
-  eval(code: string, timeoutMs = 5000): ReplResult {
-    const started = Date.now();
-    this.logs = [];
-    const sanitized = normalizeReplScript(code);
-
-    try {
-      const result = vm.runInContext(sanitized, this.context, {
-        timeout: Math.min(Math.max(timeoutMs, 500), 10000),
-        displayErrors: true,
-      });
-
-      return {
-        sessionId: this.sessionId,
-        output: this.logs.join('\n').slice(0, 50000),
-        result: result !== undefined ? formatValue(result).slice(0, 50000) : undefined,
-        executionMs: Date.now() - started,
-      };
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      return {
-        sessionId: this.sessionId,
-        output: this.logs.join('\n').slice(0, 50000),
-        error: message,
-        executionMs: Date.now() - started,
-      };
-    }
+    this.stop();
   }
 }
 
 export class StatefulReplManager {
   private sessions = new Map<string, StatefulReplSession>();
 
-  session(sessionId: string): StatefulReplSession {
+  session(sessionId: string, workerPath: string): StatefulReplSession {
     let sess = this.sessions.get(sessionId);
     if (!sess) {
-      if (this.sessions.size >= 20) {
+      if (this.sessions.size >= 8) {
         const oldest = this.sessions.keys().next().value;
-        if (oldest) this.sessions.delete(oldest);
+        if (oldest) this.clear(oldest);
       }
-      sess = new StatefulReplSession(sessionId);
+      sess = new StatefulReplSession(sessionId, workerPath);
       this.sessions.set(sessionId, sess);
     }
     return sess;
   }
 
   reset(sessionId: string) {
-    const sess = this.sessions.get(sessionId);
-    if (sess) sess.reset();
+    this.sessions.get(sessionId)?.reset();
   }
 
   clear(sessionId: string) {
+    this.sessions.get(sessionId)?.stop();
     this.sessions.delete(sessionId);
+  }
+
+  close() {
+    for (const id of [...this.sessions.keys()]) this.clear(id);
   }
 }

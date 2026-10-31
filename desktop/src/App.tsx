@@ -103,6 +103,7 @@ import type { WorkMode, Workflow } from './types';
 import { WorkPlanCard, WORKFLOW_LABELS } from './work-plan';
 import { revisionRequest } from './plan-comments';
 import { GoogleChangesList } from './google-changes-list';
+import { ArtifactDialog, ArtifactsList, type OpenedArtifact } from './artifacts-list';
 import { WorkAssistantActivity, WorkAssistantGuide, updateWorkActions, workActionsFromTrace } from './work-assistant';
 import { ChatMarkdown } from './chat-markdown';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
@@ -212,7 +213,8 @@ export default function App() {
     [activityAt, setActivityAt] = useState(0);
   const [error, setError] = useState(''),
     [files, setFiles] = useState<Attachment[]>([]),
-    [inspecting, setInspecting] = useState<Attachment | null>(null);
+    [inspecting, setInspecting] = useState<Attachment | null>(null),
+    [viewingArtifact, setViewingArtifact] = useState<OpenedArtifact | null>(null);
   // Three columns need room: on narrower windows the draft panel, then the task list, start hidden.
   // `left` is the full task list; when it is off the sidebar folds to an icon rail, as in Claude and Codex. The
   // employee's own choice is remembered on this computer; with no choice yet, narrow windows start folded.
@@ -2257,6 +2259,21 @@ export default function App() {
                         }
                       />
                     )}
+                    {!!message.artifacts?.length && session && (
+                      <ArtifactsList
+                        artifacts={message.artifacts}
+                        onOpen={artifact =>
+                          void action(async () => {
+                            // HTML opens in the Web tab's isolated preview; other kinds come back to show here.
+                            const opened = (await api.call('artifactOpen', {
+                              sessionId: session.id,
+                              id: artifact.id,
+                            })) as OpenedArtifact | null;
+                            if (opened) setViewingArtifact(opened);
+                          })
+                        }
+                      />
+                    )}
                     {message.check &&
                       (message.check.unsupported.length ? (
                         <div className="answer-check warn" role="note">
@@ -3978,6 +3995,7 @@ export default function App() {
             </section>
           </div>
         )}
+        {viewingArtifact && <ArtifactDialog artifact={viewingArtifact} onClose={() => setViewingArtifact(null)} />}
         {inspecting && (
           <div
             className="dialog-backdrop"

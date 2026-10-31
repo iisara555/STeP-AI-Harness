@@ -2036,3 +2036,86 @@ test('patch supports atomic multi-hunk args.edits and code_diagnostics typecheck
     await rm(f.root, { recursive: true, force: true });
   }
 });
+
+test('repl_eval runs only through the permission gate: asks in ask mode, blocked in plan mode, never allow-listed', async () => {
+  const worker = resolve('electron/repl-worker.cjs');
+  const ask = await fixture('ask');
+  try {
+    // An allowed shell command prefix must not let REPL code skip the question.
+    ask.policy.permission.allowedCommands = ['const'];
+    const answer = (await ask.tools.execute(
+      { tool: 'repl_eval', input: '', args: { code: 'const product = 6 * 7; product' } },
+      ask.scope,
+    )) as {
+      result?: string;
+    };
+    assert.equal(ask.requests(), 1, 'ask mode asks before running code');
+    assert.match(ask.bodies[0], /const product = 6 \* 7/, 'the approval shows the code that will run');
+    assert.equal(answer.result, '42');
+    ask.deny();
+    assert.equal(await ask.tools.execute({ tool: 'repl_eval', input: 'globalThis.ran = true; 1' }, ask.scope), null);
+    assert.equal(ask.requests(), 2);
+    // The refused code never ran: the session has no trace of it.
+    assert.equal((await ask.workbench.repl('s', 'typeof ran', worker)).result, 'undefined');
+  } finally {
+    await ask.workbench.close();
+  }
+  const plan = await fixture('plan');
+  try {
+    await assert.rejects(plan.tools.execute({ tool: 'repl_eval', input: '1 + 1' }, plan.scope), /PLAN_MODE_BLOCKED/);
+    assert.equal(plan.requests(), 0);
+  } finally {
+    await plan.workbench.close();
+  }
+  const auto = await fixture('auto');
+  try {
+    auto.policy.features.autoMode = true;
+    auto.policy.features.shellByAi = false;
+    await auto.tools.execute({ tool: 'repl_eval', input: '1 + 1' }, auto.scope);
+    assert.equal(auto.requests(), 1, 'auto mode still asks unless the organization allows AI-run code');
+    auto.policy.features.shellByAi = true;
+    const result = (await auto.tools.execute({ tool: 'repl_eval', input: '2 + 2' }, auto.scope)) as { result?: string };
+    assert.equal(result.result, '4');
+    assert.equal(auto.requests(), 1);
+  } finally {
+    await auto.workbench.close();
+  }
+});
+
+test('invoke_subagent asks first, runs the service delegate and refuses without one', async () => {
+  const f = await fixture('ask');
+  try {
+    const delegated: string[] = [];
+    const scope = { ...f.scope, delegate: async (role: string, prompt: string) => (delegated.push(`${role}:${prompt}`), 'พบใน policy.md') };
+    const task = (await f.tools.execute(
+      { tool: 'invoke_subagent', input: '', args: { role: 'Policy Reader', prompt: 'หาวันลาพักร้อน' } },
+      scope,
+    )) as any;
+    assert.equal(f.requests(), 1, 'the employee is asked before a subagent starts');
+    assert.match(f.bodies[0], /Policy Reader/);
+    assert.match(f.bodies[0], /หาวันลาพักร้อน/);
+    assert.deepEqual(delegated, ['Policy Reader:หาวันลาพักร้อน']);
+    assert.equal(task.status, 'completed');
+    assert.equal(task.result, 'พบใน policy.md');
+    assert.equal(task.provenance, 'subagent-unverified');
+    await assert.rejects(
+      f.tools.execute({ tool: 'invoke_subagent', input: 'x', args: { role: 'R' } }, f.scope),
+      /TOOL_UNAVAILABLE/,
+      'no delegate means no subagent, never a pretend result',
+    );
+    f.deny();
+    assert.equal(await f.tools.execute({ tool: 'invoke_subagent', input: 'อีกงาน', args: { role: 'R' } }, scope), null);
+    assert.equal(delegated.length, 1, 'a refused subagent never calls the AI');
+  } finally {
+    await f.workbench.close();
+  }
+  const plan = await fixture('plan');
+  try {
+    await assert.rejects(
+      plan.tools.execute({ tool: 'invoke_subagent', input: 'x', args: { role: 'R' } }, { ...plan.scope, delegate: async () => 'x' }),
+      /PLAN_MODE_BLOCKED/,
+    );
+  } finally {
+    await plan.workbench.close();
+  }
+});

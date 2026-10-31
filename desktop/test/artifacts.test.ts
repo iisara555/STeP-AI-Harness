@@ -20,7 +20,6 @@ test('ArtifactStore creates, versions, and lists interactive live artifacts', ()
   assert.equal(art1.sessionId, 'session-1');
   assert.equal(art1.version, 1);
   assert.equal(art1.kind, 'markdown');
-  assert.equal(art1.uri, 'sidecar://artifact/project-roadmap');
 
   // 2. Read back
   const read1 = artifacts.get('session-1', 'project-roadmap');

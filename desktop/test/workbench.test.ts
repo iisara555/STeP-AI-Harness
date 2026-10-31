@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, writeFile, rename, symlink, link, unlink, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { Store } from '../electron/store';
 import { Workbench, browserUrl } from '../electron/workbench';
 import { toolRemediationHint } from '../electron/tool-loop';
@@ -10,6 +10,8 @@ import { toolRequests, loopRequests } from '../src/tools';
 import { defaultPolicy } from '../electron/policy';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+
+const replWorker = resolve('electron/repl-worker.cjs');
 
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), 'step-tools-'));
@@ -254,42 +256,40 @@ test('Workbench codeSymbols and codeReferences inspect workspace TypeScript defi
   }
 });
 
-test('Workbench repl evaluates sandboxed stateful scripts and preserves variables', async () => {
+test('Workbench repl evaluates stateful scripts in the REPL worker and preserves variables', async () => {
   const f = await fixture();
   try {
-    const turn1 = f.tools.repl('sess-1', 'const x = 50; const y = 5; x * y;');
+    const turn1 = await f.tools.repl('sess-1', 'const x = 50; const y = 5; x * y;', replWorker);
     assert.equal(turn1.error, undefined);
     assert.equal(turn1.result, '250');
 
-    const turn2 = f.tools.repl('sess-1', 'x + y + 10;');
+    const turn2 = await f.tools.repl('sess-1', 'x + y + 10;', replWorker);
     assert.equal(turn2.error, undefined);
     assert.equal(turn2.result, '65');
+    assert.equal((await f.tools.repl('sess-1', '', replWorker, true)).output, '');
+    assert.equal((await f.tools.repl('sess-1', 'typeof x', replWorker)).result, 'undefined');
+    await assert.rejects(f.tools.repl('sess-1', '  ', replWorker), /INVALID_INPUT/);
   } finally {
     await f.close();
   }
 });
 
-test('Workbench manages session artifacts and spawns subagents', async () => {
+test('Workbench manages session artifacts', async () => {
   const f = await fixture();
   try {
     const art = f.tools.saveArtifact('sess-art', 'draft-spec', 'TOR Proposal Draft', 'markdown', '# Content');
     assert.equal(art.id, 'draft-spec');
     assert.equal(art.version, 1);
-    assert.equal(art.uri, 'sidecar://artifact/draft-spec');
 
     const retrieved = f.tools.getArtifact('sess-art', 'draft-spec');
     assert.equal(retrieved?.title, 'TOR Proposal Draft');
 
     const list = f.tools.listArtifacts('sess-art');
     assert.equal(list.length, 1);
-
-    const subtask = await f.tools.invokeSubagent('sess-art', {
-      role: 'Reviewer',
-      prompt: 'Check the proposal',
-      workspace: 'inherit',
-    });
-    assert.equal(subtask.status, 'completed');
-    assert.equal(subtask.role, 'Reviewer');
+  } finally {
+    await f.close();
+  }
+});
 
 test('remediation hints match the failure codes the real patch and search tools throw', async () => {
   const f = await fixture();
@@ -321,6 +321,32 @@ test('remediation hints match the failure codes the real patch and search tools 
     // The cursor the old hint suggested is refused by the search tool, so no hint may suggest it.
     assert.equal(await failure(() => f.tools.searchFiles('.', { ...args, cursor: '0' })), 'INVALID_INPUT');
     for (const code of [noMatch, ambiguous, changed]) assert.doesNotMatch(toolRemediationHint('x', code) || '', /cursor=0/);
+  } finally {
+    await f.close();
+  }
+});
+
+test('code_symbols without a file searches the whole workspace, nested folders and every code extension', async () => {
+  const f = await fixture();
+  try {
+    await mkdir(join(f.root, 'src', 'deep'), { recursive: true });
+    await writeFile(join(f.root, 'top.ts'), 'export function topLevel() {}\n');
+    await writeFile(join(f.root, 'src', 'deep', 'widget.tsx'), 'export class Widget {}\n');
+    await writeFile(join(f.root, 'src', 'tool.mjs'), 'export const helperValue = 1;\n');
+    await writeFile(join(f.root, 'notes.md'), 'function notCode() {}\n');
+    const all = await f.tools.codeSymbols('');
+    assert.equal(all.truncated, false);
+    assert.deepEqual(all.symbols.map(s => s.name).sort(), ['Widget', 'helperValue', 'topLevel']);
+    const query = await f.tools.codeSymbols('', { query: 'widget' });
+    assert.deepEqual(
+      query.symbols.map(s => [s.name, s.path]),
+      [['Widget', 'src/deep/widget.tsx']],
+    );
+    // A folder input limits the search to that folder.
+    assert.deepEqual(
+      (await f.tools.codeSymbols('src/deep')).symbols.map(s => s.name),
+      ['Widget'],
+    );
   } finally {
     await f.close();
   }

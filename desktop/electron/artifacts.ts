@@ -9,7 +9,6 @@ export type ArtifactRecord = {
   kind: ArtifactKind;
   content: string;
   version: number;
-  uri: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -42,7 +41,6 @@ export class ArtifactStore {
       kind,
       content,
       version: (existing?.version ?? 0) + 1,
-      uri: `sidecar://artifact/${encodeURIComponent(id)}`,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };
