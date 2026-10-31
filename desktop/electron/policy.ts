@@ -286,9 +286,9 @@ export function defaultPolicy(): Policy {
     budgets: {},
     pilot: true,
     checks: { authority: false, privacy: false },
-    receiptLocalOnly: true,
-    // Managed policy contains public configuration only; build-time native client credentials stay in main.
-    ...(typeof __STEP_RECEIPT_CLOUD__ !== 'undefined' && __STEP_RECEIPT_CLOUD__ ? { receiptCloud: __STEP_RECEIPT_CLOUD__ } : {}),
+    // Owner's call (2026-10-31): the local OCR reads poorly, so receipts go to the employee's own AI by default, after
+    // the one-time consent and the ordinary vision/privacy gates. The central receiptCloud service is not a default.
+    receiptLocalOnly: false,
     googleWorkspace: {
       clientId: DEFAULT_GOOGLE_CLIENT_ID,
       domains: ['step.cmu.ac.th'],
@@ -298,6 +298,9 @@ export function defaultPolicy(): Policy {
 }
 
 /** Invalid or untrusted policy must not fall back to newly enabled credential/demo capabilities. */
+const bundledReceiptCloud = (): ReceiptCloudConfig | undefined =>
+  typeof __STEP_RECEIPT_CLOUD__ !== 'undefined' && __STEP_RECEIPT_CLOUD__ ? { ...__STEP_RECEIPT_CLOUD__ } : undefined;
+
 function closedPolicy(): Policy {
   const policy = defaultPolicy();
   // Invalid or untrusted routing must never redirect receipt images to a default recipient.
@@ -307,6 +310,7 @@ function closedPolicy(): Policy {
   policy.features.googleWorkspace = false;
   policy.features.developmentMode = false;
   policy.features.learningReview = false;
+  policy.receiptLocalOnly = true;
   delete policy.googleWorkspace;
   return policy;
 }
@@ -374,6 +378,10 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
     if (typeof raw.receiptLocalOnly !== 'boolean') problems.push('receiptLocalOnly must be boolean');
     else policy.receiptLocalOnly = raw.receiptLocalOnly;
   }
+  // The organization service (bundled at build time or set here) applies only where managed policy explicitly sets
+  // receiptLocalOnly: false, as before; the default sends receipts to the employee's own AI instead.
+  if (raw.receiptLocalOnly === false && raw.receiptCloud === undefined && bundledReceiptCloud())
+    policy.receiptCloud = bundledReceiptCloud();
   if (raw.receiptCloud === null) delete policy.receiptCloud;
   else if (raw.receiptCloud !== undefined) {
     const cloud = parseReceiptCloudConfig(raw.receiptCloud);
@@ -382,6 +390,7 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
       problems.push('receiptCloud requires an HTTPS service origin and a Gemini model, with no credentials');
     }
   }
+  if (raw.receiptLocalOnly !== false) delete policy.receiptCloud;
   if (raw.googleWorkspace === null) delete policy.googleWorkspace;
   else if (raw.googleWorkspace !== undefined) {
     const g = raw.googleWorkspace;
