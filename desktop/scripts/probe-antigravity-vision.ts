@@ -6,7 +6,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
-import { ANTIGRAVITY_DENY, antigravityHome, runAntigravity } from '../electron/antigravity';
+import { ANTIGRAVITY_DENY, antigravityHome, antigravityModels, runAntigravity } from '../electron/antigravity';
+import type { Connection } from '../src/types';
 
 const COLORS = {
   red: [220, 25, 35],
@@ -90,19 +91,49 @@ const TOOL_NAMES = new Set([
   'mcp:step_image_probe:read_probe_image',
   'mcp(step_image_probe/read_probe_image)',
   'mcp__step_image_probe__read_probe_image',
-  // Some versions report the dispatcher's name; the isolated MCP catalog still contains one exact tool only.
-  'call_mcp_tool',
 ]);
+/** agy 1.3.2 headless `strict` auto-denies every MCP call; `request-review` honours an exact MCP allow (2026-10-31). */
+const PERMISSION_MODE = 'request-review';
+
+function stepArguments(step: any): any {
+  const value = step.tool_info?.parameters ?? step.tool_call?.args ?? step.tool_call?.arguments ?? step.tool_call?.parameters;
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+/**
+ * agy 1.3.2 offers MCP tools through its generic call_mcp_tool, which must name this server and tool. The model may
+ * first view_file agy's on-demand schema file for the tool; read_file(*) stays denied, so agy refuses that read itself.
+ */
+export function allowedProbeStep(step: any, schemaFile: string) {
+  const name = step.tool_name ?? step.tool_call?.name ?? step.tool_info?.name;
+  const args = stepArguments(step);
+  if (name === 'call_mcp_tool')
+    return Boolean(args) && typeof args === 'object' && args.ServerName === 'step_image_probe' && args.ToolName === 'read_probe_image';
+  if (name === 'view_file')
+    return (
+      Boolean(args) &&
+      typeof args === 'object' &&
+      typeof args.AbsolutePath === 'string' &&
+      Object.keys(args).length === 1 &&
+      resolve(args.AbsolutePath).toLowerCase() === resolve(schemaFile).toLowerCase()
+    );
+  return TOOL_NAMES.has(name);
+}
 
 export async function runProbe(options: {
   executable: string;
-  model: string;
+  model?: string;
   signal?: AbortSignal;
   timeoutMs?: number;
   /** Tests isolate credentials completely. Normal execution uses the existing native account. */
   profile?: { home: string; platform: NodeJS.Platform };
 }) {
-  if (!/^gemini-[\w.-]{1,93}$/.test(options.model)) throw new Error('INVALID_MODEL');
+  if (options.model !== undefined && !/^gemini-[\w.-]{1,93}$/.test(options.model)) throw new Error('INVALID_MODEL');
   const challenge = createChallenge();
   const root = await mkdtemp(join(tmpdir(), 'step-image-probe-'));
   let home: Awaited<ReturnType<typeof antigravityHome>> | undefined;
@@ -130,11 +161,11 @@ export async function runProbe(options: {
     await writeFile(
       join(isolatedHome, '.gemini', 'antigravity-cli', 'settings.json'),
       JSON.stringify({
-        toolPermission: 'strict',
+        toolPermission: PERMISSION_MODE,
         artifactReviewPolicy: 'asks-for-review',
         allowNonWorkspaceAccess: false,
         // Deny takes precedence over allow, even over a more specific tool name. The isolated catalog contains
-        // only this server/tool; strict mode denies unconfigured actions. Keep all non-MCP native tools denied.
+        // only this server/tool; an unconfigured MCP call is Ask, which headless soft-denies. Native tools stay denied.
         permissions: {
           allow: ['mcp(step_image_probe/read_probe_image)'],
           ask: [],
@@ -155,6 +186,11 @@ export async function runProbe(options: {
     const parts = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
     if (!parts || +parts[1] < 1 || (+parts[1] === 1 && (+parts[2] < 3 || (+parts[2] === 3 && +parts[3] < 2))))
       throw new Error('ANTIGRAVITY_UPDATE_REQUIRED');
+    const model =
+      options.model || (await antigravityModels({ executable: options.executable } as Connection, { cwd: root, env: process.env }))[0]?.id;
+    if (!model) throw new Error('MODEL_NOT_AVAILABLE');
+    const schemaFile = join(isolatedHome, '.gemini', 'antigravity-cli', 'mcp', 'step_image_probe', 'read_probe_image.json');
+    const steps: string[] = [];
     let conversation = '',
       result: { status?: string; conversation_id?: string; response?: string } | undefined;
     await runAntigravity(
@@ -170,7 +206,7 @@ export async function runProbe(options: {
         '--print-timeout',
         '2m',
         '--model',
-        options.model,
+        model,
       ],
       home,
       {
@@ -187,8 +223,8 @@ export async function runProbe(options: {
               typeof init.cwd !== 'string' ||
               realpathSync(init.cwd) !== realpathSync(home!.cwd) ||
               init.agent !== 'step-draft' ||
-              init.permission_mode !== 'strict' ||
-              init.model !== options.model ||
+              init.permission_mode !== PERMISSION_MODE ||
+              (init.model !== undefined && init.model !== model) ||
               !Array.isArray(init.tools) ||
               typeof event.conversation_id !== 'string' ||
               !event.conversation_id
@@ -205,8 +241,10 @@ export async function runProbe(options: {
           if (event.event === 'step_update') {
             const step = event.step_update;
             if (!step || step.conversation_id !== conversation) throw new Error('PROBE_STREAM_INVALID');
-            if (step.step_type === 'tool' || step.tool_name !== undefined || step.tool_call !== undefined) {
-              if (!TOOL_NAMES.has(step.tool_name ?? step.tool_call?.name)) throw new Error('TOOL_DENIED');
+            if (step.step_type === 'tool' || step.tool_name !== undefined || step.tool_call !== undefined || step.tool_info !== undefined) {
+              const name = String(step.tool_name ?? step.tool_call?.name ?? step.tool_info?.name ?? '?');
+              if (!steps.includes(name)) steps.push(name);
+              if (!allowedProbeStep(step, schemaFile)) throw Object.assign(new Error('TOOL_DENIED'), { steps });
             }
           } else if (event.event === 'result') {
             result = event.result;
@@ -221,7 +259,8 @@ export async function runProbe(options: {
     const imageDelivered = evidence.calls > 0 && evidence.sha256 === createHash('sha256').update(challenge.png).digest('hex');
     return {
       version,
-      model: options.model,
+      model,
+      toolSteps: steps,
       imageDelivered,
       visualAnswerCorrect: imageDelivered && matchesImage(result.response!, challenge.cells),
     };
@@ -239,9 +278,9 @@ export async function runProbe(options: {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const executable = args[args.indexOf('--agy') + 1];
-  const model = args[args.indexOf('--model') + 1];
-  if (!args.includes('--agy') || !args.includes('--model') || !executable || !model) {
-    console.error('ใช้: npx tsx scripts/probe-antigravity-vision.ts --agy <path-to-agy> --model <gemini-model>');
+  const model = args.includes('--model') ? args[args.indexOf('--model') + 1] : undefined;
+  if (!args.includes('--agy') || !executable || (args.includes('--model') && !model)) {
+    console.error('ใช้: npx tsx scripts/probe-antigravity-vision.ts --agy <path-to-agy> [--model <gemini-model>]');
     process.exitCode = 1;
   } else {
     console.log('กำลังทดสอบภาพสังเคราะห์ผ่านบัญชี Antigravity ที่ลงชื่อเข้าใช้ไว้ อาจใช้โควตาของบัญชี');
@@ -255,7 +294,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     } catch (error) {
       // No native stderr, account details, tokens or raw model output in the report.
       const code = error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'PROBE_FAILED';
-      console.error(code);
+      console.error(code, (error as { steps?: string[] })?.steps?.join(',') ?? '');
       process.exitCode = 1;
     }
   }

@@ -107,7 +107,7 @@ assert.deepEqual(policy.permissions.allow,['mcp(step_image_probe/read_probe_imag
 assert.equal(policy.permissions.deny.includes('mcp(*)'),false);
 for(const rule of ['read_file(*)','write_file(*)','read_url(*)','execute_url(*)','command(*)','unsandboxed(*)'])assert.ok(policy.permissions.deny.includes(rule));
 const send=x=>console.log(JSON.stringify(x));
-send({event:'init',conversation_id:'probe',init:{cwd:process.cwd(),agent:'step-draft',model:process.argv.at(-1),permission_mode:kind==='unsafe'?'always-proceed':'strict',tools:['finish']}});
+send({event:'init',conversation_id:'probe',init:{cwd:process.cwd(),agent:'step-draft',model:process.argv.at(-1),permission_mode:kind==='unsafe'?'always-proceed':'request-review',tools:['finish']}});
 createInterface({input:process.stdin}).on('line',async line=>{
  const prompt=JSON.parse(line).message.content;
  if(prompt.includes('base64')||prompt.includes('220,25,35'))process.exit(9);
@@ -182,3 +182,16 @@ for (const kind of ['success', 'wrong', 'no-image', 'unsafe', 'tool', 'duplicate
     }
   });
 }
+
+test('probe steps: only call_mcp_tool for the probe tool and a view_file of its schema file pass', async () => {
+  const { allowedProbeStep } = await import('../scripts/probe-antigravity-vision');
+  const schema = '/tmp/home/.gemini/antigravity-cli/mcp/step_image_probe/read_probe_image.json';
+  const call = (args: unknown) => ({ tool_info: { name: 'call_mcp_tool', parameters: args } });
+  assert.equal(allowedProbeStep(call({ ServerName: 'step_image_probe', ToolName: 'read_probe_image', Arguments: {} }), schema), true);
+  assert.equal(allowedProbeStep(call(JSON.stringify({ ServerName: 'step_image_probe', ToolName: 'read_probe_image' })), schema), true);
+  assert.equal(allowedProbeStep(call({ ServerName: 'other', ToolName: 'read_probe_image' }), schema), false);
+  assert.equal(allowedProbeStep({ tool_info: { name: 'view_file', parameters: { AbsolutePath: schema } } }, schema), true);
+  assert.equal(allowedProbeStep({ tool_info: { name: 'view_file', parameters: { AbsolutePath: '/etc/passwd' } } }, schema), false);
+  assert.equal(allowedProbeStep({ tool_name: 'read_file' }, schema), false);
+  assert.equal(allowedProbeStep({ tool_name: 'search_web' }, schema), false);
+});
