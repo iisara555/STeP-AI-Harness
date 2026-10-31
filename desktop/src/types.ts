@@ -158,7 +158,7 @@ export type StepTrace = {
 };
 /** Host text estimates and provider observations stay separate. No task text is persisted here. */
 export type ProviderCallTrace = {
-  kind: 'answer' | 'summary' | 'web-search' | 'check' | 'vision' | 'selection';
+  kind: 'answer' | 'summary' | 'web-search' | 'check' | 'vision' | 'selection' | 'subagent';
   outcome: 'running' | 'completed' | 'error';
   code?: string;
   ms: number;
@@ -216,6 +216,8 @@ export type Message = {
   draftSummary?: boolean;
   /** What this answer created or changed in Google Workspace (completed writes only), listed under it. */
   google?: import('./google-changes').GoogleChange[];
+  /** Artifacts the AI saved in this answer's run, opened from the answer (IPC artifactOpen). */
+  artifacts?: ArtifactRef[];
 };
 /** A file sent in a chat: its checked, masked text stays with the conversation. */
 export type ConversationFile = { name: string; text: string; at: string };
@@ -615,3 +617,6 @@ export type MaintenanceItem = MaintenanceFinding & {
   reopened?: boolean;
 };
 export type MaintenanceBoard = { checkedAt: string; items: MaintenanceItem[] };
+
+/** An artifact the AI saved for a task; the content stays in the artifact store and opens on request. */
+export type ArtifactRef = { id: string; title: string; kind: 'markdown' | 'html' | 'mermaid' | 'table' | 'code' | 'json'; version: number };

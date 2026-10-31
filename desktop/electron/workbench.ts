@@ -8,6 +8,10 @@ import { promisify } from 'node:util';
 import { StringDecoder } from 'node:string_decoder';
 import { StreamOutput } from './stream-output';
 import { codeDiagnostics } from './code-diagnostics';
+import { searchSymbolsInFiles, extractSymbolsFromSource, findReferencesInFiles } from './code-intelligence';
+import { StatefulReplManager, type ReplResult } from './stateful-repl';
+import { ArtifactStore, type ArtifactKind } from './artifacts';
+import { SubagentManager, type SubagentTask } from './subagents';
 import type { BackgroundTask, FileChange } from '../src/tools';
 import { taskAction } from '../src/tools';
 import type { WorkPlan, WorkTask } from '../src/types';
@@ -28,6 +32,8 @@ export function browserUrl(input: string) {
   if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || input.length > 2000) throw new Error('INVALID_URL');
   return url.href;
 }
+const CODE_EXTENSIONS = ['ts', 'tsx', 'mts', 'cts', 'js', 'jsx', 'mjs', 'cjs'];
+const CODE_SYMBOL_FILES = 50;
 export class Workbench {
   executionAllowed: () => void = () => {};
   private children = new Map<string, ChildProcess>();
@@ -35,6 +41,9 @@ export class Workbench {
   private stopped = new Set<string>();
   private cancelling = new Set<string>();
   private disposed = false;
+  private replManager = new StatefulReplManager();
+  private artifactStore: ArtifactStore;
+  private subagentManager = new SubagentManager();
   rememberPlan(sessionId: string, text: string) {
     const session = this.store.session(sessionId);
     session.approvedPlan = text;
@@ -74,6 +83,7 @@ export class Workbench {
     private scrub: (text: string) => string = text => text,
     private policy?: () => Policy,
   ) {
+    this.artifactStore = new ArtifactStore(this.store);
     for (const task of this.store.list<BackgroundTask>('background'))
       if (task.status === 'running') {
         task.status = 'interrupted';
@@ -226,6 +236,123 @@ export class Workbench {
     const buffer = await readFile(path);
     if (buffer.includes(0)) throw new Error('FILE_BINARY');
     return { path: relative(await this.root(), path), text: buffer.toString('utf8') };
+  }
+  async codeSymbols(input: string, args: Record<string, unknown> = {}) {
+    const root = await this.root();
+    const query = typeof args.query === 'string' ? args.query : undefined;
+    const kind = typeof args.kind === 'string' ? args.kind : undefined;
+    const limit = typeof args.limit === 'number' ? args.limit : 50;
+
+    if (input && input.trim()) {
+      try {
+        const targetPath = await this.path(input, true);
+        const stat = await lstat(targetPath);
+        if (stat.isFile()) {
+          const buffer = await this.bytes(input, 500000);
+          const relPath = relative(root, targetPath).split('\\').join('/');
+          const symbols = extractSymbolsFromSource(relPath, buffer.toString('utf8'));
+          const filtered = symbols.filter(s => {
+            if (query && !s.name.toLowerCase().includes(query.toLowerCase())) return false;
+            if (kind && kind !== 'all' && s.kind !== kind) return false;
+            return true;
+          });
+          return { total: filtered.length, symbols: filtered.slice(0, limit), scannedFiles: 1, truncated: false };
+        }
+      } catch (e: any) {
+        if (e.message !== 'INVALID_PATH') throw e;
+      }
+    }
+
+    // Filename search takes globs (regex is content-only), so each code extension is one bounded glob search.
+    const folder =
+      input &&
+      input.trim() &&
+      (
+        await this.path(input)
+          .then(lstat, () => undefined)
+          .catch(() => undefined)
+      )?.isDirectory()
+        ? input
+        : '.';
+    const files: { path: string; text: string }[] = [];
+    let truncated = false;
+    for (const extension of CODE_EXTENSIONS) {
+      if (files.length >= CODE_SYMBOL_FILES) break;
+      const found = await this.searchFiles(folder, { target: 'files', pattern: `**/*.${extension}`, maxFiles: 1000, maxResults: 500 });
+      truncated ||= Boolean(found.truncated);
+      for (const item of found.matches) {
+        if (files.length >= CODE_SYMBOL_FILES) {
+          truncated = true;
+          break;
+        }
+        try {
+          const buffer = await this.bytes(item.path, 200000);
+          files.push({ path: item.path, text: buffer.toString('utf8') });
+        } catch {
+          // Skip unreadable files
+        }
+      }
+    }
+
+    return { ...searchSymbolsInFiles(files, { query, kind, limit }), scannedFiles: files.length, truncated };
+  }
+
+  async codeReferences(input: string, args: Record<string, unknown> = {}) {
+    const symbol = (typeof args.symbol === 'string' && args.symbol.trim()) || input.trim();
+    if (!symbol) throw new Error('INVALID_INPUT');
+
+    const searchRes = await this.searchFiles('.', {
+      target: 'content',
+      pattern: symbol,
+      maxFiles: 30,
+      maxResults: 100,
+    });
+
+    const seen = new Set<string>();
+    const files: { path: string; text: string }[] = [];
+
+    for (const m of searchRes.matches) {
+      if (seen.has(m.path)) continue;
+      seen.add(m.path);
+      try {
+        const buffer = await this.bytes(m.path, 200000);
+        files.push({ path: m.path, text: buffer.toString('utf8') });
+      } catch {
+        // Skip unreadable files
+      }
+    }
+
+    return findReferencesInFiles(files, symbol);
+  }
+
+  /** Runs approved REPL code in this task's session thread (`workerPath` is `repl-worker.cjs`). */
+  async repl(sessionId: string, code: string, workerPath: string, reset = false, timeoutMs = 5000): Promise<ReplResult> {
+    this.executionAllowed();
+    if (typeof code !== 'string' || code.length > 50000 || (!code.trim() && !reset)) throw new Error('INVALID_INPUT');
+    const session = this.replManager.session(sessionId, workerPath);
+    if (reset) session.reset();
+    return code.trim() ? session.eval(code, timeoutMs) : ({ sessionId, output: '', executionMs: 0 } satisfies ReplResult);
+  }
+
+  saveArtifact(sessionId: string, id: string, title: string, kind: ArtifactKind, content: string) {
+    return this.artifactStore.save(sessionId, id, title, kind, content);
+  }
+
+  getArtifact(sessionId: string, id: string) {
+    return this.artifactStore.get(sessionId, id);
+  }
+
+  listArtifacts(sessionId: string) {
+    return this.artifactStore.list(sessionId);
+  }
+
+  deleteArtifact(sessionId: string, id: string) {
+    return this.artifactStore.delete(sessionId, id);
+  }
+
+  /** Starts a subagent for this task; `run` is the service's tool-limited delegate, so no subagent runs without one. */
+  invokeSubagent(sessionId: string, params: { role: string; prompt: string }, run: (task: SubagentTask) => Promise<string>) {
+    return this.subagentManager.spawn(sessionId, params, run);
   }
   async diagnostics(input: string, signal: AbortSignal, workerPath: string) {
     if (!/\.(?:[cm]?[jt]sx?)$/i.test(input)) throw new Error('CODE_LANGUAGE_UNSUPPORTED');
@@ -854,6 +981,7 @@ export class Workbench {
     );
     await Promise.all([...this.children.keys()].map(id => this.cancel(id)));
     await Promise.all(pending);
+    this.replManager.close();
     this.disposed = true;
   }
 }

@@ -10,6 +10,7 @@ import { discoverTools, validateToolRequest } from '../src/tool-registry';
 import type { Harness } from './service';
 import { Workbench } from './workbench';
 import { ToolGate } from './tool-gate';
+import { REPL_WORKER } from './stateful-repl';
 import { Approvals } from './approvals';
 import { Questions } from './questions';
 import type { Policy, PermissionMode } from './policy';
@@ -44,6 +45,12 @@ const TOOL_ACTIVITY: Record<string, string> = {
   patch: 'กำลังเตรียมแก้ข้อความเฉพาะจุด',
   changes: 'กำลังเตรียมการแก้ไขไฟล์',
   sheet_create: 'กำลังจัดทำไฟล์ Excel',
+  code_symbols: 'กำลังค้นหาสัญลักษณ์ในโค้ด',
+  code_references: 'กำลังค้นหาจุดอ้างอิงของสัญลักษณ์',
+  repl_eval: 'กำลังคำนวณด้วยโค้ด JavaScript',
+  artifact_save: 'กำลังบันทึกเอกสารทำงานของผู้ช่วย',
+  artifact_read: 'กำลังอ่านเอกสารทำงานของผู้ช่วย',
+  invoke_subagent: 'กำลังให้ผู้ช่วยย่อยค้นคว้า',
   slides_create: 'กำลังจัดทำไฟล์ PowerPoint',
 };
 export type ToolScope = {
@@ -65,6 +72,10 @@ export type ToolScope = {
   /** The native workflow of this run (electron/workflows.ts), if the employee picked one. */
   analyze?: (prompt: string, image: import('../src/types').VisionInput) => Promise<string>;
   generate?: (prompt: string, model?: string) => Promise<unknown>;
+  /** Runs a subagent: its own AI call on this connection, limited to read-only tools (electron/subagents.ts). */
+  delegate?: (role: string, prompt: string) => Promise<string>;
+  /** Records an artifact the AI saved, so the answer can list it with a way to open it. */
+  artifactSaved?: (artifact: import('../src/types').ArtifactRef) => void;
   workflow?: Workflow;
 };
 type SiteApproval = { url: string; sessionId: string; signal: AbortSignal; workspace: string; policy: Policy; mode: PermissionMode };
@@ -520,6 +531,9 @@ export class DesktopTools {
           'mcp_call',
           'mcp_search',
           'sandbox',
+          'repl_eval',
+          'artifact_save',
+          'invoke_subagent',
           'browser_control',
           'browser_vision',
           'vision_analyze',
@@ -603,7 +617,7 @@ export class DesktopTools {
     if (scope.workflow === 'assistant') {
       const unavailable = assistantPolicyError(this.policy());
       if (unavailable) throw new Error(unavailable);
-      if (['terminal', 'sandbox'].includes(r.tool)) throw new Error('ASSISTANT_COMMAND_DISABLED');
+      if (['terminal', 'sandbox', 'repl_eval'].includes(r.tool)) throw new Error('ASSISTANT_COMMAND_DISABLED');
       if (
         r.tool === 'browser_vault' ||
         (r.tool === 'browser_control' && !['open', 'read', 'close'].includes(String(r.args?.action || 'open')))
@@ -626,6 +640,8 @@ export class DesktopTools {
     if (r.tool === 'browser_control' && this.mode() === 'plan' && a.action !== 'read') throw new Error('PLAN_MODE_BLOCKED');
     const fileTool = [
       'code_diagnostics',
+      'code_symbols',
+      'code_references',
       'files',
       'vision_analyze',
       'search_files',
@@ -639,17 +655,45 @@ export class DesktopTools {
       'slides_create',
     ].includes(r.tool);
     const command = r.tool === 'terminal' || r.tool === 'sandbox' ? target : undefined;
-    if (command && this.harness.privacy(command).action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
-    if (this.mode() === 'plan' && ['changes', 'patch', 'sheet_edit', 'sheet_create', 'slides_create', 'image_generate'].includes(r.tool))
+    // REPL code runs like a command: privacy check, approval in ask mode, and shellByAi in auto mode. It is not matched
+    // against the shell allow/deny lists, which describe shell commands, so an allowed command prefix cannot let code
+    // run without a person.
+    const replCode = r.tool === 'repl_eval' ? (typeof a.code === 'string' ? a.code : target) : undefined;
+    const subagent =
+      r.tool === 'invoke_subagent'
+        ? {
+            role: typeof a.role === 'string' && a.role.trim() ? a.role.trim() : 'Researcher',
+            prompt: typeof a.prompt === 'string' ? a.prompt : target,
+          }
+        : undefined;
+    const reviewed = command || replCode || (subagent && `${subagent.role}\n${subagent.prompt}`);
+    // Without the service's delegate there is no AI to hand the task to; refuse before asking the employee.
+    if (subagent && !scope.delegate) throw new Error('TOOL_UNAVAILABLE');
+    if (reviewed && this.harness.privacy(reviewed).action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
+    if (
+      this.mode() === 'plan' &&
+      ['changes', 'patch', 'sheet_edit', 'sheet_create', 'slides_create', 'image_generate', 'repl_eval', 'invoke_subagent'].includes(r.tool)
+    )
       throw new Error('PLAN_MODE_BLOCKED');
     const request = {
       tool: r.tool,
       readOnly:
         (r.tool === 'browser_vault' && a.action === 'list') ||
         (!cancelTask &&
-          !['terminal', 'sandbox', 'mcp_call', 'mcp_search', 'image_generate', 'browser_vault', 'google_workspace'].includes(r.tool)),
+          ![
+            'terminal',
+            'sandbox',
+            'repl_eval',
+            'invoke_subagent',
+            'mcp_call',
+            'mcp_search',
+            'image_generate',
+            'browser_vault',
+            'google_workspace',
+          ].includes(r.tool)),
       ...(fileTool ? { path: target || '.' } : {}),
       ...(command ? { command, execute: true } : {}),
+      ...(replCode !== undefined ? { execute: true } : {}),
     };
     return this.gate.run(
       request,
@@ -658,7 +702,11 @@ export class DesktopTools {
           ? tm('หยุดงานเบื้องหลังนี้?')
           : r.tool === 'image_generate'
             ? tm('สร้างภาพด้วยบัญชี API นี้?')
-            : tm('รันคำสั่งจาก AI?'),
+            : r.tool === 'repl_eval'
+              ? tm('รันโค้ด JavaScript จาก AI?')
+              : subagent
+                ? tm('ให้ผู้ช่วยย่อยค้นคว้า?')
+                : tm('รันคำสั่งจาก AI?'),
         body: cancelled
           ? tm(
               '{0}\nสถานะ: {1} · เริ่ม: {2}',
@@ -668,8 +716,16 @@ export class DesktopTools {
             )
           : r.tool === 'image_generate'
             ? target + tm('\nจะสร้างภาพหนึ่งภาพด้วยบัญชี API ที่เลือก อาจมีค่าใช้จ่ายตามบริการ')
-            : target + tm('\nคำสั่งอาจแก้ไฟล์หรือเชื่อมต่อเครือข่ายด้วยสิทธิ์ของคุณ'),
-        key: target,
+            : replCode !== undefined
+              ? replCode.slice(0, 2000) + tm('\nโค้ดรันในเซสชันคำนวณของงานนี้ ตัวแปรจะอยู่ต่อในรอบถัดไป')
+              : subagent
+                ? tm(
+                    'บทบาท: {0}\n{1}\nผู้ช่วยย่อยใช้บัญชี AI เดียวกัน อ่านไฟล์และเอกสารได้อย่างเดียว ไม่แก้ไฟล์ ไม่รันคำสั่ง และไม่ใช้เว็บ',
+                    subagent.role,
+                    subagent.prompt.slice(0, 2000),
+                  )
+                : target + tm('\nคำสั่งอาจแก้ไฟล์หรือเชื่อมต่อเครือข่ายด้วยสิทธิ์ของคุณ'),
+        key: replCode ?? (subagent ? `${subagent.role}\n${subagent.prompt}` : target),
         sessionId: scope.sessionId,
       },
       async () => {
@@ -783,6 +839,47 @@ export class DesktopTools {
             return this.workbench.stage(target, r.content).then(c => this.settle({ id: c.id, path: c.path }, scope));
           case 'code_diagnostics':
             return this.workbench.diagnostics(target, scope.signal, join(dirname(this.sheetPath), 'code-worker.cjs'));
+          case 'code_symbols':
+            return this.workbench.codeSymbols(target, a);
+          case 'code_references':
+            return this.workbench.codeReferences(target, a);
+          case 'repl_eval':
+            await check();
+            return this.workbench.repl(
+              scope.sessionId,
+              replCode!,
+              join(dirname(this.sheetPath), REPL_WORKER),
+              Boolean(a.reset),
+              typeof a.timeoutMs === 'number' ? a.timeoutMs : 5000,
+            );
+          case 'artifact_save': {
+            const saved = this.workbench.saveArtifact(
+              scope.sessionId,
+              (a.id as string) || target,
+              (a.title as string) || (a.id as string) || target,
+              (a.kind as any) || 'markdown',
+              (a.content as string) || '',
+            );
+            const ref = { id: saved.id, title: saved.title, kind: saved.kind, version: saved.version };
+            scope.artifactSaved?.(ref);
+            // The content is not echoed back; the AI has it, and the employee opens it from the answer.
+            return { ...ref, shownToEmployee: Boolean(scope.artifactSaved) };
+          }
+          case 'invoke_subagent': {
+            if (!scope.delegate) throw new Error('TOOL_UNAVAILABLE');
+            await check();
+            const task = await this.workbench.invokeSubagent(scope.sessionId, subagent!, t => scope.delegate!(t.role, t.prompt));
+            return {
+              id: task.id,
+              role: task.role,
+              status: task.status,
+              ...(task.result !== undefined ? { result: task.result, provenance: 'subagent-unverified' } : {}),
+              ...(task.error ? { code: task.error } : {}),
+            };
+          }
+          case 'artifact_read':
+            if (a.id || target) return this.workbench.getArtifact(scope.sessionId, (a.id as string) || target);
+            return this.workbench.listArtifacts(scope.sessionId);
           case 'terminal': {
             const job = await this.workbench.start(target, scope.sessionId);
             if (typeof a.waitMsBeforeAsync === 'number' && a.waitMsBeforeAsync > 0 && !a.isDaemon) {

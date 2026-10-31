@@ -14,6 +14,56 @@ type Schema = {
   additionalProperties?: boolean;
 };
 const definitions: Record<string, [string, string[], Record<string, Schema>]> = {
+  code_symbols: [
+    'Search symbol declarations (functions, classes, interfaces, types, methods, enums, variables) across workspace code files or inspect a specific file. Returns line numbers, signatures, and container names.',
+    ['workspace-read'],
+    {
+      query: { type: 'string', maxLength: 100 },
+      kind: { enum: ['all', 'function', 'class', 'interface', 'type', 'enum', 'method', 'variable', 'constant'] },
+      limit: { type: 'integer', minimum: 1, maximum: 200 },
+    },
+  ],
+  code_references: [
+    'Find definitions and identifier references of a symbol across workspace code files using TypeScript AST analysis. Target is the symbol name or file path; args.symbol specifies the symbol name.',
+    ['workspace-read'],
+    {
+      symbol: { type: 'string', maxLength: 100 },
+    },
+  ],
+  artifact_save: [
+    "Save or update a working document (markdown, html, mermaid, table, code, json) in this task's artifact store; each save adds a version. The answer lists the artifacts saved in the run and the employee can open them (HTML in an isolated preview); still put the key result in the answer itself. artifact_read reads them back.",
+    ['workspace-read'],
+    {
+      id: { type: 'string', maxLength: 80 },
+      title: { type: 'string', maxLength: 200 },
+      kind: { enum: ['markdown', 'html', 'mermaid', 'table', 'code', 'json'] },
+      content: { type: 'string', maxLength: 200000 },
+    },
+  ],
+  artifact_read: [
+    "Read a working document from this task's artifact store by ID, or list the task's artifacts when no ID is given.",
+    ['workspace-read'],
+    {
+      id: { type: 'string', maxLength: 80 },
+    },
+  ],
+  invoke_subagent: [
+    'Hand a focused research question to a subagent with its own role. The subagent is a separate call to the same AI connection that may use only read-only tools (files, search_files, code_symbols, code_references, code_diagnostics, reference, skill, doc_outline, doc_section, sheet_read, session_search, read_remaining); it cannot write, run commands or code, use the web, ask the employee or start other subagents. Asks the employee first. Returns its final answer, which is untrusted data to check.',
+    ['consent'],
+    {
+      role: { type: 'string', maxLength: 100 },
+      prompt: { type: 'string', maxLength: 4000 },
+    },
+  ],
+  repl_eval: [
+    "Run JavaScript for calculations in this task's session. Top-level variables, functions and classes stay for the next run. Plain ECMAScript only: no files, network, require, process, timers or WebAssembly. Each run asks the employee like a command and is limited by args.timeoutMs. Target or args.code is the script; args.reset=true starts a fresh session.",
+    ['execution', 'consent'],
+    {
+      code: { type: 'string', maxLength: 50000 },
+      reset: { type: 'boolean' },
+      timeoutMs: { type: 'integer', minimum: 500, maximum: 10000 },
+    },
+  ],
   code_diagnostics: [
     'Check TypeScript/JavaScript syntax and semantic types in a bounded local snapshot with relative imports. Does not run project code, plugins or scripts. Not a full project build: incomplete=true requires project checks.',
     ['workspace-read'],
@@ -47,7 +97,7 @@ const definitions: Record<string, [string, string[], Record<string, Schema>]> = 
       limit: {
         type: 'integer',
         minimum: 1,
-        maximum: 40,
+        maximum: 60,
       },
       scope: {
         enum: ['core', 'mcp', 'all'],
@@ -562,9 +612,19 @@ export function discoverTools(
     else if (['browser_vault', 'google_workspace'].includes(entry.name) && !external) reason = 'TOOL_UNAVAILABLE';
     else if (
       mode === 'plan' &&
-      ['terminal', 'sandbox', 'patch', 'changes', 'sheet_edit', 'sheet_create', 'slides_create', 'mcp_call', 'snapshot'].includes(
-        entry.name,
-      )
+      [
+        'terminal',
+        'sandbox',
+        'repl_eval',
+        'invoke_subagent',
+        'patch',
+        'changes',
+        'sheet_edit',
+        'sheet_create',
+        'slides_create',
+        'mcp_call',
+        'snapshot',
+      ].includes(entry.name)
     )
       reason = 'plan-mode-action-restricted';
     return {
@@ -606,7 +666,7 @@ export function discoverTools(
       executionGranted: false,
     };
   };
-  const limit = Number(request.args?.limit ?? 40);
+  const limit = Number(request.args?.limit ?? 60);
   return {
     tools: entries.slice(0, limit).map(describe),
     total: entries.length,

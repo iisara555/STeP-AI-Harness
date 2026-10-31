@@ -748,6 +748,11 @@ export const en: Record<string, string> = {
   โมเดลและการจัดการบัญชี: 'Models and account management',
 
   'กำลังจัดทำไฟล์ Excel': 'Creating an Excel file',
+  กำลังค้นหาสัญลักษณ์ในโค้ด: 'Searching code symbols',
+  กำลังค้นหาจุดอ้างอิงของสัญลักษณ์: 'Finding symbol references',
+  'กำลังคำนวณด้วยโค้ด JavaScript': 'Calculating with JavaScript',
+  กำลังบันทึกเอกสารทำงานของผู้ช่วย: "Saving the assistant's working document",
+  กำลังอ่านเอกสารทำงานของผู้ช่วย: "Reading the assistant's working document",
   'กำลังจัดทำไฟล์ PowerPoint': 'Creating a PowerPoint file',
   'เซลล์นี้มีสูตรอยู่ กรุณาแก้เฉพาะช่องข้อมูลหรือให้เจ้าของไฟล์ตรวจสูตร':
     'This cell contains a formula. Edit an input cell or ask the file owner to review the formula.',
@@ -2193,6 +2198,8 @@ export const en: Record<string, string> = {
   กำลังค้นงานเก่าบนเครื่องนี้: 'Searching earlier tasks on this computer',
   กำลังเตรียมแก้ข้อความเฉพาะจุด: 'Preparing a targeted text patch',
   'ไม่พบข้อความเดิมแบบตรงตัว กรุณาอ่านไฟล์ล่าสุดก่อนแก้ไข': 'Exact original text was not found. Read the latest file before editing',
+  'ไม่พบเอกสารนี้แล้ว อาจถูกลบหรือเป็นของงานอื่น': 'This document is no longer there; it may have been removed or belong to another task',
+  ผู้ช่วยย่อยใช้ได้เฉพาะเครื่องมืออ่านข้อมูล: 'A subagent can use read-only tools only',
   'พบข้อความเดิมมากกว่าหนึ่งจุด กรุณาระบุบริบทให้ตรงเพียงจุดเดียว':
     'Original text matches multiple locations. Include enough context for a unique match',
   'ไฟล์หรือผลค้นหาเปลี่ยนระหว่างแบ่งหน้า กรุณาเริ่มค้นหาใหม่': 'Files or search results changed between pages. Restart the search',
@@ -2485,6 +2492,23 @@ export const en: Record<string, string> = {
   'ผลการอ่านเว็บ {0}': 'Web read results from {0}',
   'กำลังใช้เครื่องมือ ': 'Using tool ',
   'รันคำสั่งจาก AI?': 'Run the command from the AI?',
+  'รันโค้ด JavaScript จาก AI?': 'Run the JavaScript code from the AI?',
+  'ให้ผู้ช่วยย่อยค้นคว้า?': 'Let a subagent research this?',
+  'บทบาท: {0}\n{1}\nผู้ช่วยย่อยใช้บัญชี AI เดียวกัน อ่านไฟล์และเอกสารได้อย่างเดียว ไม่แก้ไฟล์ ไม่รันคำสั่ง และไม่ใช้เว็บ':
+    'Role: {0}\n{1}\nThe subagent uses the same AI account and can only read files and documents: it does not change files, run commands or use the web',
+  กำลังให้ผู้ช่วยย่อยค้นคว้า: 'A subagent is researching',
+  'ผู้ช่วยย่อย ({0}) กำลังค้นคว้า': 'Subagent ({0}) is researching',
+  เอกสารทำงานของผู้ช่วย: "Assistant's working documents",
+  '{0} ชิ้น': '{0} items',
+  'ฉบับที่ {0}': 'version {0}',
+  เอกสาร: 'Document',
+  'หน้าเว็บ HTML': 'HTML page',
+  'แผนภาพ Mermaid': 'Mermaid diagram',
+  ตาราง: 'Table',
+  โค้ด: 'Code',
+  'ผู้ช่วยเขียนเอกสารนี้ ตรวจก่อนนำไปใช้': 'Written by the assistant; check it before you use it',
+  '\nโค้ดรันในเซสชันคำนวณของงานนี้ ตัวแปรจะอยู่ต่อในรอบถัดไป':
+    "\nThe code runs in this task's calculation session; its variables stay for the next run",
   '\nคำสั่งอาจแก้ไฟล์หรือเชื่อมต่อเครือข่ายด้วยสิทธิ์ของคุณ': '\nThe command may change files or use the network with your permissions',
   'อนุมัติแผนก่อนจัดทำร่าง?': 'Approve the plan before drafting?',
   '{0}\nส่งให้ {1} เฉพาะรอบการทำงานนี้ ไม่เกิน 10 นาที, 24 ผลการอ่าน และ 200,000 ตัวอักษรรวม\nฉันตรวจสิทธิ์ต้นทางแล้ว และอนุญาตให้ส่งข้อความทั่วไปหรือภายในในขอบเขตนี้':

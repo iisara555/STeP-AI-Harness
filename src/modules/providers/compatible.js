@@ -172,7 +172,21 @@ export async function compatibleRun(
               role: "user",
               content: images.length
                 ? [{ type: "text", text: prompt }, ...images]
-                : prompt,
+                : profile.promptCaching === 'anthropic-ephemeral' &&
+                    prompt.length >= 2048 &&
+                    prompt.includes('\n\n<current_message>\n')
+                  ? [
+                      {
+                        type: 'text',
+                        text: prompt.slice(0, prompt.indexOf('\n\n<current_message>\n')),
+                        cache_control: { type: 'ephemeral' },
+                      },
+                      {
+                        type: 'text',
+                        text: prompt.slice(prompt.indexOf('\n\n<current_message>\n') + 2),
+                      },
+                    ]
+                  : prompt,
             },
           ],
         }

@@ -28,6 +28,12 @@ export type FileChange = {
 };
 export const LOOP_TOOLS = [
   'code_diagnostics',
+  'code_symbols',
+  'code_references',
+  'repl_eval',
+  'artifact_save',
+  'artifact_read',
+  'invoke_subagent',
   'tool_search',
   'tool_describe',
   'mcp_search',

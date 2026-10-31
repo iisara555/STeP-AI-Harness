@@ -11,6 +11,7 @@ import type {
   Session,
   StepTrace,
   ProviderCallTrace,
+  ArtifactRef,
   WorkMode,
   VisionInput,
   Workflow,
@@ -22,6 +23,7 @@ import { webSources } from '../src/web';
 import { brokenRequests, loopRequests } from '../src/tools';
 import { speakingStyleRules } from '../src/speaking-styles';
 import { ToolLoop, TOOL_RULES, BROWSER_RULES, type LoopHost } from './tool-loop';
+import { SUBAGENT_MAX_TURNS, SUBAGENT_TOOLS, subagentSystem } from './subagents';
 import type { ToolScope } from './tools';
 import { RETRYABLE_CODES, RETRY_DELAYS_MS, retryDelay } from './retry';
 import { section } from './prompt';
@@ -40,7 +42,7 @@ import { sanitizeModelOutput, evaluateOutputQuality, buildRepairPrompt } from '.
 import { autoEffort, modelOption, taskSize } from './effort';
 import { selfContainedText } from './text-intent';
 import { selectDiscovery } from './discovery';
-import { highConfidenceSkill, prepareSkillSelection } from './skill-selection';
+import { highConfidenceSkill, prepareSkillSelection, shouldRunModelSkillSelection } from './skill-selection';
 import { parseDocumentOutput } from '../src/document-output';
 import { GOOGLE_CHANGE_LIMIT, type GoogleChange } from '../src/google-changes';
 import { markdownDocument, documentText } from '../src/draft';
@@ -844,6 +846,7 @@ export class WorkService {
     };
     // Completed Google writes of this run, for the list under the answer (src/google-changes.ts).
     const googleChanges: GoogleChange[] = [];
+    const artifacts = new Map<string, ArtifactRef>();
     try {
       status(tm('กำลังเตรียมงาน'));
       let routed = await this.harness.route(session.originalQuery, {
@@ -954,7 +957,14 @@ export class WorkService {
             ? previous
             : highConfidenceSkill(routed, skillRegistry, session.originalQuery);
         if (chosen) trace.skillSelection = { method: chosen === previous ? 'previous' : 'router', skill: chosen };
-        else {
+        else if (
+          shouldRunModelSkillSelection(
+            routed,
+            session.originalQuery,
+            incomingSource || (continuing || revising || retrying ? masked(session.files?.at(-1)?.text || '') : ''),
+            (known[0]?.score || 0) >= STRONG_MATCH,
+          )
+        ) {
           const selection = prepareSkillSelection(
             skillRegistry,
             session.originalQuery,
@@ -977,6 +987,7 @@ export class WorkService {
               signal: controller.signal,
               system: selection.system,
               jsonSchema: selection.schema,
+              effort: autoEffort(modelOption(selectedConnection)?.efforts, 'small'),
               emit: () => {},
               onUsage: count => {
                 counted = combineUsage(counted, count, 'max');
@@ -1432,6 +1443,7 @@ export class WorkService {
                   ...runtime.context,
                   signal: controller.signal,
                   system: summarySystem,
+                  effort: autoEffort(modelOption(selectedConnection)?.efforts, 'small'),
                   emit: delta => {
                     if (delta && call.ttftMs === undefined) call.ttftMs = Date.now() - calledAt;
                   },
@@ -1615,6 +1627,59 @@ export class WorkService {
               if (googleChanges.length < GOOGLE_CHANGE_LIMIT) googleChanges.push(change);
             },
             workflow: options.workflow,
+            artifactSaved: artifact => {
+              artifacts.delete(artifact.id);
+              if (artifacts.size < 20) artifacts.set(artifact.id, artifact);
+            },
+            // A subagent is its own tool-free provider call (no shared conversation, nothing streamed to the screen) in a
+            // nested tool loop that runs only read-only tools, through the same host gates, masking and consent.
+            delegate: async (role, task) => {
+              activity(tm('ผู้ช่วยย่อย ({0}) กำลังค้นคว้า', role));
+              const system = subagentSystem(role);
+              const subagentCall = async (next: string) => {
+                const calledAt = Date.now();
+                const call: ProviderCallTrace = { ...promptMetrics(system, next), kind: 'subagent', outcome: 'running', ms: 0 };
+                stepTrace.providerCalls!.push(call);
+                let counted: TokenCount = { input: 0, output: 0, total: 0 };
+                try {
+                  if (tokens(system + next) > budget) throw new Error('CONTEXT_LIMIT');
+                  checkAbort();
+                  const reply = await runtime.adapter.run(next, connection, {
+                    ...runtime.context,
+                    signal: controller.signal,
+                    system,
+                    session: undefined,
+                    nativeBridge: undefined,
+                    emit: () => {},
+                    onUsage: count => {
+                      counted = combineUsage(counted, count, 'max');
+                    },
+                    onTransport: info => {
+                      call.transport = info;
+                    },
+                  });
+                  checkAbort();
+                  call.outcome = 'completed';
+                  return reply;
+                } catch (error) {
+                  call.outcome = 'error';
+                  call.code = codeOf(error);
+                  throw error;
+                } finally {
+                  call.ms = Date.now() - calledAt;
+                  if (counted.total) call.usage = counted;
+                  recordUsage(counted);
+                }
+              };
+              return new ToolLoop(
+                {
+                  ...host,
+                  execute: (request, signal) =>
+                    SUBAGENT_TOOLS.has(request.tool) ? host.execute(request, signal) : Promise.reject(new Error('SUBAGENT_TOOL_DENIED')),
+                },
+                SUBAGENT_MAX_TURNS,
+              ).run(section('subagent_task', task), subagentCall, controller.signal);
+            },
             analyze: (prompt, image) => callProvider(prompt, runtime, false, image),
             generate: async (prompt, model) => {
               if (!this.generateImage) throw new Error('IMAGE_API_REQUIRED');
@@ -1728,6 +1793,7 @@ export class WorkService {
             ...runtime.context,
             signal: controller.signal,
             system: draftingTool ? documentToolRule(draftingTool.id, Boolean(session.documentTemplate)) : CHAT_RULES,
+            effort: autoEffort(modelOption(selectedConnection)?.efforts, 'small'),
             emit: () => {},
             onUsage: count => {
               counted = combineUsage(counted, count, 'max');
@@ -1787,6 +1853,7 @@ export class WorkService {
             signal: controller.signal,
             system: ANSWER_CHECK_SYSTEM,
             jsonSchema: ANSWER_CHECK_SCHEMA,
+            effort: autoEffort(modelOption(selectedConnection)?.efforts, 'small'),
             emit: () => {},
             onUsage: count => {
               counted = combineUsage(counted, count, 'max');
@@ -1835,6 +1902,7 @@ export class WorkService {
         ...(docSources.length ? { docSources } : {}),
         ...(written.size ? { written: [...written.values()] } : {}),
         ...(googleChanges.length ? { google: [...googleChanges] } : {}),
+        ...(artifacts.size ? { artifacts: [...artifacts.values()] } : {}),
         ...(check ? { check } : {}),
         ...(retrieved || searched.length ? { webSources: webSources([retrieved, ...searched].filter(Boolean).join('\n\n')) } : {}),
       });
@@ -1853,6 +1921,7 @@ export class WorkService {
         text: shown,
         at: new Date().toISOString(),
         ...(googleChanges.length ? { google: [...googleChanges] } : {}),
+        ...(artifacts.size ? { artifacts: [...artifacts.values()] } : {}),
       });
       if (done && session.status === 'error')
         session.messages.push({
