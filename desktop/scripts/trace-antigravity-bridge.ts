@@ -19,16 +19,20 @@
  *   strict-spellings  read-exact under strict, with several spellings of the step_host MCP allow rule
  *   review-native-read  review-exact, but the prompt asks for a built-in read of a synthetic file outside the
  *                workspace; that one read is let through to see whether agy itself refuses it
+ *   deny-bridge / deny-read / deny-list / deny-web  request-review with the app's bridge permissions (every native
+ *                namespace denied, read_file(*) included; only mcp(step_host/step_host) allowed): the bridge prompt, then
+ *                a built-in read, directory listing and web fetch aimed at synthetic targets, each let through to see
+ *                whether agy itself refuses it
  * agy's own error and denial messages are kept (with the isolated home path shortened to <home>): they are the CLI's
  * text, not user data.
  * agy is only ever started through an isolated home (never run agy by hand with the real home: it updates itself).
  */
 import { randomBytes } from 'node:crypto';
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, relative, resolve, sep } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { antigravityHome, antigravityModels, checkAntigravity, runAntigravity } from '../electron/antigravity';
+import { antigravityHome, antigravityModels, antigravityPermissions, checkAntigravity, runAntigravity } from '../electron/antigravity';
 import { NATIVE_STEP_HOST_SCHEMA } from '../electron/antigravity-mcp-bridge';
 import type { Connection } from '../src/types';
 
@@ -42,9 +46,13 @@ const VARIANTS = [
   'review-exact',
   'strict-spellings',
   'review-native-read',
+  'deny-bridge',
+  'deny-read',
+  'deny-list',
+  'deny-web',
 ] as const;
-const DEFAULT_VARIANTS: Variant[] = ['review-exact', 'strict-spellings', 'review-native-read'];
-const rewritesSettings = (variant: Variant) => /^(read-|review-|strict-)/.test(variant);
+const DEFAULT_VARIANTS: Variant[] = ['deny-bridge', 'deny-read', 'deny-list', 'deny-web'];
+const rewritesSettings = (variant: Variant) => /^(read-|review-|strict-|deny-)/.test(variant);
 /** agy's own messages, kept with the home path shortened. */
 const AGY_TEXT_KEYS = new Set(['message', 'action', 'display_name', 'reason']);
 type Variant = (typeof VARIANTS)[number];
@@ -110,6 +118,21 @@ export function redact(value: unknown, home: string, key = '', depth = 0): unkno
   }
   if (SAFE_VALUE_KEYS.has(key) && value.length <= 80 && /^[\w:.\/()\-]*$/.test(value)) return value;
   return `<string ${value.length}>`;
+}
+
+/** Every absolute path (or file URL) named anywhere in a step, resolved. */
+function absolutePathsIn(value: unknown, found: string[] = []): string[] {
+  if (Array.isArray(value)) value.forEach(item => absolutePathsIn(item, found));
+  else if (value && typeof value === 'object') Object.values(value).forEach(item => absolutePathsIn(item, found));
+  else if (typeof value === 'string' && parsedJson(value) !== undefined) absolutePathsIn(parsedJson(value), found);
+  else if (typeof value === 'string' && /^(file:|([a-z]:)?[\\/])/i.test(value.trim())) {
+    try {
+      found.push(resolve(/^file:/i.test(value.trim()) ? fileURLToPath(value.trim()) : value.trim()));
+    } catch {
+      found.push('<unparsable>');
+    }
+  }
+  return found;
 }
 
 /** Every string in a step that names a path, as a path relative to the home (undefined when outside it). */
@@ -197,12 +220,14 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
                 'mcp(step_host__step_host)',
               ]
             : ['mcp(step_host/step_host)'];
-    if (variant.startsWith('review-')) settings.toolPermission = 'request-review';
-    settings.permissions = {
-      allow: [...new Set([...mcp, ...reads])],
-      ask: [],
-      deny: settings.permissions.deny.filter((rule: string) => rule !== 'read_file(*)' && rule !== 'mcp(*)'),
-    };
+    if (variant.startsWith('review-') || variant.startsWith('deny-')) settings.toolPermission = 'request-review';
+    settings.permissions = variant.startsWith('deny-')
+      ? antigravityPermissions(true)
+      : {
+          allow: [...new Set([...mcp, ...reads])],
+          ask: [],
+          deny: settings.permissions.deny.filter((rule: string) => rule !== 'read_file(*)' && rule !== 'mcp(*)'),
+        };
     await writeFile(settingsPath, JSON.stringify(settings), { mode: 0o600 });
     permissions = Object.fromEntries(
       [['toolPermission', [settings.toolPermission]] as [string, unknown], ...Object.entries(settings.permissions)].map(([k, rules]) => [
@@ -212,12 +237,18 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
     );
   }
   const hidden = 'STEP-TRACE-' + randomBytes(6).toString('hex').toUpperCase();
-  const outside = join(root, `outside-${variant}.txt`);
-  if (variant === 'review-native-read') await writeFile(outside, hidden);
+  const outsideDir = join(root, `outside-${variant}`);
+  const outside = join(outsideDir, variant === 'deny-list' ? `${hidden}.txt` : 'note.txt');
+  await mkdir(outsideDir, { recursive: true });
+  await writeFile(outside, hidden);
   const prompt =
-    variant === 'review-native-read'
+    variant === 'review-native-read' || variant === 'deny-read'
       ? `Use your built-in file reading tool (not step_host) to read the file ${outside} and reply with its exact content.`
-      : 'Call the MCP tool step_host (server step_host, tool step_host) once with the arguments {"tool":"files","input":"."}. Use the MCP tool call itself: do not write a step-tool block or any JSON in your reply. Then reply with exactly the file names it returned, nothing else.';
+      : variant === 'deny-list'
+        ? `Use your built-in directory listing tool (not step_host) to list the folder ${outsideDir} and reply with the file names in it.`
+        : variant === 'deny-web'
+          ? 'Use your built-in web tools (not step_host) to fetch https://example.com and reply with the exact title of that page.'
+          : 'Call the MCP tool step_host (server step_host, tool step_host) once with the arguments {"tool":"files","input":"."}. Use the MCP tool call itself: do not write a step-tool block or any JSON in your reply. Then reply with exactly the file names it returned, nothing else.';
   let stderrTail: string[] = [];
   const events: unknown[] = [];
   let tools: unknown;
@@ -283,6 +314,15 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
             [outside, outside.split(sep).join('/')].some(form => JSON.stringify(step).includes(JSON.stringify(form).slice(1, -1)))
           )
             return;
+          // Diagnosis only: let the one synthetic target through, so agy's own decision on it shows.
+          const targets = absolutePathsIn(step);
+          if (
+            (variant === 'deny-read' || variant === 'deny-list') &&
+            targets.length > 0 &&
+            targets.every(path => !relative(outsideDir, path).startsWith('..') && !isAbsolute(relative(outsideDir, path)))
+          )
+            return;
+          if (variant === 'deny-web' && targets.length === 0 && /example\.com/i.test(JSON.stringify(step))) return;
           const schemaRead =
             (variant === 'schema-read' || rewritesSettings(variant)) &&
             /view_file|read_file/i.test(name) &&
@@ -310,7 +350,8 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
     stoppedOn,
     hostCalls,
     markerInAnswer: answer.includes(listed),
-    outsideContentLeaked: variant === 'review-native-read' ? answer.includes(hidden) : undefined,
+    outsideContentLeaked: /native-read|deny-read|deny-list/.test(variant) ? answer.includes(hidden) : undefined,
+    webPageReached: variant === 'deny-web' ? /example domain/i.test(answer) : undefined,
     stderrTail,
     textProtocolInstead: answer.includes('```step-tool'),
     mcpToolsInInit: Array.isArray(tools) ? tools.filter(tool => /mcp|step_host/i.test(JSON.stringify(tool))) : tools,
