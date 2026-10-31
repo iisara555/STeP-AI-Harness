@@ -422,6 +422,7 @@ async function main() {
     assistantPolicy: () => assistantPolicyError(policyState.policy),
     hybridSkillSelection: () => policyState.policy.features.hybridSkillSelection,
     visionEnabled: () => policyState.policy.features.vision,
+    antigravityBridge: () => policyState.policy.features.antigravityNativeBridge,
     answerCheck: () => policyState.policy.features.answerCheck,
     autoEffort: () => policyState.policy.features.autoEffort,
     skillMetadata: async id => {

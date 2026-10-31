@@ -119,6 +119,8 @@ export type Harness = {
   answerCheck?: () => boolean;
   /** Optional 1-pass auto-repair when deterministic output quality checks find critical defects. */
   qualityRepair?: () => boolean;
+  /** Antigravity tool calls through the governed step_host MCP bridge (policy `features.antigravityNativeBridge`). */
+  antigravityBridge?: () => boolean;
   tools?: (scope: ToolScope) => Promise<LoopHost>;
   recordUsage?: (connection: Connection, count: TokenCount) => void;
   /** Administrator limits, else the window a model on this computer actually loaded (electron/local-context.ts). */
@@ -1480,6 +1482,10 @@ export class WorkService {
         activity(tm('กำลังรอ AI เตรียมคำตอบ'));
         // The runtime conversation stays open across this step's tool turns (closed below when the step ends).
         const providerSession = new ProviderSession();
+        // With the policy feature on, an Antigravity answer turn may call this step's tools through the governed
+        // step_host bridge; each call runs through the same tool loop, gates and masking as a step-tool request.
+        let bridgeLoop: ToolLoop | undefined;
+        const bridgeOn = connection.provider === 'antigravity' && Boolean(this.harness.antigravityBridge?.());
         const callProvider = async (nextPrompt: string, selectedRuntime = runtime, search = false, analysisImage?: VisionInput) => {
           if (!search && !analysisImage) nextPrompt = await compactPrompt(nextPrompt);
           const originalPrompt = nextPrompt;
@@ -1537,6 +1543,10 @@ export class WorkService {
                 webSearch: search,
                 longFormTor: !search && !analysisImage && draftingTool?.id === 'tor',
                 session: search || analysisImage ? undefined : providerSession,
+                nativeBridge:
+                  bridgeOn && bridgeLoop && !search && !analysisImage
+                    ? (request, signal) => bridgeLoop!.bridge(request, signal)
+                    : undefined,
                 images: search ? undefined : analysisImage ? [analysisImage] : options.images,
                 onWebActivity: search
                   ? stage => {
@@ -1703,7 +1713,7 @@ export class WorkService {
               return found;
             },
           });
-          result = await new ToolLoop({
+          bridgeLoop = new ToolLoop({
             ...host,
             begin: action => {
               host.begin?.(action);
@@ -1751,7 +1761,8 @@ export class WorkService {
               stepTrace.toolMs = (stepTrace.toolMs || 0) + ms;
               host.timing?.(tool, ms);
             },
-          })
+          });
+          result = await bridgeLoop
             .run(prompt, next => callProvider(next), controller.signal)
             .finally(() => providerSession.closeAndWait());
         } else result = await callProvider(prompt).finally(() => providerSession.closeAndWait());

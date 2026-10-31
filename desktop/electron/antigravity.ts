@@ -648,18 +648,33 @@ export async function prewarmAntigravity(connection: Connection, context: Provid
 
 export class AntigravityAdapter implements ProviderAdapter {
   private conversations = new WeakMap<ProviderSession, AgyConversation>();
+  /** Sessions in which a governed bridge call reached the host: their effects live only in that agy conversation. */
+  private bridged = new WeakSet<ProviderSession>();
   constructor(private timeoutMs = 600_000) {}
   async run(prompt: string, connection: Connection, context: ProviderContext) {
     const deadline = Date.now() + this.timeoutMs;
     const timeout = AbortSignal.timeout(this.timeoutMs);
     const signal = AbortSignal.any([context.signal, timeout]);
+    // A bridge call may already have had an effect (a file staged, a command run) that only the agy conversation knows
+    // about. A text-only retry or a fresh conversation would start without it and could repeat it, so once a call has
+    // reached the host in this run or session, neither happens.
+    let called = false;
+    const session = context.session;
+    const executor = context.nativeBridge;
+    const nativeBridge: GovernedBridgeExecutor | undefined = executor
+      ? (request, bridgeSignal) => {
+          called = true;
+          if (session) this.bridged.add(session);
+          return executor(request, bridgeSignal);
+        }
+      : undefined;
     for (let attempt = 0; attempt < 2; attempt++) {
-      const useNativeBridge = attempt === 0 && Boolean(context.nativeBridge);
+      const useNativeBridge = attempt === 0 && Boolean(nativeBridge);
       const transportRules = useNativeBridge ? NATIVE_BRIDGE_RULES : TEXT_TRANSPORT_RULES;
       const attemptContext: ProviderContext = {
         ...context,
         signal,
-        nativeBridge: useNativeBridge ? context.nativeBridge : undefined,
+        nativeBridge: useNativeBridge ? nativeBridge : undefined,
         system: [
           context.system || '',
           transportRules,
@@ -698,6 +713,8 @@ export class AntigravityAdapter implements ProviderAdapter {
         // Never replay quota/auth failures, unconfirmed policy or uncertain shutdown.
         if (
           attempt === 0 &&
+          !called &&
+          !(session && this.bridged.has(session)) &&
           error instanceof Error &&
           (error.message === 'TOOL_DENIED' || (error.message === 'PROVIDER_STREAM_INVALID' && !(error as any).protocolRecoveryAttempted)) &&
           !signal.aborted &&
@@ -818,7 +835,7 @@ export class AntigravityAdapter implements ProviderAdapter {
       } catch (error) {
         // A process that ended or answered out of protocol between turns gets one fresh start with the whole prompt,
         // after its partial text is taken back.
-        if (context.signal.aborted || !resettable(error)) throw error;
+        if (context.signal.aborted || !resettable(error) || this.bridged.has(session)) throw error;
         if (shown) context.discard?.(shown);
         await session.closeAndWait();
         return this.turn(
