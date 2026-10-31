@@ -182,8 +182,9 @@ test('the same change applied twice at once is saved once', async () => {
     const change = await f.tools.stage('once.txt', 'after');
     const results = await Promise.allSettled([f.tools.apply(change.id), f.tools.apply(change.id)]);
     assert.deepEqual(
-      results.map(r => (r.status === 'fulfilled' ? 'ok' : r.reason.message)),
-      ['ok', 'CHANGE_NOT_FOUND'],
+      // Either call may reach the file's queue first; exactly one of them saves.
+      results.map(r => (r.status === 'fulfilled' ? 'ok' : r.reason.message)).sort(),
+      ['CHANGE_NOT_FOUND', 'ok'],
     );
     assert.equal(await readFile(join(f.root, 'once.txt'), 'utf8'), 'after');
   } finally {
@@ -256,11 +257,9 @@ test('when the file cannot be replaced (e.g. held open on Windows) the save writ
     const stale = await f.tools.stage('held.txt', 'z'.repeat(10));
     const other = await f.tools.stage('held.txt', 'w'.repeat(10));
     const results = await Promise.allSettled([f.tools.apply(stale.id), f.tools.apply(other.id)]);
-    assert.deepEqual(
-      results.map(r => (r.status === 'fulfilled' ? 'ok' : r.reason.message)),
-      ['ok', 'FILE_CONFLICT'],
-    );
-    assert.equal(await readFile(join(f.root, 'held.txt'), 'utf8'), 'z'.repeat(10));
+    // Either call may reach the file's queue first; the other one sees a changed file.
+    assert.deepEqual(results.map(r => (r.status === 'fulfilled' ? 'ok' : r.reason.message)).sort(), ['FILE_CONFLICT', 'ok']);
+    assert.equal(await readFile(join(f.root, 'held.txt'), 'utf8'), (results[0].status === 'fulfilled' ? 'z' : 'w').repeat(10));
   } finally {
     (fsp as any).rename = original;
     syncBuiltinESMExports();
