@@ -117,11 +117,11 @@ try {
     }, input);
     assert.match(code, /INVALID_CONNECTION|GEMINI_PERSONAL_DISCONTINUED/);
   }
-  // Antigravity is text-only. A newly started OCR retains that capability and automatically requests token mapping.
+  // A newly started OCR keeps the receipt page's text mode for Antigravity and automatically requests token mapping.
   await rm(marker);
   assert.equal((await page.evaluate(id => window.step.call('connect', { id }), connection.id)).ready, true);
-  // agy's stream-json input takes text only, so a scanned PDF is never turned into page pictures for it. With no local
-  // OCR running the chip says what to change instead of a bare "no text".
+  // Antigravity takes pictures through its per-request MCP image tool, so a scanned PDF becomes page pictures for it
+  // like for the other image-capable connections (no local OCR needed).
   const scan = join(home, 'scanned-tor.pdf');
   await writeFile(scan, blankPdf(2));
   await app.evaluate(({ dialog }, file) => {
@@ -129,9 +129,8 @@ try {
   }, scan);
   const task = await page.evaluate(connectionId => window.step.call('create', { connectionId }), connection.id);
   const scanned = await page.evaluate(id => window.step.call('attach', { id }), task.id);
-  assert.equal(scanned.usable, false, JSON.stringify(scanned));
-  assert.equal(scanned.reason, 'ATTACH_SCANNED_NEEDS_VISION');
-  assert.equal(scanned.vision, undefined);
+  assert.equal(scanned.usable, true, JSON.stringify(scanned));
+  assert.equal(scanned.vision, true);
   const folder = join(home, 'ocr'),
     python = process.platform === 'win32' ? join(folder, '.venv', 'Scripts', 'python.exe') : join(folder, '.venv', 'bin', 'python');
   await mkdir(dirname(python), { recursive: true });

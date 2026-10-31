@@ -150,7 +150,7 @@ try {
   await expect(panel.locator('.connection-card[data-selected=true]')).toHaveCount(1);
   await expect(panel.locator('.selected-ai')).toHaveText('ใช้สำหรับงานใหม่');
   const antigravity = panel.locator('.connection-card').filter({ has: page.locator('.connection-name', { hasText: 'Antigravity' }) });
-  await expect(antigravity.locator('[data-capability=vision]')).toContainText('ยังรับภาพไม่ได้');
+  await expect(antigravity.locator('[data-capability=vision]')).toContainText('ต้องตรวจเงื่อนไข');
   await antigravity.getByRole('button', { name: 'ใช้สำหรับงานใหม่', exact: true }).click();
   await expect(antigravity).toHaveAttribute('data-selected', 'true');
   await expect(panel.locator('.connection-note').first()).toHaveText('ทดสอบรับคำตอบสำเร็จ');

@@ -489,8 +489,6 @@ export const en: Record<string, string> = {
   'ผู้ดูแลปิดเครื่องมือในแชต ติดต่อ IT': 'Chat tools are disabled by your administrator; contact IT',
   'บัญชีนี้ใช้ข้อความ OCR แทนภาพได้ เลือกบัญชีที่รองรับภาพหากต้องการอ่านภาพ':
     'Use OCR text with this connection, or choose an image-capable connection to read images',
-  'Gemini ผ่าน Antigravity ยังรับภาพไม่ได้ ภาพและ PDF สแกนจะใช้ข้อความ OCR ในเครื่องแทน ถ้าต้องให้ AI ดูภาพเอง เชื่อมต่อ Gemini ด้วย API key, ChatGPT หรือ Claude':
-    'Gemini through Antigravity cannot take images yet. Images and scanned PDFs use on-device OCR text instead. To let the AI see images, connect Gemini with an API key, ChatGPT or Claude',
   'ผู้ดูแลปิดการอ่านภาพ ติดต่อ IT': 'Image reading is disabled by your administrator; contact IT',
   'โหมดตรวจข้อมูลขององค์กรไม่ส่งภาพ ใช้ OCR ในเครื่องแทน': 'Organization privacy checks prevent sending images; use local OCR',
   'ยังไม่ทราบนโยบายการส่งภาพ ติดต่อ IT': 'Image transmission policy is unknown; contact IT',
@@ -1475,8 +1473,8 @@ export const en: Record<string, string> = {
   'การเชื่อมต่อ AI นี้ยังไม่รับภาพ (รวมถึง PDF สแกน) เลือกโมเดลที่อ่านภาพได้ หรือใช้ไฟล์ต้นฉบับที่มีข้อความ':
     "This AI connection doesn't take images (scanned PDFs included). Pick a model that reads images, or use the original file with text",
   'PDF สแกนยาวเกิน 30 หน้า แบ่งไฟล์แล้วแนบทีละส่วน': 'The scanned PDF is over 30 pages. Split it and attach one part at a time',
-  'PDF นี้เป็นภาพสแกน แต่บัญชี AI ที่เลือกอยู่ (เช่น Gemini ผ่าน Antigravity) ยังรับภาพไม่ได้ และ OCR ในเครื่องยังไม่เปิด เปิด OCR ในเครื่อง หรือเปลี่ยนเป็น ChatGPT, Claude หรือ Gemini ด้วย API key แล้วแนบใหม่':
-    'This PDF is a scan, but the selected AI account (such as Gemini through Antigravity) cannot take images and on-device OCR is not running. Start on-device OCR, or switch to ChatGPT, Claude or Gemini with an API key, then attach it again',
+  'PDF นี้เป็นภาพสแกน แต่บัญชี AI ที่เลือกอยู่ (เช่น GitHub Copilot) ยังรับภาพไม่ได้ และ OCR ในเครื่องยังไม่เปิด เปิด OCR ในเครื่อง หรือเปลี่ยนเป็น ChatGPT, Claude หรือ Gemini ด้วย API key แล้วแนบใหม่':
+    'This PDF is a scan, but the selected AI account (such as GitHub Copilot) cannot take images and on-device OCR is not running. Start on-device OCR, or switch to ChatGPT, Claude or Gemini with an API key, then attach it again',
   'ส่งภาพให้ AI อ่านโดยตรง ตรวจว่ามีสิทธิ์ส่งข้อมูลในภาพก่อนส่ง':
     'The image goes to the AI as it is. Check you may share what it shows before sending',
   'PDF สแกน · ส่งเป็นภาพ {0} หน้าให้ AI อ่าน': 'Scanned PDF · {0} pages go to the AI as images',

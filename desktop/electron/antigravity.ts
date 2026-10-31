@@ -2,14 +2,25 @@ import { spawn } from 'node:child_process';
 import { chmod, copyFile, mkdir, mkdtemp, rm, symlink, unlink, writeFile } from 'node:fs/promises';
 import { existsSync, realpathSync, statSync } from 'node:fs';
 import { homedir, userInfo } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import { scrub, explainRuntimeFailure } from './diagnostics';
-import type { Connection, ModelOption } from '../src/types';
+import type { Connection, ModelOption, VisionInput } from '../src/types';
 import { providerSessionKey, type ProviderAdapter, type ProviderContext, type ProviderSession, type TokenCount } from './providers';
 import { combineUsage } from './usage';
 import { jsonSchemaInstruction, strictJsonSchema } from './json-schema';
 import { AntigravityMcpBridge, isGovernedBridgeTool, type GovernedBridgeExecutor } from './antigravity-mcp-bridge';
+import {
+  IMAGE_PERMISSION,
+  IMAGE_RULES,
+  IMAGE_SERVER,
+  IMAGE_TOOL,
+  brainReadRules,
+  checkImages,
+  imageSchemaFile,
+  mediaStepsDir,
+  writeImageServer,
+} from './antigravity-image-mcp';
 
 const LIMIT = 4_000_000;
 // Fixed protocol stages help diagnose a failure without retaining prompts, tool arguments or Google results.
@@ -35,7 +46,7 @@ export const STEP_HOST_PERMISSION = 'mcp(step_host/step_host)';
  * built-in read, URL read and the schema-file read under it in the same check. Tools outside those namespaces (such as
  * search_web) are stopped by the host on their first step in both modes.
  */
-export const antigravityToolPermission = (bridge: boolean) => (bridge ? 'request-review' : 'strict');
+export const antigravityToolPermission = (bridge: boolean, images = false) => (bridge || images ? 'request-review' : 'strict');
 
 /** agy's on-demand schema file for the step_host tool in an isolated home; agy may read it before call_mcp_tool. */
 export const stepHostSchemaFile = (home: string) => join(home, '.gemini', 'antigravity-cli', 'mcp', 'step_host', 'step_host.json');
@@ -48,10 +59,16 @@ export const stepHostSchemaFile = (home: string) => join(home, '.gemini', 'antig
  * config and the agent's `mcpServers` list only step_host, and the host stops the run on the first tool step that is
  * not step_host (`TOOL_DENIED`). Without the bridge, every MCP tool stays denied.
  */
-export function antigravityPermissions(bridge: boolean) {
-  return bridge
-    ? { allow: [STEP_HOST_PERMISSION], ask: [] as string[], deny: ANTIGRAVITY_DENY.filter(rule => rule !== 'mcp(*)') }
-    : { allow: [] as string[], ask: [] as string[], deny: ANTIGRAVITY_DENY };
+export function antigravityPermissions(bridge: boolean, images?: { home: string }) {
+  if (!bridge && !images) return { allow: [] as string[], ask: [] as string[], deny: ANTIGRAVITY_DENY };
+  return {
+    allow: [...(bridge ? [STEP_HOST_PERMISSION] : []), ...(images ? [IMAGE_PERMISSION, ...brainReadRules(images.home)] : [])],
+    ask: [] as string[],
+    // With attached pictures agy must read back the media file it saved for the image tool's result (it refused that
+    // read under read_file(*), 2026-10-31), so reads are allowed only under its own brain folder. Any other read
+    // matches no rule (Ask, soft-denied headless) and the host stops every view_file outside that conversation's media.
+    deny: ANTIGRAVITY_DENY.filter(rule => rule !== 'mcp(*)' && (!images || rule !== 'read_file(*)')),
+  };
 }
 
 /** The employee's real home, where agy keeps its sign-in. */
@@ -87,7 +104,11 @@ async function shareSignIn(home: string, profile: string, platform: NodeJS.Platf
 
 /** Native credentials stay in the OS keyring. Configuration and request state are isolated per invocation. */
 export async function antigravityHome(
-  context: Pick<ProviderContext, 'cwd' | 'env' | 'system'> & { nativeBridge?: GovernedBridgeExecutor; signal?: AbortSignal },
+  context: Pick<ProviderContext, 'cwd' | 'env' | 'system'> & {
+    nativeBridge?: GovernedBridgeExecutor;
+    signal?: AbortSignal;
+    images?: VisionInput[];
+  },
   profile = { home: profileHome(), platform: process.platform },
 ) {
   const base = resolve(context.cwd);
@@ -114,24 +135,30 @@ export async function antigravityHome(
     const bridgeConfig = context.nativeBridge
       ? await (bridge = new AntigravityMcpBridge(context.nativeBridge, context.signal)).start(home)
       : undefined;
+    const imageConfig = context.images?.length ? await writeImageServer(home, context.images) : undefined;
     await writeFile(
       settings,
       JSON.stringify({
-        toolPermission: antigravityToolPermission(Boolean(bridgeConfig)),
+        toolPermission: antigravityToolPermission(Boolean(bridgeConfig), Boolean(imageConfig)),
         artifactReviewPolicy: 'asks-for-review',
         allowNonWorkspaceAccess: false,
-        permissions: antigravityPermissions(Boolean(bridgeConfig)),
+        permissions: antigravityPermissions(Boolean(bridgeConfig), imageConfig ? { home } : undefined),
       }),
       { mode: 0o600 },
     );
-    if (bridgeConfig) {
+    if (bridgeConfig || imageConfig) {
       const mcpPayload = JSON.stringify({
         mcpServers: {
-          step_host: {
-            command: bridgeConfig.command,
-            args: bridgeConfig.args,
-            env: bridgeConfig.env,
-          },
+          ...(bridgeConfig
+            ? {
+                step_host: {
+                  command: bridgeConfig.command,
+                  args: bridgeConfig.args,
+                  env: bridgeConfig.env,
+                },
+              }
+            : {}),
+          ...(imageConfig ? { [IMAGE_SERVER]: imageConfig } : {}),
         },
       });
       await writeFile(join(dirname(settings), 'mcp_config.json'), mcpPayload, { mode: 0o600 });
@@ -139,8 +166,14 @@ export async function antigravityHome(
     }
     // Declare only harmless finish (plus governed step_host when nativeBridge is active) and opt out of the built-in
     // tools and prompt sections (excludeDefaultComponents, agy 1.2.1+).
-    const toolsHeader = bridgeConfig ? '[finish, mcp:step_host:step_host]' : '[finish]';
-    const mcpHeader = bridgeConfig ? '[step_host]' : '[]';
+    const tools = [
+      'finish',
+      ...(bridgeConfig ? ['mcp:step_host:step_host'] : []),
+      ...(imageConfig ? [`mcp:${IMAGE_SERVER}:${IMAGE_TOOL}`] : []),
+    ];
+    const servers = [...(bridgeConfig ? ['step_host'] : []), ...(imageConfig ? [IMAGE_SERVER] : [])];
+    const toolsHeader = `[${tools.join(', ')}]`;
+    const mcpHeader = `[${servers.join(', ')}]`;
     await writeFile(
       agent,
       `---\nname: step-draft\ndescription: STeP governed text generation\ntools: ${toolsHeader}\nexcludeDefaultComponents: true\nmainAgent: true\nsubagent: false\ncommandExecutionPolicy: off\nmcpServers: ${mcpHeader}\nskills: []\nplugins: []\n---\n` +
@@ -171,6 +204,12 @@ export async function antigravityHome(
     bridge,
     /** Set only when the governed bridge runs: the one file a tool step may name (agy itself refuses the read). */
     schemaFile: bridge ? stepHostSchemaFile(home) : undefined,
+    /** Set only when pictures are attached: the steps that let the model view them (see imageStep). */
+    images: context.images?.length
+      ? { schemaFile: imageSchemaFile(home), media: (conversation: string) => mediaStepsDir(home, conversation) }
+      : undefined,
+    /** The permission mode agy must report in init. */
+    permission: antigravityToolPermission(Boolean(bridge), Boolean(context.images?.length)),
     close,
   };
 }
@@ -391,15 +430,9 @@ function parseEvent(line: string) {
 }
 
 /** The isolated settings and agent must be the ones agy loaded before any request text is written. */
-function checkInit(event: any, cwd: string, connection: Connection, bridge: boolean) {
+function checkInit(event: any, cwd: string, connection: Connection, permission: string) {
   const init = event.init;
-  if (
-    !init ||
-    typeof init.cwd !== 'string' ||
-    !samePath(init.cwd, cwd) ||
-    init.agent !== AGENT ||
-    init.permission_mode !== antigravityToolPermission(bridge)
-  )
+  if (!init || typeof init.cwd !== 'string' || !samePath(init.cwd, cwd) || init.agent !== AGENT || init.permission_mode !== permission)
     throw new Error('ANTIGRAVITY_POLICY_UNCONFIRMED');
   if (init.model !== undefined && init.model !== connection.model) throw new Error('MODEL_NOT_AVAILABLE');
   // The CLI lists its built-in tools in init whatever the agent declares (live-tested 2026-10-05), so the
@@ -447,6 +480,29 @@ export function governedBridgeStep(step: any, schemaFile: string): boolean {
   return isGovernedBridgeTool(name) && name !== 'call_mcp_tool';
 }
 
+/** What a run with attached pictures may do besides answering: the image tool, its schema file and its saved media. */
+export type ImageSteps = { schemaFile: string; media: (conversation: string) => string };
+
+/**
+ * The tool steps that let the model see the attached pictures (agy 1.3.2 on a signed-in device, 2026-10-31): an optional
+ * view_file of agy's schema file for the image tool, `call_mcp_tool` naming the image server and tool, then view_file
+ * of the media file agy saved for that result in this conversation's folder. Any other step stops the run.
+ */
+export function imageStep(step: any, images: ImageSteps, conversation: string): boolean {
+  const name = step.tool_name ?? step.tool_call?.name ?? step.tool_info?.name;
+  const args: any = stepArguments(step);
+  if (name === 'call_mcp_tool')
+    return Boolean(args) && typeof args === 'object' && args.ServerName === IMAGE_SERVER && args.ToolName === IMAGE_TOOL;
+  if (name !== 'view_file' || !args || typeof args !== 'object' || Array.isArray(args)) return false;
+  const entries = Object.entries(args);
+  if (entries.length !== 1 || entries[0][0] !== 'AbsolutePath' || typeof entries[0][1] !== 'string') return false;
+  const path = resolve(entries[0][1]);
+  if (samePath(path, images.schemaFile)) return true;
+  if (!conversation || !/^[\w-]{1,100}$/.test(conversation)) return false;
+  const inside = relative(resolve(images.media(conversation)), path);
+  return /^\d{1,6}[\\/]media_\d{1,3}\.(?:png|jpe?g|webp|gif)$/i.test(inside);
+}
+
 /**
  * Follows one turn's step updates and result. Text is passed on as it arrives; the returned answer is the validated final
  * response. `turns` is how many turns the process answered before this one: a later turn may report either its own
@@ -460,8 +516,11 @@ function turnReader(
   discard?: (chars: number) => void,
   /** The isolated home's step_host schema file when the governed bridge runs; no tool step is allowed without it. */
   bridgeSchema?: string,
+  /** Set when pictures are attached: the steps that view them pass too. */
+  images?: ImageSteps,
 ) {
   const allowGovernedBridge = Boolean(bridgeSchema);
+  const toolTurns = allowGovernedBridge || Boolean(images);
   let text = '';
   let result: any;
   return {
@@ -474,6 +533,7 @@ function turnReader(
         if (!conversation() || result || !step || step.conversation_id !== conversation()) throw invalidStream('step-conversation');
         if (step.step_type === 'tool' || step.tool_name !== undefined || step.tool_call !== undefined) {
           if (bridgeSchema && governedBridgeStep(step, bridgeSchema)) return undefined;
+          if (images && imageStep(step, images, conversation())) return undefined;
           throw new Error('TOOL_DENIED');
         }
         if (step.step_type === 'agent_response' && step.text_delta !== undefined) {
@@ -489,7 +549,7 @@ function turnReader(
       result = event.result;
       if (!result || typeof result.status !== 'string') throw invalidStream('result-shape');
       const count = antigravityUsage(result.usage);
-      if (count) onUsage(count, turns > 0 && (result.num_turns === turns + 1 || (allowGovernedBridge && result.num_turns > turns)));
+      if (count) onUsage(count, turns > 0 && (result.num_turns === turns + 1 || (toolTurns && result.num_turns > turns)));
       // Authentication failures may be emitted before init; never copy their raw message.
       if (result.status !== 'SUCCESS') {
         const reason = typeof result.error === 'string' ? scrub(result.error) : '';
@@ -498,7 +558,7 @@ function turnReader(
             (['CANCELED', 'INTERRUPTED'].includes(result.status) ? 'CANCELLED' : 'PROVIDER_REQUEST_FAILED'),
         );
       }
-      const validTurns = allowGovernedBridge
+      const validTurns = toolTurns
         ? Number.isSafeInteger(result.num_turns) && result.num_turns >= 1
         : result.num_turns === 1 || (turns > 0 && result.num_turns === turns + 1);
       if (!conversation() || result.conversation_id !== conversation() || !validTurns || typeof result.response !== 'string')
@@ -608,7 +668,7 @@ export async function prewarmAntigravity(connection: Connection, context: Provid
     line: (line, send) => {
       const event = parseEvent(line);
       if (!held.conversation && event.event === 'init') {
-        held.conversation = checkInit(event, home.cwd, connection, Boolean(home.bridge));
+        held.conversation = checkInit(event, home.cwd, connection, home.permission);
         initReady(true);
         return;
       }
@@ -678,6 +738,8 @@ export class AntigravityAdapter implements ProviderAdapter {
         system: [
           context.system || '',
           transportRules,
+          // The one exception to the transport rules: the image tool and its saved media, governed by imageStep.
+          ...(context.images?.length ? [IMAGE_RULES(context.images.length)] : []),
           ...(context.jsonSchema ? [jsonSchemaInstruction(context.jsonSchema)] : []),
           ...(attempt ? [TOOL_RECOVERY_RULES] : []),
         ].join('\n\n'),
@@ -695,9 +757,10 @@ export class AntigravityAdapter implements ProviderAdapter {
       };
       let answer: string;
       try {
-        // The tool turns of a run continue on one process. A structured request and the recovery attempt run alone.
+        // The tool turns of a run continue on one process. A structured request, a request with pictures (their files
+        // and image server live only in that request's isolated home) and the recovery attempt run alone.
         answer =
-          attempt === 0 && context.session && !context.jsonSchema
+          attempt === 0 && context.session && !context.jsonSchema && !context.images?.length
             ? await this.conversationTurn(
                 prompt,
                 connection,
@@ -731,7 +794,7 @@ export class AntigravityAdapter implements ProviderAdapter {
   private check(connection: Connection, context: ProviderContext) {
     if (context.signal.aborted) throw new Error('CANCELLED');
     if (connection.provider !== 'antigravity' || connection.mode !== 'subscription' || context.key) throw new Error('INVALID_CONNECTION');
-    if (context.images?.length) throw new Error('VISION_UNAVAILABLE');
+    if (context.images?.length) checkImages(context.images);
     if (context.webSearch) throw new Error('WEB_SEARCH_UNAVAILABLE');
     if (!/^gemini-[\w.-]{1,93}$/.test(connection.model)) throw new Error('MODEL_NOT_AVAILABLE');
     if (context.effort && !ANTIGRAVITY_EFFORTS.includes(context.effort)) throw new Error('MODEL_EFFORT_UNAVAILABLE');
@@ -777,6 +840,7 @@ export class AntigravityAdapter implements ProviderAdapter {
         count => context.onUsage?.(count),
         context.discard,
         home.schemaFile,
+        home.images,
       );
       let answer = '';
       await runAntigravity(connection.executable, this.args(connection, context, extra), home, {
@@ -787,7 +851,7 @@ export class AntigravityAdapter implements ProviderAdapter {
           const event = parseEvent(line);
           if (event.event === 'init') {
             if (conversation) throw new Error('ANTIGRAVITY_POLICY_UNCONFIRMED');
-            conversation = checkInit(event, home.cwd, connection, Boolean(home.bridge));
+            conversation = checkInit(event, home.cwd, connection, home.permission);
             send({ event: 'user', message: { content: prompt } });
             return;
           }
@@ -964,7 +1028,7 @@ export class AntigravityAdapter implements ProviderAdapter {
       const ask = (send: (message: unknown) => void) => send({ event: 'user', message: { content: input } });
       held.handler = (event, send) => {
         if (event.event === 'init') {
-          const id = checkInit(event, held.home.cwd, connection, Boolean(held.home.bridge));
+          const id = checkInit(event, held.home.cwd, connection, held.home.permission);
           // A later turn may announce the same conversation again; a different one is not this conversation.
           if (held.conversation) {
             if (id !== held.conversation) throw new Error('PROVIDER_SESSION_INVALID');

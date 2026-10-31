@@ -42,9 +42,7 @@ export function connectionCapabilities(c: Connection, policy?: PolicySnapshot): 
       definitions[2][1],
       'blocked',
       'transport',
-      c.provider === 'antigravity'
-        ? 'Gemini ผ่าน Antigravity ยังรับภาพไม่ได้ ภาพและ PDF สแกนจะใช้ข้อความ OCR ในเครื่องแทน ถ้าต้องให้ AI ดูภาพเอง เชื่อมต่อ Gemini ด้วย API key, ChatGPT หรือ Claude'
-        : 'บัญชีนี้ใช้ข้อความ OCR แทนภาพได้ เลือกบัญชีที่รองรับภาพหากต้องการอ่านภาพ',
+      'บัญชีนี้ใช้ข้อความ OCR แทนภาพได้ เลือกบัญชีที่รองรับภาพหากต้องการอ่านภาพ',
     );
   else if (feature('vision') === false) vision = entry('vision', definitions[2][1], 'blocked', 'policy', 'ผู้ดูแลปิดการอ่านภาพ ติดต่อ IT');
   else if (policy?.checks?.privacy)

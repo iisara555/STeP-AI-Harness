@@ -20,18 +20,18 @@ const policy = {
   mcpServers: 0,
 } as unknown as PolicySnapshot;
 const state = (c: Connection, p: PolicySnapshot | undefined, id: string) => connectionCapabilities(c, p).find(x => x.id === id)!;
-test('Antigravity can search via host but does not inherit image or image-generation entitlement', () => {
+test('Antigravity can search via host and take attached images, but has no image-generation entitlement', () => {
   assert.equal(state(connection, policy, 'web').state, 'available');
-  assert.equal(state(connection, policy, 'vision').state, 'blocked');
+  assert.equal(state(connection, policy, 'vision').state, 'conditional');
   assert.equal(state(connection, policy, 'image').state, 'blocked');
 });
-test('images go where the transport carries them; Antigravity and Copilot point to OCR text instead', () => {
-  assert.match(state(connection, policy, 'vision').detail, /Antigravity.*OCR/);
+test('images go where the transport carries them; Copilot points to OCR text instead', () => {
   const compatible = { ...connection, provider: 'compatible', mode: 'api' } as Connection;
   assert.equal(state(compatible, policy, 'vision').state, 'conditional');
   assert.equal(state({ ...connection, provider: 'copilot' } as Connection, policy, 'vision').reason, 'transport');
-  for (const provider of ['openai', 'claude', 'gemini', 'compatible']) assert.equal(takesImages(provider), true, provider);
-  for (const provider of ['antigravity', 'copilot', undefined]) assert.equal(takesImages(provider), false, String(provider));
+  assert.match(state({ ...connection, provider: 'copilot' } as Connection, policy, 'vision').detail, /OCR/);
+  for (const provider of ['openai', 'claude', 'gemini', 'compatible', 'antigravity']) assert.equal(takesImages(provider), true, provider);
+  for (const provider of ['copilot', undefined]) assert.equal(takesImages(provider), false, String(provider));
 });
 test('policy revocation and missing policy never project stale or guessed readiness', () => {
   assert.equal(state({ ...connection, policyBlocked: true, ready: false }, policy, 'web').state, 'blocked');
