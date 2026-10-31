@@ -12,6 +12,8 @@ let mode = 'quota';
 let ocrServer;
 const chatTurns = [];
 const selectionTurns = [];
+const DELIVERABLE = 'อ่านร่างนี้ให้หน่อย มีตรงไหนงง ข้อมูลตกหล่น หรือบอกไม่เหมือนกันบ้าง';
+const DELIVERABLE_ANSWER = 'ร่างนี้อ่านเข้าใจง่าย และไม่พบข้อมูลที่ขัดกัน';
 const cachedPrefixes = new Map();
 const cachedRequests = [];
 const receiptReply = {
@@ -89,6 +91,8 @@ const server = createServer((req, res) => {
       if (selecting) {
         selectionTurns.push(request);
         text = JSON.stringify({ skillId: null, reason: 'Gemini conversation fixture' });
+      } else if (said.includes(DELIVERABLE)) {
+        text = DELIVERABLE_ANSWER;
       } else if (said.includes('ผอ.วิน คือใคร')) {
         chatTurns.push({
           contents: request.contents.length,
@@ -344,10 +348,22 @@ try {
   }
   await page.getByText('รศ.ดร.ปิติวัฒน์ วัฒนชัย (จากเอกสาร step-executive-board)').waitFor({ timeout: 90000 });
   assert.equal(chatTurns.length, 2, JSON.stringify(chatTurns.map(t => t.contents)));
-  assert.equal(selectionTurns.length, 1, 'selection is a separate tool-free request');
+  // A plain organization knowledge question skips the extra Skill selection call.
+  assert.equal(selectionTurns.length, 0, 'knowledge questions skip Skill selection');
   assert.equal(chatTurns[0].contents, 1);
   assert.ok(chatTurns[1].contents >= 3, 'the second turn continues the same conversation');
   assert.ok(chatTurns[1].last.includes('<tool_results>') && !chatTurns[1].last.includes('<routing_contract>'), 'only the new part is sent');
+
+  // A request for a deliverable still asks the model to choose a Skill, in a separate request without tools.
+  await page.getByRole('button', { name: 'เริ่มงานใหม่' }).first().click();
+  await page.locator('.composer textarea').fill(DELIVERABLE);
+  await page.keyboard.press('Enter');
+  await page.getByText(DELIVERABLE_ANSWER).waitFor({ timeout: 90000 });
+  assert.equal(selectionTurns.length, 1, 'a deliverable request still runs Skill selection');
+  assert.ok(
+    (selectionTurns[0].tools || []).every(tool => !tool.functionDeclarations?.length),
+    'selection is a separate tool-free request',
+  );
 
   // PDF receipt reads use the selected snapshot, and never silently omit a fourth page.
   const pdf = join(home, 'synthetic-receipt.pdf');
