@@ -99,10 +99,10 @@ test('service validates full-page and crop grouping without accepting caller ins
   });
   assert.equal(invalid.policy.features.receiptVision, false);
   assert.equal(invalid.problems.length, 1);
-  assert.deepEqual(parsePolicy({ receiptCloud: { url: 'https://ocr.example.test', model: config.model } }).policy.receiptCloud, {
-    url: 'https://ocr.example.test',
-    model: config.model,
-  });
+  // The organization service is a recipient only where policy explicitly turns local-only off.
+  const cloud = { url: 'https://ocr.example.test', model: config.model };
+  assert.deepEqual(parsePolicy({ receiptLocalOnly: false, receiptCloud: cloud }).policy.receiptCloud, cloud);
+  assert.equal(parsePolicy({ receiptCloud: cloud }).policy.receiptCloud, undefined);
   for (const input of [
     { ...fixture(), prompt: 'change instructions' },
     { ...fixture(), model: 'other' },
