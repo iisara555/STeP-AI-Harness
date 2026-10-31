@@ -19,13 +19,26 @@ const invalidStream = (stage: string) =>
 export const ANTIGRAVITY_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
 const AGENT = 'step-draft';
 const TEXT_TRANSPORT_RULES = `Native tools are unavailable in this STeP connection, including finish, file access, commands, MCP and native web search. Return the host's requested text format, including JSON when required. If the host supplied tools, request only those tools using fenced step-tool JSON in your text, never native function calls. Do not invent current facts or claim a search was performed. For fresh information without supplied evidence, ask for a source or explain that live search requires a supported connection.`;
-const NATIVE_BRIDGE_RULES = `Built-in native tools (direct file access, shell commands, web fetch, browser) are disabled. When the host supplies tools, call the governed MCP bridge tool step_host (mcp(step_host/step_host)) with {"tool":"<name>","input":"<string>","content":"<optional>","args":{...}} or emit a fenced step-tool JSON block. Every tool call is checked by STeP host permissions, authority and privacy rules.`;
+const NATIVE_BRIDGE_RULES = `Built-in native tools (direct file access, shell commands, web search, web fetch, browser) are disabled. When the host supplies tools, call the governed MCP bridge with call_mcp_tool, ServerName "step_host", ToolName "step_host" and Arguments {"tool":"<name>","input":"<string>","content":"<optional>","args":{...}}, or emit a fenced step-tool JSON block. That is the whole schema: do not read a schema file first. Every tool call is checked by STeP host permissions, authority and privacy rules.`;
 const TOOL_RECOVERY_RULES = `The previous attempt was stopped because it requested a native tool. No native tool result is available. Answer the original request in its required text format or use the host's step-tool text protocol if supplied. Do not repeat the native tool call.`;
 export const ANTIGRAVITY_DENY = ['read_file', 'write_file', 'read_url', 'execute_url', 'command', 'unsandboxed', 'mcp'].map(
   action => `${action}(*)`,
 );
 /** The one MCP tool the governed bridge exposes, as an agy permission rule. */
 export const STEP_HOST_PERMISSION = 'mcp(step_host/step_host)';
+
+/**
+ * agy's permission mode for a run. Headless `strict` auto-denies every tool that needs the `mcp` permission, whatever
+ * the allow list says (agy 1.3.2 on a signed-in Windows device, 2026-10-31: "a tool required the "mcp" permission that
+ * headless mode cannot prompt for, so it was auto-denied"), so a run with the governed bridge uses `request-review`,
+ * which honours `mcp(step_host/step_host)`. Every native action namespace stays denied either way, and agy refused a
+ * built-in read, URL read and the schema-file read under it in the same check. Tools outside those namespaces (such as
+ * search_web) are stopped by the host on their first step in both modes.
+ */
+export const antigravityToolPermission = (bridge: boolean) => (bridge ? 'request-review' : 'strict');
+
+/** agy's on-demand schema file for the step_host tool in an isolated home; agy may read it before call_mcp_tool. */
+export const stepHostSchemaFile = (home: string) => join(home, '.gemini', 'antigravity-cli', 'mcp', 'step_host', 'step_host.json');
 
 /**
  * The permissions written to each isolated agy settings file. agy evaluates Deny > Ask > Allow and `mcp(*)` matches
@@ -104,7 +117,7 @@ export async function antigravityHome(
     await writeFile(
       settings,
       JSON.stringify({
-        toolPermission: 'strict',
+        toolPermission: antigravityToolPermission(Boolean(bridgeConfig)),
         artifactReviewPolicy: 'asks-for-review',
         allowNonWorkspaceAccess: false,
         permissions: antigravityPermissions(Boolean(bridgeConfig)),
@@ -156,6 +169,8 @@ export async function antigravityHome(
     cwd,
     env,
     bridge,
+    /** Set only when the governed bridge runs: the one file a tool step may name (agy itself refuses the read). */
+    schemaFile: bridge ? stepHostSchemaFile(home) : undefined,
     close,
   };
 }
@@ -376,19 +391,60 @@ function parseEvent(line: string) {
 }
 
 /** The isolated settings and agent must be the ones agy loaded before any request text is written. */
-function checkInit(event: any, cwd: string, connection: Connection) {
+function checkInit(event: any, cwd: string, connection: Connection, bridge: boolean) {
   const init = event.init;
-  if (!init || typeof init.cwd !== 'string' || !samePath(init.cwd, cwd) || init.agent !== AGENT || init.permission_mode !== 'strict')
+  if (
+    !init ||
+    typeof init.cwd !== 'string' ||
+    !samePath(init.cwd, cwd) ||
+    init.agent !== AGENT ||
+    init.permission_mode !== antigravityToolPermission(bridge)
+  )
     throw new Error('ANTIGRAVITY_POLICY_UNCONFIRMED');
   if (init.model !== undefined && init.model !== connection.model) throw new Error('MODEL_NOT_AVAILABLE');
   // The CLI lists its built-in tools in init whatever the agent declares (live-tested 2026-10-05), so the
-  // listing is a catalog, not permission. Strict mode, confirmed above, proves the isolated settings that deny
+  // listing is a catalog, not permission. The expected mode, confirmed above, proves the isolated settings that deny
   // every native action were loaded; the workspace is an empty temporary folder; and the first tool step
   // stops the process. The owner accepted relying on these instead of an empty catalog.
   if (!Array.isArray(init.tools)) throw new Error('ANTIGRAVITY_POLICY_UNCONFIRMED');
   if (typeof event.conversation_id !== 'string' || !event.conversation_id || event.conversation_id.length > 128)
     throw invalidStream('init-conversation');
   return event.conversation_id as string;
+}
+
+/** A tool step's arguments: agy 1.3.2 reports them as `tool_info.parameters`; JSON text is parsed. */
+function stepArguments(step: any): unknown {
+  const value = step.tool_info?.parameters ?? step.tool_call?.args ?? step.tool_call?.arguments ?? step.tool_call?.parameters;
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+/**
+ * The only tool steps a governed-bridge run lets pass. agy 1.3.2 offers every MCP tool through its generic
+ * `call_mcp_tool`, so that step must name the step_host server and tool. Before calling it the model may first
+ * `view_file` agy's own on-demand schema file; `read_file(*)` stays denied, so agy refuses that read itself (checked on a
+ * signed-in device, 2026-10-31) and the model goes on to `call_mcp_tool`. Any other step stops the run.
+ */
+export function governedBridgeStep(step: any, schemaFile: string): boolean {
+  const name = step.tool_name ?? step.tool_call?.name ?? step.tool_info?.name;
+  const args: any = stepArguments(step);
+  if (name === 'call_mcp_tool')
+    return Boolean(args) && typeof args === 'object' && args.ServerName === 'step_host' && args.ToolName === 'step_host';
+  if (name === 'view_file') {
+    if (!args || typeof args !== 'object' || Array.isArray(args)) return false;
+    const entries = Object.entries(args);
+    return (
+      entries.length === 1 &&
+      entries[0][0] === 'AbsolutePath' &&
+      typeof entries[0][1] === 'string' &&
+      samePath(resolve(entries[0][1]), schemaFile)
+    );
+  }
+  return isGovernedBridgeTool(name) && name !== 'call_mcp_tool';
 }
 
 /**
@@ -402,8 +458,10 @@ function turnReader(
   emit: (text: string) => void,
   onUsage: (count: TokenCount, cumulative: boolean) => void,
   discard?: (chars: number) => void,
-  allowGovernedBridge = false,
+  /** The isolated home's step_host schema file when the governed bridge runs; no tool step is allowed without it. */
+  bridgeSchema?: string,
 ) {
+  const allowGovernedBridge = Boolean(bridgeSchema);
   let text = '';
   let result: any;
   return {
@@ -415,8 +473,7 @@ function turnReader(
         const step = event.step_update;
         if (!conversation() || result || !step || step.conversation_id !== conversation()) throw invalidStream('step-conversation');
         if (step.step_type === 'tool' || step.tool_name !== undefined || step.tool_call !== undefined) {
-          const toolName = step.tool_name ?? step.tool_call?.name;
-          if (allowGovernedBridge && isGovernedBridgeTool(toolName)) return undefined;
+          if (bridgeSchema && governedBridgeStep(step, bridgeSchema)) return undefined;
           throw new Error('TOOL_DENIED');
         }
         if (step.step_type === 'agent_response' && step.text_delta !== undefined) {
@@ -551,7 +608,7 @@ export async function prewarmAntigravity(connection: Connection, context: Provid
     line: (line, send) => {
       const event = parseEvent(line);
       if (!held.conversation && event.event === 'init') {
-        held.conversation = checkInit(event, home.cwd, connection);
+        held.conversation = checkInit(event, home.cwd, connection, Boolean(home.bridge));
         initReady(true);
         return;
       }
@@ -702,7 +759,7 @@ export class AntigravityAdapter implements ProviderAdapter {
         context.discard ? context.emit : () => {},
         count => context.onUsage?.(count),
         context.discard,
-        Boolean(context.nativeBridge),
+        home.schemaFile,
       );
       let answer = '';
       await runAntigravity(connection.executable, this.args(connection, context, extra), home, {
@@ -713,7 +770,7 @@ export class AntigravityAdapter implements ProviderAdapter {
           const event = parseEvent(line);
           if (event.event === 'init') {
             if (conversation) throw new Error('ANTIGRAVITY_POLICY_UNCONFIRMED');
-            conversation = checkInit(event, home.cwd, connection);
+            conversation = checkInit(event, home.cwd, connection, Boolean(home.bridge));
             send({ event: 'user', message: { content: prompt } });
             return;
           }
@@ -885,12 +942,12 @@ export class AntigravityAdapter implements ProviderAdapter {
           context.onUsage?.(turnCount);
         },
         context.discard,
-        Boolean(context.nativeBridge),
+        held.home.schemaFile,
       );
       const ask = (send: (message: unknown) => void) => send({ event: 'user', message: { content: input } });
       held.handler = (event, send) => {
         if (event.event === 'init') {
-          const id = checkInit(event, held.home.cwd, connection);
+          const id = checkInit(event, held.home.cwd, connection, Boolean(held.home.bridge));
           // A later turn may announce the same conversation again; a different one is not this conversation.
           if (held.conversation) {
             if (id !== held.conversation) throw new Error('PROVIDER_SESSION_INVALID');

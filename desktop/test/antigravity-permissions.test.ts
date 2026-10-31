@@ -3,7 +3,15 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { ANTIGRAVITY_DENY, STEP_HOST_PERMISSION, antigravityHome, antigravityPermissions } from '../electron/antigravity';
+import {
+  ANTIGRAVITY_DENY,
+  STEP_HOST_PERMISSION,
+  antigravityHome,
+  antigravityPermissions,
+  antigravityToolPermission,
+  governedBridgeStep,
+  stepHostSchemaFile,
+} from '../electron/antigravity';
 
 type Permissions = { allow: string[]; ask: string[]; deny: string[] };
 
@@ -75,7 +83,10 @@ test('the isolated settings file carries the bridge permissions only while the b
       try {
         const root = dirname(home.cwd);
         const settings = JSON.parse(await readFile(join(root, '.gemini', 'antigravity-cli', 'settings.json'), 'utf8'));
-        assert.equal(settings.toolPermission, 'strict');
+        // Headless strict auto-denies every MCP call (agy 1.3.2), so only a bridge run uses request-review.
+        assert.equal(settings.toolPermission, bridge ? 'request-review' : 'strict');
+        assert.equal(settings.toolPermission, antigravityToolPermission(bridge));
+        assert.equal(home.schemaFile, bridge ? stepHostSchemaFile(root) : undefined);
         assert.equal(settings.allowNonWorkspaceAccess, false);
         assert.deepEqual(settings.permissions, antigravityPermissions(bridge));
         const agent = await readFile(join(root, '.gemini', 'config', 'agents', 'step-draft', 'agent.md'), 'utf8');
@@ -92,4 +103,37 @@ test('the isolated settings file carries the bridge permissions only while the b
   } finally {
     await rm(base, { recursive: true, force: true });
   }
+});
+
+test('a bridge run lets through only call_mcp_tool for step_host and the read of its own schema file', () => {
+  const schema = stepHostSchemaFile(join(tmpdir(), 'antigravity-synthetic'));
+  const step = (tool_name: string, parameters: unknown) => ({
+    step_type: 'tool',
+    state: 'ACTIVE',
+    tool_name,
+    tool_info: { name: tool_name, parameters },
+  });
+  const call = (ServerName: string, ToolName: string) =>
+    step('call_mcp_tool', { ServerName, ToolName, Arguments: { tool: 'files', input: '.' } });
+  assert.equal(governedBridgeStep(call('step_host', 'step_host'), schema), true);
+  assert.equal(governedBridgeStep(call('other', 'step_host'), schema), false);
+  assert.equal(governedBridgeStep(call('step_host', 'other'), schema), false);
+  assert.equal(governedBridgeStep(step('call_mcp_tool', undefined), schema), false);
+  // Arguments may arrive as JSON text.
+  assert.equal(
+    governedBridgeStep(
+      { step_type: 'tool', tool_call: { name: 'call_mcp_tool', args: JSON.stringify({ ServerName: 'step_host', ToolName: 'step_host' }) } },
+      schema,
+    ),
+    true,
+  );
+  // agy refuses this read itself (read_file(*) stays denied); the host only declines to stop the run for it.
+  assert.equal(governedBridgeStep(step('view_file', { AbsolutePath: schema }), schema), true);
+  assert.equal(governedBridgeStep(step('view_file', { AbsolutePath: join(dirname(schema), 'other.json') }), schema), false);
+  assert.equal(governedBridgeStep(step('view_file', { AbsolutePath: schema, StartLine: 1 }), schema), false);
+  assert.equal(governedBridgeStep(step('view_file', { AbsolutePath: join(schema, '..', '..', '..', 'settings.json') }), schema), false);
+  for (const name of ['search_web', 'read_url_content', 'run_command', 'list_dir', 'write_to_file', 'browser_subagent'])
+    assert.equal(governedBridgeStep(step(name, { AbsolutePath: schema }), schema), false, name);
+  // The fixed bridge tool names still pass.
+  assert.equal(governedBridgeStep({ step_type: 'tool', tool_name: 'mcp:step_host:step_host' }, schema), true);
 });

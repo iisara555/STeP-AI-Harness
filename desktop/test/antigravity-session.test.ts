@@ -30,8 +30,10 @@ fs.appendFileSync(log,JSON.stringify({start:process.pid,args,home:process.env.HO
 const send=x=>console.log(JSON.stringify(x));
 const mcpCfgPath=process.env.HOME+'/.gemini/antigravity-cli/mcp_config.json';
 const hasMcp=fs.existsSync(mcpCfgPath)&&JSON.parse(fs.readFileSync(mcpCfgPath,'utf8')).mcpServers?.step_host;
-const initTools=hasMcp?['finish','mcp:step_host:step_host']:['finish'];
-send({event:'init',conversation_id:'conv',init:{cwd:process.cwd(),agent:'step-draft',model:args[args.indexOf('--model')+1],permission_mode:'strict',tools:initTools}});
+const settings=JSON.parse(fs.readFileSync(process.env.HOME+'/.gemini/antigravity-cli/settings.json','utf8'));
+// Like agy 1.3.2: init lists only the generic call_mcp_tool for MCP servers.
+const initTools=hasMcp?['finish','view_file','call_mcp_tool']:['finish'];
+send({event:'init',conversation_id:'conv',init:{cwd:process.cwd(),agent:'step-draft',model:args[args.indexOf('--model')+1],permission_mode:settings.toolPermission,tools:initTools}});
 let turns=0;
 createInterface({input:process.stdin}).on('line',async line=>{
   const input=JSON.parse(line);turns++;
@@ -45,14 +47,24 @@ createInterface({input:process.stdin}).on('line',async line=>{
   if(kind==='schema-tool' && schema) return send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'finish'}});
   if(kind==='tool' && turns===2) return send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'read_file'}});
   if(kind==='native-bridge-unapproved' && starts===1) return send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'bash'}});
+  const step=(tool_name,parameters,state='ACTIVE',extra={})=>send({event:'step_update',step_update:{conversation_id:'conv',step_index:turns*2,step_type:'tool',state,tool_name,tool_info:{name:tool_name,parameters,...extra}}});
+  const schemaFile=process.env.HOME+'/.gemini/antigravity-cli/mcp/step_host/step_host.json';
+  if(kind==='native-bridge-other-server' && hasMcp) return step('call_mcp_tool',{ServerName:'other',ToolName:'step_host',Arguments:{tool:'files',input:'.'}});
+  if(kind==='native-bridge-other-read' && hasMcp) return step('view_file',{AbsolutePath:process.env.HOME+'/.gemini/antigravity-cli/mcp/step_host/other.json'});
+  if(kind==='native-bridge-search' && hasMcp) return step('search_web',{query:'synthetic'});
   if(kind==='native-bridge' && hasMcp){
-    // Like agy: Deny > Ask > Allow, and mcp(*) matches every MCP tool, so a deny of mcp(*) soft-denies the bridge.
-    const policy=JSON.parse(fs.readFileSync(process.env.HOME+'/.gemini/antigravity-cli/settings.json','utf8')).permissions;
-    if(policy.deny.some(r=>r==='mcp(*)'||r==='mcp(step_host/*)'||r==='mcp(step_host/step_host)')||!policy.allow.includes('mcp(step_host/step_host)')){
+    // Like agy 1.3.2: Deny > Ask > Allow, mcp(*) matches every MCP tool, and headless strict auto-denies every MCP
+    // call whatever the allow list says. Before call_mcp_tool the model reads agy's own schema file, which
+    // read_file(*) refuses.
+    const policy=settings.permissions;
+    if(settings.toolPermission==='strict'||policy.deny.some(r=>r==='mcp(*)'||r==='mcp(step_host/*)'||r==='mcp(step_host/step_host)')||!policy.allow.includes('mcp(step_host/step_host)')){
       const soft='soft-denied: mcp(step_host/step_host)';
       return send({event:'result',result:{status:'SUCCESS',conversation_id:'conv',num_turns:turns,response:soft,usage:{input_tokens:5,output_tokens:5,total_tokens:10}}});
     }
-    send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'mcp:step_host:step_host'}});
+    step('view_file',{AbsolutePath:schemaFile});
+    if(!policy.deny.includes('read_file(*)')) return console.log('test fixture: read_file(*) must stay denied');
+    step('view_file',{AbsolutePath:schemaFile},'ERROR',{error:{type:'TOOL_ERROR',message:'Matches user-configured deny rule.'}});
+    step('call_mcp_tool',{ServerName:'step_host',ToolName:'step_host',Arguments:{tool:'files',input:'note.txt'}});
     const {spawn}=await import('node:child_process');
     const child=spawn(hasMcp.command,hasMcp.args,{env:{...process.env,...hasMcp.env},stdio:['pipe','pipe','pipe']});
     const rl=createInterface({input:child.stdout});
@@ -383,6 +395,28 @@ test('native MCP bridge executes governed host tools over local IPC and rejects 
   } finally {
     await unapproved.session.closeAndWait();
     await unapproved.close();
+  }
+
+  // A call_mcp_tool for another server, a read of any other file, and a tool outside every agy permission namespace
+  // (search_web runs even in strict mode on agy 1.3.2) stop the bridge attempt; the text-only retry answers.
+  for (const kind of ['native-bridge-other-server', 'native-bridge-other-read', 'native-bridge-search']) {
+    const other = await fixture(kind);
+    const hostCalls: unknown[] = [];
+    try {
+      const answer = await new AntigravityAdapter().run('Fallback', other.connection, {
+        ...other.context,
+        nativeBridge: async request => {
+          hostCalls.push(request);
+          return { ok: true };
+        },
+      });
+      assert.equal(answer, 'answer 1', kind);
+      assert.equal((await other.calls()).filter(c => c.start).length, 2, kind);
+      assert.deepEqual(hostCalls, [], kind);
+    } finally {
+      await other.session.closeAndWait();
+      await other.close();
+    }
   }
 
   // Direct bridge unit check: invalid token and invalid tool request fail closed.
