@@ -76,7 +76,11 @@ export function SkillsHub({
               <input placeholder={t('ค้นหา Skill ทีม หรือคำที่ใช้เรียก')} value={query} onChange={e => setQuery(e.target.value)} />
             </label>
             {onAddOwn && (
-              <button className="skills-add" onClick={onAddOwn} title={t('เลือกโฟลเดอร์ Skill ระบบตรวจรูปแบบและจุดเสี่ยงก่อนเปิดใช้')}>
+              <button
+                className="skills-add quiet"
+                onClick={onAddOwn}
+                title={t('เลือกโฟลเดอร์ Skill ระบบตรวจรูปแบบและจุดเสี่ยงก่อนเปิดใช้')}
+              >
                 <Plus size={15} />
                 {t('เพิ่ม Skill ของฉัน')}
               </button>
@@ -162,15 +166,18 @@ export function SkillsHub({
                 <Blocks size={16} />
                 <strong>{s.title}</strong>
               </header>
-              <code className="skill-command">/{s.name}</code>
               <p>{s.description}</p>
-              {/* Release stage and category are internal bookkeeping; they stay in the tooltip for maintainers. */}
+              {/* The name typed after "/" is for people who call Skills by name: small and quiet under the description. */}
+              <code className="skill-command">/{s.name}</code>
+              {/* One tag says whose Skill it is; the status shows only when the Skill cannot be used yet (a usable one has
+                  its button). Release stage and category are internal bookkeeping; they stay in the tooltip. */}
               <div className="skill-tags" title={[s.stage, s.category].filter(Boolean).join(' · ')}>
-                {mine(s) && <span className="tag team">{t('ทีมคุณ')}</span>}
-                <span className={`tag ${tag.tone}`} title={t(tag.hint)}>
-                  {t(tag.label)}
-                </span>
-                {s.owner && <span className="tag">{ownerLabel(s.owner)}</span>}
+                {mine(s) ? <span className="tag team">{t('ทีมคุณ')}</span> : s.owner && <span className="tag">{ownerLabel(s.owner)}</span>}
+                {s.status !== 'routed' && (
+                  <span className={`tag ${tag.tone}`} title={t(tag.hint)}>
+                    {t(tag.label)}
+                  </span>
+                )}
               </div>
               {!!s.contributors?.length && <small className="skill-credit">{creditLine(s.contributors)}</small>}
               {s.status === 'routed' ? (

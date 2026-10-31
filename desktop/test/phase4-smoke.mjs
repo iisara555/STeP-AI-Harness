@@ -121,7 +121,7 @@ try {
   stage = 'automation';
   await page.getByRole('menuitem', { name: 'งานตั้งเวลา', exact: true }).click();
   const jobs = page.locator('.schedules');
-  await jobs.getByRole('button', { name: 'งานใหม่', exact: true }).click();
+  await jobs.getByRole('button', { name: 'ตั้งเวลางานใหม่', exact: true }).click();
   await jobs.getByLabel('ชื่องานตั้งเวลา', { exact: true }).fill('Synthetic recurring draft');
   await jobs.getByLabel('สิ่งที่ให้ผู้ช่วยทำ', { exact: true }).fill('Prepare a concise public draft.');
   await jobs.getByLabel('บัญชี AI ของงาน', { exact: true }).selectOption('fake');

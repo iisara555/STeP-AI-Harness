@@ -130,7 +130,7 @@ try {
   await expect(sidebar.locator('.session')).toHaveCount(0);
   await sidebar.getByRole('tab', { name: 'งานทั้งหมด' }).click();
   await task(report.title).locator('.session-open').click();
-  await page.locator('.message.assistant').last().getByRole('button', { name: 'เปิดใน Output' }).click();
+  await page.locator('.message.assistant').last().getByRole('button', { name: 'เปิดในผลงาน' }).click();
   await expect.poll(async () => Boolean((await sessions()).find(s => s.id === report.id).draft)).toBe(true);
   await sidebar.getByRole('tab', { name: 'มีผลงาน' }).click();
   await expect(sidebar.locator('.session')).toHaveCount(1);

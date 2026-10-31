@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, LoaderCircle, Pause, Pencil, Play, Plus, Power, Trash2 } from './icons';
+import { ArrowRight, CalendarClock, LoaderCircle, Pause, Pencil, Play, Plus, Power, Trash2 } from './icons';
 import type { Automation, AutomationRun } from '../electron/cron';
 import type { Connection, DesktopAPI } from './types';
 import { connectionName, explainError } from './messages';
@@ -145,7 +145,7 @@ export function ScheduledTasks({
         {enabled && (
           <button disabled={!!busy || !ready.length} onClick={() => setDraft(blank(fallback))}>
             <Plus size={16} />
-            {t('งานใหม่')}
+            {t('ตั้งเวลางานใหม่')}
           </button>
         )}
       </section>
@@ -180,7 +180,9 @@ export function ScheduledTasks({
       {enabled && (
         <>
           <h2>{t('งานของฉัน')}</h2>
-          {!data.jobs.length && <p className="schedules-empty">{t('ยังไม่มีงานตั้งเวลา เริ่มจากแม่แบบด้านล่างหรือกด "งานใหม่"')}</p>}
+          {!data.jobs.length && (
+            <p className="schedules-empty">{t('ยังไม่มีงานตั้งเวลา เริ่มจากแม่แบบด้านล่างหรือกด "ตั้งเวลางานใหม่"')}</p>
+          )}
           <ul className="schedule-list">
             {data.jobs.map(job => {
               const run = lastRun(job.id),
@@ -287,6 +289,10 @@ export function ScheduledTasks({
                 <button className="schedule-template" disabled={!!busy || !ready.length} onClick={() => fromTemplate(template)}>
                   <strong>{t(template.name)}</strong>
                   <span className="small muted">{t(template.note)}</span>
+                  <span className="schedule-template-use" aria-hidden="true">
+                    {t('ใช้แม่แบบนี้')}
+                    <ArrowRight size={13} />
+                  </span>
                 </button>
               </li>
             ))}

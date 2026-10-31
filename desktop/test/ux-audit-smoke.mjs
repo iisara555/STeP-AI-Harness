@@ -15,7 +15,7 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   const wizard = page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' });
   await page.getByRole('button', { name: 'เริ่มตั้งค่า', exact: true }).click();
-  await expect(wizard.getByRole('heading', { name: 'เชื่อมต่อ AI', exact: true })).toBeVisible();
+  await expect(wizard.getByRole('heading', { name: 'เลือก AI และเชื่อมต่อ', level: 1, exact: true })).toBeVisible();
   await expect(wizard).not.toContainText('USER.md');
   await expect(wizard).not.toContainText('OCR');
   const assertVisibleButton = async locator => {
@@ -48,7 +48,7 @@ try {
   await assertVisibleButton(accept);
   await accept.check();
   await connect.click();
-  await expect(wizard.getByRole('heading', { level: 1 })).toHaveText('เชื่อมต่อ AI');
+  await expect(wizard.getByRole('heading', { level: 1 })).toHaveText('เลือก AI และเชื่อมต่อ');
   await page.getByRole('button', { name: 'ทำภายหลัง', exact: true }).click();
   // Ticking records the accepted version when the workspace opens.
   await enter.click();
