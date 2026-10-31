@@ -43,9 +43,15 @@ export function autoEffort(efforts: EffortOption[] | undefined, size: TaskSize) 
   return wanted && efforts?.some(e => e.id === wanted) ? wanted : undefined;
 }
 
+const ANTIGRAVITY_DEFAULT_EFFORTS: EffortOption[] = [{ id: 'low' }, { id: 'medium' }, { id: 'high' }];
+
 /** The catalog entry of the model this connection will run, if the provider listed one. */
-export function modelOption(connection: Pick<Connection, 'model' | 'models'>): ModelOption | undefined {
-  return (
-    connection.models?.find(m => m.id === connection.model) || (!connection.model ? connection.models?.find(m => m.isDefault) : undefined)
-  );
+export function modelOption(
+  connection?: Pick<Connection, 'model' | 'models'> & { provider?: Connection['provider'] },
+): ModelOption | undefined {
+  if (!connection) return undefined;
+  const found =
+    connection.models?.find(m => m.id === connection.model) || (!connection.model ? connection.models?.find(m => m.isDefault) : undefined);
+  if (found?.efforts?.length || connection.provider !== 'antigravity' || !connection.model) return found;
+  return { id: connection.model, label: found?.label || connection.model, efforts: ANTIGRAVITY_DEFAULT_EFFORTS };
 }
