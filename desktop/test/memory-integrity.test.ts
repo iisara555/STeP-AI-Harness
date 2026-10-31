@@ -130,3 +130,97 @@ test('chat language is independent of UI language and explicit user requests kee
   assert.match(personal({ chatLanguage: 'th' }).join('\n'), /Preferred language for chat replies: Thai/);
   assert.match(personal({ chatLanguage: 'en' }).join('\n'), /different language explicitly requested by the user/);
 });
+
+// Synthetic memories written straight to the folder, dated in the past so later edits always get a newer time.
+async function seed(dir: string, count: number) {
+  const { memoryMarkdown } = await import('../electron/memory');
+  const { randomUUID } = await import('node:crypto');
+  const { writeFile } = await import('node:fs/promises');
+  await mkdir(join(dir, 'memory'), { recursive: true });
+  const ids: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const id = randomUUID();
+    ids.push(id);
+    const at = new Date(Date.UTC(2026, 0, 1, 0, 0, i)).toISOString();
+    await writeFile(
+      join(dir, 'memory', id + '.md'),
+      memoryMarkdown({
+        schema_version: 1,
+        id,
+        name: `Synthetic note ${i}`,
+        text: `Synthetic stable preference number ${i}.`,
+        type: 'user',
+        scope: 'private',
+        importance: 0.5,
+        ttl_days: 0,
+        created_at: at,
+        updated_at: at,
+        source: 'user-confirmed',
+      }),
+    );
+  }
+  return ids;
+}
+const fresh = (i: number) => ({
+  name: `New note ${i}`,
+  text: `Another stable preference ${i}.`,
+  type: 'user',
+  scope: 'private',
+  importance: 0.5,
+  ttl_days: 0,
+});
+
+test('saving memories at the same time never goes past 200, and every saved memory lists', async t => {
+  const dir = await home(t);
+  const store = new Store(':memory:'),
+    policy = defaultPolicy();
+  store.put('settings', 'main', { workspace: '', team: 'cc' });
+  const memories = new Memories(store, dir, () => policy, scan);
+  await seed(dir, 199);
+  const results = await Promise.allSettled(Array.from({ length: 10 }, (_, i) => memories.save(fresh(i))));
+  assert.equal(results.filter(r => r.status === 'fulfilled').length, 1);
+  for (const r of results) if (r.status === 'rejected') assert.equal(r.reason.message, 'MEMORY_LIMIT');
+  assert.equal((await readdir(join(dir, 'memory'))).filter(f => f.endsWith('.md')).length, 200);
+  assert.equal((await memories.list()).length, 200);
+});
+
+test('a folder that already holds more than 200 memories lists all of them', async t => {
+  const dir = await home(t);
+  const store = new Store(':memory:'),
+    policy = defaultPolicy();
+  store.put('settings', 'main', { workspace: '', team: 'cc' });
+  const memories = new Memories(store, dir, () => policy, scan);
+  const ids = await seed(dir, 209);
+  const listed = await memories.list();
+  assert.equal(listed.length, 209);
+  assert.deepEqual(listed.map(m => m.id).sort(), [...ids].sort());
+  // Each one can be removed to get back under the limit, and new saves stay refused until then.
+  await assert.rejects(memories.save(fresh(0)), /MEMORY_LIMIT/);
+  await Promise.all(ids.slice(0, 10).map(id => memories.remove(id)));
+  assert.equal((await memories.list()).length, 199);
+  await memories.save(fresh(1));
+  assert.equal((await memories.list()).length, 200);
+});
+
+test('two edits of the same memory: the second one reports MEMORY_CONFLICT instead of overwriting', async t => {
+  const dir = await home(t);
+  const store = new Store(':memory:'),
+    policy = defaultPolicy();
+  store.put('settings', 'main', { workspace: '', team: 'cc' });
+  const memories = new Memories(store, dir, () => policy, scan);
+  await seed(dir, 1);
+  const [entry] = await memories.list();
+  const results = await Promise.allSettled([
+    memories.save({ ...entry, text: 'First edit of the synthetic preference.' }),
+    memories.save({ ...entry, text: 'Second edit of the synthetic preference.' }),
+  ]);
+  assert.deepEqual(
+    results.map(r => (r.status === 'fulfilled' ? 'ok' : r.reason.message)),
+    ['ok', 'MEMORY_CONFLICT'],
+  );
+  const [after] = await memories.list();
+  assert.equal(after.text, 'First edit of the synthetic preference.');
+  // Editing from the latest version works.
+  await memories.save({ ...after, text: 'Third edit of the synthetic preference.' });
+  assert.equal((await memories.list())[0].text, 'Third edit of the synthetic preference.');
+});

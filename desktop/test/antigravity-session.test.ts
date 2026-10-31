@@ -8,6 +8,7 @@ import { AntigravityMcpBridge } from '../electron/antigravity-mcp-bridge';
 import { ToolLoop } from '../electron/tool-loop';
 import { ProviderSession, type TokenCount } from '../electron/providers';
 import { strictJsonSchema } from '../electron/json-schema';
+import { runBridgeProbe } from '../scripts/probe-antigravity-bridge';
 import type { Connection } from '../src/types';
 
 // A stand-in for agy in stream-json mode: one turn per stdin line on one conversation, until stdin closes.
@@ -45,6 +46,12 @@ createInterface({input:process.stdin}).on('line',async line=>{
   if(kind==='tool' && turns===2) return send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'read_file'}});
   if(kind==='native-bridge-unapproved' && starts===1) return send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'bash'}});
   if(kind==='native-bridge' && hasMcp){
+    // Like agy: Deny > Ask > Allow, and mcp(*) matches every MCP tool, so a deny of mcp(*) soft-denies the bridge.
+    const policy=JSON.parse(fs.readFileSync(process.env.HOME+'/.gemini/antigravity-cli/settings.json','utf8')).permissions;
+    if(policy.deny.some(r=>r==='mcp(*)'||r==='mcp(step_host/*)'||r==='mcp(step_host/step_host)')||!policy.allow.includes('mcp(step_host/step_host)')){
+      const soft='soft-denied: mcp(step_host/step_host)';
+      return send({event:'result',result:{status:'SUCCESS',conversation_id:'conv',num_turns:turns,response:soft,usage:{input_tokens:5,output_tokens:5,total_tokens:10}}});
+    }
     send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'mcp:step_host:step_host'}});
     const {spawn}=await import('node:child_process');
     const child=spawn(hasMcp.command,hasMcp.args,{env:{...process.env,...hasMcp.env},stdio:['pipe','pipe','pipe']});
@@ -439,6 +446,24 @@ test('prewarmAntigravity spare pool and followUpDelta reuse a warm agy process a
   } finally {
     await f.session.closeAndWait();
     await closeAntigravitySpares();
+    await f.close();
+  }
+});
+
+test('the real-agy bridge probe passes against a CLI that applies agy permission precedence', async () => {
+  // Keeps scripts/probe-antigravity-bridge.ts working; the real check runs it with a signed-in agy.
+  const f = await fixture('native-bridge');
+  try {
+    const report = await runBridgeProbe({
+      executable: f.connection.executable,
+      model: 'gemini-test',
+      signal: new AbortController().signal,
+    });
+    assert.equal(report.version, '1.3.2');
+    assert.equal(report.bridge.pass, true, JSON.stringify(report));
+    assert.equal(report.nativeRead.pass, true);
+  } finally {
+    await f.session.closeAndWait();
     await f.close();
   }
 });

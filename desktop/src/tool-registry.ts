@@ -15,7 +15,7 @@ type Schema = {
 };
 const definitions: Record<string, [string, string[], Record<string, Schema>]> = {
   code_symbols: [
-    'Search symbol declarations (functions, classes, interfaces, types, methods, enums, variables) across workspace code files or inspect a specific file. Returns line numbers, signatures, and container names.',
+    'Search symbol declarations (functions, classes, interfaces, types, methods, enums, variables) across workspace code files or inspect a specific file. Returns line numbers, signatures, and container names. Reads at most 50 code files; truncated: true means it stopped there, so a missing symbol may still exist (narrow it with a folder).',
     ['workspace-read'],
     {
       query: { type: 'string', maxLength: 100 },
@@ -24,7 +24,7 @@ const definitions: Record<string, [string, string[], Record<string, Schema>]> = 
     },
   ],
   code_references: [
-    'Find definitions and identifier references of a symbol across workspace code files using TypeScript AST analysis. Target is the symbol name or file path; args.symbol specifies the symbol name.',
+    'Find definitions and identifier references of a symbol across workspace code files using TypeScript AST analysis. Target is the symbol name or file path; args.symbol specifies the symbol name. Parses at most 30 matching code files; truncated: true means the result is partial.',
     ['workspace-read'],
     {
       symbol: { type: 'string', maxLength: 100 },
