@@ -8,6 +8,7 @@ import { AntigravityMcpBridge } from '../electron/antigravity-mcp-bridge';
 import { ToolLoop } from '../electron/tool-loop';
 import { ProviderSession, type TokenCount } from '../electron/providers';
 import { strictJsonSchema } from '../electron/json-schema';
+import { runBridgeProbe } from '../scripts/probe-antigravity-bridge';
 import type { Connection } from '../src/types';
 
 // A stand-in for agy in stream-json mode: one turn per stdin line on one conversation, until stdin closes.
@@ -445,6 +446,24 @@ test('prewarmAntigravity spare pool and followUpDelta reuse a warm agy process a
   } finally {
     await f.session.closeAndWait();
     await closeAntigravitySpares();
+    await f.close();
+  }
+});
+
+test('the real-agy bridge probe passes against a CLI that applies agy permission precedence', async () => {
+  // Keeps scripts/probe-antigravity-bridge.ts working; the real check runs it with a signed-in agy.
+  const f = await fixture('native-bridge');
+  try {
+    const report = await runBridgeProbe({
+      executable: f.connection.executable,
+      model: 'gemini-test',
+      signal: new AbortController().signal,
+    });
+    assert.equal(report.version, '1.3.2');
+    assert.equal(report.bridge.pass, true, JSON.stringify(report));
+    assert.equal(report.nativeRead.pass, true);
+  } finally {
+    await f.session.closeAndWait();
     await f.close();
   }
 });
