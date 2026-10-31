@@ -38,8 +38,10 @@ readline.createInterface({input:process.stdin}).on('line',line=>{
  const prior=last[0]?.text?JSON.parse(last[0].text):null;
  const s=existsSync(state)?JSON.parse(readFileSync(state,'utf8')):{turn:0};
  if(s.turn===11)s.task=prior?.id;
+ // The fixture reads only the first 4,000-character preview of a result, so the search is limited to 8 tools
+ // (code_symbols and code_references also match "workspace"); patch is still among them.
  const requests=[
- {tool:'tool_search',input:'workspace',args:{scope:'core'}},
+ {tool:'tool_search',input:'workspace',args:{scope:'core',limit:8}},
  {tool:'tool_describe',input:'files'},
  {tool:'files',input:'nested/note.txt'},
  {tool:'tool_describe',input:'search_files'},

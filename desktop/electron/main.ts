@@ -2590,6 +2590,34 @@ async function main() {
           }
         });
       }
+      case 'artifactOpen': {
+        // An artifact the AI saved for this task. HTML opens in the Web tab's isolated preview, like an HTML draft;
+        // every other kind is returned as text for the answer's viewer, which renders Markdown without raw HTML.
+        const artifact = workbench.getArtifact(inputText(input.sessionId, 60), inputText(input.id, 80));
+        if (!artifact) throw new Error('ARTIFACT_NOT_FOUND');
+        const ref = { id: artifact.id, title: artifact.title, kind: artifact.kind, version: artifact.version };
+        if (artifact.kind !== 'html') return { ...ref, content: artifact.content };
+        if (browsers.size >= 4) throw new Error('TASK_LIMIT');
+        const id = randomUUID();
+        browsers.add(id);
+        try {
+          await openHtmlPreview(
+            partition => {
+              const page = dock.create(id, 'manual', partition, true);
+              page.once('destroyed', () => browsers.delete(id));
+              return page;
+            },
+            id,
+            artifact.content,
+            url => void openBrowserTab({ url }).catch(() => {}),
+          );
+        } catch (error) {
+          browsers.delete(id);
+          dock.remove(id);
+          throw error;
+        }
+        return null;
+      }
       case 'toolBrowserRead': {
         // The employee's own pages only: the assistant reads its pages through browser_control.
         const id = inputText(input.id, 60),
