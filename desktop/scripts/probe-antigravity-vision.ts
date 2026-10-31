@@ -245,7 +245,26 @@ export async function runProbe(options: {
             if (step.step_type === 'tool' || step.tool_name !== undefined || step.tool_call !== undefined || step.tool_info !== undefined) {
               const name = String(step.tool_name ?? step.tool_call?.name ?? step.tool_info?.name ?? '?');
               if (!steps.includes(name)) steps.push(name);
-              if (!allowedProbeStep(step, schemaFile)) throw Object.assign(new Error('TOOL_DENIED'), { steps });
+              if (!allowedProbeStep(step, schemaFile)) {
+                // Shape only: names, keys and paths relative to the isolated home, never argument values or content.
+                const args = stepArguments(step);
+                const path = typeof args?.AbsolutePath === 'string' ? resolve(args.AbsolutePath) : undefined;
+                const inHome = path?.toLowerCase().startsWith(resolve(isolatedHome).toLowerCase());
+                throw Object.assign(new Error('TOOL_DENIED'), {
+                  steps,
+                  refused: {
+                    name,
+                    stepKeys: Object.keys(step),
+                    toolInfoKeys: step.tool_info && typeof step.tool_info === 'object' ? Object.keys(step.tool_info) : undefined,
+                    argType: Array.isArray(args) ? 'array' : typeof args,
+                    argKeys: args && typeof args === 'object' ? Object.keys(args) : undefined,
+                    server: typeof args?.ServerName === 'string' ? args.ServerName : undefined,
+                    tool: typeof args?.ToolName === 'string' ? args.ToolName : undefined,
+                    path: path === undefined ? undefined : inHome ? path.slice(resolve(isolatedHome).length) : 'outside-isolated-home',
+                    status: typeof step.status === 'string' ? step.status : undefined,
+                  },
+                });
+              }
             }
           } else if (event.event === 'result') {
             result = event.result;
@@ -311,8 +330,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     } catch (error) {
       // No native stderr, account details, tokens or raw model output in the report.
       const code = error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'PROBE_FAILED';
-      const extra = error as { steps?: string[]; detail?: unknown; imageCalls?: number };
-      console.error(code, JSON.stringify({ toolSteps: extra?.steps, imageCalls: extra?.imageCalls, detail: extra?.detail }));
+      const extra = error as { steps?: string[]; detail?: unknown; refused?: unknown; imageCalls?: number };
+      console.error(
+        code,
+        JSON.stringify({ toolSteps: extra?.steps, imageCalls: extra?.imageCalls, refused: extra?.refused, detail: extra?.detail }),
+      );
       process.exitCode = 1;
     }
   }
