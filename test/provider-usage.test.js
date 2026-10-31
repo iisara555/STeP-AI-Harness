@@ -246,3 +246,41 @@ test("invalid remote cache counts fail closed and previously observed usage surv
   );
   assert.deepEqual(counts, [{ input: 10, output: 2, total: 12 }]);
 });
+
+
+test("Anthropic caching sets ephemeral breakpoint on large document context prefix in messages", async () => {
+  const bodies = [];
+  const profile = {
+    baseUrl: "https://fixture.invalid/v1",
+    protocol: "anthropic",
+    model: "fixture",
+    promptCaching: "anthropic-ephemeral",
+  };
+  const fetcher = async (_url, options) => {
+    bodies.push(JSON.parse(options.body));
+    return stream(
+      event({
+        type: "message_start",
+        message: { usage: { input_tokens: 10 } },
+      }) +
+        event({
+          type: "content_block_delta",
+          delta: { type: "text_delta", text: "Answer" },
+        }) +
+        event({ type: "message_delta", usage: { output_tokens: 2 } }) +
+        event({ type: "message_stop" }),
+    );
+  };
+  const context = { key: "synthetic", system: "Rules" };
+  const largePrefix = "<organization_knowledge>\n" + "x".repeat(2500) + "\n</organization_knowledge>";
+  const prompt = largePrefix + "\n\n<current_message>\nคำถาม\n</current_message>";
+  await compatibleRun(prompt, profile, context, fetcher);
+  assert.equal(bodies.length, 1);
+  assert.equal(bodies[0].messages[0].content.length, 2);
+  assert.deepEqual(bodies[0].messages[0].content[0], {
+    type: "text",
+    text: largePrefix,
+    cache_control: { type: "ephemeral" },
+  });
+  assert.equal(bodies[0].messages[0].content[1].text, "<current_message>\nคำถาม\n</current_message>");
+});

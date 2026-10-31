@@ -19,6 +19,7 @@ const allowed = new Set([
   'googleExecute',
   'googleOpen',
   'googleOpenChange',
+  'artifactOpen',
   'morningBriefState',
   'morningBriefRun',
   'morningBriefSettings',

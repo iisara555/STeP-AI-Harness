@@ -28,6 +28,7 @@ await build({
   external: ['electron', '@anthropic-ai/claude-agent-sdk', '@github/copilot-sdk'],
 });
 await copyFile('electron/sheet-worker.cjs', 'dist/sheet-worker.cjs');
+await copyFile('electron/repl-worker.cjs', 'dist/repl-worker.cjs');
 await build({
   entryPoints: ['electron/code-worker.cjs'],
   outfile: 'dist/code-worker.cjs',
