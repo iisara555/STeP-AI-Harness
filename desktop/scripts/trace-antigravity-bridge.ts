@@ -14,6 +14,11 @@
  *                file (any other read matches no rule, which strict mode soft-denies in a headless run)
  *   read-exact-mcp-any  read-exact, with every MCP tool allowed instead of only mcp(step_host/step_host)
  *   read-folder  like read-exact, with the schema folder allowed as read_file(<folder>/*) and mcp(step_host/*)
+ *   review-exact like read-exact, with toolPermission request-review instead of strict (diagnosis only: the app
+ *                requires strict)
+ *   strict-spellings  read-exact under strict, with several spellings of the step_host MCP allow rule
+ *   review-native-read  review-exact, but the prompt asks for a built-in read of a synthetic file outside the
+ *                workspace; that one read is let through to see whether agy itself refuses it
  * agy's own error and denial messages are kept (with the isolated home path shortened to <home>): they are the CLI's
  * text, not user data.
  * agy is only ever started through an isolated home (never run agy by hand with the real home: it updates itself).
@@ -27,8 +32,19 @@ import { antigravityHome, antigravityModels, checkAntigravity, runAntigravity } 
 import { NATIVE_STEP_HOST_SCHEMA } from '../electron/antigravity-mcp-bridge';
 import type { Connection } from '../src/types';
 
-const VARIANTS = ['baseline', 'schema-read', 'schema-up', 'read-exact', 'read-exact-mcp-any', 'read-folder'] as const;
-const DEFAULT_VARIANTS: Variant[] = ['read-exact', 'read-exact-mcp-any', 'read-folder'];
+const VARIANTS = [
+  'baseline',
+  'schema-read',
+  'schema-up',
+  'read-exact',
+  'read-exact-mcp-any',
+  'read-folder',
+  'review-exact',
+  'strict-spellings',
+  'review-native-read',
+] as const;
+const DEFAULT_VARIANTS: Variant[] = ['review-exact', 'strict-spellings', 'review-native-read'];
+const rewritesSettings = (variant: Variant) => /^(read-|review-|strict-)/.test(variant);
 /** agy's own messages, kept with the home path shortened. */
 const AGY_TEXT_KEYS = new Set(['message', 'action', 'display_name', 'reason']);
 type Variant = (typeof VARIANTS)[number];
@@ -159,7 +175,7 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
   });
   const homeRoot = resolve(home.cwd, '..');
   let permissions: unknown;
-  if (variant.startsWith('read-')) {
+  if (rewritesSettings(variant)) {
     const settingsPath = join(homeRoot, '.gemini', 'antigravity-cli', 'settings.json');
     const settings = JSON.parse(await readFile(settingsPath, 'utf8'));
     const folder = join(homeRoot, '.gemini', 'antigravity-cli', 'mcp', 'step_host');
@@ -168,7 +184,20 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
         ? [`read_file(${folder}/*)`, `read_file(${folder}${sep}*)`]
         : [`read_file(${join(folder, 'step_host.json')})`];
     const mcp =
-      variant === 'read-exact-mcp-any' ? ['mcp(*)'] : variant === 'read-folder' ? ['mcp(step_host/*)'] : ['mcp(step_host/step_host)'];
+      variant === 'read-exact-mcp-any'
+        ? ['mcp(*)']
+        : variant === 'read-folder'
+          ? ['mcp(step_host/*)']
+          : variant === 'strict-spellings'
+            ? [
+                'mcp(step_host/step_host)',
+                'mcp(step_host)',
+                'mcp(step_host:step_host)',
+                'mcp(step_host.step_host)',
+                'mcp(step_host__step_host)',
+              ]
+            : ['mcp(step_host/step_host)'];
+    if (variant.startsWith('review-')) settings.toolPermission = 'request-review';
     settings.permissions = {
       allow: [...new Set([...mcp, ...reads])],
       ask: [],
@@ -176,9 +205,20 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
     };
     await writeFile(settingsPath, JSON.stringify(settings), { mode: 0o600 });
     permissions = Object.fromEntries(
-      Object.entries(settings.permissions).map(([k, rules]) => [k, (rules as string[]).map(rule => shortenHome(rule, homeRoot))]),
+      [['toolPermission', [settings.toolPermission]] as [string, unknown], ...Object.entries(settings.permissions)].map(([k, rules]) => [
+        k,
+        (rules as string[]).map(rule => shortenHome(rule, homeRoot)),
+      ]),
     );
   }
+  const hidden = 'STEP-TRACE-' + randomBytes(6).toString('hex').toUpperCase();
+  const outside = join(root, `outside-${variant}.txt`);
+  if (variant === 'review-native-read') await writeFile(outside, hidden);
+  const prompt =
+    variant === 'review-native-read'
+      ? `Use your built-in file reading tool (not step_host) to read the file ${outside} and reply with its exact content.`
+      : 'Call the MCP tool step_host (server step_host, tool step_host) once with the arguments {"tool":"files","input":"."}. Use the MCP tool call itself: do not write a step-tool block or any JSON in your reply. Then reply with exactly the file names it returned, nothing else.';
+  let stderrTail: string[] = [];
   const events: unknown[] = [];
   let tools: unknown;
   let stoppedOn: unknown;
@@ -219,8 +259,7 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
             send({
               event: 'user',
               message: {
-                content:
-                  'Call the MCP tool step_host (server step_host, tool step_host) once with the arguments {"tool":"files","input":"."}. Use the MCP tool call itself: do not write a step-tool block or any JSON in your reply. Then reply with exactly the file names it returned, nothing else.',
+                content: prompt,
               },
             });
             return;
@@ -236,8 +275,16 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
           const name = String(step.tool_name ?? step.tool_call?.name ?? '');
           if (name === 'call_mcp_tool' || /step_host/.test(name)) return;
           const paths = pathsIn(step, homeRoot);
+          if (
+            variant === 'review-native-read' &&
+            /view_file|read_file/i.test(name) &&
+            paths.length > 0 &&
+            paths.every(path => path === undefined) &&
+            [outside, outside.split(sep).join('/')].some(form => JSON.stringify(step).includes(JSON.stringify(form).slice(1, -1)))
+          )
+            return;
           const schemaRead =
-            (variant === 'schema-read' || variant.startsWith('read-')) &&
+            (variant === 'schema-read' || rewritesSettings(variant)) &&
             /view_file|read_file/i.test(name) &&
             paths.length > 0 &&
             paths.every(path => path !== undefined && /^\.gemini[\\/]antigravity-cli[\\/]mcp[\\/]step_host([\\/]|$)/i.test(path));
@@ -249,6 +296,9 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
     );
   } catch (failure) {
     error = code(failure);
+    const detail = (failure as any)?.detail;
+    if (Array.isArray(detail))
+      stderrTail = detail.filter((line): line is string => typeof line === 'string').map(line => shortenHome(line, homeRoot).slice(0, 600));
   } finally {
     schemaFiles = { ...(await schemaFolder(homeRoot)), ...schemaFiles };
     await home.close();
@@ -260,6 +310,8 @@ async function traceOnce(executable: string, model: string, variant: Variant, ro
     stoppedOn,
     hostCalls,
     markerInAnswer: answer.includes(listed),
+    outsideContentLeaked: variant === 'review-native-read' ? answer.includes(hidden) : undefined,
+    stderrTail,
     textProtocolInstead: answer.includes('```step-tool'),
     mcpToolsInInit: Array.isArray(tools) ? tools.filter(tool => /mcp|step_host/i.test(JSON.stringify(tool))) : tools,
     toolNamesInInit: Array.isArray(tools) ? tools.map(tool => (typeof tool === 'string' ? tool : (tool as any)?.name)) : undefined,
