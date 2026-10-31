@@ -8,7 +8,7 @@ import { scrub, explainRuntimeFailure } from './diagnostics';
 import type { Connection, ModelOption } from '../src/types';
 import { providerSessionKey, type ProviderAdapter, type ProviderContext, type ProviderSession, type TokenCount } from './providers';
 import { combineUsage } from './usage';
-import { strictJsonSchema } from './json-schema';
+import { jsonSchemaInstruction, strictJsonSchema } from './json-schema';
 import { AntigravityMcpBridge, isGovernedBridgeTool, type GovernedBridgeExecutor } from './antigravity-mcp-bridge';
 
 const LIMIT = 4_000_000;
@@ -591,7 +591,12 @@ export class AntigravityAdapter implements ProviderAdapter {
         ...context,
         signal,
         nativeBridge: useNativeBridge ? context.nativeBridge : undefined,
-        system: [context.system || '', transportRules, ...(attempt ? [TOOL_RECOVERY_RULES] : [])].join('\n\n'),
+        system: [
+          context.system || '',
+          transportRules,
+          ...(context.jsonSchema ? [jsonSchemaInstruction(context.jsonSchema)] : []),
+          ...(attempt ? [TOOL_RECOVERY_RULES] : []),
+        ].join('\n\n'),
       };
       // Text is shown as it arrives. An attempt that fails takes its text back first, so the recovery attempt
       // (or the error) never leaves a stopped attempt's prose or tool requests on screen next to the new one.

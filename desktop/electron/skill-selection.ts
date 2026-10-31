@@ -39,6 +39,23 @@ export function highConfidenceSkill(routed: any, entries: Entry[], query: string
   return undefined;
 }
 
+/**
+ * Skip the extra LLM selection round-trip when there is no attached source text and either:
+ * - the request is a direct STeP organization knowledge lookup without a drafting/review deliverable cue, or
+ * - the router found no plausible procedure candidates and the message has no deliverable/procedure cue.
+ */
+export function shouldRunModelSkillSelection(routed: any, query: string, source: string, hasStrongKnowledge = false): boolean {
+  if (source.trim().length > 0) return true;
+  const deliverableCue =
+    /อ่านร่าง|ตรวจร่าง|ตรวจเอกสาร|ร่าง|เขียน|จัดทำ|ทำแผน|วางแผน|วิเคราะห์|ประเมิน|ออกแบบ|สร้าง|เตรียม|สรุปผล|คำนวณ|ตรวจสอบ|รีวิว|เปรียบเทียบ|แคปชัน|โพสต์|สคริปต์|บรีฟ|ใบเสนอราคา|สัญญา|บันทึกข้อความ|รายงาน|review|draft|write|create|plan|analyze|prepare|build|design|evaluate|audit/i.test(
+      query,
+    );
+  if (hasStrongKnowledge && !deliverableCue) return false;
+  const topScore = Number(routed?.ranked?.[0]?.score ?? routed?.candidateSkills?.[0]?.score ?? 0);
+  if (!deliverableCue && (!routed?.candidateSkills?.length || topScore < 0.22)) return false;
+  return true;
+}
+
 /** Only metadata enters selection. References, scripts, history and credentials are not discovered here. */
 export function prepareSkillSelection(entries: Entry[], query: string, source: string) {
   const rows = entries
@@ -47,12 +64,12 @@ export function prepareSkillSelection(entries: Entry[], query: string, source: s
       id: entry.name,
       description: String(entry.description || '')
         .replace(/\s+/g, ' ')
-        .slice(0, 300),
+        .slice(0, 180),
     }));
   const names = new Set(rows.map(row => row.id));
   return {
     system:
-      'You select ONE registered STeP procedure before the assistant answers. Return only the required JSON. ' +
+      'You select ONE registered STeP procedure before the assistant answers. Return only the required JSON: {"skillId":"<id from skill_catalog>"|null,"reason":"<short reason>"}. ' +
       'Select the Skill matching the requested deliverable, even when an attached excerpt already answers a domain question. ' +
       'Choose null for general conversation, arithmetic and simple self-contained language edits. Missing task details do not prevent selecting a clear procedure. ' +
       'Distinguish creating from reviewing: drafting new posts, captions or publicity copy uses step-writing; brand-tone-of-voice reviews the tone of an existing text. ' +
@@ -72,9 +89,10 @@ export function prepareSkillSelection(entries: Entry[], query: string, source: s
       additionalProperties: false,
     },
     parse(reply: string): string | null | undefined {
-      if (reply.length > 4000) return undefined;
+      if (reply.length > 100_000) return undefined;
       try {
         const text = extractStructuredJson(reply);
+        if (!text || text.length > 4000) return undefined;
         const value = JSON.parse(text);
         if (!value || typeof value !== 'object' || typeof value.reason !== 'string') return undefined;
         if (Object.keys(value).some(key => !['skillId', 'reason'].includes(key))) return undefined;

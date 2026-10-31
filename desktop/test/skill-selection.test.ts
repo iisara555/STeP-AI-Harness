@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { prepareSkillSelection, highConfidenceSkill } from '../electron/skill-selection';
+import { prepareSkillSelection, highConfidenceSkill, shouldRunModelSkillSelection } from '../electron/skill-selection';
 import { WorkService, type Harness } from '../electron/service';
 import { Store } from '../electron/store';
 import { selfContainedText } from '../electron/text-intent';
@@ -315,6 +315,37 @@ test('calibrated Thai trigger+intent queries fast-path via router and preload sk
     );
     assert.match(f.calls[0].system, /<skill_resource_manifest skill="project-pre-mortem">/);
     assert.match(f.calls[0].system, /<skill_template path="templates\/pre-mortem-matrix-template\.md"/);
+  } finally {
+    f.store.close();
+  }
+});
+
+test('shouldRunModelSkillSelection skips redundant selection when no source and request has strong knowledge without deliverable cue', () => {
+  assert.equal(shouldRunModelSkillSelection({ candidateSkills: [] }, 'ติดต่อฝ่ายบุคคลช่องทางไหน', '', true), false);
+  assert.equal(
+    shouldRunModelSkillSelection(
+      { candidateSkills: [{ skill: { name: 'brand-tone-of-voice' }, score: 0.1 }] },
+      'สอบถามระเบียบวันลาพักร้อน',
+      '',
+      true,
+    ),
+    false,
+  );
+  assert.equal(shouldRunModelSkillSelection({ candidateSkills: [] }, 'สวัสดีครับ', '', false), false);
+  assert.equal(shouldRunModelSkillSelection({ candidateSkills: [] }, 'ตรวจร่างนี้ให้หน่อย', '', false), true);
+  assert.equal(shouldRunModelSkillSelection({ candidateSkills: [] }, 'สวัสดีครับ', 'มีไฟล์แนบ', false), true);
+});
+
+test('organization knowledge chat without deliverable cues skips LLM selector call', async () => {
+  const f = fixture();
+  try {
+    await f.service.run(f.session.id, 'ติดต่อฝ่ายบุคคลช่องทางไหน', '', true, undefined, 'chat');
+    const done = f.store.session(f.session.id);
+    assert.deepEqual(
+      f.calls.map(c => c.selection),
+      [false],
+    );
+    assert.equal(done.runs!.at(-1)!.skillSelection, undefined);
   } finally {
     f.store.close();
   }
