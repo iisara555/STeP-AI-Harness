@@ -13,6 +13,10 @@ const SCOPES = ['private', 'project', 'team'];
 // A memory holds up to 4,000 characters of text; Thai takes 3 bytes per character in UTF-8, so the file limit is in
 // bytes with room for the name and metadata. Saving and listing use the same limit, so a saved memory always lists.
 const MEMORY_FILE_BYTES = 16_384;
+// Saving stops at 200 memories per scope. Listing reads more than that, so a folder that already went over (a team
+// folder written from several computers, or an older version's concurrent saves) still shows every memory to review.
+const MEMORY_LIMIT = 200;
+const MEMORY_LIST_FILES = 1000;
 async function canonicalPathRules(rules: PathRule[]) {
   const aliases = await Promise.all(
     rules
@@ -160,6 +164,13 @@ export function extractPreferences(session: Session) {
 
 export class Memories {
   private queue: Promise<void> = Promise.resolve();
+  // Saves and deletions run one at a time, so the 200-memory check and the write that follows it are one step.
+  private writes: Promise<unknown> = Promise.resolve();
+  private serial<T>(run: () => Promise<T>): Promise<T> {
+    const next = this.writes.then(run, run);
+    this.writes = next.catch(() => {});
+    return next;
+  }
   private confirming = new Set<string>();
   /** Bumped on every save or deletion, so a prompt built before an approval can tell its memories changed. */
   version = 0;
@@ -227,7 +238,7 @@ export class Memories {
     for (const scope of SCOPES as MemoryEntry['scope'][]) {
       try {
         const directory = await this.directory(scope);
-        for (const file of (await readdir(directory)).filter(f => /^[a-f0-9-]{36}\.md$/.test(f)).slice(0, 200)) {
+        for (const file of (await readdir(directory)).filter(f => /^[a-f0-9-]{36}\.md$/.test(f)).slice(0, MEMORY_LIST_FILES)) {
           try {
             const path = join(directory, file),
               info = await lstat(path);
@@ -257,7 +268,10 @@ export class Memories {
     return entries.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
   }
   /** `from` is set by the host for a confirmed proposal; what the renderer sends never sets a memory's origin. */
-  async save(raw: any, from?: Pick<MemoryEntry, 'origin' | 'origin_session' | 'origin_evidence'>) {
+  save(raw: any, from?: Pick<MemoryEntry, 'origin' | 'origin_session' | 'origin_evidence'>) {
+    return this.serial(() => this.saveNow(raw, from));
+  }
+  private async saveNow(raw: any, from?: Pick<MemoryEntry, 'origin' | 'origin_session' | 'origin_evidence'>) {
     const context = this.context(),
       policy = this.policy();
     const m = normalize(raw);
@@ -265,6 +279,8 @@ export class Memories {
     stableMemory(m.name + '\n' + m.text);
     const existing = raw.id ? (await this.list()).find(e => e.id === raw.id && e.scope === m.scope) : undefined;
     if (raw.id && !existing) throw new Error('MEMORY_NOT_FOUND');
+    // An edit names the version it started from; a memory saved again since then is not overwritten silently.
+    if (existing && typeof raw.updated_at === 'string' && raw.updated_at !== existing.updated_at) throw new Error('MEMORY_CONFLICT');
     if (existing) {
       m.id = existing.id;
       m.created_at = existing.created_at;
@@ -284,7 +300,8 @@ export class Memories {
         throw new Error('PATH_RULE_DENIED');
       await ensureGitignored(workspace, { strict: true });
     }
-    if (!existing && (await readdir(directory)).filter(f => /^[a-f0-9-]{36}\.md$/.test(f)).length >= 200) throw new Error('MEMORY_LIMIT');
+    if (!existing && (await readdir(directory)).filter(f => /^[a-f0-9-]{36}\.md$/.test(f)).length >= MEMORY_LIMIT)
+      throw new Error('MEMORY_LIMIT');
     if (context !== this.context() || policy !== this.policy()) throw new Error('WORKSPACE_CHANGED');
     const path = join(directory, m.id + '.md');
     if (existing) {
@@ -303,7 +320,10 @@ export class Memories {
     this.version++;
     return m;
   }
-  async remove(id: string) {
+  remove(id: string) {
+    return this.serial(() => this.removeNow(id));
+  }
+  private async removeNow(id: string) {
     const context = this.context(),
       policy = this.policy();
     const entry = (await this.list()).find(m => m.id === id);
