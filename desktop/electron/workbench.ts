@@ -54,6 +54,9 @@ function oneAtATime<T>(path: string, run: () => Promise<T>): Promise<T> {
 const REPLACE_FALLBACK = ['EPERM', 'EACCES', 'EBUSY', 'EXDEV', 'ENOTSUP', 'EROFS'];
 const CODE_EXTENSIONS = ['ts', 'tsx', 'mts', 'cts', 'js', 'jsx', 'mjs', 'cjs'];
 const CODE_SYMBOL_FILES = 50;
+const CODE_REFERENCE_FILES = 30;
+const CODE_SEARCH_PARTIAL = (limit: number) =>
+  `Partial result: the search stopped at its limit (${limit} code files), so a symbol that is not listed may still exist. Narrow it with a folder or file path.`;
 export class Workbench {
   executionAllowed: () => void = () => {};
   private children = new Map<string, ChildProcess>();
@@ -276,7 +279,13 @@ export class Workbench {
             if (kind && kind !== 'all' && s.kind !== kind) return false;
             return true;
           });
-          return { total: filtered.length, symbols: filtered.slice(0, limit), scannedFiles: 1, truncated: false };
+          return { total: filtered.length, symbols: filtered.slice(0, limit), scannedFiles: 1, truncated: false } as {
+            total: number;
+            symbols: typeof filtered;
+            scannedFiles: number;
+            truncated: boolean;
+            note?: string;
+          };
         }
       } catch (e: any) {
         if (e.message !== 'INVALID_PATH') throw e;
@@ -297,9 +306,16 @@ export class Workbench {
     const files: { path: string; text: string }[] = [];
     let truncated = false;
     for (const extension of CODE_EXTENSIONS) {
-      if (files.length >= CODE_SYMBOL_FILES) break;
       const found = await this.searchFiles(folder, { target: 'files', pattern: `**/*.${extension}`, maxFiles: 1000, maxResults: 500 });
-      truncated ||= Boolean(found.truncated);
+      if (files.length >= CODE_SYMBOL_FILES) {
+        // The file limit was reached on an earlier extension: any file of this one was not read.
+        if (found.total) {
+          truncated = true;
+          break;
+        }
+        continue;
+      }
+      truncated ||= Boolean(found.truncated || found.nextCursor);
       for (const item of found.matches) {
         if (files.length >= CODE_SYMBOL_FILES) {
           truncated = true;
@@ -314,35 +330,59 @@ export class Workbench {
       }
     }
 
-    return { ...searchSymbolsInFiles(files, { query, kind, limit }), scannedFiles: files.length, truncated };
+    return {
+      ...searchSymbolsInFiles(files, { query, kind, limit }),
+      scannedFiles: files.length,
+      fileLimit: CODE_SYMBOL_FILES,
+      truncated,
+      ...(truncated ? { note: CODE_SEARCH_PARTIAL(CODE_SYMBOL_FILES) } : {}),
+    };
   }
 
   async codeReferences(input: string, args: Record<string, unknown> = {}) {
     const symbol = (typeof args.symbol === 'string' && args.symbol.trim()) || input.trim();
     if (!symbol) throw new Error('INVALID_INPUT');
 
-    const searchRes = await this.searchFiles('.', {
-      target: 'content',
-      pattern: symbol,
-      maxFiles: 30,
-      maxResults: 100,
-    });
-
+    // Search code files only (one glob per extension), so documents and data files never use up the file limit.
     const seen = new Set<string>();
     const files: { path: string; text: string }[] = [];
-
-    for (const m of searchRes.matches) {
-      if (seen.has(m.path)) continue;
-      seen.add(m.path);
-      try {
-        const buffer = await this.bytes(m.path, 200000);
-        files.push({ path: m.path, text: buffer.toString('utf8') });
-      } catch {
-        // Skip unreadable files
+    let truncated = false,
+      searchedFiles = 0;
+    for (const extension of CODE_EXTENSIONS) {
+      if (truncated && files.length >= CODE_REFERENCE_FILES) break;
+      const searchRes = await this.searchFiles('.', {
+        target: 'content',
+        pattern: symbol,
+        glob: `**/*.${extension}`,
+        maxFiles: 1000,
+        maxResults: 500,
+      });
+      searchedFiles += searchRes.scannedFiles;
+      truncated ||= Boolean(searchRes.truncated || searchRes.nextCursor);
+      for (const m of searchRes.matches) {
+        if (seen.has(m.path)) continue;
+        if (files.length >= CODE_REFERENCE_FILES) {
+          truncated = true;
+          break;
+        }
+        seen.add(m.path);
+        try {
+          const buffer = await this.bytes(m.path, 200000);
+          files.push({ path: m.path, text: buffer.toString('utf8') });
+        } catch {
+          // Skip unreadable files
+        }
       }
     }
 
-    return findReferencesInFiles(files, symbol);
+    return {
+      ...findReferencesInFiles(files, symbol),
+      scannedFiles: files.length,
+      searchedFiles,
+      fileLimit: CODE_REFERENCE_FILES,
+      truncated,
+      ...(truncated ? { note: CODE_SEARCH_PARTIAL(CODE_REFERENCE_FILES) } : {}),
+    };
   }
 
   /** Runs approved REPL code in this task's session thread (`workerPath` is `repl-worker.cjs`). */

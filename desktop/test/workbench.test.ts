@@ -351,3 +351,54 @@ test('code_symbols without a file searches the whole workspace, nested folders a
     await f.close();
   }
 });
+
+test('code_symbols reports a partial search when the 50-file limit stops it before another extension', async () => {
+  const f = await fixture();
+  try {
+    for (let i = 0; i < 50; i++) await writeFile(join(f.root, `m${String(i).padStart(2, '0')}.ts`), `export const value${i} = ${i};\n`);
+    await writeFile(join(f.root, 'later.js'), 'export function findMeLater() {}\n');
+    const result = await f.tools.codeSymbols('', { query: 'findMeLater' });
+    assert.equal(result.scannedFiles, 50);
+    assert.equal(result.symbols.length, 0);
+    assert.equal(result.truncated, true);
+    assert.match(result.note || '', /Partial result/);
+    // Under the limit every extension is read and nothing is reported missing.
+    await rm(join(f.root, 'm00.ts'));
+    const full = await f.tools.codeSymbols('', { query: 'findMeLater' });
+    assert.deepEqual(
+      full.symbols.map(s => s.path),
+      ['later.js'],
+    );
+    assert.equal(full.truncated, false);
+    assert.equal(full.note, undefined);
+  } finally {
+    await f.close();
+  }
+});
+
+test('code_references searches code files only and reports when its 30-file limit cuts the result', async () => {
+  const f = await fixture();
+  try {
+    // Documents that mention the name come first alphabetically; they must not use up the file limit.
+    for (let i = 0; i < 40; i++)
+      await writeFile(join(f.root, `a-doc-${String(i).padStart(2, '0')}.md`), 'See SyntheticLedger in the code.\n');
+    await writeFile(join(f.root, 'z-ledger.ts'), 'export class SyntheticLedger {}\n');
+    await writeFile(join(f.root, 'z-use.js'), "import { SyntheticLedger } from './z-ledger';\nnew SyntheticLedger();\n");
+    const refs = await f.tools.codeReferences('SyntheticLedger');
+    assert.deepEqual(
+      refs.definitions.map(d => d.path),
+      ['z-ledger.ts'],
+    );
+    assert.ok(refs.references.some(r => r.path === 'z-use.js'));
+    assert.equal(refs.truncated, false);
+    assert.equal(refs.scannedFiles, 2);
+
+    for (let i = 0; i < 30; i++) await writeFile(join(f.root, `use-${String(i).padStart(2, '0')}.ts`), 'new SyntheticLedger();\n');
+    const many = await f.tools.codeReferences('SyntheticLedger');
+    assert.equal(many.scannedFiles, 30);
+    assert.equal(many.truncated, true);
+    assert.match(many.note || '', /Partial result/);
+  } finally {
+    await f.close();
+  }
+});
