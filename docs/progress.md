@@ -4,9 +4,11 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-10-30_
+_Last updated: 2026-10-31_
 
 ## Latest release
+
+- **Desktop v0.6.24 prepared (2026-10-31)**: the owner asked to release on 2026-10-31. 0.6.24 combines the merged UX/UI review work (#259–#263: tool pages, first-run setup and Settings, chat room and actions, plan step comments, task status dots, Google Workspace action list, tighter allowlists) with #261 (faster Gemini/Antigravity replies), #264 (prompt caching and self-healing hints) and #265 (code intelligence, approved JavaScript REPL, artifacts viewer, read-only subagents). Harness remains 0.7.7. Published via `Build STeP Desktop installers` (`desktop-release.yml`) on `main` with `publish` ticked after this PR merges; Thai release notes are pasted by the owner.
 
 - **Desktop v0.6.23 published (2026-10-30)**: release `desktop-v0.6.23` targets `7dde3d70c2162963ff42f618452a52077b050503` after merging #253. `Build STeP Desktop installers` workflow run `40910731745` (`publish=true`) succeeded across `build (macos-arm64)`, `build (windows-x64)` and `publish`, publishing Windows x64 and macOS Apple silicon installers and update feeds. Harness remains 0.7.7.
 
