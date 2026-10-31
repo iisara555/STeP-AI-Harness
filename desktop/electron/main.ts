@@ -1143,7 +1143,7 @@ async function main() {
     if (request.tool === 'vision_analyze' || request.tool === 'browser_vision') {
       if (!policyState.policy.features.vision) throw new Error('VISION_DISABLED');
       if (policyState.policy.checks.privacy) throw new Error('VISION_PRIVACY_REQUIRED');
-      if (!['openai', 'gemini', 'claude'].includes(scope.connection.provider) || !scope.analyze) throw new Error('VISION_UNAVAILABLE');
+      if (!takesImages(scope.connection.provider) || !scope.analyze) throw new Error('VISION_UNAVAILABLE');
       const prompt = typeof request.args?.prompt === 'string' ? request.args.prompt : 'Describe the image and identify uncertain details.';
       if (harness.privacy(prompt).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
       let image: VisionInput;
@@ -4365,8 +4365,13 @@ async function main() {
         let report: any = await harness.documentPrivacy(path, { includeRedacted: true }),
           images: VisionInput[] | undefined;
         // With privacy checks off, an image for a vision model is sent as it is, like other AI apps: no local OCR pass.
+        // That holds whichever attach button picked it (owner, 2026-10-31: local OCR reads too poorly to stand in for the
+        // picture), as long as the organization allows sending images.
         const directImage =
-          vision && imagesAccepted && !policyState.policy.checks.privacy && ['png', 'jpg', 'jpeg', 'webp'].includes(extension);
+          imagesAccepted &&
+          policyState.policy.features.vision &&
+          !policyState.policy.checks.privacy &&
+          ['png', 'jpg', 'jpeg', 'webp'].includes(extension);
         if (directImage) {
           const bytes = await readFile(path);
           if (bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
