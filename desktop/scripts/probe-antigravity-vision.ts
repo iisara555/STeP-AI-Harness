@@ -3,7 +3,7 @@ import { createHash, randomInt } from 'node:crypto';
 import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { mkdirSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
 import { ANTIGRAVITY_DENY, antigravityHome, antigravityModels, runAntigravity } from '../electron/antigravity';
@@ -106,23 +106,29 @@ function stepArguments(step: any): any {
   }
 }
 
+/** agy saves an MCP image result under its conversation folder: `brain/<conversation>/.system_generated/steps/<n>/media_<n>.<ext>`. */
+export const mediaStepsDir = (home: string, conversation: string) =>
+  join(home, '.gemini', 'antigravity-cli', 'brain', conversation, '.system_generated', 'steps');
+
 /**
  * agy 1.3.2 offers MCP tools through its generic call_mcp_tool, which must name this server and tool. The model may
- * first view_file agy's on-demand schema file for the tool; read_file(*) stays denied, so agy refuses that read itself.
+ * first view_file agy's on-demand schema file for the tool. agy does not hand an MCP image to the model directly: it
+ * saves it as a media file of that step and the model opens it with view_file (real agy 1.3.2, 2026-10-31), so a
+ * view_file of exactly such a file in this conversation's folder is allowed too. Nothing else passes.
  */
-export function allowedProbeStep(step: any, schemaFile: string) {
+export function allowedProbeStep(step: any, schemaFile: string, mediaDir?: string) {
   const name = step.tool_name ?? step.tool_call?.name ?? step.tool_info?.name;
   const args = stepArguments(step);
   if (name === 'call_mcp_tool')
     return Boolean(args) && typeof args === 'object' && args.ServerName === 'step_image_probe' && args.ToolName === 'read_probe_image';
-  if (name === 'view_file')
-    return (
-      Boolean(args) &&
-      typeof args === 'object' &&
-      typeof args.AbsolutePath === 'string' &&
-      Object.keys(args).length === 1 &&
-      resolve(args.AbsolutePath).toLowerCase() === resolve(schemaFile).toLowerCase()
-    );
+  if (name === 'view_file') {
+    if (!args || typeof args !== 'object' || typeof args.AbsolutePath !== 'string' || Object.keys(args).length !== 1) return false;
+    const path = resolve(args.AbsolutePath);
+    if (path.toLowerCase() === resolve(schemaFile).toLowerCase()) return true;
+    if (!mediaDir) return false;
+    const inside = relative(resolve(mediaDir), path);
+    return /^\d{1,6}[\\/]media_\d{1,3}\.(?:png|jpe?g|webp|gif)$/i.test(inside);
+  }
   return TOOL_NAMES.has(name);
 }
 
@@ -245,7 +251,7 @@ export async function runProbe(options: {
             if (step.step_type === 'tool' || step.tool_name !== undefined || step.tool_call !== undefined || step.tool_info !== undefined) {
               const name = String(step.tool_name ?? step.tool_call?.name ?? step.tool_info?.name ?? '?');
               if (!steps.includes(name)) steps.push(name);
-              if (!allowedProbeStep(step, schemaFile)) {
+              if (!allowedProbeStep(step, schemaFile, mediaStepsDir(isolatedHome, conversation))) {
                 // Shape only: names, keys and paths relative to the isolated home, never argument values or content.
                 const args = stepArguments(step);
                 const path = typeof args?.AbsolutePath === 'string' ? resolve(args.AbsolutePath) : undefined;

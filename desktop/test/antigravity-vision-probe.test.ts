@@ -192,6 +192,13 @@ test('probe steps: only call_mcp_tool for the probe tool and a view_file of its 
   assert.equal(allowedProbeStep(call({ ServerName: 'other', ToolName: 'read_probe_image' }), schema), false);
   assert.equal(allowedProbeStep({ tool_info: { name: 'view_file', parameters: { AbsolutePath: schema } } }, schema), true);
   assert.equal(allowedProbeStep({ tool_info: { name: 'view_file', parameters: { AbsolutePath: '/etc/passwd' } } }, schema), false);
+  const media = '/tmp/home/.gemini/antigravity-cli/brain/conv-1/.system_generated/steps';
+  const view = (path: string) => ({ tool_info: { name: 'view_file', parameters: { AbsolutePath: path } } });
+  assert.equal(allowedProbeStep(view(media + '/4/media_0.png'), schema, media), true);
+  assert.equal(allowedProbeStep(view(media + '/4/media_0.png'), schema), false);
+  assert.equal(allowedProbeStep(view(media + '/4/notes.md'), schema, media), false);
+  assert.equal(allowedProbeStep(view(media + '/../../../conv-2/.system_generated/steps/4/media_0.png'), schema, media), false);
+  assert.equal(allowedProbeStep(view(media + '/4/../../../../../../secret/media_0.png'), schema, media), false);
   assert.equal(allowedProbeStep({ tool_name: 'read_file' }, schema), false);
   assert.equal(allowedProbeStep({ tool_name: 'search_web' }, schema), false);
 });
