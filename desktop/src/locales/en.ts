@@ -23,6 +23,18 @@ import { uxToolsEn } from './ux-tools-en';
 import { uxReviewEn } from './ux-review-en';
 import { googleChangesEn } from './google-changes-en';
 export const en: Record<string, string> = {
+  'ปรับหน้าจอทั้งแอปตามรีวิว UX แชตมีพื้นที่มากขึ้น หน้าเครื่องมือเริ่มใช้ง่ายขึ้น และหน้าตั้งค่ากับการตั้งค่าเริ่มต้นอ่านง่ายขึ้น':
+    'App-wide UX review fixes: more room for chat, easier-to-start tool pages, and clearer first-run setup and Settings',
+  'เขียนความเห็นในแต่ละขั้นของแผนได้ แล้วให้ผู้ช่วยแก้แผนตามความเห็นก่อนลงมือ':
+    'Comment on each plan step and have the assistant revise the plan before it starts',
+  'รายการงานมีจุดสีบอกสถานะ รองาน กำลังทำ เสร็จ หรือไม่สำเร็จ และแจ้งเตือนเมื่องานรอคำตอบจากคุณ':
+    'Task list status dots show waiting, running, finished or failed, with a notification when a task needs your answer',
+  'ใต้คำตอบแสดงสิ่งที่ผู้ช่วยทำใน Google Workspace พร้อมปุ่มเปิดดู':
+    'Each answer lists what the assistant did in Google Workspace, with an Open button',
+  'ตอบเร็วขึ้นบน Gemini และ Antigravity โดยเฉพาะคำถามเรื่อง STeP และคำทักทาย':
+    'Faster replies on Gemini and Antigravity, especially for STeP questions and greetings',
+  'ผู้ช่วยบันทึกเอกสารทำงานไว้ใต้คำตอบให้เปิดดูในแอป และค้นโค้ด คำนวณ หรือให้ผู้ช่วยย่อยช่วยค้นคว้าได้ โดยถามคุณก่อนทุกครั้ง':
+    'The assistant saves working documents under the answer to open in the app, and can search code, calculate or ask a research subagent, always asking you first',
   'ผู้ช่วยตรวจไฟล์และเว็บ แสดงลำดับขั้นตอนที่ทำจริง อ่านไฟล์ เว็บ และข้อมูล Google โดยแก้ไฟล์เป็นร่างรอตรวจ':
     'File and web assistant shows actual tool steps, reads files, websites and Google data, and stages file edits for review',
   'ชุดหลักฐาน AFP แนะนำเอกสารตามประเภทกิจกรรม แยกขั้นตอนเคส หลักฐาน และการส่งออก พร้อมสรุปในไฟล์ PDF รวม':
