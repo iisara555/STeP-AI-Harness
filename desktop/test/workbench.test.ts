@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Store } from '../electron/store';
 import { Workbench, browserUrl } from '../electron/workbench';
+import { toolRemediationHint } from '../electron/tool-loop';
 import { toolRequests, loopRequests } from '../src/tools';
 import { defaultPolicy } from '../electron/policy';
 import { execFile } from 'node:child_process';
@@ -229,4 +230,39 @@ test('browser rejects local file and script schemes; model tool proposals remain
   assert.deepEqual(toolRequests('```step-tool\n{"tool":"terminal","input":"echo ok"}\n```'), [{ tool: 'terminal', input: 'echo ok' }]);
   assert.deepEqual(toolRequests('```step-tool\n{"tool":"eval","input":"evil"}\n```'), []);
   assert.deepEqual(toolRequests('```step-tool\nnot-json\n```'), []);
+});
+
+test('remediation hints match the failure codes the real patch and search tools throw', async () => {
+  const f = await fixture();
+  try {
+    await writeFile(join(f.root, 'note.txt'), 'alpha\nbeta\nalpha\n');
+    const failure = async (run: () => Promise<unknown>) => {
+      try {
+        await run();
+      } catch (error) {
+        return (error as Error).message;
+      }
+      throw new Error('expected a failure');
+    };
+    const noMatch = await failure(() => f.tools.patch('note.txt', { old_string: 'gamma', new_string: 'delta' }));
+    const ambiguous = await failure(() => f.tools.patch('note.txt', { old_string: 'alpha', new_string: 'delta' }));
+    assert.deepEqual([noMatch, ambiguous], ['PATCH_NO_MATCH', 'PATCH_AMBIGUOUS']);
+    assert.match(toolRemediationHint('patch', noMatch) || '', /Read the current file/);
+    assert.match(toolRemediationHint('patch', ambiguous) || '', /more surrounding lines/);
+
+    const args = { pattern: 'alpha', target: 'content', maxResults: 1 };
+    const first = await f.tools.searchFiles('.', args);
+    assert.ok(first.nextCursor);
+    await writeFile(join(f.root, 'note.txt'), 'alpha\nchanged\n');
+    const changed = await failure(() => f.tools.searchFiles('.', { ...args, cursor: first.nextCursor }));
+    assert.equal(changed, 'SEARCH_CHANGED');
+    assert.match(toolRemediationHint('search_files', changed) || '', /no args\.cursor/);
+    // Following the hint works: the same search without a cursor starts again.
+    assert.equal((await f.tools.searchFiles('.', args)).matches[0].text, 'alpha');
+    // The cursor the old hint suggested is refused by the search tool, so no hint may suggest it.
+    assert.equal(await failure(() => f.tools.searchFiles('.', { ...args, cursor: '0' })), 'INVALID_INPUT');
+    for (const code of [noMatch, ambiguous, changed]) assert.doesNotMatch(toolRemediationHint('x', code) || '', /cursor=0/);
+  } finally {
+    await f.close();
+  }
 });
