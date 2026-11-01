@@ -259,3 +259,30 @@ test('naming things is ordinary drafting work, naming people still needs review'
     assert.equal(evaluatePrivacyGate(input).action, 'human-confirm', input);
   }
 });
+
+test('vendor lists, file extensions and role or meeting names are not personal-name labels', () => {
+  for (const input of [
+    'ดูรายชื่อผู้ให้บริการที่ได้รับอนุมัติ',
+    'รายชื่อผู้ให้บริการ',
+    'ตรวจนามสกุลไฟล์ให้เป็น .docx',
+    'นามสกุลของไฟล์ต้องเป็น pdf',
+    'ไฟล์นามสกุล xlsx',
+    'นามสกุล .pptx',
+    'ระบุชื่อบทบาทในทีม',
+    'ชื่อ บทบาท',
+    'ชื่อการประชุม: ทบทวนแผน',
+    'ชื่อแบบฟอร์มขอใช้รถ',
+  ]) {
+    assert.equal(evaluatePrivacyGate(input).action, 'pass', input);
+  }
+  for (const input of [
+    'นามสกุล ใจดี',
+    'ชื่อ-นามสกุล',
+    'ชื่อผู้ให้บริการ: สมชาย ใจดี',
+    'ชื่อผู้ให้บริการ สมชาย ใจดี',
+    'ชื่อผู้ติดต่อ สมชาย',
+    'ชื่อพนักงาน',
+  ]) {
+    assert.notEqual(evaluatePrivacyGate(input).action, 'pass', input);
+  }
+});
