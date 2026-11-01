@@ -43,6 +43,29 @@ export function autoEffort(efforts: EffortOption[] | undefined, size: TaskSize) 
   return wanted && efforts?.some(e => e.id === wanted) ? wanted : undefined;
 }
 
+/**
+ * Antigravity model ids such as `gemini-3.8-flash-medium` already fix the reasoning level. agy rejects any extra
+ * `--effort` for them ("--model ... conflicts with --effort=low"), so such a model offers no levels and gets no flag.
+ */
+export function effortInModel(model?: string) {
+  return /-(?:low|medium|high|xhigh|max)$/.test(model || '');
+}
+
+/**
+ * The connection for the first Skill selection attempt. agy takes no `--effort` with an id that names its level, so for
+ * `gemini-3.8-flash-medium` (or -high, -xhigh, -max) it is the same model's `-low` id when agy lists it; otherwise the
+ * connection is unchanged. The caller asks the chosen model again when the -low reply is malformed or fails. Only Skill
+ * selection is measured (eval:selection, 2026-11-01); the answer, summary, check and repair keep the chosen model.
+ */
+export function auxiliaryConnection<T extends Pick<Connection, 'model' | 'models'> & { provider?: Connection['provider'] }>(
+  connection: T,
+): T {
+  if (connection.provider !== 'antigravity') return connection;
+  const base = /^(.+)-(?:medium|high|xhigh|max)$/.exec(connection.model || '')?.[1];
+  const low = base && `${base}-low`;
+  return low && connection.models?.some(m => m.id === low) ? { ...connection, model: low } : connection;
+}
+
 const ANTIGRAVITY_DEFAULT_EFFORTS: EffortOption[] = [{ id: 'low' }, { id: 'medium' }, { id: 'high' }];
 
 /** The catalog entry of the model this connection will run, if the provider listed one. */
@@ -52,6 +75,6 @@ export function modelOption(
   if (!connection) return undefined;
   const found =
     connection.models?.find(m => m.id === connection.model) || (!connection.model ? connection.models?.find(m => m.isDefault) : undefined);
-  if (found?.efforts?.length || connection.provider !== 'antigravity' || !connection.model) return found;
+  if (found?.efforts?.length || connection.provider !== 'antigravity' || !connection.model || effortInModel(connection.model)) return found;
   return { id: connection.model, label: found?.label || connection.model, efforts: ANTIGRAVITY_DEFAULT_EFFORTS };
 }
