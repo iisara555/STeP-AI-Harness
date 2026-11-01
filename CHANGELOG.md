@@ -6,7 +6,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-- Pick the Skill with the provider's small model on OpenAI and Gemini too (owner, 2026-11-01), as Gemini through Antigravity already does with `-low`: the GPT mini on OpenAI and Flash-Lite on the Gemini CLI, when the provider lists one. Claude keeps the chosen model: in a live comparison on 53 Skills and 8 general requests, Haiku picked as many right Skills as Sonnet (53/53, none wrong) but was not faster (p50 3.4 s against 3.0 s) and gave one more general request a Skill. A malformed or failed reply asks the chosen model again, and the answer, history summary, answer check and quality repair keep the chosen model. `npm run eval:selection` can now run in parts (`STEP_EVAL_CASES=1-12`) and join them (`npm run eval:selection -- merge <folders>`), so providers under the eval's 50-call and 200,000-token cap can be compared on the whole set.
+- Keep Skill selection on the chosen model for Claude, OpenAI and Gemini (owner, 2026-11-01); only Gemini through Antigravity tries `-low` first. In a live comparison on 53 Skills and 8 general requests, Claude Haiku picked as many right Skills as Sonnet (53/53, none wrong) but was not faster (p50 3.4 s against 3.0 s) and gave one more general request a Skill. OpenAI's mini and Gemini's Flash-Lite wait for their own comparison. `npm run eval:selection` can now run in parts (`STEP_EVAL_CASES=1-12`) and join them (`npm run eval:selection -- merge <folders>`), so providers under the eval's 50-call and 200,000-token cap can be compared on the whole set, and the selection's reasoning level now follows the model actually called.
 
 ## Desktop v0.6.25 (2026-11-01)
 

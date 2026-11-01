@@ -72,34 +72,7 @@ test("auxiliary calls on Antigravity move to the same model's listed -low id", (
   assert.equal(auxiliaryConnection(agy('gemini-3.8-flash')).model, 'gemini-3.8-flash', 'no level in the id: unchanged');
   assert.equal(auxiliaryConnection(agy('gemini-3.8-flash-medium', [])).model, 'gemini-3.8-flash-medium');
   const other = { provider: 'openai' as const, model: 'x-medium', models: [{ id: 'x-low', label: 'x' }] };
-  assert.equal(auxiliaryConnection(other), other, 'no -low mapping outside Antigravity');
-});
-
-test('Skill selection on OpenAI and the Gemini CLI tries the listed small model first; Claude keeps the chosen model (C6)', () => {
-  const list = (...ids: string[]) => ids.map(id => ({ id, label: id }));
-  const claude = [
-    { id: 'default', label: 'Default (recommended)', isDefault: true },
-    { id: 'opus', label: 'Opus' },
-    { id: 'haiku', label: 'Haiku' },
-  ];
-  const run = (provider: 'claude' | 'openai' | 'gemini' | 'compatible' | 'copilot', model: string, models: any[]) =>
-    auxiliaryConnection({ provider, model, models }).model;
-  // Owner kept Claude on the chosen model after eval:selection (Haiku no faster, one more general request given a Skill).
-  assert.equal(run('claude', 'opus', claude), 'opus');
-  assert.equal(run('claude', '', claude), '');
-  assert.equal(run('openai', 'gpt-5.5', list('gpt-5.5', 'gpt-5.4-mini', 'gpt-5.5-mini')), 'gpt-5.5-mini', 'same family first');
-  assert.equal(run('openai', 'gpt-5.5', list('gpt-5.5', 'gpt-5.4-mini')), 'gpt-5.4-mini');
-  assert.equal(run('openai', 'gpt-5.5-mini', list('gpt-5.5', 'gpt-5.5-mini')), 'gpt-5.5-mini');
-  assert.equal(run('openai', 'gpt-5.5', list('gpt-5.5', 'codex-mini')), 'gpt-5.5', 'only GPT minis');
-  assert.equal(
-    run('gemini', 'gemini-3.8-pro', list('gemini-3.1-flash-lite', 'gemini-3.8-flash-lite', 'gemini-3.8-pro')),
-    'gemini-3.8-flash-lite',
-  );
-  assert.equal(run('gemini', 'gemini-3.8-pro', list('gemini-3.1-flash-lite', 'gemini-3.1-flash-lite-image')), 'gemini-3.1-flash-lite');
-  assert.equal(run('gemini', 'gemini-3.8-flash-lite', list('gemini-3.8-flash-lite')), 'gemini-3.8-flash-lite');
-  assert.equal(run('gemini', 'gemini-3.8-pro', []), 'gemini-3.8-pro');
-  assert.equal(run('compatible', 'llama-70b', list('llama-8b-mini')), 'llama-70b', 'local and compatible models are unchanged');
-  assert.equal(run('copilot', 'gpt-5.5', list('gpt-5.5-mini')), 'gpt-5.5');
+  assert.equal(auxiliaryConnection(other), other, 'other providers are untouched');
 });
 
 async function effortsFor(run: { text: string; mode: 'chat' | 'draft'; chosen?: string; auto?: boolean }) {
