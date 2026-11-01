@@ -60,6 +60,7 @@ const featureNames: Record<string, string> = localized({
   learningReview: 'ทบทวนหาบทเรียนอัตโนมัติ',
   ocrTrial: 'บันทึกผลทดลอง OCR สำหรับทีมนำร่อง',
   answerCheck: 'ตรวจคำตอบเรื่อง STeP กับเอกสาร',
+  documentSelection: 'ให้ AI เลือกเอกสาร STeP ก่อนตอบ เมื่อค้นด้วยคำไม่เจอ',
   autoEffort: 'ปรับระดับการคิดตามขนาดงาน',
   maintenance: 'ตรวจข้อมูลที่จำ บทเรียน และ Skill ทุกวัน',
 });
@@ -78,6 +79,7 @@ const POLICY_GROUPS: [string, string[]][] = [
       'skillSuggestions',
       'autoEffort',
       'answerCheck',
+      'documentSelection',
       'vision',
       'receiptVision',
       'voice',

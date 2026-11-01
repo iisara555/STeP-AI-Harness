@@ -2940,6 +2940,7 @@ export const en: Record<string, string> = {
   ความจำที่ใช้ร่วมกันในทีม: 'Team-shared memory',
   'ให้ระบบเลือก Skill และถามเพิ่มให้เอง': 'Pick Skills and ask follow-up questions automatically',
   'เลือก Skill ที่เหมาะกับงานก่อนตอบ': 'Choose a suitable Skill before answering',
+  'ให้ AI เลือกเอกสาร STeP ก่อนตอบ เมื่อค้นด้วยคำไม่เจอ': 'Let the AI pick STeP documents before answering when keyword search finds none',
   อัปเดตแอปอัตโนมัติ: 'Automatic app updates',
   'ใช้แพ็กเกจ Claude Pro/Max': 'Use a Claude Pro/Max plan',
   ทบทวนหาบทเรียนอัตโนมัติ: 'Automatic lesson review',

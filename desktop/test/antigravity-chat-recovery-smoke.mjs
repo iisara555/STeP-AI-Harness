@@ -26,6 +26,7 @@ createInterface({input:process.stdin}).on('line',line=>{
  const prompt=JSON.parse(line).message.content;
  let selection;try{selection=JSON.parse(prompt);}catch{}
  if(selection && Object.hasOwn(selection,'sourceTruncated')){send({event:'result',result:{status:'SUCCESS',conversation_id:'fixture',num_turns:1,response:JSON.stringify({skillId:null,reason:'Recovery fixture'}),usage:{input_tokens:2,output_tokens:1,total_tokens:3}}});return;}
+ if(selection && Object.keys(selection).join()==='request'){send({event:'result',result:{status:'SUCCESS',conversation_id:'fixture',num_turns:1,response:JSON.stringify({documents:[],reason:'Recovery fixture'}),usage:{input_tokens:2,output_tokens:1,total_tokens:3}}});return;}
  const mode=fs.readFileSync(scenario,'utf8');fs.appendFileSync(calls,mode+'\\n');
  if(mode==='recover'||mode==='block'){
   if(mode==='recover')fs.writeFileSync(scenario,'answer');

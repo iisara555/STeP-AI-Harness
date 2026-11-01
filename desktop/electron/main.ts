@@ -424,6 +424,7 @@ async function main() {
     visionEnabled: () => policyState.policy.features.vision,
     antigravityBridge: () => policyState.policy.features.antigravityNativeBridge,
     answerCheck: () => policyState.policy.features.answerCheck,
+    documentSelection: () => policyState.policy.features.documentSelection,
     autoEffort: () => policyState.policy.features.autoEffort,
     skillMetadata: async id => {
       const m = await routing.loadSkillContextMetadata(id);

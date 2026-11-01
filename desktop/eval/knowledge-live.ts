@@ -11,7 +11,8 @@
  * Runtimes are the same as eval:selection (Antigravity only through an agy named by absolute path, in a throwaway home;
  * Claude, OpenAI and Gemini through eval/runtime.ts). Only `reference` and `skill` run; every other tool answers
  * EVAL_TOOL_DISABLED. The answer check is off, so each question is the answer's own calls. Questions are synthetic.
- * When the app asks back which Skill fits, the case's `reply` is sent once, as an employee would; still asking (or no
+ * STEP_EVAL_DOCUMENT_SELECTION=off turns A1 (an AI picks documents from the registry before answering) off for a
+ * same-day comparison with keyword search alone. When the app asks back which Skill fits, the case's `reply` is sent once, as an employee would; still asking (or no
  * reply) is reported as CLARIFY and counts as not reached.
  */
 import { execFileSync } from 'node:child_process';
@@ -39,6 +40,8 @@ export type Outcome = {
   earlier?: string;
   expected: string[];
   searched: string[];
+  /** Documents the AI picked from the registry before answering (A1, policy documentSelection). */
+  selected?: string[];
   opened: string[];
   keyword: boolean;
   reached: boolean;
@@ -53,13 +56,16 @@ export type Outcome = {
 /** The query Desktop searches for a chat turn (service.ts): the conversation's first request, then the new message. */
 export const turnQuery = (item: Case) => [...new Set([item.earlier, item.q].filter(Boolean))].join('\n');
 
-/** Right document reached: in the search excerpts or opened by the AI. A general question must reach none. */
-export function judge(item: Case, searched: string[], opened: string[]) {
+/**
+ * Right document reached: in the search excerpts, picked from the registry before the answer (A1), or opened by the AI.
+ * A general question must reach none.
+ */
+export function judge(item: Case, searched: string[], opened: string[], selected: string[] = []) {
   const expected = [item.doc].flat();
-  if (expected.includes('none')) return { keyword: !searched.length, reached: !searched.length && !opened.length };
+  if (expected.includes('none')) return { keyword: !searched.length, reached: !searched.length && !opened.length && !selected.length };
   return {
     keyword: expected.includes(searched[0]),
-    reached: [...searched, ...opened].some(id => expected.includes(id)),
+    reached: [...searched, ...selected, ...opened].some(id => expected.includes(id)),
   };
 }
 
@@ -87,7 +93,7 @@ export function report(meta: Record<string, string>, outcomes: Outcome[]) {
   const lines = [
     `# STeP knowledge, live (${meta.provider} ${meta.model})`,
     '',
-    `Harness ${meta.harness}, ${meta.date}. Reached = the right document was in the search excerpts or the AI opened it.`,
+    `Harness ${meta.harness}, ${meta.date}. Reached = the right document was in the search excerpts, picked from the registry before the answer, or opened by the AI. A1 ${meta.documentSelection || 'on'}.`,
     '',
     '| Questions | Keyword search right | Reached by the answer | Reached only because the AI opened it | Failed | p50 time | p50 AI rounds | Documents opened | Asked back first |',
     '| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
@@ -98,7 +104,7 @@ export function report(meta: Record<string, string>, outcomes: Outcome[]) {
     lines.push(
       `## ${o.reached ? 'reached' : 'MISSED'}: ${o.earlier ? `[${o.earlier}] ` : ''}${o.q}`,
       '',
-      `Expected ${o.expected.join(' or ')}; search ${o.searched.join(', ') || 'nothing'}; opened ${o.opened.join(', ') || 'nothing'}; ${o.rounds} rounds, ${seconds(o.ms)}${o.code ? `; ${o.code}` : ''}`,
+      `Expected ${o.expected.join(' or ')}; search ${o.searched.join(', ') || 'nothing'}; ${o.selected ? `picked ${o.selected.join(', ')}; ` : ''}opened ${o.opened.join(', ') || 'nothing'}; ${o.rounds} rounds, ${seconds(o.ms)}${o.code ? `; ${o.code}` : ''}`,
       '',
       o.answer.trim() ? '> ' + o.answer.trim().slice(0, 1500).replace(/\n/g, '\n> ') : '(no answer)',
       '',
@@ -114,6 +120,8 @@ export async function runKnowledge(options: {
   cases: Case[];
   live: Pick<Live, 'connection' | 'context' | 'run'>;
   onProgress?: (line: string) => void;
+  /** Policy documentSelection (A1); on by default like the app, off to compare with keyword search alone. */
+  documentSelection?: boolean;
 }): Promise<Outcome[]> {
   const { root, cases, live } = options,
     connection = live.connection;
@@ -150,6 +158,7 @@ export async function runKnowledge(options: {
         toolLoop: () => true,
         hybridSkillSelection: () => true,
         answerCheck: () => false,
+        documentSelection: () => options.documentSelection !== false,
       };
       const desktopTools = new DesktopTools(
         workbench,
@@ -194,6 +203,7 @@ export async function runKnowledge(options: {
         const done = store.session(session.id);
         const trace = done.runs?.at(-1);
         const turns = (done.runs || []).slice(before);
+        const selected = [...new Set(turns.flatMap(run => run.documentSelection?.documents || []))];
         code = trace?.code || (done.status === 'error' ? 'RUN_FAILED' : askedBack() ? 'CLARIFY' : '');
         const searched = [...new Set((await knowledge.search(turnQuery(item))).map(s => s.id))];
         const uniqueOpened = [...new Set(opened)];
@@ -202,8 +212,9 @@ export async function runKnowledge(options: {
           ...(item.earlier ? { earlier: item.earlier } : {}),
           expected: [item.doc].flat(),
           searched,
+          ...(selected.length ? { selected } : {}),
           opened: uniqueOpened,
-          ...judge(item, searched, uniqueOpened),
+          ...judge(item, searched, uniqueOpened, selected),
           // Still asking back after the reply (or with none): no answer was given, so nothing was reached.
           ...(code === 'CLARIFY' ? { reached: false } : {}),
           ...(asked ? { asked } : {}),
@@ -271,7 +282,13 @@ async function main(env = process.env) {
   const connection = { ...live.connection, model: model || live.connection.model };
   let outcomes: Outcome[];
   try {
-    outcomes = await runKnowledge({ root, cases, live: { ...live, connection }, onProgress: line => console.log(line) });
+    outcomes = await runKnowledge({
+      root,
+      cases,
+      live: { ...live, connection },
+      onProgress: line => console.log(line),
+      documentSelection: env.STEP_EVAL_DOCUMENT_SELECTION !== 'off',
+    });
   } finally {
     await live.close();
   }
@@ -285,6 +302,7 @@ async function main(env = process.env) {
   const meta = {
     provider: connection.provider,
     model: connection.model || '(provider default)',
+    documentSelection: env.STEP_EVAL_DOCUMENT_SELECTION === 'off' ? 'off' : 'on',
     date: new Date().toISOString(),
     harness: git(['rev-parse', '--short', 'HEAD']) + (git(['status', '--porcelain']) ? '-dirty' : ''),
   };

@@ -48,6 +48,7 @@ export const FEATURES = [
   'learningReview',
   'ocrTrial',
   'answerCheck',
+  'documentSelection',
   'autoEffort',
   'maintenance',
   'developmentMode',
@@ -244,6 +245,10 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // beyond the documents (owner's decision, 2026-10-18); it runs only for answers grounded in STeP documents, so general
   // questions are not slowed. Each check is one more model call; IT can set it to false.
   answerCheck: true,
+  // A1 (backend optimisation plan): when keyword search finds no strong match for a chat question, one structured model
+  // call picks the STeP documents and sections from the knowledge registry (metadata only), so the answer reads them in
+  // its first round instead of opening them one by one. Its gate is npm run eval:knowledge. IT can set it to false.
+  documentSelection: true,
   // When the employee has not picked a reasoning level, a short chat question gets a light level and a large task (a
   // Playbook, plan mode, a long request or many files) a deeper one, within the levels the model offers (electron/effort.ts).
   // The employee's choice always wins. IT can set it to false to always use the model default.

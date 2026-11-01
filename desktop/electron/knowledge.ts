@@ -123,6 +123,11 @@ export function expandAbbreviations(text: string) {
 export const MATCH_THRESHOLD = 0.3;
 /** A match this strong answers from the documents alone; weaker matches still allow a public web search afterwards. */
 export const STRONG_MATCH = 0.5;
+/**
+ * Sections an AI picked from the registry count as a match, but never as a strong one: they reach the answer from its
+ * first round, and a public web search or the answer check still treat the question as not settled by keywords.
+ */
+export const PICKED_SCORE = MATCH_THRESHOLD;
 const HISTORY_HEADING = /^(?:\d+\.\s*)?ประวัติการ(?:แก้ไข|เปลี่ยนแปลง)/;
 const REVISION_QUESTION = /รุ่นล่าสุด|รุ่นปัจจุบัน|ฉบับล่าสุด|ฉบับปัจจุบัน|ใช้ฉบับไหน|\brev\b|มีผลวันไหน|วันที่บังคับใช้/i;
 const MAX_SECTIONS = 4,
@@ -213,6 +218,29 @@ export class OrganizationKnowledge {
         return { ...entry, summary, sections: headings.slice(0, REGISTRY_SECTIONS) };
       })
       .filter((e): e is RegistryEntry => Boolean(e));
+  }
+  /**
+   * The sections an AI picked from the registry (A1), in pick order, within the same size limits as a search. A pick
+   * without sections reads its document's beginning. Headings are the registry's (clipped) headings.
+   */
+  async picked(picks: { id: string; sections: string[] }[]): Promise<KnowledgeSection[]> {
+    const all = await this.load();
+    const out: KnowledgeSection[] = [];
+    let chars = 0;
+    for (const pick of picks) {
+      const own = all.filter(s => s.id === pick.id);
+      const wanted = pick.sections.length
+        ? pick.sections.map(heading => own.slice(1).find(s => clip(s.heading, 90) === heading)).filter(Boolean)
+        : own.slice(0, 2);
+      for (const section of wanted as Section[]) {
+        if (out.length >= MAX_SECTIONS) return out;
+        const text = section.text.length > SECTION_CHARS ? section.text.slice(0, SECTION_CHARS) + '\n…' : section.text;
+        if (chars + text.length > MAX_CHARS) continue;
+        chars += text.length;
+        out.push({ id: section.id, title: section.title, path: section.path, heading: section.heading, text, score: PICKED_SCORE });
+      }
+    }
+    return out;
   }
   /** The best-matching sections, strongest first; empty when the documents do not cover the question. */
   async search(question: string): Promise<KnowledgeSection[]> {

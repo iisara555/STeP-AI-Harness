@@ -43,6 +43,7 @@ import { autoEffort, auxiliaryConnection, modelOption, taskSize } from './effort
 import { selfContainedText } from './text-intent';
 import { selectDiscovery } from './discovery';
 import { highConfidenceSkill, prepareSkillSelection, shouldRunModelSkillSelection } from './skill-selection';
+import { documentLookup, prepareDocumentSelection } from './document-selection';
 import { parseDocumentOutput } from '../src/document-output';
 import { GOOGLE_CHANGE_LIMIT, type GoogleChange } from '../src/google-changes';
 import { markdownDocument, documentText } from '../src/draft';
@@ -115,6 +116,8 @@ export type Harness = {
   hybridSkillSelection?: () => boolean;
   /** Trusted host instructions for a restricted tool surface; execution and consent gates still apply. */
   toolInstructions?: () => string;
+  /** Policy documentSelection: when keyword search is not strong, an AI picks the STeP documents from the registry (A1). */
+  documentSelection?: () => boolean;
   /** Policy answerCheck: check chat answers about STeP against the document excerpts they used. */
   answerCheck?: () => boolean;
   /** Optional 1-pass auto-repair when deterministic output quality checks find critical defects. */
@@ -324,6 +327,72 @@ export class WorkService {
    * Reads and indexes the organization documents and the Skill catalog before the first message, so the first STeP
    * question is answered as fast as later ones. Failures are left for the first real task to report.
    */
+  /**
+   * A1: one structured call picks the registered documents for a question keyword search did not match strongly, and
+   * returns their sections. Like the Skill selection it tries Antigravity's -low model first and asks the chosen model
+   * again when that reply is malformed. A failure returns no sections, so the answer goes on as before (registry and
+   * reference tool).
+   */
+  private async pickDocuments(
+    connection: Connection,
+    catalog: RegistryEntry[],
+    turn: string[],
+    trace: RunTrace,
+    signal: AbortSignal,
+    onUsage: (count: TokenCount) => void,
+  ): Promise<KnowledgeSection[]> {
+    const knowledge = this.knowledge();
+    if (!knowledge) return [];
+    const selection = prepareDocumentSelection(catalog, [...new Set(turn.filter(Boolean))].join('\n'));
+    const runtime = await this.runtime(connection, false);
+    const lowFirst = auxiliaryConnection(connection);
+    const attempts = lowFirst.model !== connection.model ? [lowFirst, connection] : [connection];
+    for (const [index, attemptConnection] of attempts.entries()) {
+      const last = index === attempts.length - 1;
+      const calledAt = Date.now();
+      const call: ProviderCallTrace = {
+        ...promptMetrics(selection.system, selection.prompt),
+        kind: 'document-selection',
+        outcome: 'running',
+        ms: 0,
+      };
+      (trace.providerCalls ||= []).push(call);
+      let counted: TokenCount = { input: 0, output: 0, total: 0 };
+      try {
+        const reply = await runtime.adapter.run(selection.prompt, attemptConnection, {
+          ...runtime.context,
+          signal,
+          system: selection.system,
+          jsonSchema: selection.schema,
+          effort: autoEffort(modelOption(attemptConnection)?.efforts, 'small'),
+          emit: () => {},
+          onUsage: count => {
+            counted = combineUsage(counted, count, 'max');
+          },
+          onTransport: info => {
+            call.transport = info;
+          },
+        });
+        const picks = selection.parse(reply);
+        call.outcome = picks === undefined ? 'error' : 'completed';
+        if (picks === undefined) {
+          call.code = 'INVALID_DOCUMENT_SELECTION';
+          if (last) return [];
+          continue;
+        }
+        return await knowledge.picked(picks);
+      } catch (error) {
+        call.outcome = 'error';
+        call.code = codeOf(error);
+        if (last || ['CANCELLED', 'LOGIN_REQUIRED', 'PROVIDER_QUOTA', 'PROVIDER_PERMISSION_DENIED'].includes(call.code || '')) return [];
+      } finally {
+        call.ms = Date.now() - calledAt;
+        if (counted.total) call.usage = counted;
+        onUsage(counted);
+      }
+    }
+    return [];
+  }
   /** Resolves once every background answer check has finished and been saved (tests, quitting). */
   async settledChecks() {
     while (this.checks.size) await Promise.all([...this.checks]);
@@ -962,7 +1031,7 @@ export class WorkService {
       // depends on them). A public web search still follows unless the documents clearly answer the question.
       const knowledgeTurn = mode !== 'image' && !options.draftOnly;
       const knowledge = knowledgeTurn ? this.knowledge() : undefined;
-      const known: KnowledgeSection[] = knowledge
+      let known: KnowledgeSection[] = knowledge
         ? await knowledge.search([...new Set([session.originalQuery, latest].filter(Boolean))].join('\n')).catch(() => [])
         : [];
       // A request to work in STeP MIS is done in the STeP Browser, not answered from the web or memory.
@@ -987,6 +1056,27 @@ export class WorkService {
       // With tools, the AI decides when to search the web (web_search), as in Claude Code and opencode. The host searches
       // ahead only for a run without tools.
       const modelTools = Boolean(!options.isolatedQuestion && !options.draftOnly && this.harness.tools && this.harness.toolLoop?.());
+      // A1: when keyword search has no strong match, one structured call picks the documents from the registry, so the
+      // answer reads them from its first round. It runs beside the Skill selection and never stops the run on failure.
+      const picking =
+        knowledge &&
+        chat &&
+        catalog.length &&
+        !textOnly &&
+        !internal &&
+        !options.isolatedQuestion &&
+        !options.workflow &&
+        !attachments &&
+        !(session.files || []).length &&
+        !session.documentTool &&
+        (known[0]?.score || 0) < STRONG_MATCH &&
+        documentLookup(latest, organizationText(latest)) &&
+        this.harness.documentSelection?.()
+          ? this.pickDocuments(connection, catalog, [session.originalQuery, latest], trace, controller.signal, count => {
+              searchUsage = combineUsage(searchUsage, count);
+              recordUsage(count);
+            }).catch(() => [] as KnowledgeSection[])
+          : undefined;
       if (
         this.harness.hybridSkillSelection?.() &&
         chat &&
@@ -1093,6 +1183,21 @@ export class WorkService {
           contract = checked.routingContract;
           trace.mode = String(contract.mode || '');
           trace.route = routeKey(contract);
+        }
+      }
+      if (picking) {
+        const picked = await picking;
+        checkAbort();
+        trace.documentSelection = { documents: [...new Set(picked.map(section => section.id))] };
+        // Picked sections lead; keyword matches of other documents follow within the same size limit.
+        const pickedKeys = new Set(picked.map(section => section.id + '\n' + section.heading));
+        const rest = known.filter(section => !pickedKeys.has(section.id + '\n' + section.heading));
+        let chars = picked.reduce((n, section) => n + section.text.length, 0);
+        known = [...picked];
+        for (const section of rest) {
+          if (known.length >= 5 || chars + section.text.length > 12000) break;
+          chars += section.text.length;
+          known.push(section);
         }
       }
       const searchPublic =
