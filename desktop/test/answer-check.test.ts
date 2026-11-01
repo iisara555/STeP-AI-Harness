@@ -11,7 +11,11 @@ const privacy: any = await import('../../src/modules/privacy/index.js');
 const catalog: any = await import('../../src/modules/skills/catalog.js');
 const root = resolve('..');
 
-function fixture(extra: Partial<Harness>, checkReply = '{"unsupported":[]}', connection: Partial<Connection> = {}) {
+function fixture(
+  extra: Partial<Harness>,
+  checkReply: string | (() => Promise<string>) = '{"unsupported":[]}',
+  connection: Partial<Connection> = {},
+) {
   const store = new Store(':memory:');
   store.put('connection', 'c', { id: 'c', provider: 'openai', model: 'fixture', ready: true, ...connection } as Connection);
   store.put('settings', 'main', { workspace: tmpdir(), team: 'cc' });
@@ -40,7 +44,7 @@ function fixture(extra: Partial<Harness>, checkReply = '{"unsupported":[]}', con
         run: async (prompt, c, context) => {
           const checking = /You check an AI answer/.test(context.system || '');
           calls.push({ prompt, system: context.system || '', schema: Boolean(context.jsonSchema), model: c.model });
-          if (checking) return checkReply;
+          if (checking) return typeof checkReply === 'string' ? checkReply : checkReply();
           context.emit('ติดต่อฝ่ายบุคคลทางอีเมลและโทรศัพท์ภายใน');
           return 'ติดต่อฝ่ายบุคคลทางอีเมลและโทรศัพท์ภายใน';
         },
@@ -84,9 +88,11 @@ test('with answerCheck on, the answer is checked against the same excerpts and t
   const f = fixture({ answerCheck: () => true }, '{"unsupported":[{"claim":"โทรศัพท์ภายใน","reason":"เอกสารไม่ได้ระบุเบอร์ภายใน"}]}');
   try {
     await f.service.run(f.session.id, QUERY, '', true, undefined, 'chat');
+    await f.service.settledChecks();
     const done = f.store.session(f.session.id);
     const answer = done.messages.at(-1)!;
     assert.equal(done.status, 'review');
+    assert.equal(answer.checkPending, undefined);
     assert.deepEqual(answer.check, { unsupported: [{ claim: 'โทรศัพท์ภายใน', reason: 'เอกสารไม่ได้ระบุเบอร์ภายใน' }] });
     const check = f.calls.find(c => /You check an AI answer/.test(c.system))!;
     assert.ok(check.schema, 'the checker asks for structured output');
@@ -107,9 +113,73 @@ test('a checker reply that is not the expected JSON leaves the answer without a 
   const f = fixture({ answerCheck: () => true }, 'I cannot check this.');
   try {
     await f.service.run(f.session.id, QUERY, '', true, undefined, 'chat');
+    await f.service.settledChecks();
     const done = f.store.session(f.session.id);
     assert.equal(done.status, 'review');
     assert.equal(done.messages.at(-1)!.check, undefined);
+    assert.equal(done.messages.at(-1)!.checkPending, undefined, 'a failed check clears the pending mark');
+  } finally {
+    f.store.close();
+  }
+});
+
+test('a chat answer is finished before its check returns; the result is added to that answer afterwards', async () => {
+  let release!: (reply: string) => void;
+  const held = new Promise<string>(resolve => (release = resolve));
+  const f = fixture({ answerCheck: () => true }, () => held);
+  try {
+    await f.service.run(f.session.id, QUERY, '', true, undefined, 'chat');
+    let done = f.store.session(f.session.id);
+    const answer = done.messages.at(-1)!;
+    assert.equal(done.status, 'review', 'the run ends without waiting for the check');
+    assert.equal(answer.role, 'assistant');
+    assert.equal(answer.check, undefined);
+    assert.ok(answer.checkPending, 'the answer shows that its check is still running');
+
+    // The next question can start while the first answer is still being checked.
+    await f.service.run(f.session.id, 'ฝ่ายบุคคลอยู่ชั้นไหน', '', true, undefined, 'chat');
+    release('{"unsupported":[{"claim":"โทรศัพท์ภายใน","reason":"เอกสารไม่ได้ระบุเบอร์ภายใน"}]}');
+    await f.service.settledChecks();
+    done = f.store.session(f.session.id);
+    const first = done.messages.find(m => m.at === answer.at)!;
+    assert.deepEqual(first.check, { unsupported: [{ claim: 'โทรศัพท์ภายใน', reason: 'เอกสารไม่ได้ระบุเบอร์ภายใน' }] });
+    assert.equal(first.checkPending, undefined);
+    assert.ok(done.messages.filter(m => m.role === 'assistant').length >= 2);
+    assert.ok(done.runs!.some(run => run.steps.at(-1)?.providerCalls?.some(call => call.kind === 'check')));
+  } finally {
+    f.store.close();
+  }
+});
+
+test('a check that finishes while another run is saving the conversation is not lost', async () => {
+  let release!: (reply: string) => void;
+  const held = new Promise<string>(resolve => (release = resolve));
+  let checks = 0,
+    runs = 0;
+  const f = fixture(
+    {
+      answerCheck: () => true,
+      // The second run reads the conversation, then waits here while the first answer's check lands and is saved;
+      // the run then saves its own earlier copy of the conversation over it.
+      modelLimits: async () => {
+        if (++runs === 2) {
+          release('{"unsupported":[]}');
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        return {};
+      },
+    },
+    () => (++checks === 1 ? held : Promise.resolve('{"unsupported":[]}')),
+  );
+  try {
+    await f.service.run(f.session.id, QUERY, '', true, undefined, 'chat');
+    const first = f.store.session(f.session.id).messages.at(-1)!;
+    assert.ok(first.checkPending);
+    await f.service.run(f.session.id, QUERY, '', true, undefined, 'chat');
+    await f.service.settledChecks();
+    const saved = f.store.session(f.session.id).messages.find(m => m.at === first.at)!;
+    assert.deepEqual(saved.check, { unsupported: [] });
+    assert.equal(saved.checkPending, undefined);
   } finally {
     f.store.close();
   }

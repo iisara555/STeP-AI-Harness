@@ -210,6 +210,8 @@ export type Message = {
   docSources?: string[];
   /** Policy answerCheck: statements about STeP that the document excerpts did not support (empty: all supported). */
   check?: { unsupported: { claim: string; reason: string }[] };
+  /** When the background answer check of this answer started; removed when its result (or failure) is saved. */
+  checkPending?: string;
   /** Files the AI wrote in this answer: applied to the workspace, or staged for review in the changes tab (id). */
   written?: { path: string; id: string; status: 'applied' | 'staged' }[];
   /** The note a drafting run leaves in chat; the document itself is the proposal, so this is never opened as one. */
