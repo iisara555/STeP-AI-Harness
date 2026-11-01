@@ -28,6 +28,7 @@
     "eval:golden": "tsx eval/golden.ts",
     "eval:features": "tsx eval/feature-matrix.ts",
     "eval:context": "tsx eval/context-efficiency.ts",
+    "eval:diagnostics": "tsx eval/diagnostics-summary.ts",
     "eval:office": "tsx eval/office-usability.ts",
     "eval:skill-benefit": "node eval/office-skill-benefit/eval.mjs",
     "eval:harness-parity": "node eval/harness-parity/eval.mjs"
