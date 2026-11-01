@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { WorkService, type Harness } from '../electron/service';
-import { autoEffort, effortInModel, modelOption, taskSize, type TaskSignals } from '../electron/effort';
+import { autoEffort, auxiliaryConnection, effortInModel, modelOption, taskSize, type TaskSignals } from '../electron/effort';
 import { defaultPolicy } from '../electron/policy';
 import { Store } from '../electron/store';
 import type { Connection } from '../src/types';
@@ -57,6 +57,22 @@ test('Antigravity ids that already name a level offer no extra levels', () => {
     modelOption({ provider: 'antigravity', model: 'gemini-3.8-flash' })?.efforts?.map(e => e.id),
     ['low', 'medium', 'high'],
   );
+});
+
+test("auxiliary calls on Antigravity move to the same model's listed -low id", () => {
+  const models = ['gemini-3.8-flash-low', 'gemini-3.8-flash-medium', 'gemini-3.8-flash-high', 'gemini-3.1-pro-high'].map(id => ({
+    id,
+    label: id,
+  }));
+  const agy = (model: string, list = models) => ({ provider: 'antigravity' as const, model, models: list });
+  assert.equal(auxiliaryConnection(agy('gemini-3.8-flash-medium')).model, 'gemini-3.8-flash-low');
+  assert.equal(auxiliaryConnection(agy('gemini-3.8-flash-high')).model, 'gemini-3.8-flash-low');
+  assert.equal(auxiliaryConnection(agy('gemini-3.8-flash-low')).model, 'gemini-3.8-flash-low');
+  assert.equal(auxiliaryConnection(agy('gemini-3.1-pro-high')).model, 'gemini-3.1-pro-high', 'no -low listed: unchanged');
+  assert.equal(auxiliaryConnection(agy('gemini-3.8-flash')).model, 'gemini-3.8-flash', 'no level in the id: unchanged');
+  assert.equal(auxiliaryConnection(agy('gemini-3.8-flash-medium', [])).model, 'gemini-3.8-flash-medium');
+  const other = { provider: 'openai' as const, model: 'x-medium', models: [{ id: 'x-low', label: 'x' }] };
+  assert.equal(auxiliaryConnection(other), other, 'other providers are untouched');
 });
 
 async function effortsFor(run: { text: string; mode: 'chat' | 'draft'; chosen?: string; auto?: boolean }) {
