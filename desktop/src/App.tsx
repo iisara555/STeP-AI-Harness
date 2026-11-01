@@ -145,6 +145,8 @@ const PERMISSION_SHORT: Record<string, string> = {
 };
 
 const TOOLS_KEY = 'step.sidebarTools';
+/** A background answer check that started within its step budget; a stale mark (the app closed mid-check) shows nothing. */
+const checkStillRunning = (startedAt?: string) => Boolean(startedAt) && Date.now() - Date.parse(startedAt!) < 10 * 60_000;
 
 export default function App() {
   const api = window.step;
@@ -2273,6 +2275,12 @@ export default function App() {
                           })
                         }
                       />
+                    )}
+                    {!message.check && checkStillRunning(message.checkPending) && (
+                      <p className="answer-check pending small muted" role="status">
+                        <LoaderCircle size={13} className="spin" aria-hidden="true" />
+                        {t('กำลังตรวจคำตอบกับเอกสาร STeP')}
+                      </p>
                     )}
                     {message.check &&
                       (message.check.unsupported.length ? (

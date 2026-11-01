@@ -480,7 +480,8 @@
   font-variant-numeric: tabular-nums;
 }
 .doc-sources,
-.answer-check.ok {
+.answer-check.ok,
+.answer-check.pending {
   display: flex;
   align-items: flex-start;
   gap: 6px;
