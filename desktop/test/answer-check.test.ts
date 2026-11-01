@@ -126,26 +126,22 @@ test('parseAnswerCheck accepts the JSON reply, trims items and caps them at five
   assert.equal(parseAnswerCheck('{"other":1}'), undefined);
 });
 
-test("on Antigravity, the answer check runs on the same model's -low id when agy lists it; the answer keeps the chosen model", async () => {
+test('on Antigravity, the answer check and the answer stay on the chosen model even when agy lists a -low id', async () => {
   const models = ['gemini-3.8-flash-low', 'gemini-3.8-flash-medium', 'gemini-3.8-flash-high'].map(id => ({ id, label: id }));
-  for (const [listed, expected] of [
-    [models, 'gemini-3.8-flash-low'],
-    [models.slice(1), 'gemini-3.8-flash-medium'],
-  ] as const) {
-    const f = fixture({ answerCheck: () => true }, '{"unsupported":[]}', {
-      provider: 'antigravity',
-      mode: 'subscription',
-      model: 'gemini-3.8-flash-medium',
-      models: [...listed],
-    });
-    try {
-      await f.service.run(f.session.id, QUERY, '', true, undefined, 'chat');
-      const check = f.calls.find(c => /You check an AI answer/.test(c.system))!;
-      assert.equal(check.model, expected);
-      const answers = f.calls.filter(c => !/You check an AI answer/.test(c.system) && !c.schema);
-      assert.ok(answers.length && answers.every(c => c.model === 'gemini-3.8-flash-medium'), 'the answer keeps the chosen model');
-    } finally {
-      f.store.close();
-    }
+  const f = fixture({ answerCheck: () => true }, '{"unsupported":[]}', {
+    provider: 'antigravity',
+    mode: 'subscription',
+    model: 'gemini-3.8-flash-medium',
+    models,
+  });
+  try {
+    await f.service.run(f.session.id, QUERY, '', true, undefined, 'chat');
+    const check = f.calls.find(c => /You check an AI answer/.test(c.system))!;
+    // The -low id has only been measured for Skill selection (2026-11-01); the check that catches unsupported claims keeps the chosen model.
+    assert.equal(check.model, 'gemini-3.8-flash-medium');
+    const answers = f.calls.filter(c => !/You check an AI answer/.test(c.system) && !c.schema);
+    assert.ok(answers.length && answers.every(c => c.model === 'gemini-3.8-flash-medium'), 'the answer keeps the chosen model');
+  } finally {
+    f.store.close();
   }
 });

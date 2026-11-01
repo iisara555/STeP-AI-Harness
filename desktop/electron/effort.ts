@@ -52,9 +52,10 @@ export function effortInModel(model?: string) {
 }
 
 /**
- * The connection for an auxiliary call (Skill selection, history summary, answer check). agy takes no `--effort` with
- * an id that names its level, so for `gemini-3.8-flash-medium` (or -high, -xhigh, -max) these calls switch to the same
- * model's `-low` id when agy lists it; otherwise the connection is unchanged. The answer itself keeps the chosen model.
+ * The connection for the first Skill selection attempt. agy takes no `--effort` with an id that names its level, so for
+ * `gemini-3.8-flash-medium` (or -high, -xhigh, -max) it is the same model's `-low` id when agy lists it; otherwise the
+ * connection is unchanged. The caller asks the chosen model again when the -low reply is malformed or fails. Only Skill
+ * selection is measured (eval:selection, 2026-11-01); the answer, summary, check and repair keep the chosen model.
  */
 export function auxiliaryConnection<T extends Pick<Connection, 'model' | 'models'> & { provider?: Connection['provider'] }>(
   connection: T,
