@@ -9,7 +9,7 @@
  */
 import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { posix, resolve, win32 } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export type Call = {
@@ -223,6 +223,8 @@ export function report(rows: Row[]) {
 
 /** Where the installed app writes its log (Electron userData of "@step-cmu/desktop"). */
 export function defaultLogPath(platform = process.platform, env = process.env, home = homedir()) {
+  // The path module of the target platform, so the result is right whichever system runs this.
+  const { join } = platform === 'win32' ? win32 : posix;
   const base =
     platform === 'win32'
       ? env.APPDATA || join(home, 'AppData', 'Roaming')

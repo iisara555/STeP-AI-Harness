@@ -99,8 +99,8 @@ test('percentile uses the nearest rank', () => {
 
 test('finds the installed app log on each platform', () => {
   assert.equal(
-    defaultLogPath('win32', { APPDATA: 'C:\\Users\\a\\AppData\\Roaming' }, 'C:\\Users\\a').replace(/\\/g, '/'),
-    'C:/Users/a/AppData/Roaming/@step-cmu/desktop/logs/diagnostics.jsonl',
+    defaultLogPath('win32', { APPDATA: 'C:\\Users\\a\\AppData\\Roaming' }, 'C:\\Users\\a'),
+    'C:\\Users\\a\\AppData\\Roaming\\@step-cmu\\desktop\\logs\\diagnostics.jsonl',
   );
   assert.equal(defaultLogPath('darwin', {}, '/Users/a'), '/Users/a/Library/Application Support/@step-cmu/desktop/logs/diagnostics.jsonl');
   assert.equal(defaultLogPath('linux', {}, '/home/a'), '/home/a/.config/@step-cmu/desktop/logs/diagnostics.jsonl');
