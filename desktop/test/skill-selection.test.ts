@@ -312,30 +312,50 @@ test('a failed -low selection is retried on the chosen model; quota is not', asy
   }
 });
 
-test('Claude selects on the listed Haiku first, with only the levels Haiku offers, and answers on the chosen model', async () => {
+test('OpenAI selects on the listed GPT mini first, with only the levels the mini offers, and answers on the chosen model', async () => {
+  const openai = {
+    provider: 'openai',
+    model: 'gpt-5.5',
+    models: [
+      { id: 'gpt-5.5', label: 'GPT-5.5', efforts: [{ id: 'low' }, { id: 'medium' }, { id: 'high' }] },
+      { id: 'gpt-5.5-mini', label: 'GPT-5.5 mini' },
+    ],
+  };
+  const f = fixture(model => (model === 'gpt-5.5-mini' ? '{"skillId":"document-review"' : REVIEW), {}, openai);
+  try {
+    await f.service.run(f.session.id, 'อ่านร่างนี้ว่ามีอะไรขาดบ้าง', 'ร่างจำลอง', true, undefined, 'chat');
+    assert.deepEqual(
+      f.calls.filter(c => c.selection).map(c => [c.model, c.effort]),
+      [
+        ['gpt-5.5-mini', undefined],
+        ['gpt-5.5', 'low'],
+      ],
+      'a malformed mini reply is asked again on the chosen model',
+    );
+    assert.deepEqual(f.store.session(f.session.id).runs!.at(-1)!.skillSelection, { method: 'model', skill: 'document-review' });
+    assert.ok(f.calls.filter(c => !c.selection).every(c => c.model === 'gpt-5.5'));
+  } finally {
+    f.store.close();
+  }
+});
+
+test('Claude selects once on the chosen model even when Haiku is listed (owner, 2026-11-01)', async () => {
   const claude = {
     provider: 'claude',
     mode: 'subscription',
-    model: 'opus',
+    model: 'sonnet',
     models: [
-      { id: 'opus', label: 'Opus', efforts: [{ id: 'low' }, { id: 'medium' }, { id: 'high' }] },
+      { id: 'sonnet', label: 'Sonnet', efforts: [{ id: 'low' }, { id: 'medium' }] },
       { id: 'haiku', label: 'Haiku' },
     ],
   };
-  const f = fixture(model => (model === 'haiku' ? '{"skillId":"document-review"' : REVIEW), {}, claude);
+  const f = fixture(REVIEW, {}, claude);
   try {
     await f.service.run(f.session.id, 'อ่านร่างนี้ว่ามีอะไรขาดบ้าง', 'ร่างจำลอง', true, undefined, 'chat');
-    const selections = f.calls.filter(c => c.selection);
     assert.deepEqual(
-      selections.map(c => [c.model, c.effort]),
-      [
-        ['haiku', undefined],
-        ['opus', 'low'],
-      ],
-      'a malformed Haiku reply is asked again on the chosen model',
+      f.calls.filter(c => c.selection).map(c => [c.model, c.effort]),
+      [['sonnet', 'low']],
     );
-    assert.deepEqual(f.store.session(f.session.id).runs!.at(-1)!.skillSelection, { method: 'model', skill: 'document-review' });
-    assert.ok(f.calls.filter(c => !c.selection).every(c => c.model === 'opus'));
   } finally {
     f.store.close();
   }

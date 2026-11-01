@@ -1024,9 +1024,9 @@ export class WorkService {
           );
           const selectionRuntime = await this.runtime(connection, false);
           // The selection first runs on a smaller model: the -low id on Antigravity (live comparison 2026-11-01: no wrong
-          // Skill, about 7 s faster, but 2 of 61 replies malformed), the listed Haiku, GPT mini or Flash-Lite on Claude,
-          // OpenAI and the Gemini CLI (owner, C6). A malformed or failed reply asks the chosen model again, so a request
-          // never loses its Skill to the smaller model.
+          // Skill, about 7 s faster, but 2 of 61 replies malformed), the listed GPT mini or Flash-Lite on OpenAI and the
+          // Gemini CLI (owner, C6; Claude keeps the chosen model). A malformed or failed reply asks the chosen model
+          // again, so a request never loses its Skill to the smaller model.
           const lowFirst = auxiliaryConnection(connection);
           const attempts = lowFirst.model !== connection.model ? [lowFirst, connection] : [connection];
           for (const [index, attemptConnection] of attempts.entries()) {

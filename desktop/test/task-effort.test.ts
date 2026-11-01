@@ -75,7 +75,7 @@ test("auxiliary calls on Antigravity move to the same model's listed -low id", (
   assert.equal(auxiliaryConnection(other), other, 'no -low mapping outside Antigravity');
 });
 
-test('Skill selection on Claude, OpenAI and the Gemini CLI tries the listed small model first (C6)', () => {
+test('Skill selection on OpenAI and the Gemini CLI tries the listed small model first; Claude keeps the chosen model (C6)', () => {
   const list = (...ids: string[]) => ids.map(id => ({ id, label: id }));
   const claude = [
     { id: 'default', label: 'Default (recommended)', isDefault: true },
@@ -84,11 +84,9 @@ test('Skill selection on Claude, OpenAI and the Gemini CLI tries the listed smal
   ];
   const run = (provider: 'claude' | 'openai' | 'gemini' | 'compatible' | 'copilot', model: string, models: any[]) =>
     auxiliaryConnection({ provider, model, models }).model;
-  assert.equal(run('claude', 'opus', claude), 'haiku');
-  assert.equal(run('claude', '', claude), 'haiku', 'the provider default is not small either');
-  assert.equal(run('claude', 'haiku', claude), 'haiku');
-  assert.equal(run('claude', 'claude-sonnet-5-5', [{ id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5' }]), 'claude-haiku-5-5');
-  assert.equal(run('claude', 'opus', [{ id: 'opus', label: 'Opus' }]), 'opus', 'no Haiku listed: unchanged');
+  // Owner kept Claude on the chosen model after eval:selection (Haiku no faster, one more general request given a Skill).
+  assert.equal(run('claude', 'opus', claude), 'opus');
+  assert.equal(run('claude', '', claude), '');
   assert.equal(run('openai', 'gpt-5.5', list('gpt-5.5', 'gpt-5.4-mini', 'gpt-5.5-mini')), 'gpt-5.5-mini', 'same family first');
   assert.equal(run('openai', 'gpt-5.5', list('gpt-5.5', 'gpt-5.4-mini')), 'gpt-5.4-mini');
   assert.equal(run('openai', 'gpt-5.5-mini', list('gpt-5.5', 'gpt-5.5-mini')), 'gpt-5.5-mini');

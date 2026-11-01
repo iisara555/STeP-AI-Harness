@@ -51,9 +51,12 @@ export function effortInModel(model?: string) {
   return /-(?:low|medium|high|xhigh|max)$/.test(model || '');
 }
 
-/** The small model of each provider's family that Skill selection may try first (owner, C6, 2026-11-01). */
+/**
+ * The small model of each provider's family that Skill selection may try first (owner, C6, 2026-11-01). Claude is not
+ * here: Haiku against Sonnet (eval:selection, 2026-11-01) picked no Skill faster and gave one general request a Skill,
+ * so the owner kept Claude on the chosen model.
+ */
 const SMALL_MODEL: Partial<Record<Connection['provider'], RegExp>> = {
-  claude: /haiku/i,
   openai: /^gpt-[\w.]*-mini$/i,
   gemini: /^gemini-[\w.-]*-flash-lite$/i,
 };
@@ -61,10 +64,10 @@ const SMALL_MODEL: Partial<Record<Connection['provider'], RegExp>> = {
 /**
  * The connection for the first Skill selection attempt; the caller asks the chosen model again when that reply is
  * malformed or fails. agy takes no `--effort` with an id that names its level, so for `gemini-3.8-flash-medium` (or
- * -high, -xhigh, -max) it is the same model's `-low` id (measured with eval:selection, 2026-11-01). Claude, OpenAI and
- * the Gemini CLI use the small model of the provider's own list (owner, 2026-11-01): Haiku, the chosen GPT's `-mini`
- * (else another listed GPT mini) and the chosen version's Flash-Lite (else another listed one). Only a model the
- * provider listed is used, the chosen model is kept when it is already small, and other providers are unchanged. The
+ * -high, -xhigh, -max) it is the same model's `-low` id (measured with eval:selection, 2026-11-01). OpenAI and the
+ * Gemini CLI use the small model of the provider's own list (owner, 2026-11-01): the chosen GPT's `-mini` (else another
+ * listed GPT mini) and the chosen version's Flash-Lite (else another listed one). Only a model the provider listed is
+ * used, the chosen model is kept when it is already small, and other providers (Claude included) are unchanged. The
  * answer, summary, check and repair keep the chosen model.
  */
 export function auxiliaryConnection<T extends Pick<Connection, 'model' | 'models'> & { provider?: Connection['provider'] }>(
@@ -78,17 +81,14 @@ export function auxiliaryConnection<T extends Pick<Connection, 'model' | 'models
   }
   const small = connection.provider && SMALL_MODEL[connection.provider];
   if (!small) return connection;
-  // Claude lists aliases ("haiku") and full ids, and names the family in the label.
-  const isSmall = (m: ModelOption) => small.test(m.id) || (connection.provider === 'claude' && small.test(m.label || ''));
+  const isSmall = (m: ModelOption) => small.test(m.id);
   const listed = (connection.models || []).filter(isSmall);
   const chosen = connection.models?.find(m => m.id === model) || (!model ? connection.models?.find(m => m.isDefault) : undefined);
   if (!listed.length || small.test(model) || (chosen && isSmall(chosen))) return connection;
   const family =
     connection.provider === 'openai'
       ? listed.find(m => m.id === `${model}-mini`)
-      : connection.provider === 'gemini'
-        ? listed.find(m => m.id.startsWith((/^gemini-[\d.]+-/.exec(model) || [''])[0] || '\0'))
-        : listed.find(m => m.id === 'haiku');
+      : listed.find(m => m.id.startsWith((/^gemini-[\d.]+-/.exec(model) || [''])[0] || '\0'));
   return { ...connection, model: (family || listed[0]).id };
 }
 
