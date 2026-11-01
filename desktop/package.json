@@ -26,6 +26,7 @@
     "format": "prettier --config .prettierrc.json --write \"electron/**/*.{ts,cjs}\" \"src/**/*.{ts,tsx,css}\" \"test/**/*.{ts,mjs}\" \"eval/**/*.{ts,mjs,json}\" \"scripts/**/*.{mjs,cjs}\" build.mjs vite.config.ts \"../gateway/receipt/*.ts\"",
     "format:check": "prettier --config .prettierrc.json --check \"electron/**/*.{ts,cjs}\" \"src/**/*.{ts,tsx,css}\" \"test/**/*.{ts,mjs}\" \"eval/**/*.{ts,mjs,json}\" \"scripts/**/*.{mjs,cjs}\" build.mjs vite.config.ts \"../gateway/receipt/*.ts\"",
     "eval:golden": "tsx eval/golden.ts",
+    "eval:selection": "tsx eval/skill-selection-live.ts",
     "eval:features": "tsx eval/feature-matrix.ts",
     "eval:context": "tsx eval/context-efficiency.ts",
     "eval:diagnostics": "tsx eval/diagnostics-summary.ts",
