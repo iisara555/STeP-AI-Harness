@@ -19,7 +19,7 @@ import type {
 import { Store } from './store';
 import { ProviderSession, type ProviderAdapter, type ProviderContext, type TokenCount } from './providers';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
-import { webSources } from '../src/web';
+import { usedWebSources, webSources } from '../src/web';
 import { brokenRequests, loopRequests } from '../src/tools';
 import { speakingStyleRules } from '../src/speaking-styles';
 import { ToolLoop, TOOL_RULES, BROWSER_RULES, type LoopHost } from './tool-loop';
@@ -957,6 +957,9 @@ export class WorkService {
       let retrieved = '';
       // What the AI's own web_search calls returned in this run, for the sources shown under the answer.
       const searched: string[] = [];
+      // Public pages the AI opened with a web tool in this run; with the links the answer cites, they pick which
+      // web_search hits are shown as the answer's sources.
+      const browsed = new Set<string>();
       let searchUsage: TokenCount = { input: 0, output: 0, total: 0 };
       // Every chat or draft turn reads the organization's own documents first (a lookup Skill such as hr-policy-lookup
       // depends on them). A public web search still follows unless the documents clearly answer the question.
@@ -1798,6 +1801,7 @@ export class WorkService {
             execute: (request, signal) => {
               checkAbort();
               if (request.tool === 'reference' && request.input) opened.add(request.input);
+              if (['web_fetch', 'web_extract', 'browser'].includes(request.tool) && request.input) browsed.add(request.input);
               const done = host.execute(request, signal);
               if (request.tool === 'changes' && request.content !== undefined)
                 void done.then(
@@ -1986,6 +1990,11 @@ export class WorkService {
           sources,
           at: new Date().toISOString(),
         });
+      // The host's own pre-search summary is the answer's evidence, so all its links show. A web_search tool result is a
+      // raw hit list (it once showed a drama's pages under writing advice); only hits the answer used are shown.
+      const shownSources = [...webSources(retrieved), ...usedWebSources(searched.join('\n\n'), handoff, browsed)]
+        .filter((source, index, all) => all.findIndex(other => other.url === source.url) === index)
+        .slice(0, 12);
       const answeredAt = new Date().toISOString();
       session.messages.push({
         role: 'assistant',
@@ -1999,7 +2008,7 @@ export class WorkService {
         ...(artifacts.size ? { artifacts: [...artifacts.values()] } : {}),
         ...(check ? { check } : {}),
         ...(checkLater ? { checkPending: answeredAt } : {}),
-        ...(retrieved || searched.length ? { webSources: webSources([retrieved, ...searched].filter(Boolean).join('\n\n')) } : {}),
+        ...(shownSources.length ? { webSources: shownSources } : {}),
       });
       finish(session, 'review');
       this.store.save(session);

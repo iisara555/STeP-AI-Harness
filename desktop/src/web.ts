@@ -18,12 +18,32 @@ export function publicSourceUrl(value: string) {
     return '';
   }
 }
-export function webSources(text: string): WebSource[] {
+export function webSources(text: string, keep: (url: string) => boolean = () => true): WebSource[] {
   const sources: WebSource[] = [];
-  for (const match of text.slice(0, 60000).matchAll(/\[([^\]\n]{1,250})\]\((https?:\/\/[^\s)]+)\)/g)) {
+  for (const match of text.slice(0, 200000).matchAll(/\[([^\]\n]{1,250})\]\((https?:\/\/[^\s)]+)\)/g)) {
     const url = publicSourceUrl(match[2]);
-    if (url && !sources.some(s => s.url === url)) sources.push({ title: match[1], url });
+    if (url && keep(url) && !sources.some(s => s.url === url)) sources.push({ title: match[1], url });
     if (sources.length === 12) break;
   }
   return sources;
+}
+
+// The key two links share when they name the same page: no fragment, no trailing slash, host without "www.".
+function sourceKey(value: string) {
+  const href = publicSourceUrl(value);
+  if (!href) return '';
+  const url = new URL(href);
+  url.hash = '';
+  url.hostname = url.hostname.replace(/^www\./, '');
+  return url.href.replace(/\/+$/, '');
+}
+// A web_search result list holds every hit the search engine returned, related or not. Only the hits the answer
+// cites, or pages the AI opened with a web tool, are the answer's sources.
+export function usedWebSources(results: string, answer: string, opened: Iterable<string> = []): WebSource[] {
+  const used = new Set<string>();
+  for (const link of [...(answer.slice(0, 200000).match(/https?:\/\/[^\s<>"'\])]+/g) || []), ...opened]) {
+    const key = sourceKey(link.replace(/[.,;:!?]+$/, ''));
+    if (key) used.add(key);
+  }
+  return used.size ? webSources(results, url => used.has(sourceKey(url))) : [];
 }

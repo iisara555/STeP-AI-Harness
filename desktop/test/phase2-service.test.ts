@@ -88,7 +88,7 @@ test('every connection searches via the host without a native provider search or
         assert.equal(query, 'public synthetic query');
         assert.equal(signal.aborted, false);
         searches++;
-        return '[Synthetic public source](https://www.example.org/announcement)';
+        return '[Synthetic public source](https://www.example.org/announcement)\n[Unrelated drama episode](https://www.example.net/drama-ep1)';
       },
       tools: async scope => ({
         enabled: () => true,
@@ -119,8 +119,60 @@ test('every connection searches via the host without a native provider search or
     assert.equal(store.session(session.id).status, 'review', provider);
     assert.equal(searches, 1, provider);
     assert.equal(calls, 2, provider);
+    // Only the hit the answer cites is a source; the unrelated hit in the same result list is not shown.
+    assert.deepEqual(
+      store.session(session.id).messages.at(-1)?.webSources,
+      [{ title: 'Synthetic public source', url: 'https://www.example.org/announcement' }],
+      provider,
+    );
     store.close();
   }
+});
+test('web_search hits an answer does not use are not shown as its sources', async () => {
+  const store = new Store(':memory:');
+  store.put('connection', 'c', { id: 'c', provider: 'antigravity', model: 'synthetic', ready: true } as Connection);
+  store.put('settings', 'main', { workspace: tmpdir() });
+  const session = store.create('c', 'cc');
+  let calls = 0;
+  const harness: Harness = {
+    root: tmpdir(),
+    route: async () => ({ routingContract: { mode: 'GENERAL', authority: { status: 'ALLOW' }, mandatoryReferences: [] } }),
+    contextPolicy: () => ({ history: 'ignore', carryover: false }),
+    privacy: privacy.evaluatePrivacyGate,
+    skillMetadata: async () => null,
+    documentPrivacy: async () => null,
+    nextOutput: async () => null,
+    toolLoop: () => true,
+    publicSearch: async () =>
+      '[Royal Betrothal EP01](https://www.example.net/drama-ep1)\n[Royal Betrothal cast](https://www.example.com/cast)',
+    tools: async scope => ({
+      enabled: () => true,
+      check: async () => {},
+      readOnly: () => true,
+      outgoing: async text => text,
+      execute: request => scope.search(request.input!),
+    }),
+  };
+  const service = new WorkService(
+    store,
+    harness,
+    async () => ({
+      context: { cwd: tmpdir(), env: {} },
+      adapter: {
+        run: async () => {
+          calls++;
+          if (calls === 1) return '```step-tool\n{"tool":"web_search","input":"public synthetic query"}\n```';
+          return 'Writing advice from general knowledge, no web source used.';
+        },
+      },
+    }),
+    () => {},
+  );
+  await service.run(session.id, 'Help me write a promo post', '', false, undefined, 'chat');
+  assert.equal(store.session(session.id).status, 'review');
+  assert.equal(calls, 2);
+  assert.equal(store.session(session.id).messages.at(-1)?.webSources, undefined);
+  store.close();
 });
 test('chat and draft both run gated tools and count retries and every model turn', async () => {
   for (const mode of ['chat', 'draft'] as const) {

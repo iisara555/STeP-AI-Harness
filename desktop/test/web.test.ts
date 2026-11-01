@@ -7,7 +7,7 @@ import { Store } from '../electron/store';
 import { WorkService, type Harness } from '../electron/service';
 import { CodexAdapter, GeminiAdapter, ClaudeAdapter } from '../electron/providers';
 import { geminiTools } from '../electron/runtime-policy';
-import { publicSourceUrl, webSources } from '../src/web';
+import { publicSourceUrl, usedWebSources, webSources } from '../src/web';
 import type { Connection, RunEvent } from '../src/types';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
 const routing: any = await import('../../src/modules/router/service.js');
@@ -62,6 +62,24 @@ test('public sources reject credentials, scripts, local hosts and IP literals', 
   assert.deepEqual(webSources(evidence + '\n' + evidence + '\n[Bad](javascript:alert)'), [
     { title: 'Government fixture', url: 'https://www.thaigov.go.th/example' },
   ]);
+});
+test('only search hits the answer cites or the AI opened are its sources', () => {
+  const hits = [
+    '[Holiday announcement](https://www.thaigov.go.th/news/1)',
+    '[Drama EP01](https://www.viu.com/ott/th/ep1)',
+    '[Drama cast](https://www.example.org/cast#top)',
+    '[Read page](https://www.example.com/page/)',
+  ].join('\n');
+  // Cited with a different "www." and trailing punctuation still matches; uncited hits are dropped.
+  assert.deepEqual(usedWebSources(hits, 'See https://thaigov.go.th/news/1.', ['https://example.com/page']), [
+    { title: 'Holiday announcement', url: 'https://www.thaigov.go.th/news/1' },
+    { title: 'Read page', url: 'https://www.example.com/page/' },
+  ]);
+  assert.deepEqual(usedWebSources(hits, 'ตามประกาศ [ที่นี่](https://www.thaigov.go.th/news/1)'), [
+    { title: 'Holiday announcement', url: 'https://www.thaigov.go.th/news/1' },
+  ]);
+  assert.deepEqual(usedWebSources(hits, 'General writing advice with no links.'), []);
+  assert.deepEqual(usedWebSources(hits, 'Bad [x](javascript:alert(1)) http://127.0.0.1/'), []);
 });
 test('public holidays route to GENERAL with governance even with a CC profile; internal HR and authority remain gated', async () => {
   const publicResult = await routing.queryStepRouter(query, { team: 'cc', cluster: '', workspaceDir: tmpdir() });
