@@ -128,9 +128,9 @@ const ENGLISH_SENSITIVE = /\b(?:medical\s+record|medical\s+history|health\s+reco
 const NAME_TABLE_HEADER = /ชื่อ\s*[-–]?\s*(?:นามสกุล|สกุล)|(?:^|[\r\n|,\t])\s*(?:ชื่อ|นามสกุล|full\s*name|first\s*name|last\s*name|surname)\s*(?=[|,\t\r\n]|$)/im;
 // "ชื่อ" is only a personal-name signal when it labels a value ("ชื่อ:", "ชื่อ สมชาย") or names a person
 // ("ชื่อผู้…", "ชื่อพนักงาน"). Naming things ("ตั้งชื่อแคมเปญ", "ชื่อโครงการ") is ordinary drafting work.
-const NOT_PERSON_NOUN = 'โครงการ|บริษัท|องค์กร|หน่วยงาน|เรื่อง|เอกสาร|ไฟล์|แคมเปญ|งาน|สินค้า|บริการ|แบรนด์|หลักสูตร|กิจกรรม';
-const PERSON_NAME_LABEL = `(?<!ตั้ง|คิด|เปลี่ยน)ชื่อ(?:\\s*[:：=]|\\s+(?!(?:${NOT_PERSON_NOUN}))(?=[\\u0E01-\\u0E2EA-Za-z])|\\s*[-–]|จริง|เล่น|สกุล|ผู้|นัก|พนักงาน|ลูกค้า|บุคคล|เจ้าหน้าที่|อาจารย์|ครู|วิทยากร|บิดา|มารดา|คู่สมรส|บุตร)`;
-const UNRESOLVED_ID_LABEL = new RegExp(String.raw`นามสกุล|ผู้(?:เข้าอบรม|สมัคร)\s*[:：]|` + PERSON_NAME_LABEL + String.raw`|หนังสือเดินทาง|ใบ(?:อนุญาต)?ขับขี่|บัตรเครดิต|วัน(?:เดือนปี)?เกิด|\b(?:passport|line\s*id|credit\s*card|date\s*of\s*birth|dob|surname|full\s*name|first\s*name|last\s*name)\b`, 'i');
+const NOT_PERSON_NOUN = 'โครงการ|บริษัท|องค์กร|หน่วยงาน|เรื่อง|เอกสาร|ไฟล์|แคมเปญ|งาน|สินค้า|บริการ|แบรนด์|หลักสูตร|กิจกรรม|การประชุม|ประชุม|บทบาท|ตำแหน่ง|ฝ่าย|ทีม|แผนก|ระบบ|เว็บไซต์|แบบฟอร์ม|ฟอร์ม|หัวข้อ|รายการ|ผู้ให้บริการ|ตาราง|แม่แบบ';
+const PERSON_NAME_LABEL = `(?<!ตั้ง|คิด|เปลี่ยน)ชื่อ(?:\\s*[:：=]|\\s+(?!(?:${NOT_PERSON_NOUN}))(?=[\\u0E01-\\u0E2EA-Za-z])|\\s*[-–]|จริง|เล่น|สกุล|ผู้(?!ให้บริการ(?!\\s*[:：=]|\\s+[\\u0E01-\\u0E2EA-Za-z]))|นัก|พนักงาน|ลูกค้า|บุคคล|เจ้าหน้าที่|อาจารย์|ครู|วิทยากร|บิดา|มารดา|คู่สมรส|บุตร)`;
+const UNRESOLVED_ID_LABEL = new RegExp(String.raw`(?<!ไฟล์\s{0,3})นามสกุล(?!\s*(?:ของ)?\s*ไฟล์|\s*\.[A-Za-z0-9]{2,5}\b)|ผู้(?:เข้าอบรม|สมัคร)\s*[:：]|` + PERSON_NAME_LABEL + String.raw`|หนังสือเดินทาง|ใบ(?:อนุญาต)?ขับขี่|บัตรเครดิต|วัน(?:เดือนปี)?เกิด|\b(?:passport|line\s*id|credit\s*card|date\s*of\s*birth|dob|surname|full\s*name|first\s*name|last\s*name)\b`, 'i');
 
 function isLuhnCard(value) {
   const digits = normalizeDigits(value);
