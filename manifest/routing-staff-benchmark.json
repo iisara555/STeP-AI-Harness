@@ -3,7 +3,8 @@
   "notes": [
     "Synthetic staff-style requests written 2026-10-26: four per routed Skill, phrased the way employees type them, with and without trigger words.",
     "Measures two Router views: the confident pick (routingConfidence HIGH, what Desktop offers as a Skill suggestion and autoRouting selects) and the evidence pick (the top candidate with trigger-keyword or path evidence, what a host without AI skill selection such as the Webapp should use). AI (hybrid) skill selection is not measured.",
-    "Limits only tighten: a change that improves routing tightens them in the same pull request."
+    "Limits only tighten: a change that improves routing tightens them in the same pull request.",
+    "desktopSelection (2026-11-01): Desktop hybrid selection measured through WorkService with a selector that always names the expected Skill (desktop/test/skill-selection-benchmark.test.ts). Router fast path 90 right, 3 wrong; 100 of 212 requests wait for the AI selection call; 19 start without their Skill preloaded; 1/8 general requests get a Skill. Accepting every HIGH router pick would save 13 calls but add 5 wrong Skills, so it was not done."
   ],
   "limits": {
     "confident": {
@@ -15,7 +16,14 @@
       "maxWrongSkill": 8
     },
     "maxGeneralMatched": 1,
-    "minAuthorityHeld": 3
+    "minAuthorityHeld": 3,
+    "desktopSelection": {
+      "minRouterRight": 90,
+      "maxRouterWrong": 3,
+      "maxSkippedSkill": 19,
+      "maxSelectionCalls": 100,
+      "maxGeneralPicked": 1
+    }
   },
   "skills": {
     "step-skill-authoring": [
