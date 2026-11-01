@@ -61,10 +61,12 @@ await new Promise((ok, fail) => {
 });
 
 const home = await mkdtemp(join(tmpdir(), 'step-receipt-'));
-// Private trial APIs remain tested separately from the simplified employee UI.
+// Private trial APIs remain tested separately from the simplified employee UI. Local-only is no longer the default
+// (receipts go to the employee's AI), so this smoke sets it to keep the no-model-call path covered.
 await writeFile(
   join(home, 'desktop-policy.json'),
   JSON.stringify({
+    receiptLocalOnly: true,
     features: { ocrTrial: true },
     receiptCloud: { url: 'https://ocr.example.test', model: 'gemini-3.8-flash' },
   }),
