@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Add a knowledge test set of staff questions worded differently from the STeP documents and of follow-up questions (`desktop/eval/knowledge-paraphrases.json`, `desktop/test/knowledge-paraphrase.test.ts`). Keyword search finds the right document for 15 of 38 reworded questions and 7 of 8 follow-ups today; CI fails if a change lowers either score, so later search improvements can be measured. Nothing employees see changes.
+
 ## Desktop v0.6.25 (2026-11-01)
 
 - Show a chat answer about STeP as finished without waiting for its answer check (owner, 2026-11-01). The check against the STeP documents now runs after the answer is saved: a small "กำลังตรวจคำตอบกับเอกสาร STeP" line sits under the answer until the result (or nothing, if the check fails) is added to it, and the next question can be asked meanwhile. On Gemini through Antigravity the check took about 46 seconds of a one-minute answer. A side question still waits for its check.

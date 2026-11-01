@@ -1,0 +1,199 @@
+{
+  "note": "Synthetic staff questions worded differently from the organization documents (A3 of the backend optimisation plan, 2026-11-01), and follow-up questions searched the way Desktop searches a chat turn (the first request of the conversation and the new message, joined by a newline). doc lists the registered document(s) that answer each question; none means outside the organization documents. Used by test/knowledge-paraphrase.test.ts: the score may not drop below its floor, and the floor is raised whenever a retrieval change lifts the score. The 61-question corpus in knowledge-questions.json is separate.",
+  "paraphrases": [
+    {
+      "q": "หยุดพักร้อนได้ปีละกี่วัน",
+      "doc": "hr-personnel-welfare-2569"
+    },
+    {
+      "q": "ไม่สบายหยุดงานได้กี่วันต่อปี",
+      "doc": "hr-personnel-welfare-2569"
+    },
+    {
+      "q": "คลอดลูกหยุดงานได้นานแค่ไหน",
+      "doc": "hr-personnel-welfare-2569"
+    },
+    {
+      "q": "ลาบวชได้กี่วัน",
+      "doc": "hr-personnel-welfare-2569"
+    },
+    {
+      "q": "ไปหาหมอเบิกเงินคืนได้ไหม",
+      "doc": "hr-personnel-welfare-2569"
+    },
+    {
+      "q": "มาทำงานวันเสาร์อาทิตย์ได้เงินเพิ่มไหม",
+      "doc": "hr-personnel-welfare-2569"
+    },
+    {
+      "q": "ต้องเข้าออฟฟิศกี่โมง",
+      "doc": "hr-personnel-welfare-2569"
+    },
+    {
+      "q": "ใส่ยีนส์มาทำงานได้ไหม",
+      "doc": "hr-personnel-welfare-2569"
+    },
+    {
+      "q": "ไม่ขาดไม่ลาทั้งเดือนได้เงินพิเศษเท่าไร",
+      "doc": "hr-personnel-welfare-2569"
+    },
+    {
+      "q": "เพิ่งเริ่มงานใหม่มีสิทธิ์ลากี่วัน",
+      "doc": "hr-personnel-welfare-2569"
+    },
+    {
+      "q": "จะติดต่อ HR ต้องทำยังไง",
+      "doc": "hr-service-channels"
+    },
+    {
+      "q": "วันหยุดนักขัตฤกษ์ปีนี้มีวันไหนบ้าง",
+      "doc": "hr-service-channels"
+    },
+    {
+      "q": "อยากเลื่อนระดับต้องทำอะไรบ้าง",
+      "doc": "step-career-path-2569"
+    },
+    {
+      "q": "เส้นทางการเติบโตของพนักงาน STeP",
+      "doc": "step-career-path-2569"
+    },
+    {
+      "q": "ส่งเรื่องเบิกเงินต้องยื่นก่อนกี่วัน",
+      "doc": "afp-operational-circulars"
+    },
+    {
+      "q": "เช่ารถตู้ไปงานต้องทำเรื่องยังไง",
+      "doc": "afp-operational-circulars"
+    },
+    {
+      "q": "จ่ายค่าวิทยากรได้ชั่วโมงละเท่าไร",
+      "doc": "afp-operational-circulars"
+    },
+    {
+      "q": "ยืมเงินล่วงหน้าไปจัดงานต้องระวังอะไรบ้าง",
+      "doc": "afp-operational-circulars"
+    },
+    {
+      "q": "เซ็นเอกสารออนไลน์ในระบบ MIS ทำยังไง",
+      "doc": "afp-operational-circulars"
+    },
+    {
+      "q": "ระเบียบการเงินขัดกันให้ยึดฉบับไหน",
+      "doc": "afp-regulation-hierarchy"
+    },
+    {
+      "q": "ทีม CC มีฟอร์มอะไรให้ใช้บ้าง",
+      "doc": ["cc-iso-document-register", "mis-iso-document-register", "qms-working-master-list"]
+    },
+    {
+      "q": "คู่มือคุณภาพฉบับปัจจุบันเป็น rev ไหน",
+      "doc": ["mis-iso-document-register", "qms-working-master-list"]
+    },
+    {
+      "q": "ฟอร์มขอซื้อของใบล่าสุดคือฉบับไหน",
+      "doc": "mis-iso-document-register"
+    },
+    {
+      "q": "ใครเป็นหัวหน้าสูงสุดของ STeP",
+      "doc": "step-executive-board"
+    },
+    {
+      "q": "ผอ. STeP ชื่ออะไร",
+      "doc": "step-executive-board"
+    },
+    {
+      "q": "ในองค์กรมีทีมอะไรบ้าง",
+      "doc": "step-teams-directory"
+    },
+    {
+      "q": "ทีม AFP ดูแลเรื่องอะไร",
+      "doc": "step-teams-directory"
+    },
+    {
+      "q": "ถ้าจะโอนงานให้ทีมอื่นต้องทำยังไง",
+      "doc": "step-teams-directory"
+    },
+    {
+      "q": "เลขโครงการแต่ละหลักหมายถึงอะไร",
+      "doc": "project-code-scheme"
+    },
+    {
+      "q": "STeP มีภารกิจอะไรบ้าง",
+      "doc": "step-public-profile"
+    },
+    {
+      "q": "เบอร์โทรอุทยานวิทยาศาสตร์",
+      "doc": "step-public-profile"
+    },
+    {
+      "q": "เป้าหมายระยะยาวของ STeP คืออะไร",
+      "doc": "step-public-profile"
+    },
+    {
+      "q": "มีเครื่องพิมพ์ 3 มิติให้ใช้ไหม",
+      "doc": "step-facility-equipment-inventory-2020"
+    },
+    {
+      "q": "อยากตรวจคุณภาพอาหาร STeP มีเครื่องมือไหม",
+      "doc": "step-facility-equipment-inventory-2020"
+    },
+    {
+      "q": "ทองคำบาทละเท่าไหร่วันนี้",
+      "doc": "none"
+    },
+    {
+      "q": "ช่วยเขียนแคปชั่นวันเกิดเพื่อน",
+      "doc": "none"
+    },
+    {
+      "q": "พรุ่งนี้ฝนตกไหม",
+      "doc": "none"
+    },
+    {
+      "q": "หนังเข้าใหม่สัปดาห์นี้มีเรื่องอะไรบ้าง",
+      "doc": "none"
+    }
+  ],
+  "followUps": [
+    {
+      "earlier": "ลาพักร้อนได้ปีละกี่วัน",
+      "q": "แล้วลาป่วยล่ะ",
+      "doc": "hr-personnel-welfare-2569"
+    },
+    {
+      "earlier": "ส่งเอกสารเบิกให้ AFP ล่วงหน้ากี่วัน",
+      "q": "ถ้าจ้างเหมารถตู้ต้องทำยังไง",
+      "doc": "afp-operational-circulars"
+    },
+    {
+      "earlier": "ใครเป็นผู้อำนวยการ STeP",
+      "q": "แล้วรองมีใครบ้าง",
+      "doc": "step-executive-board"
+    },
+    {
+      "earlier": "ทีม HD ทำหน้าที่อะไร",
+      "q": "แล้วทีม CC ล่ะ",
+      "doc": ["step-teams-directory", "hr-service-channels"]
+    },
+    {
+      "earlier": "ลาพักร้อนได้ปีละกี่วัน",
+      "q": "อีกเรื่อง FABLAB มีเครื่องอะไรบ้าง",
+      "doc": "step-facility-equipment-inventory-2020"
+    },
+    {
+      "earlier": "ใครเป็นผู้อำนวยการ STeP",
+      "q": "เปลี่ยนเรื่อง ระเบียบการเงินฉบับไหนใช้ก่อน",
+      "doc": "afp-regulation-hierarchy"
+    },
+    {
+      "earlier": "ช่วยเขียนอีเมลขอบคุณลูกค้า",
+      "q": "ขอสั้นกว่านี้",
+      "doc": "none"
+    },
+    {
+      "earlier": "ลาป่วยได้กี่วัน",
+      "q": "ต้องมีใบรับรองแพทย์ไหม",
+      "doc": "hr-personnel-welfare-2569"
+    }
+  ]
+}
