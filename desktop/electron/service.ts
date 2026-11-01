@@ -310,6 +310,10 @@ export type RunOptions = {
 
 export class WorkService {
   private active = new Map<string, AbortController>();
+  /** Answer checks still running after their answer was shown. */
+  private checks = new Set<Promise<void>>();
+  /** Check results to apply again when the run that was active on the conversation ends (it may save over them). */
+  private lateChecks = new Map<string, ((session: Session) => void)[]>();
   private knowledgeIndex?: OrganizationKnowledge;
   private knowledge() {
     if (!this.harness.documentCatalog) return undefined;
@@ -320,6 +324,48 @@ export class WorkService {
    * Reads and indexes the organization documents and the Skill catalog before the first message, so the first STeP
    * question is answered as fast as later ones. Failures are left for the first real task to report.
    */
+  /** Resolves once every background answer check has finished and been saved (tests, quitting). */
+  async settledChecks() {
+    while (this.checks.size) await Promise.all([...this.checks]);
+  }
+  private checkLater(
+    id: string,
+    answeredAt: string,
+    traceId: string,
+    runCheck: (signal: AbortSignal) => Promise<{ check: Message['check']; call: ProviderCallTrace; counted: TokenCount }>,
+  ) {
+    const pending = (async () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), this.stepTimeoutMs);
+      const done = await runCheck(controller.signal).finally(() => clearTimeout(timeout));
+      // Idempotent: puts the result on the answer it checked, wherever that answer now sits in the conversation.
+      const apply = (target: Session) => {
+        const message = target.messages.find(m => m.role === 'assistant' && m.at === answeredAt);
+        if (!message) return false;
+        delete message.checkPending;
+        if (done.check) message.check = done.check;
+        return true;
+      };
+      const fresh = this.store.get<Session>('session', id);
+      if (!fresh || !apply(fresh)) return;
+      fresh.runs
+        ?.find(run => run.id === traceId)
+        ?.steps.at(-1)
+        ?.providerCalls?.push(done.call);
+      if (done.counted.total && fresh.usage)
+        fresh.usage = {
+          ...fresh.usage,
+          input: fresh.usage.input + done.counted.input,
+          output: fresh.usage.output + done.counted.output,
+          total: fresh.usage.total + done.counted.total,
+        };
+      this.store.save(fresh);
+      if (this.active.has(id)) this.lateChecks.set(id, [...(this.lateChecks.get(id) || []), apply]);
+      this.emit({ sessionId: id, type: 'changed' });
+    })().catch(() => {});
+    this.checks.add(pending);
+    void pending.finally(() => this.checks.delete(pending));
+  }
   async warmUp() {
     await Promise.all([
       this.knowledge()
@@ -589,6 +635,10 @@ export class WorkService {
         this.store.save(final);
       }
       this.active.delete(id);
+      const late = this.lateChecks.get(id);
+      this.lateChecks.delete(id);
+      const again = late && this.store.get<Session>('session', id);
+      if (again && late.map(apply => apply(again)).some(Boolean)) this.store.save(again);
       this.emit({ sessionId: id, type: 'changed' });
     }
   }
@@ -1863,19 +1913,22 @@ export class WorkService {
             ]),
           ]
         : [];
-      let check: Message['check'];
-      if (groundedIn.length && this.harness.answerCheck?.()) {
-        activity(tm('กำลังตรวจคำตอบกับเอกสาร STeP'));
+      // The answer check compares the answer with the STeP excerpts it drew on. A chat answer is finished and shown
+      // first and the check runs after it in the background (it can take far longer than the answer on some models);
+      // an isolated side question still waits for it, since its record is read once when the question ends.
+      const checking = groundedIn.length > 0 && Boolean(this.harness.answerCheck?.());
+      const checkLater = checking && !options.isolatedQuestion;
+      const runCheck = async (signal: AbortSignal) => {
         const calledAt = Date.now();
         const checkPrompt = [section('organization_knowledge', knowledgeText(groundedIn)), section('answer', handoff)].join('\n\n');
         const call: ProviderCallTrace = { ...promptMetrics(ANSWER_CHECK_SYSTEM, checkPrompt), kind: 'check', outcome: 'running', ms: 0 };
-        trace.steps.at(-1)?.providerCalls?.push(call);
         let counted: TokenCount = { input: 0, output: 0, total: 0 };
+        let result: Message['check'];
         try {
-          checkAbort();
+          if (signal.aborted) throw new Error('CANCELLED');
           const reply = await runtime.adapter.run(checkPrompt, connection, {
             ...runtime.context,
-            signal: controller.signal,
+            signal,
             system: ANSWER_CHECK_SYSTEM,
             jsonSchema: ANSWER_CHECK_SCHEMA,
             effort: autoEffort(modelOption(selectedConnection)?.efforts, 'small'),
@@ -1884,19 +1937,27 @@ export class WorkService {
               counted = combineUsage(counted, count, 'max');
             },
           });
-          check = parseAnswerCheck(reply);
-          call.outcome = check ? 'completed' : 'error';
+          result = parseAnswerCheck(reply);
+          call.outcome = result ? 'completed' : 'error';
         } catch (error) {
           // The answer stands without a check; a failed or cancelled check is never a failed answer.
           call.outcome = 'error';
           call.code = codeOf(error);
-          checkAbort();
         } finally {
           call.ms = Date.now() - calledAt;
           if (counted.total) call.usage = counted;
-          usage = combineUsage(usage, counted);
           recordUsage(counted);
         }
+        return { check: result, call, counted };
+      };
+      let check: Message['check'];
+      if (checking && !checkLater) {
+        activity(tm('กำลังตรวจคำตอบกับเอกสาร STeP'));
+        const done = await runCheck(controller.signal);
+        trace.steps.at(-1)?.providerCalls?.push(done.call);
+        usage = combineUsage(usage, done.counted);
+        check = done.check;
+        checkAbort();
       }
       session = this.store.session(id);
       session.clarification = false;
@@ -1918,10 +1979,11 @@ export class WorkService {
           sources,
           at: new Date().toISOString(),
         });
+      const answeredAt = new Date().toISOString();
       session.messages.push({
         role: 'assistant',
         text: chat ? handoff : draftSummary(handoff, working, skillTitle, revising ? (session.followUps || []).at(-1) || '' : ''),
-        at: new Date().toISOString(),
+        at: answeredAt,
         ...(chat ? {} : { draftSummary: true }),
         ms: Date.now() - started,
         ...(docSources.length ? { docSources } : {}),
@@ -1929,10 +1991,12 @@ export class WorkService {
         ...(googleChanges.length ? { google: [...googleChanges] } : {}),
         ...(artifacts.size ? { artifacts: [...artifacts.values()] } : {}),
         ...(check ? { check } : {}),
+        ...(checkLater ? { checkPending: answeredAt } : {}),
         ...(retrieved || searched.length ? { webSources: webSources([retrieved, ...searched].filter(Boolean).join('\n\n')) } : {}),
       });
       finish(session, 'review');
       this.store.save(session);
+      if (checkLater) this.checkLater(id, answeredAt, trace.id, runCheck);
       await this.harness.completed?.(session);
     } catch (error) {
       session = this.store.session(id);
