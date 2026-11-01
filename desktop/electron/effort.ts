@@ -56,6 +56,8 @@ export function effortInModel(model?: string) {
  * `gemini-3.8-flash-medium` (or -high, -xhigh, -max) it is the same model's `-low` id when agy lists it; otherwise the
  * connection is unchanged. The caller asks the chosen model again when the -low reply is malformed or fails. Only Skill
  * selection is measured (eval:selection, 2026-11-01); the answer, summary, check and repair keep the chosen model.
+ * Other providers keep the chosen model too (owner, 2026-11-01): Haiku against Sonnet picked no Skill faster and gave
+ * one more general request a Skill, and OpenAI's mini and Gemini's Flash-Lite wait for their own eval:selection run.
  */
 export function auxiliaryConnection<T extends Pick<Connection, 'model' | 'models'> & { provider?: Connection['provider'] }>(
   connection: T,

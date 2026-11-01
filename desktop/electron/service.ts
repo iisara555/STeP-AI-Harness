@@ -1046,7 +1046,7 @@ export class WorkService {
                 signal: controller.signal,
                 system: selection.system,
                 jsonSchema: selection.schema,
-                effort: autoEffort(modelOption(selectedConnection)?.efforts, 'small'),
+                effort: autoEffort(modelOption(attemptConnection)?.efforts, 'small'),
                 emit: () => {},
                 onUsage: count => {
                   counted = combineUsage(counted, count, 'max');

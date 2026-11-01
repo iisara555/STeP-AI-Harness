@@ -20,7 +20,7 @@ function fixture(
   const store = new Store(':memory:');
   store.put('settings', 'main', { workspace: tmpdir(), team: 'cc' });
   store.put('connection', 'c', { id: 'c', provider: 'openai', model: 'fixture', ready: true, ...connection });
-  const calls: { prompt: string; system: string; selection: boolean; model: string }[] = [];
+  const calls: { prompt: string; system: string; selection: boolean; model: string; effort?: string }[] = [];
   const recorded: number[] = [];
   const harness: Harness = {
     root,
@@ -55,7 +55,7 @@ function fixture(
       adapter: {
         run: async (prompt, c, ctx) => {
           const selection = Boolean((ctx.jsonSchema as any)?.properties?.skillId);
-          calls.push({ prompt, system: ctx.system || '', selection, model: c.model });
+          calls.push({ prompt, system: ctx.system || '', selection, model: c.model, effort: ctx.effort });
           ctx.onUsage?.({ input: 10, output: 2, total: 12 });
           if (selection) return typeof reply === 'function' ? reply(c.model) : reply;
           return 'Synthetic answer';
@@ -307,6 +307,28 @@ test('a failed -low selection is retried on the chosen model; quota is not', asy
       'quota on the account stops the run without a second selection call',
     );
     assert.equal(f.store.session(second.id).status, 'error');
+  } finally {
+    f.store.close();
+  }
+});
+
+test('Claude selects once on the chosen model, with its own low level, even when Haiku is listed (owner, 2026-11-01)', async () => {
+  const claude = {
+    provider: 'claude',
+    mode: 'subscription',
+    model: 'sonnet',
+    models: [
+      { id: 'sonnet', label: 'Sonnet', efforts: [{ id: 'low' }, { id: 'medium' }] },
+      { id: 'haiku', label: 'Haiku' },
+    ],
+  };
+  const f = fixture(REVIEW, {}, claude);
+  try {
+    await f.service.run(f.session.id, 'อ่านร่างนี้ว่ามีอะไรขาดบ้าง', 'ร่างจำลอง', true, undefined, 'chat');
+    assert.deepEqual(
+      f.calls.filter(c => c.selection).map(c => [c.model, c.effort]),
+      [['sonnet', 'low']],
+    );
   } finally {
     f.store.close();
   }
