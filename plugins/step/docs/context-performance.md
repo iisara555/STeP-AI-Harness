@@ -167,6 +167,21 @@ base instructions and images. TTFT is the first emitted answer text; a reasoning
 event is not counted as answer text. RPC recovery is one host attempt containing
 two physical calls, with combined usage and a `session-invalid` transport reset.
 
+To summarise what employees actually waited for, run the diagnostics summary on a
+`diagnostics.jsonl` copied from a computer (or, with no path, the app's own log on this
+computer):
+
+```sh
+npm --prefix desktop run eval:diagnostics -- path/to/diagnostics.jsonl --since 2026-11-01
+```
+
+It joins each `run-trace` line with its `provider-call` lines and prints, per provider and
+model, finished-run time p50/p90, AI calls and tokens per answer, the cached share of input,
+and the p50 time of each kind of call (answer, selection, check, summary). `--until` ends
+the date range and `--json` prints the rows. Since this change `run-trace` lines carry the
+run id, provider, model and Skill selection method; older lines are matched to the calls
+logged just before them. It reads codes, sizes and timings only and makes no provider calls.
+
 Run the local benchmark from the repository root:
 
 ```sh
