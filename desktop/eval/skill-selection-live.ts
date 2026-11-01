@@ -7,9 +7,10 @@
  *   STEP_EVAL_APPROVE_LIVE=1 STEP_EVAL_PROVIDER=antigravity STEP_EVAL_ANTIGRAVITY_EXECUTABLE=<pinned agy.exe> \
  *   STEP_EVAL_MODELS=gemini-3.8-flash-medium,gemini-3.8-flash-low [STEP_EVAL_PER_SKILL=1] npm run eval:selection
  *
- * Claude, OpenAI and Gemini use the same environment and 50-call cap as eval:golden (desktop/eval/runtime.ts); run the
- * full set in parts with STEP_EVAL_CASES=1-25, 26-50 and 51-61 (with STEP_EVAL_MAX_CALLS=50) and join them with
- * `npm run eval:selection -- merge <folder> <folder> <folder>`. Antigravity runs only the agy named by an absolute path (STeP's pinned copy), in a throwaway home; agy keeps its sign-in in the OS
+ * Claude, OpenAI and Gemini use the same environment and caps as eval:golden (desktop/eval/runtime.ts: 50 calls and
+ * 200,000 tokens per run; a selection call is about 7,000 tokens, so about 28 calls fit). Run the full set in parts of
+ * 12 requests (24 calls with two models): STEP_EVAL_CASES=1-12, 13-24, 25-36, 37-48, 49-61 with STEP_EVAL_MAX_CALLS=26,
+ * then join them with `npm run eval:selection -- merge <folder> ...`. Antigravity runs only the agy named by an absolute path (STeP's pinned copy), in a throwaway home; agy keeps its sign-in in the OS
  * keyring, so nothing is copied. The selection call matches the app's: same prompt, schema and no --effort for an id that
  * names its level. Each request costs one model call per model. Requests and Skills are synthetic; no employee data is read.
  */
@@ -119,8 +120,8 @@ async function liveRuntime(env: NodeJS.ProcessEnv) {
 }
 
 /**
- * `STEP_EVAL_CASES=26-50` keeps cases 26 to 50 (1-based, inclusive), so a run that would pass a provider's call cap
- * (50 for Claude, OpenAI and Gemini in eval/runtime.ts) can be done in parts and joined with `npm run eval:selection --
+ * `STEP_EVAL_CASES=13-24` keeps cases 13 to 24 (1-based, inclusive), so a run that would pass the call or token cap of
+ * eval/runtime.ts (Claude, OpenAI and Gemini) can be done in parts and joined with `npm run eval:selection --
  * merge <folder> <folder> ...`.
  */
 export function pickRange<T>(cases: T[], range?: string): T[] {
@@ -132,12 +133,22 @@ export function pickRange<T>(cases: T[], range?: string): T[] {
   return cases.slice(from - 1, to);
 }
 
+/**
+ * The outcomes of runs made in parts. A part stopped by the eval's own cap records the request it did not send
+ * (EVAL_QUOTA_BOUND); that entry is dropped when another part answered the same request on the same model.
+ */
+export function joinOutcomes(all: Outcome[]) {
+  const key = (o: Outcome) => JSON.stringify([o.request, o.model]);
+  const answered = new Set(all.filter(o => o.code !== 'EVAL_QUOTA_BOUND').map(key));
+  return all.filter(o => o.code !== 'EVAL_QUOTA_BOUND' || !answered.has(key(o)));
+}
+
 /** Joins the results.json of runs made in parts into one report. */
 async function merge(folders: string[], out: string) {
   if (folders.length < 2) throw new Error('EVAL_MERGE_FOLDERS_REQUIRED');
   const parts = await Promise.all(folders.map(async f => JSON.parse(await readFile(join(f, 'results.json'), 'utf8'))));
   if (new Set(parts.map(p => JSON.stringify([p.provider, p.models, p.perSkill]))).size > 1) throw new Error('EVAL_MERGE_MISMATCH');
-  const outcomes: Outcome[] = parts.flatMap(p => p.outcomes);
+  const outcomes = joinOutcomes(parts.flatMap(p => p.outcomes));
   const rows = score(outcomes);
   const text =
     parts

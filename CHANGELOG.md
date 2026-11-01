@@ -6,7 +6,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-- Pick the Skill with the provider's small model on Claude, OpenAI and Gemini too (owner, 2026-11-01), as Gemini through Antigravity already does with `-low`: Haiku on Claude, the GPT mini on OpenAI and Flash-Lite on the Gemini CLI, when the provider lists one. A malformed or failed reply asks the chosen model again, and the answer, history summary, answer check and quality repair keep the chosen model. `npm run eval:selection` can now run in parts (`STEP_EVAL_CASES=1-25`) and join them (`npm run eval:selection -- merge <folders>`), so providers with a 50-call cap can be compared on the whole set.
+- Pick the Skill with the provider's small model on Claude, OpenAI and Gemini too (owner, 2026-11-01), as Gemini through Antigravity already does with `-low`: Haiku on Claude, the GPT mini on OpenAI and Flash-Lite on the Gemini CLI, when the provider lists one. A malformed or failed reply asks the chosen model again, and the answer, history summary, answer check and quality repair keep the chosen model. `npm run eval:selection` can now run in parts (`STEP_EVAL_CASES=1-12`) and join them (`npm run eval:selection -- merge <folders>`), so providers under the eval's 50-call and 200,000-token cap can be compared on the whole set.
 
 ## Desktop v0.6.25 (2026-11-01)
 
