@@ -86,7 +86,7 @@ export function report(rows: ReturnType<typeof score>, outcomes: Outcome[]) {
   return lines.join('\n') + '\n';
 }
 
-async function liveRuntime(env: NodeJS.ProcessEnv) {
+export async function liveRuntime(env: NodeJS.ProcessEnv) {
   if (env.STEP_EVAL_PROVIDER !== 'antigravity') {
     const live = await evaluationRuntime(env);
     const { context, adapter: run } = await live.runtime();
