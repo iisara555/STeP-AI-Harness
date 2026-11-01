@@ -11,6 +11,8 @@
  * Runtimes are the same as eval:selection (Antigravity only through an agy named by absolute path, in a throwaway home;
  * Claude, OpenAI and Gemini through eval/runtime.ts). Only `reference` and `skill` run; every other tool answers
  * EVAL_TOOL_DISABLED. The answer check is off, so each question is the answer's own calls. Questions are synthetic.
+ * When the app asks back which Skill fits, the case's `reply` is sent once, as an employee would; still asking (or no
+ * reply) is reported as CLARIFY and counts as not reached.
  */
 import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -30,7 +32,8 @@ import type { LoopHost } from '../electron/tool-loop';
 import { evaluationHarness } from './golden';
 import { liveRuntime } from './skill-selection-live';
 
-export type Case = { q: string; doc: string | string[]; earlier?: string };
+/** reply: what the employee answers when the app asks back which Skill fits, sent once (as a person would). */
+export type Case = { q: string; doc: string | string[]; earlier?: string; reply?: string };
 export type Outcome = {
   q: string;
   earlier?: string;
@@ -39,6 +42,8 @@ export type Outcome = {
   opened: string[];
   keyword: boolean;
   reached: boolean;
+  /** The app asked back which Skill fits before answering (and the case's reply was sent, if it has one). */
+  asked?: boolean;
   rounds: number;
   ms: number;
   code?: string;
@@ -68,6 +73,7 @@ export function summary(outcomes: Outcome[]) {
     keyword: outcomes.filter(o => o.keyword).length,
     reached: outcomes.filter(o => o.reached).length,
     keywordMissedButReached: outcomes.filter(o => !o.keyword && o.reached).length,
+    asked: outcomes.filter(o => o.asked).length,
     failed: outcomes.length - answered.length,
     p50Ms: mid(ms),
     p50Rounds: mid(rounds),
@@ -83,9 +89,9 @@ export function report(meta: Record<string, string>, outcomes: Outcome[]) {
     '',
     `Harness ${meta.harness}, ${meta.date}. Reached = the right document was in the search excerpts or the AI opened it.`,
     '',
-    '| Questions | Keyword search right | Reached by the answer | Reached only because the AI opened it | Failed | p50 time | p50 AI rounds | Documents opened |',
-    '| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
-    `| ${s.cases} | ${s.keyword} | ${s.reached} | ${s.keywordMissedButReached} | ${s.failed} | ${seconds(s.p50Ms)} | ${s.p50Rounds ?? '-'} | ${s.opened} |`,
+    '| Questions | Keyword search right | Reached by the answer | Reached only because the AI opened it | Failed | p50 time | p50 AI rounds | Documents opened | Asked back first |',
+    '| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+    `| ${s.cases} | ${s.keyword} | ${s.reached} | ${s.keywordMissedButReached} | ${s.failed} | ${seconds(s.p50Ms)} | ${s.p50Rounds ?? '-'} | ${s.opened} | ${s.asked} |`,
     '',
   ];
   for (const o of outcomes)
@@ -178,11 +184,17 @@ export async function runKnowledge(options: {
       try {
         if (item.earlier) await service.run(session.id, item.earlier, '', true, undefined, 'chat');
         opened.length = 0;
+        const before = (store.session(session.id).runs || []).length;
         const turnStarted = Date.now();
         await service.run(session.id, item.q, '', true, undefined, 'chat');
+        // The app may ask back which Skill fits (no AI call). The employee's answer is sent once, as a person would.
+        const askedBack = () => store.session(session.id).runs?.at(-1)?.outcome === 'clarify';
+        const asked = askedBack();
+        if (asked && item.reply) await service.run(session.id, item.reply, '', true, undefined, 'chat');
         const done = store.session(session.id);
         const trace = done.runs?.at(-1);
-        code = trace?.code || (done.status === 'error' ? 'RUN_FAILED' : '');
+        const turns = (done.runs || []).slice(before);
+        code = trace?.code || (done.status === 'error' ? 'RUN_FAILED' : askedBack() ? 'CLARIFY' : '');
         const searched = [...new Set((await knowledge.search(turnQuery(item))).map(s => s.id))];
         const uniqueOpened = [...new Set(opened)];
         outcomes.push({
@@ -192,7 +204,10 @@ export async function runKnowledge(options: {
           searched,
           opened: uniqueOpened,
           ...judge(item, searched, uniqueOpened),
-          rounds: (trace?.steps || []).reduce((n, step) => n + (step.providerCalls || []).length, 0),
+          // Still asking back after the reply (or with none): no answer was given, so nothing was reached.
+          ...(code === 'CLARIFY' ? { reached: false } : {}),
+          ...(asked ? { asked } : {}),
+          rounds: turns.flatMap(run => run.steps || []).reduce((n, step) => n + (step.providerCalls || []).length, 0),
           ms: Date.now() - turnStarted,
           ...(code ? { code } : {}),
           answer: done.messages.filter(m => m.role === 'assistant').at(-1)?.text || '',

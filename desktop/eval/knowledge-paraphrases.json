@@ -1,5 +1,5 @@
 {
-  "note": "Synthetic staff questions worded differently from the organization documents (A3 of the backend optimisation plan, 2026-11-01), and follow-up questions searched the way Desktop searches a chat turn (the first request of the conversation and the new message, joined by a newline). doc lists the registered document(s) that answer each question; none means outside the organization documents. Used by test/knowledge-paraphrase.test.ts: the score may not drop below its floor, and the floor is raised whenever a retrieval change lifts the score. The 61-question corpus in knowledge-questions.json is separate.",
+  "note": "Synthetic staff questions worded differently from the organization documents (A3 of the backend optimisation plan, 2026-11-01), and follow-up questions searched the way Desktop searches a chat turn (the first request of the conversation and the new message, joined by a newline). doc lists the registered document(s) that answer each question; none means outside the organization documents. Used by test/knowledge-paraphrase.test.ts: the score may not drop below its floor, and the floor is raised whenever a retrieval change lifts the score. The 61-question corpus in knowledge-questions.json is separate. reply is what a staff member answers when the app asks back which Skill fits (eval/knowledge-live.ts sends it once); a question with no reply that is asked back is reported as CLARIFY.",
   "paraphrases": [
     {
       "q": "หยุดพักร้อนได้ปีละกี่วัน",
@@ -71,7 +71,8 @@
     },
     {
       "q": "ยืมเงินล่วงหน้าไปจัดงานต้องระวังอะไรบ้าง",
-      "doc": "afp-operational-circulars"
+      "doc": "afp-operational-circulars",
+      "reply": "2"
     },
     {
       "q": "เซ็นเอกสารออนไลน์ในระบบ MIS ทำยังไง",
@@ -87,7 +88,8 @@
     },
     {
       "q": "คู่มือคุณภาพฉบับปัจจุบันเป็น rev ไหน",
-      "doc": ["mis-iso-document-register", "qms-working-master-list"]
+      "doc": ["mis-iso-document-register", "qms-working-master-list"],
+      "reply": "1"
     },
     {
       "q": "ฟอร์มขอซื้อของใบล่าสุดคือฉบับไหน",
@@ -131,7 +133,8 @@
     },
     {
       "q": "มีเครื่องพิมพ์ 3 มิติให้ใช้ไหม",
-      "doc": "step-facility-equipment-inventory-2020"
+      "doc": "step-facility-equipment-inventory-2020",
+      "reply": "1"
     },
     {
       "q": "อยากตรวจคุณภาพอาหาร STeP มีเครื่องมือไหม",
@@ -158,7 +161,8 @@
     {
       "earlier": "ลาพักร้อนได้ปีละกี่วัน",
       "q": "แล้วลาป่วยล่ะ",
-      "doc": "hr-personnel-welfare-2569"
+      "doc": "hr-personnel-welfare-2569",
+      "reply": "1"
     },
     {
       "earlier": "ส่งเอกสารเบิกให้ AFP ล่วงหน้ากี่วัน",
@@ -178,7 +182,8 @@
     {
       "earlier": "ลาพักร้อนได้ปีละกี่วัน",
       "q": "อีกเรื่อง FABLAB มีเครื่องอะไรบ้าง",
-      "doc": "step-facility-equipment-inventory-2020"
+      "doc": "step-facility-equipment-inventory-2020",
+      "reply": "1"
     },
     {
       "earlier": "ใครเป็นผู้อำนวยการ STeP",
@@ -193,7 +198,8 @@
     {
       "earlier": "ลาป่วยได้กี่วัน",
       "q": "ต้องมีใบรับรองแพทย์ไหม",
-      "doc": "hr-personnel-welfare-2569"
+      "doc": "hr-personnel-welfare-2569",
+      "reply": "1"
     }
   ]
 }

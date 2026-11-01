@@ -41,3 +41,28 @@ test('the live run asks through WorkService chat, runs the reference tool and re
   assert.match(text, /\| 1 \| 0 \| 1 \| 1 \| 0 \|/);
   assert.equal(summary(outcomes).keywordMissedButReached, 1);
 });
+
+test('when the app asks back which Skill fits, the case reply is sent once; still asking is CLARIFY and not reached', async () => {
+  const run = async (prompt: string) => {
+    if (prompt.includes('skill_catalog') || /select ONE registered/.test(prompt)) return '{"skillId":null,"reason":"general"}';
+    return 'ตอบตามระเบียบบุคคล (ข้อมูลสังเคราะห์สำหรับทดสอบ)';
+  };
+  const live = { connection, context: { cwd: resolve('.'), env: {} } as any, run: run as any };
+  const [answered, stuck] = await runKnowledge({
+    root: resolve('..'),
+    cases: [
+      { q: 'แล้วลาป่วยล่ะ', earlier: 'ลาพักร้อนได้ปีละกี่วัน', doc: 'hr-personnel-welfare-2569', reply: '1' },
+      { q: 'แล้วลาป่วยล่ะ', earlier: 'ลาพักร้อนได้ปีละกี่วัน', doc: 'hr-personnel-welfare-2569' },
+    ],
+    live,
+  });
+  assert.equal(answered.asked, true, 'this follow-up is asked back today (S2 has not landed)');
+  assert.equal(answered.code, undefined, JSON.stringify(answered));
+  assert.ok(answered.rounds >= 1, 'the answer after the reply is counted');
+  assert.match(answered.answer, /ระเบียบบุคคล/);
+  assert.equal(stuck.code, 'CLARIFY');
+  assert.equal(stuck.reached, false, 'search excerpts do not count when no answer was given');
+  assert.equal(stuck.rounds, 0);
+  assert.equal(summary([answered, stuck]).asked, 2);
+  assert.match(report({ provider: 'claude', model: 'fake', date: 'd', harness: 'h' }, [answered, stuck]), /\| 2 \|\n/);
+});

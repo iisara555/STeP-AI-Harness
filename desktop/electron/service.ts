@@ -226,7 +226,7 @@ function skillRegistryText(entries: { name: string; description?: string }[]) {
     .join('\n');
 }
 const KNOWLEDGE_RULE =
-  'STeP knowledge registry: ID | title | short purpose. <organization_knowledge> holds only matching excerpts. If they do not answer the question, use reference(input=ID,args.action=outline) for headings, then reference(input=ID,args.section=heading) for a section, or reference(input=ID) to read the document. The index may show only the top three matching documents plus mandatory references; use reference(input="",args.action=catalog) for the complete readable index if needed. Read the relevant registered source before saying the documents do not cover it.';
+  'STeP knowledge registry: ID | title | short purpose. <organization_knowledge> holds matching excerpts; a document under § ทั้งฉบับ is given complete, so answer from it without opening it again. If they do not answer the question, use reference(input=ID,args.action=outline) for headings, then reference(input=ID,args.section=heading) for a section, or reference(input=ID) to read the document. The index may show only the top three matching documents plus mandatory references; use reference(input="",args.action=catalog) for the complete readable index if needed. Read the relevant registered source before saying the documents do not cover it.';
 const ORGANIZATION_RULE =
   'For anything about STeP itself (people and HR, welfare, leave, careers, procedures, policies, the quality system, facilities, contacts), answer from <organization_knowledge> or a registered document read with the reference tool, and name the document and section you used. If the organization documents do not cover it, say so plainly and suggest the owning team; never fill the gap from general knowledge, other organizations or the web.';
 /** Words that tie a text task to STeP itself; such text keeps the organization's documents in context. */
@@ -968,6 +968,10 @@ export class WorkService {
       const known: KnowledgeSection[] = knowledge
         ? await knowledge.search([...new Set([session.originalQuery, latest].filter(Boolean))].join('\n')).catch(() => [])
         : [];
+      // What the answer reads: a short leading document whole, so it does not open it again section by section. A quarter
+      // of the model's prompt budget at most, so small local models keep excerpts.
+      const given: KnowledgeSection[] =
+        knowledge && known.length ? await knowledge.whole(known, Math.floor(contextBudget(connection) / 4)).catch(() => known) : known;
       // A request to work in STeP MIS is done in the STeP Browser, not answered from the web or memory.
       const internal = knowledgeTurn
         ? await internalSystemFor(this.harness.root, [session.originalQuery, latest].filter(Boolean).join('\n'))
@@ -1344,10 +1348,13 @@ export class WorkService {
         );
         const scopedToolInstructions = toolsEnabled ? this.harness.toolInstructions?.() : undefined;
         const baseRules = textOnly ? TEXT_RULES : chat ? CHAT_RULES : DRAFTING_RULES;
+        // A weak keyword match is often the wrong document ("อยากตรวจคุณภาพอาหาร" matched the quality manual), so the
+        // index narrows to the matched documents only when the match is strong; otherwise the answer sees every document
+        // and can open the right one (A1 live comparison 2026-11-01: a separate document-pick call was right but too slow).
         const documentDiscovery = selectDiscovery(
           catalog,
           entry => entry.id,
-          known.map(section => section.id),
+          (known[0]?.score || 0) >= STRONG_MATCH ? known.map(section => section.id) : [],
           (refs || []).map((ref: any) => ref.id).filter(Boolean),
         );
         const skillDiscovery = selectDiscovery(
@@ -1438,7 +1445,7 @@ export class WorkService {
           ...(!textOnly ? [chat ? section('conversation_files', filesSection) : section('source_document', attachments)] : []),
           ...(known.length
             ? [
-                section('organization_knowledge', knowledgeText(known)),
+                section('organization_knowledge', knowledgeText(given)),
                 'Use the organization knowledge above first for anything about STeP and name the document and section. Use web evidence only for public facts it does not cover. If neither answers the question, say so instead of guessing.',
               ]
             : []),
@@ -1854,7 +1861,7 @@ export class WorkService {
       const executedTools = (trace.steps.flatMap(s => s.tools || []) || []).filter(t => t.ok).map(t => t.tool);
       const groundingCorpus = [
         incomingSource || session.sourceText || '',
-        knowledgeText(known),
+        knowledgeText(given),
         ...catalog.map(c => `${c.id} ${c.title} ${c.summary || ''}`),
       ].join('\n');
       let qualityReport = evaluateOutputQuality(handoff, {
@@ -1908,7 +1915,7 @@ export class WorkService {
         }
       }
       // The STeP documents a chat answer drew on, shown under it: strong matches given to the AI and documents it opened.
-      const groundedIn = chat ? known.filter(k => k.score >= STRONG_MATCH) : [];
+      const groundedIn = chat ? given.filter(k => k.score >= STRONG_MATCH) : [];
       const docSources = chat
         ? [
             ...new Set([

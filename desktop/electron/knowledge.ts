@@ -1,5 +1,6 @@
 import { readFile, stat } from 'node:fs/promises';
 import { isAbsolute, relative, resolve } from 'node:path';
+import { estimateTextTokens } from '../../src/modules/context-budget/index.js';
 
 export type CatalogEntry = {
   id: string;
@@ -128,6 +129,15 @@ const REVISION_QUESTION = /รุ่นล่าสุด|รุ่นปัจ�
 const MAX_SECTIONS = 4,
   MAX_CHARS = 9000,
   SECTION_CHARS = 4000;
+/**
+ * A matched document this short is sent whole instead of as excerpts. Keyword search often finds the right document but
+ * the wrong section ("หยุดพักร้อน" matched 2.2 and 3.13, not 4.4 ลาพักผ่อนประจำปี), and the AI then spent two more rounds
+ * on outline and section (A1 baseline 2026-11-01). Most registered documents are below this; the quality manual and
+ * the MIS register are not and keep excerpts.
+ */
+export const WHOLE_DOCUMENT_CHARS = 24_000;
+/** Heading of a document given whole, so the prompt and the answer check can tell it from an excerpt. */
+export const WHOLE_DOCUMENT = 'ทั้งฉบับ';
 
 /**
  * Finds the organization's own registered documents that answer a question, so the assistant reads them before it
@@ -136,6 +146,8 @@ const MAX_SECTIONS = 4,
  */
 export class OrganizationKnowledge {
   private sections?: Promise<Section[]>;
+  /** Each loaded document's full text by path, rebuilt with the sections. */
+  private documents = new Map<string, string>();
   private revision = '';
   constructor(
     private root: string,
@@ -165,8 +177,10 @@ export class OrganizationKnowledge {
       this.revision = revision;
       this.sections = (async () => {
         const all: Section[] = [];
+        const documents = new Map<string, string>();
         for (const entry of entries) {
           const body = await readFile(resolve(this.root, entry.path), 'utf8').catch(() => '');
+          if (body.trim()) documents.set(entry.path, body.trim());
           const provenance = snapshotContext(body);
           for (const part of body.split(/\n(?=#{1,3} )/)) {
             const heading = /^#{1,3} (.+)/.exec(part)?.[1]?.trim() || entry.title;
@@ -188,6 +202,7 @@ export class OrganizationKnowledge {
             });
           }
         }
+        this.documents = documents;
         return all;
       })().catch(error => {
         this.sections = undefined;
@@ -277,6 +292,18 @@ export class OrganizationKnowledge {
       });
     }
     return picked;
+  }
+  /**
+   * The search result as the answer should read it: the leading document whole when it is short and fits `maxTokens`,
+   * followed by the other documents' excerpts. The ranking and scores stay those of `search`.
+   */
+  async whole(sections: KnowledgeSection[], maxTokens: number): Promise<KnowledgeSection[]> {
+    const lead = sections[0];
+    if (!lead) return sections;
+    await this.load();
+    const text = this.documents.get(lead.path);
+    if (!text || text.length > WHOLE_DOCUMENT_CHARS || estimateTextTokens(text).estimatedTokens > maxTokens) return sections;
+    return [{ ...lead, heading: WHOLE_DOCUMENT, text }, ...sections.filter(s => s.id !== lead.id || s.path !== lead.path)];
   }
 }
 
