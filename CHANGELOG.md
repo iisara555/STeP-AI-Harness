@@ -7,6 +7,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 ## Unreleased
 
 - Add a knowledge test set of staff questions worded differently from the STeP documents and of follow-up questions (`desktop/eval/knowledge-paraphrases.json`, `desktop/test/knowledge-paraphrase.test.ts`). Keyword search finds the right document for 15 of 38 reworded questions and 7 of 8 follow-ups today; CI fails if a change lowers either score, so later search improvements can be measured. `npm run eval:knowledge` asks the same questions through the real chat with a real model and reports whether each answer reached the right document, either from the search or by opening it with the `reference` tool, with AI rounds, time and the answer. Nothing employees see changes.
+- Stop asking for a personal-data confirmation on ordinary Thai work phrases: "รายชื่อผู้ให้บริการ" (vendor list), "นามสกุลไฟล์" / "ไฟล์นามสกุล .docx" (file extension) and "ชื่อ" before a meeting, role, position, team, department, system, website, form, topic, list, table or template. A name label with a value ("ชื่อผู้ให้บริการ: …", "นามสกุล ใจดี", "ชื่อ-นามสกุล", "ชื่อพนักงาน") still asks.
 
 ## Desktop v0.6.25 (2026-11-01)
 
