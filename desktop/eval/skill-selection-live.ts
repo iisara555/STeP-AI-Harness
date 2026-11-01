@@ -150,11 +150,11 @@ async function merge(folders: string[], out: string) {
   if (new Set(parts.map(p => JSON.stringify([p.provider, p.models, p.perSkill]))).size > 1) throw new Error('EVAL_MERGE_MISMATCH');
   const outcomes = joinOutcomes(parts.flatMap(p => p.outcomes));
   const rows = score(outcomes);
-  const text =
-    parts
-      .filter(p => p.stopped)
-      .map(p => `Stopped early: ${p.stopped}\n\n`)
-      .join('') + report(rows, outcomes);
+  // A part's own cap stop no longer matters once another part answered what it left out.
+  const stops = parts
+    .map(p => p.stopped)
+    .filter(code => code && (code !== 'EVAL_QUOTA_BOUND' || outcomes.some(o => o.code === code)));
+  const text = stops.map(code => `Stopped early: ${code}\n\n`).join('') + report(rows, outcomes);
   await mkdir(out, { recursive: true });
   await writeFile(join(out, 'results.json'), JSON.stringify({ ...parts[0], merged: folders, rows, outcomes }, null, 2));
   await writeFile(join(out, 'report.md'), text, 'utf8');
