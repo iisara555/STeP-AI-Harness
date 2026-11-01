@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Stop asking for a personal-data confirmation on ordinary Thai work phrases: "รายชื่อผู้ให้บริการ" (vendor list), "นามสกุลไฟล์" / "ไฟล์นามสกุล .docx" (file extension) and "ชื่อ" before a meeting, role, position, team, department, system, website, form, topic, list, table or template. A name label with a value ("ชื่อผู้ให้บริการ: …", "นามสกุล ใจดี", "ชื่อ-นามสกุล", "ชื่อพนักงาน") still asks.
+
 ## Desktop v0.6.25 (2026-11-01)
 
 - Show a chat answer about STeP as finished without waiting for its answer check (owner, 2026-11-01). The check against the STeP documents now runs after the answer is saved: a small "กำลังตรวจคำตอบกับเอกสาร STeP" line sits under the answer until the result (or nothing, if the check fails) is added to it, and the next question can be asked meanwhile. On Gemini through Antigravity the check took about 46 seconds of a one-minute answer. A side question still waits for its check.
