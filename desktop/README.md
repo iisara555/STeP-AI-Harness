@@ -10,7 +10,7 @@
 
 ภาพใช้ข้อมูลตัวอย่าง หน้าจอและตัวเลือกอาจต่างตามรุ่นและการตั้งค่าขององค์กร
 
-Source version: Desktop **0.6.24**. Adds the UX/UI review fixes, plan step comments, task status dots, a list of Google Workspace actions under each answer, faster Gemini and Antigravity replies, self-correcting tool requests, code search, a JavaScript calculation tool and read-only research subagents that ask first, and working documents the assistant saves and the employee opens in the app. Download published installers from the links above. OCR results and generated drafts still require comparison with the original evidence and human review.
+Source version: Desktop **0.6.25**. Faster Skill selection on Gemini through Antigravity and the fix for its short-message failure in 0.6.24, STeP answers shown before their document check finishes, attached pictures and receipt pictures read by the employee's own AI where images are allowed, pictures and scanned PDFs for Antigravity, STeP's pinned agy when the employee's own agy updates to 1.4, and fixes for concurrent file and memory saves. Download published installers from the links above. OCR results and generated drafts still require comparison with the original evidence and human review.
 
 Desktop **0.6.15** กดปุ่มเข้าสู่ระบบเว็บอย่าง STeP MBS ให้เองหลังกรอกบัญชีจาก Vault ไม่ต้องสลับไปกดเอง
 
@@ -168,4 +168,4 @@ AI ได้รับโครงและชื่อช่องที่ร�
 
 อ่าน [ภาพรวม STeP AI](../README.md) หรือ [รายละเอียดสำหรับผู้ดูแลและนักพัฒนา](../docs/desktop-development.md) เมื่อต้องตั้งค่าระบบ ทดสอบ หรือสร้างตัวติดตั้ง
 
-รุ่นใน source: **STeP Desktop v0.6.24** ดูไฟล์ที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การมี release ไม่ได้แทนการอนุมัติใช้งานในหน่วยงาน
+รุ่นใน source: **STeP Desktop v0.6.25** ดูไฟล์ที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การมี release ไม่ได้แทนการอนุมัติใช้งานในหน่วยงาน

@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.6.25 (2026-11-01)
+
 - Show a chat answer about STeP as finished without waiting for its answer check (owner, 2026-11-01). The check against the STeP documents now runs after the answer is saved: a small "กำลังตรวจคำตอบกับเอกสาร STeP" line sits under the answer until the result (or nothing, if the check fails) is added to it, and the next question can be asked meanwhile. On Gemini through Antigravity the check took about 46 seconds of a one-minute answer. A side question still waits for its check.
 - Add `npm run eval:selection` (`desktop/eval/skill-selection-live.ts`), a live comparison of Skill selection between models: it sends the app's own selection prompt for one staff request per Skill plus the general requests in `manifest/routing-staff-benchmark.json` to each named model and reports right, wrong and missing Skills, general requests kept general, failures, p50 time and output tokens, with the requests the models answered differently. Antigravity runs only an agy named by absolute path in a throwaway home. Its first run (owner's PC, 2026-11-01) decided the `-low` Skill selection with a retry on the chosen model, above.
 - Send about 250 fewer tokens with every AI round of a chat answer. The host task state no longer repeats the route, which is already in `<routing_contract>`, or in chat the message and earlier request already in `<current_message>` / `<earlier_request>`. Measured with `eval:context`: translation 3,489 → 3,220 tokens, STeP organisation question 10,849 → 10,585. Nothing is removed that the AI does not still receive once.

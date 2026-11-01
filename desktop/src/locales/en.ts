@@ -23,6 +23,17 @@ import { uxToolsEn } from './ux-tools-en';
 import { uxReviewEn } from './ux-review-en';
 import { googleChangesEn } from './google-changes-en';
 export const en: Record<string, string> = {
+  'Gemini ผ่าน Antigravity เลือก Skill เร็วขึ้นราว 7 วินาที และแก้ปัญหาข้อความสั้นตอบไม่สำเร็จ (PROVIDER_REQUEST_FAILED) ในรุ่น 0.6.24':
+    'Gemini through Antigravity picks a Skill about 7 seconds faster, and short messages no longer fail with PROVIDER_REQUEST_FAILED as in 0.6.24',
+  'คำตอบเรื่อง STeP แสดงเสร็จทันที แล้วตรวจกับเอกสาร STeP ต่อเบื้องหลัง ระหว่างนั้นถามข้อต่อไปได้เลย':
+    'STeP answers show as finished right away while the check against STeP documents runs in the background, so you can ask the next question meanwhile',
+  'ส่งรูปที่แนบและรูปใบเสร็จให้ AI ที่คุณเชื่อมอ่านเอง เมื่อองค์กรอนุญาตรูปภาพ โดยใบเสร็จอ่านหลังคุณยินยอมครั้งแรก':
+    'Attached pictures and receipt pictures go to your connected AI to read where the organization allows images; receipts after your one-time consent',
+  'Gemini ผ่าน Antigravity อ่านรูปที่แนบและ PDF สแกนได้': 'Gemini through Antigravity can read attached pictures and scanned PDFs',
+  'ถ้าโปรแกรม Antigravity ของคุณอัปเดตตัวเองเป็นรุ่น 1.4 ให้เชื่อม Antigravity ใหม่ แอปจะติดตั้งรุ่นที่ STeP ทดสอบแล้วไว้ใช้แทน':
+    'If your own Antigravity CLI updated itself to 1.4, connect Antigravity again and the app installs the version STeP has tested',
+  'แก้ปัญหาการบันทึกไฟล์และความจำพร้อมกันหลายรายการ และลดข้อความที่ส่งให้ AI ซ้ำในแต่ละรอบ':
+    'Fixes for saving several files or memories at once, and less repeated text sent to the AI each round',
   'ปรับหน้าจอทั้งแอปตามรีวิว UX แชตมีพื้นที่มากขึ้น หน้าเครื่องมือเริ่มใช้ง่ายขึ้น และหน้าตั้งค่ากับการตั้งค่าเริ่มต้นอ่านง่ายขึ้น':
     'App-wide UX review fixes: more room for chat, easier-to-start tool pages, and clearer first-run setup and Settings',
   'เขียนความเห็นในแต่ละขั้นของแผนได้ แล้วให้ผู้ช่วยแก้แผนตามความเห็นก่อนลงมือ':
