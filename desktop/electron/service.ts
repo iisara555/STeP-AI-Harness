@@ -1341,10 +1341,13 @@ export class WorkService {
         );
         const scopedToolInstructions = toolsEnabled ? this.harness.toolInstructions?.() : undefined;
         const baseRules = textOnly ? TEXT_RULES : chat ? CHAT_RULES : DRAFTING_RULES;
+        // A weak keyword match is often the wrong document ("อยากตรวจคุณภาพอาหาร" matched the quality manual), so the
+        // index narrows to the matched documents only when the match is strong; otherwise the answer sees every document
+        // and can open the right one (A1 live comparison 2026-11-01: a separate document-pick call was right but too slow).
         const documentDiscovery = selectDiscovery(
           catalog,
           entry => entry.id,
-          known.map(section => section.id),
+          (known[0]?.score || 0) >= STRONG_MATCH ? known.map(section => section.id) : [],
           (refs || []).map((ref: any) => ref.id).filter(Boolean),
         );
         const skillDiscovery = selectDiscovery(
