@@ -12,11 +12,15 @@ const privacy: any = await import('../../src/modules/privacy/index.js');
 const skills: any = await import('../../src/modules/skills/catalog.js');
 const root = resolve('..');
 
-function fixture(reply = '{"skillId":"document-review","reason":"Review an existing document"}', extra: Partial<Harness> = {}) {
+function fixture(
+  reply: string | ((model: string) => string) = '{"skillId":"document-review","reason":"Review an existing document"}',
+  extra: Partial<Harness> = {},
+  connection: Record<string, unknown> = {},
+) {
   const store = new Store(':memory:');
   store.put('settings', 'main', { workspace: tmpdir(), team: 'cc' });
-  store.put('connection', 'c', { id: 'c', provider: 'openai', model: 'fixture', ready: true });
-  const calls: { prompt: string; system: string; selection: boolean }[] = [];
+  store.put('connection', 'c', { id: 'c', provider: 'openai', model: 'fixture', ready: true, ...connection });
+  const calls: { prompt: string; system: string; selection: boolean; model: string }[] = [];
   const recorded: number[] = [];
   const harness: Harness = {
     root,
@@ -49,11 +53,11 @@ function fixture(reply = '{"skillId":"document-review","reason":"Review an exist
     async () => ({
       context: { cwd: tmpdir(), env: {} },
       adapter: {
-        run: async (prompt, _c, ctx) => {
+        run: async (prompt, c, ctx) => {
           const selection = Boolean((ctx.jsonSchema as any)?.properties?.skillId);
-          calls.push({ prompt, system: ctx.system || '', selection });
+          calls.push({ prompt, system: ctx.system || '', selection, model: c.model });
           ctx.onUsage?.({ input: 10, output: 2, total: 12 });
-          if (selection) return reply;
+          if (selection) return typeof reply === 'function' ? reply(c.model) : reply;
           return 'Synthetic answer';
         },
       },
@@ -235,6 +239,88 @@ test('invalid selection falls back without loading an unregistered Skill', async
     assert.equal(done.runs!.at(-1)!.skillSelection?.method, 'fallback');
     assert.equal(done.runs!.at(-1)!.providerCalls?.[0].code, 'INVALID_SKILL_SELECTION');
     assert.doesNotMatch(f.calls.at(-1)!.system, /not-installed/);
+  } finally {
+    f.store.close();
+  }
+});
+
+const agyModels = ['gemini-3.8-flash-low', 'gemini-3.8-flash-medium'].map(id => ({ id, label: id }));
+const agy = { provider: 'antigravity', mode: 'subscription', model: 'gemini-3.8-flash-medium', models: agyModels };
+const REVIEW = '{"skillId":"document-review","reason":"Review an existing document"}';
+
+test("Antigravity selects on the model's -low id first, and the answer keeps the chosen model", async () => {
+  const f = fixture(REVIEW, {}, agy);
+  try {
+    await f.service.run(f.session.id, 'อ่านร่างนี้ว่ามีอะไรขาดบ้าง', 'ร่างจำลอง', true, undefined, 'chat');
+    const run = f.store.session(f.session.id).runs!.at(-1)!;
+    assert.deepEqual(
+      f.calls.filter(c => c.selection).map(c => c.model),
+      ['gemini-3.8-flash-low'],
+    );
+    assert.deepEqual(run.skillSelection, { method: 'model', skill: 'document-review' });
+    assert.ok(f.calls.filter(c => !c.selection).every(c => c.model === 'gemini-3.8-flash-medium'));
+  } finally {
+    f.store.close();
+  }
+});
+
+test('a malformed -low selection asks the chosen model again, so the Skill is not lost', async () => {
+  const f = fixture(model => (model.endsWith('-low') ? '{"skillId":"document-review"' : REVIEW), {}, agy);
+  try {
+    await f.service.run(f.session.id, 'อ่านร่างนี้ว่ามีอะไรขาดบ้าง', 'ร่างจำลอง', true, undefined, 'chat');
+    const run = f.store.session(f.session.id).runs!.at(-1)!;
+    assert.deepEqual(
+      f.calls.filter(c => c.selection).map(c => c.model),
+      ['gemini-3.8-flash-low', 'gemini-3.8-flash-medium'],
+    );
+    assert.deepEqual(
+      run.providerCalls!.filter(c => c.kind === 'selection').map(c => c.code || c.outcome),
+      ['INVALID_SKILL_SELECTION', 'completed'],
+    );
+    assert.deepEqual(run.skillSelection, { method: 'model', skill: 'document-review' });
+    assert.match(f.calls.at(-1)!.system, /document-review/);
+  } finally {
+    f.store.close();
+  }
+});
+
+test('a failed -low selection is retried on the chosen model; quota is not', async () => {
+  let failure = 'PROVIDER_STREAM_INVALID';
+  const f = fixture(
+    model => {
+      if (model.endsWith('-low')) throw new Error(failure);
+      return REVIEW;
+    },
+    {},
+    agy,
+  );
+  try {
+    await f.service.run(f.session.id, 'อ่านร่างนี้ว่ามีอะไรขาดบ้าง', 'ร่างจำลอง', true, undefined, 'chat');
+    assert.deepEqual(f.store.session(f.session.id).runs!.at(-1)!.skillSelection, { method: 'model', skill: 'document-review' });
+    failure = 'PROVIDER_QUOTA';
+    const before = f.calls.length;
+    const second = f.store.create('c', 'cc');
+    await f.service.run(second.id, 'อ่านร่างนี้ว่ามีอะไรขาดบ้าง', 'ร่างจำลอง', true, undefined, 'chat');
+    assert.deepEqual(
+      f.calls.slice(before).map(c => c.model),
+      ['gemini-3.8-flash-low'],
+      'quota on the account stops the run without a second selection call',
+    );
+    assert.equal(f.store.session(second.id).status, 'error');
+  } finally {
+    f.store.close();
+  }
+});
+
+test('a model id without a listed -low id selects once on the chosen model', async () => {
+  const f = fixture('{"skillId":"document-review"', {}, { ...agy, models: agyModels.slice(1) });
+  try {
+    await f.service.run(f.session.id, 'อ่านร่างนี้ว่ามีอะไรขาดบ้าง', 'ร่างจำลอง', true, undefined, 'chat');
+    assert.deepEqual(
+      f.calls.filter(c => c.selection).map(c => c.model),
+      ['gemini-3.8-flash-medium'],
+    );
+    assert.equal(f.store.session(f.session.id).runs!.at(-1)!.skillSelection?.method, 'fallback');
   } finally {
     f.store.close();
   }
