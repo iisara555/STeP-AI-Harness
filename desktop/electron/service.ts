@@ -1023,9 +1023,10 @@ export class WorkService {
             incomingSource || (continuing || revising || retrying ? masked(session.files?.at(-1)?.text || '') : ''),
           );
           const selectionRuntime = await this.runtime(connection, false);
-          // On Antigravity the selection first runs on the model's -low id (live comparison 2026-11-01: no wrong Skill,
-          // about 7 s faster, but 2 of 61 replies malformed). A malformed or failed -low reply asks the chosen model
-          // again, so a request never loses its Skill to the smaller model.
+          // The selection first runs on a smaller model: the -low id on Antigravity (live comparison 2026-11-01: no wrong
+          // Skill, about 7 s faster, but 2 of 61 replies malformed), the listed Haiku, GPT mini or Flash-Lite on Claude,
+          // OpenAI and the Gemini CLI (owner, C6). A malformed or failed reply asks the chosen model again, so a request
+          // never loses its Skill to the smaller model.
           const lowFirst = auxiliaryConnection(connection);
           const attempts = lowFirst.model !== connection.model ? [lowFirst, connection] : [connection];
           for (const [index, attemptConnection] of attempts.entries()) {
@@ -1046,7 +1047,7 @@ export class WorkService {
                 signal: controller.signal,
                 system: selection.system,
                 jsonSchema: selection.schema,
-                effort: autoEffort(modelOption(selectedConnection)?.efforts, 'small'),
+                effort: autoEffort(modelOption(attemptConnection)?.efforts, 'small'),
                 emit: () => {},
                 onUsage: count => {
                   counted = combineUsage(counted, count, 'max');

@@ -7,8 +7,9 @@
  *   STEP_EVAL_APPROVE_LIVE=1 STEP_EVAL_PROVIDER=antigravity STEP_EVAL_ANTIGRAVITY_EXECUTABLE=<pinned agy.exe> \
  *   STEP_EVAL_MODELS=gemini-3.8-flash-medium,gemini-3.8-flash-low [STEP_EVAL_PER_SKILL=1] npm run eval:selection
  *
- * Claude, OpenAI and Gemini use the same environment and 50-call cap as eval:golden (desktop/eval/runtime.ts). Antigravity
- * runs only the agy named by an absolute path (STeP's pinned copy), in a throwaway home; agy keeps its sign-in in the OS
+ * Claude, OpenAI and Gemini use the same environment and 50-call cap as eval:golden (desktop/eval/runtime.ts); run the
+ * full set in parts with STEP_EVAL_CASES=1-25, 26-50 and 51-61 (with STEP_EVAL_MAX_CALLS=50) and join them with
+ * `npm run eval:selection -- merge <folder> <folder> <folder>`. Antigravity runs only the agy named by an absolute path (STeP's pinned copy), in a throwaway home; agy keeps its sign-in in the OS
  * keyring, so nothing is copied. The selection call matches the app's: same prompt, schema and no --effort for an id that
  * names its level. Each request costs one model call per model. Requests and Skills are synthetic; no employee data is read.
  */
@@ -117,6 +118,38 @@ async function liveRuntime(env: NodeJS.ProcessEnv) {
   };
 }
 
+/**
+ * `STEP_EVAL_CASES=26-50` keeps cases 26 to 50 (1-based, inclusive), so a run that would pass a provider's call cap
+ * (50 for Claude, OpenAI and Gemini in eval/runtime.ts) can be done in parts and joined with `npm run eval:selection --
+ * merge <folder> <folder> ...`.
+ */
+export function pickRange<T>(cases: T[], range?: string): T[] {
+  if (!range) return cases;
+  const match = /^(\d+)-(\d+)$/.exec(range.trim());
+  const from = Number(match?.[1]),
+    to = Number(match?.[2]);
+  if (!match || from < 1 || to < from || from > cases.length) throw new Error('EVAL_CASES_INVALID');
+  return cases.slice(from - 1, to);
+}
+
+/** Joins the results.json of runs made in parts into one report. */
+async function merge(folders: string[], out: string) {
+  if (folders.length < 2) throw new Error('EVAL_MERGE_FOLDERS_REQUIRED');
+  const parts = await Promise.all(folders.map(async f => JSON.parse(await readFile(join(f, 'results.json'), 'utf8'))));
+  if (new Set(parts.map(p => JSON.stringify([p.provider, p.models, p.perSkill]))).size > 1) throw new Error('EVAL_MERGE_MISMATCH');
+  const outcomes: Outcome[] = parts.flatMap(p => p.outcomes);
+  const rows = score(outcomes);
+  const text =
+    parts
+      .filter(p => p.stopped)
+      .map(p => `Stopped early: ${p.stopped}\n\n`)
+      .join('') + report(rows, outcomes);
+  await mkdir(out, { recursive: true });
+  await writeFile(join(out, 'results.json'), JSON.stringify({ ...parts[0], merged: folders, rows, outcomes }, null, 2));
+  await writeFile(join(out, 'report.md'), text, 'utf8');
+  console.log('\n' + text + `\nReport: ${join(out, 'report.md')}`);
+}
+
 async function main(env = process.env) {
   const here = dirname(fileURLToPath(import.meta.url)),
     root = resolve(here, '../..');
@@ -128,7 +161,7 @@ async function main(env = process.env) {
   const perSkill = Number(env.STEP_EVAL_PER_SKILL || 1);
   if (!Number.isSafeInteger(perSkill) || perSkill < 1 || perSkill > 4) throw new Error('EVAL_PER_SKILL_INVALID');
   const suite = JSON.parse(await readFile(join(root, 'manifest/routing-staff-benchmark.json'), 'utf8'));
-  const cases = sampleCases(suite, perSkill);
+  const cases = pickRange(sampleCases(suite, perSkill), env.STEP_EVAL_CASES);
   const maxCalls = Number(env.STEP_EVAL_MAX_CALLS || cases.length * models.length);
   if (!Number.isSafeInteger(maxCalls) || maxCalls < 1 || maxCalls > 900) throw new Error('EVAL_CALL_LIMIT_INVALID');
   const skills: any = await import('../../src/modules/skills/catalog.js');
@@ -190,10 +223,34 @@ async function main(env = process.env) {
   await mkdir(folder, { recursive: true });
   await writeFile(
     join(folder, 'results.json'),
-    JSON.stringify({ provider: live.connection.provider, models, perSkill, rows, outcomes }, null, 2),
+    JSON.stringify(
+      {
+        provider: live.connection.provider,
+        models,
+        perSkill,
+        cases: env.STEP_EVAL_CASES || 'all',
+        ...(stopped ? { stopped } : {}),
+        rows,
+        outcomes,
+      },
+      null,
+      2,
+    ),
   );
   await writeFile(join(folder, 'report.md'), text, 'utf8');
   console.log('\n' + text + `\nReport: ${join(folder, 'report.md')}`);
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  if (process.argv[2] === 'merge')
+    await merge(
+      process.argv.slice(3),
+      join(
+        dirname(fileURLToPath(import.meta.url)),
+        '..',
+        'eval-results',
+        `${new Date().toISOString().replace(/[:.]/g, '-')}-selection-merged`,
+      ),
+    );
+  else await main();
+}

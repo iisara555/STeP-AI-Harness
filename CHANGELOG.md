@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Pick the Skill with the provider's small model on Claude, OpenAI and Gemini too (owner, 2026-11-01), as Gemini through Antigravity already does with `-low`: Haiku on Claude, the GPT mini on OpenAI and Flash-Lite on the Gemini CLI, when the provider lists one. A malformed or failed reply asks the chosen model again, and the answer, history summary, answer check and quality repair keep the chosen model. `npm run eval:selection` can now run in parts (`STEP_EVAL_CASES=1-25`) and join them (`npm run eval:selection -- merge <folders>`), so providers with a 50-call cap can be compared on the whole set.
+
 ## Desktop v0.6.25 (2026-11-01)
 
 - Show a chat answer about STeP as finished without waiting for its answer check (owner, 2026-11-01). The check against the STeP documents now runs after the answer is saved: a small "กำลังตรวจคำตอบกับเอกสาร STeP" line sits under the answer until the result (or nothing, if the check fails) is added to it, and the next question can be asked meanwhile. On Gemini through Antigravity the check took about 46 seconds of a one-minute answer. A side question still waits for its check.

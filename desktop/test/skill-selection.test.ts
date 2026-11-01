@@ -20,7 +20,7 @@ function fixture(
   const store = new Store(':memory:');
   store.put('settings', 'main', { workspace: tmpdir(), team: 'cc' });
   store.put('connection', 'c', { id: 'c', provider: 'openai', model: 'fixture', ready: true, ...connection });
-  const calls: { prompt: string; system: string; selection: boolean; model: string }[] = [];
+  const calls: { prompt: string; system: string; selection: boolean; model: string; effort?: string }[] = [];
   const recorded: number[] = [];
   const harness: Harness = {
     root,
@@ -55,7 +55,7 @@ function fixture(
       adapter: {
         run: async (prompt, c, ctx) => {
           const selection = Boolean((ctx.jsonSchema as any)?.properties?.skillId);
-          calls.push({ prompt, system: ctx.system || '', selection, model: c.model });
+          calls.push({ prompt, system: ctx.system || '', selection, model: c.model, effort: ctx.effort });
           ctx.onUsage?.({ input: 10, output: 2, total: 12 });
           if (selection) return typeof reply === 'function' ? reply(c.model) : reply;
           return 'Synthetic answer';
@@ -307,6 +307,35 @@ test('a failed -low selection is retried on the chosen model; quota is not', asy
       'quota on the account stops the run without a second selection call',
     );
     assert.equal(f.store.session(second.id).status, 'error');
+  } finally {
+    f.store.close();
+  }
+});
+
+test('Claude selects on the listed Haiku first, with only the levels Haiku offers, and answers on the chosen model', async () => {
+  const claude = {
+    provider: 'claude',
+    mode: 'subscription',
+    model: 'opus',
+    models: [
+      { id: 'opus', label: 'Opus', efforts: [{ id: 'low' }, { id: 'medium' }, { id: 'high' }] },
+      { id: 'haiku', label: 'Haiku' },
+    ],
+  };
+  const f = fixture(model => (model === 'haiku' ? '{"skillId":"document-review"' : REVIEW), {}, claude);
+  try {
+    await f.service.run(f.session.id, 'อ่านร่างนี้ว่ามีอะไรขาดบ้าง', 'ร่างจำลอง', true, undefined, 'chat');
+    const selections = f.calls.filter(c => c.selection);
+    assert.deepEqual(
+      selections.map(c => [c.model, c.effort]),
+      [
+        ['haiku', undefined],
+        ['opus', 'low'],
+      ],
+      'a malformed Haiku reply is asked again on the chosen model',
+    );
+    assert.deepEqual(f.store.session(f.session.id).runs!.at(-1)!.skillSelection, { method: 'model', skill: 'document-review' });
+    assert.ok(f.calls.filter(c => !c.selection).every(c => c.model === 'opus'));
   } finally {
     f.store.close();
   }
