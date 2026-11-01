@@ -687,7 +687,11 @@ test('chat retains source and host context across a fact confirmation and acknow
       assert.match(current.prompt, /<conversation_files>[^]*Synthetic TOR/);
       const state = JSON.parse(/<task_state>\n([^]*?)\n<\/task_state>/.exec(current.prompt)![1]);
       assert.deepEqual(state.files, [{ name: 'synthetic-tor.docx', at: '2000-01-01T00:00:00.000Z' }]);
-      assert.equal(state.latest, input);
+      // The message is in <current_message>; task_state no longer repeats it (or the route in <routing_contract>).
+      assert.match(current.prompt, new RegExp(`<current_message>\n${input}\n</current_message>`));
+      assert.equal(state.latest, undefined);
+      assert.equal(state.route, undefined);
+      assert.match(current.prompt, /<routing_contract>\n\{/);
       assert.equal(store.session(session.id).files?.[0].text, source);
     }
     assert.match(calls.at(-1)!.prompt, /พิธีเปิดวันที่ 8 พฤษภาคม/);
