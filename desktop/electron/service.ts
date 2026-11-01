@@ -1406,11 +1406,13 @@ export class WorkService {
               section('current_message', latest),
             ]
           : [section('request', requestText), ...(continuing ? [section('latest_message', latest)] : [])];
+        // The route is already in <routing_contract>, and in chat the message (and the earlier request when it differs)
+        // is in <current_message> / <earlier_request>, so task_state does not repeat them.
+        const requestShown = chat && (requestSections.length > 1 || requestText === latest);
         const taskState = () =>
           JSON.stringify({
-            request: requestText,
-            latest,
-            route: contract,
+            ...(requestShown ? {} : { request: requestText }),
+            ...(chat ? {} : { latest }),
             files: (session.files || []).map(f => ({ name: f.name, at: f.at })),
             references: paths,
             skill: skillId || '',
