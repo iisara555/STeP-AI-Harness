@@ -39,7 +39,7 @@ import { promptMetrics } from './prompt-metrics';
 import { extractStructuredJson } from './json-schema';
 import { selectSkillBundle } from './skill-resources';
 import { sanitizeModelOutput, evaluateOutputQuality, buildRepairPrompt } from './output-quality';
-import { autoEffort, modelOption, taskSize } from './effort';
+import { autoEffort, auxiliaryConnection, modelOption, taskSize } from './effort';
 import { selfContainedText } from './text-intent';
 import { selectDiscovery } from './discovery';
 import { highConfidenceSkill, prepareSkillSelection, shouldRunModelSkillSelection } from './skill-selection';
@@ -973,47 +973,59 @@ export class WorkService {
             incomingSource || (continuing || revising || retrying ? masked(session.files?.at(-1)?.text || '') : ''),
           );
           const selectionRuntime = await this.runtime(connection, false);
-          const calledAt = Date.now();
-          const call: ProviderCallTrace = {
-            ...promptMetrics(selection.system, selection.prompt),
-            kind: 'selection',
-            outcome: 'running',
-            ms: 0,
-          };
-          (trace.providerCalls ||= []).push(call);
-          let counted: TokenCount = { input: 0, output: 0, total: 0 };
-          try {
-            checkAbort();
-            const reply = await selectionRuntime.adapter.run(selection.prompt, connection, {
-              ...selectionRuntime.context,
-              signal: controller.signal,
-              system: selection.system,
-              jsonSchema: selection.schema,
-              effort: autoEffort(modelOption(selectedConnection)?.efforts, 'small'),
-              emit: () => {},
-              onUsage: count => {
-                counted = combineUsage(counted, count, 'max');
-              },
-              onTransport: info => {
-                call.transport = info;
-              },
-            });
-            checkAbort();
-            chosen = selection.parse(reply);
-            call.outcome = chosen === undefined ? 'error' : 'completed';
-            if (chosen === undefined) call.code = 'INVALID_SKILL_SELECTION';
-            trace.skillSelection = { method: chosen === undefined ? 'fallback' : 'model', ...(chosen ? { skill: chosen } : {}) };
-            // A deliberate general-help decision keeps procedure suggestions out of this answer's prompt.
-            if (chosen === null) skillRegistry = [];
-          } catch (error) {
-            call.outcome = 'error';
-            call.code = codeOf(error);
-            throw error;
-          } finally {
-            call.ms = Date.now() - calledAt;
-            if (counted.total) call.usage = counted;
-            searchUsage = combineUsage(searchUsage, counted);
-            recordUsage(counted);
+          // On Antigravity the selection first runs on the model's -low id (live comparison 2026-11-01: no wrong Skill,
+          // about 7 s faster, but 2 of 61 replies malformed). A malformed or failed -low reply asks the chosen model
+          // again, so a request never loses its Skill to the smaller model.
+          const lowFirst = auxiliaryConnection(connection);
+          const attempts = lowFirst.model !== connection.model ? [lowFirst, connection] : [connection];
+          for (const [index, attemptConnection] of attempts.entries()) {
+            const last = index === attempts.length - 1;
+            const calledAt = Date.now();
+            const call: ProviderCallTrace = {
+              ...promptMetrics(selection.system, selection.prompt),
+              kind: 'selection',
+              outcome: 'running',
+              ms: 0,
+            };
+            (trace.providerCalls ||= []).push(call);
+            let counted: TokenCount = { input: 0, output: 0, total: 0 };
+            try {
+              checkAbort();
+              const reply = await selectionRuntime.adapter.run(selection.prompt, attemptConnection, {
+                ...selectionRuntime.context,
+                signal: controller.signal,
+                system: selection.system,
+                jsonSchema: selection.schema,
+                effort: autoEffort(modelOption(selectedConnection)?.efforts, 'small'),
+                emit: () => {},
+                onUsage: count => {
+                  counted = combineUsage(counted, count, 'max');
+                },
+                onTransport: info => {
+                  call.transport = info;
+                },
+              });
+              checkAbort();
+              chosen = selection.parse(reply);
+              call.outcome = chosen === undefined ? 'error' : 'completed';
+              if (chosen === undefined) call.code = 'INVALID_SKILL_SELECTION';
+              if (chosen === undefined && !last) continue;
+              trace.skillSelection = { method: chosen === undefined ? 'fallback' : 'model', ...(chosen ? { skill: chosen } : {}) };
+              // A deliberate general-help decision keeps procedure suggestions out of this answer's prompt.
+              if (chosen === null) skillRegistry = [];
+              break;
+            } catch (error) {
+              call.outcome = 'error';
+              call.code = codeOf(error);
+              // Sign-in, quota, permission and cancellation apply to the chosen model too; anything else gets one more try.
+              if (last || ['CANCELLED', 'LOGIN_REQUIRED', 'PROVIDER_QUOTA', 'PROVIDER_PERMISSION_DENIED'].includes(call.code || ''))
+                throw error;
+            } finally {
+              call.ms = Date.now() - calledAt;
+              if (counted.total) call.usage = counted;
+              searchUsage = combineUsage(searchUsage, counted);
+              recordUsage(counted);
+            }
           }
         }
         if (chosen) {
