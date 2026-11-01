@@ -151,9 +151,7 @@ async function merge(folders: string[], out: string) {
   const outcomes = joinOutcomes(parts.flatMap(p => p.outcomes));
   const rows = score(outcomes);
   // A part's own cap stop no longer matters once another part answered what it left out.
-  const stops = parts
-    .map(p => p.stopped)
-    .filter(code => code && (code !== 'EVAL_QUOTA_BOUND' || outcomes.some(o => o.code === code)));
+  const stops = parts.map(p => p.stopped).filter(code => code && (code !== 'EVAL_QUOTA_BOUND' || outcomes.some(o => o.code === code)));
   const text = stops.map(code => `Stopped early: ${code}\n\n`).join('') + report(rows, outcomes);
   await mkdir(out, { recursive: true });
   await writeFile(join(out, 'results.json'), JSON.stringify({ ...parts[0], merged: folders, rows, outcomes }, null, 2));
