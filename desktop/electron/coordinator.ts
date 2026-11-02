@@ -118,7 +118,7 @@ export class Coordinator {
     this.cancelAll();
     await Promise.allSettled(pending);
   }
-  async run(id: string, query: string, source: string) {
+  async run(id: string, query: string, source: string, accepted?: { text: string; files: string[]; onAccepted: () => void }) {
     if (!this.policy().features.coordinator) throw new Error('COORDINATOR_DISABLED');
     if (this.active.size || this.service.isActive(id)) throw new Error('RUN_ALREADY_ACTIVE');
     const parent = this.store.session(id);
@@ -169,6 +169,17 @@ export class Coordinator {
       );
     };
     try {
+      const acceptedAt = accepted ? new Date().toISOString() : undefined;
+      if (accepted && acceptedAt) {
+        parent.messages.push({
+          role: 'user',
+          text: accepted.text,
+          at: acceptedAt,
+          ...(accepted.files.length ? { files: accepted.files.map(name => ({ name })) } : {}),
+        });
+        this.store.save(parent);
+        accepted.onAccepted();
+      }
       const routed = await this.route(query, parent.team),
         contract = routed.routingContract;
       if (contract?.authority?.status !== 'ALLOW' || ['BLOCK', 'ESCALATE', 'CLARIFY', 'UNAVAILABLE'].includes(contract?.mode))
@@ -221,6 +232,7 @@ export class Coordinator {
       await this.service.run(id, query, combined, true, undefined, 'draft', undefined, ['Subtask drafts'], {
         draftOnly: true,
         mergeOnly: true,
+        ...(acceptedAt ? { acceptedMessageAt: acceptedAt } : {}),
       });
       check();
     } catch (error) {
