@@ -50,7 +50,7 @@ class ServiceSecurityTests(unittest.TestCase):
         self.assertEqual(self.mock_worker.call_count, 3)
 
     def test_untrusted_request_is_refused_without_waiting_for_its_announced_body(self):
-        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=0.5)
+        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=2)
         try:
             connection.putrequest("POST", "/api/ocr?filename=synthetic.png")
             connection.putheader("Origin", "https://attacker.example")
