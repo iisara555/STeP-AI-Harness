@@ -965,9 +965,7 @@ export class WorkService {
       // depends on them). A public web search still follows unless the documents clearly answer the question.
       const knowledgeTurn = mode !== 'image' && !options.draftOnly;
       const knowledge = knowledgeTurn ? this.knowledge() : undefined;
-      const known: KnowledgeSection[] = knowledge
-        ? await knowledge.search([...new Set([session.originalQuery, latest].filter(Boolean))].join('\n')).catch(() => [])
-        : [];
+      const known: KnowledgeSection[] = knowledge ? await knowledge.searchTurn(session.originalQuery, latest).catch(() => []) : [];
       // What the answer reads: a short leading document whole, so it does not open it again section by section. A quarter
       // of the model's prompt budget at most, so small local models keep excerpts.
       const given: KnowledgeSection[] =
