@@ -6,6 +6,7 @@ import type { PathRule, Policy } from './policy';
 import type { MemoryEntry, MemoryProposal, Session } from '../src/types';
 import { deniedPath, sensitivePath } from './permissions';
 import { ensureGitignored } from '../../src/modules/user-memory.js';
+import { overlap } from '../src/learning-curator';
 
 const hash = (text: string) => createHash('sha256').update(text).digest('hex');
 const TYPES = ['user', 'feedback', 'project', 'reference'];
@@ -110,6 +111,20 @@ function normalize(raw: any): MemoryEntry {
     updated_at: new Date().toISOString(),
     source: 'user-confirmed',
   };
+}
+/** How much of the shorter text the longer covers before saving asks "replace or keep both?" (the daily maintenance
+ * check reports pairs at 0.8 and up as duplicates; this catches near-copies that differ in a day, a number or a word). */
+export const SIMILAR_ON_SAVE = 0.6;
+/**
+ * Saved memories about the same thing as a memory about to be saved: the same name, or text that mostly overlaps. Two
+ * such memories that disagree ("ส่งทุกวันศุกร์" and "ส่งทุกวันจันทร์") would both reach the AI, which then has to guess.
+ * This is a word-overlap check, not a reading of meaning: a contradiction worded differently is not found.
+ */
+export function similarMemories(candidate: { id?: string; name: string; text: string }, entries: MemoryEntry[]) {
+  const name = candidate.name.trim().toLowerCase();
+  return entries.filter(
+    m => m.id !== candidate.id && (m.name.trim().toLowerCase() === name || overlap(candidate.text, m.text) >= SIMILAR_ON_SAVE),
+  );
 }
 export function memoryMarkdown(m: MemoryEntry) {
   const { text, ...metadata } = m;
@@ -266,6 +281,16 @@ export class Memories {
       }
     }
     return entries.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  }
+  /** Memories to show before saving `raw`, so the person can replace one instead of keeping two that disagree. */
+  async similar(raw: any) {
+    const candidate = {
+      id: typeof raw?.id === 'string' ? raw.id : undefined,
+      name: String(raw?.name || '').slice(0, 120),
+      text: String(raw?.text || '').slice(0, 4000),
+    };
+    if (!candidate.text.trim()) return [];
+    return similarMemories(candidate, await this.list()).slice(0, 5);
   }
   /** `from` is set by the host for a confirmed proposal; what the renderer sends never sets a memory's origin. */
   save(raw: any, from?: Pick<MemoryEntry, 'origin' | 'origin_session' | 'origin_evidence'>) {

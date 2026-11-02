@@ -34,6 +34,8 @@ Storage uses Markdown frontmatter inspired by [OpenHarness schema v1](https://gi
 
 Every proposed, saved and loaded item passes `evaluatePrivacyGate`. Personal-data findings, masking, human-review signals, restricted data and secrets are rejected. No identifiers are allowlisted for memory. Schema and body sizes are bounded; symlinks/junctions, hard-linked files, credential locations and administrator path denials are refused. Path rules check both configured and canonical locations, including Windows 8.3 aliases and project `.gitignore` updates. Absolute rule prefixes resolve through existing ancestors, preserving denials for mixed short/long names even before memory folders exist. Writes replace verified records atomically. Each scope permits at most 200 files; bodies are at most 4,000 characters. The privacy detector recognizes text patterns; it cannot certify that all personal or organizational data has been identified. Employees must keep memory free of such data.
 
+**Before saving:** when a new or edited memory has the name of a saved one, or its text mostly repeats one (character-bigram coverage 0.6 or more, `similarMemories` in `memory.ts`), the editor lists those memories and asks whether to replace them or keep both. Two memories that disagree ("ส่งทุกวันศุกร์" and "ส่งทุกวันจันทร์") would otherwise both reach the AI. This compares words, not meaning, so a contradiction worded differently is not caught. The daily maintenance check still reports pairs at 0.8 and up that were kept.
+
 Each answer has **Good**, **Needs fixing** and **Remember this** buttons:
 
 - **Good** and **Needs fixing** are stored on the message, on this computer only.
