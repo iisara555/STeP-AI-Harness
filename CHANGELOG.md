@@ -6,6 +6,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Saved memories about a project or a reference now come with Thai requests. The app split a Thai request on spaces, so "ช่วยสรุปรายงานประชุมทีมการตลาดให้หน่อย" was one long word that matched no memory, and only preferences and answer feedback (which go with every task) reached the AI. It now splits Thai with the word segmenter, leaves out question words and fillers such as ช่วย, ให้, หน่อย and การ, and matches whole Thai words only. `desktop/test/memory-recall.test.ts` covers Thai, mixed and English requests.
 - Saving a memory that repeats or nearly repeats a saved one (same name, or mostly the same text, such as "รายงานส่งทุกวันศุกร์" and "รายงานส่งทุกวันจันทร์") now shows the saved one first and asks whether to replace it or keep both, so two memories that disagree do not both reach the AI. Before, such a pair was only reported by the daily maintenance check, and only when the texts were almost identical.
 
 ## Desktop v0.6.26 (2026-11-02)
