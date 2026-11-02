@@ -17,6 +17,7 @@ import {
 import { AIConnections } from './ai-connections';
 import { CredentialSettings } from './credential-settings';
 import { DeveloperDiagnostics } from './developer-diagnostics';
+import { StartupSettings } from './startup-settings';
 import { shortcut, explainError } from './messages';
 import { SectionArt } from './illustration';
 import { Avatar, pickableAvatars } from './avatars';
@@ -268,7 +269,7 @@ export function SettingsPanel({
     ...(developerAccess ? ([['developer', t('นักพัฒนา / แอดมิน'), FileSearch]] as const) : []),
   ] as const;
   const keywords = {
-    general: 'ชื่อ ทีม ผู้ช่วย รูป โปรไฟล์ สไตล์ โฟลเดอร์ chat language profile team style folder',
+    general: 'ชื่อ ทีม ผู้ช่วย รูป โปรไฟล์ สไตล์ โฟลเดอร์ เริ่มโปรแกรม เปิดเครื่อง startup Windows chat language profile team style folder',
     ai: 'AI บัญชี โมเดล ทดสอบ account model test',
     credentials: 'Google ปฏิทิน Gmail รหัสผ่าน ที่อยู่ พัก บัญชี password address pause calendar',
     appearance: 'ภาษา ธีม language theme display',
@@ -335,6 +336,7 @@ export function SettingsPanel({
       </div>
       {page === 'credentials' && <CredentialSettings call={call} onError={onError} onBusy={credentialBusy} requestedOrigin={vaultOrigin} />}
       {page === 'developer' && developerAccess && <DeveloperDiagnostics call={call} onError={onError} />}
+      {page === 'general' && <StartupSettings call={call} onError={onError} />}
       {page === 'general' && (
         <section className="settings-profile">
           <h2>{t('โปรไฟล์และทีม')}</h2>

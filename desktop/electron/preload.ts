@@ -77,6 +77,8 @@ const allowed = new Set([
   'sessionFork',
   'sessionExport',
   'snapshot',
+  'startupState',
+  'startupSet',
   'diagnostics',
   'diagnosticsExport',
   'skillSuggest',

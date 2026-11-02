@@ -31,6 +31,7 @@ import { join, resolve, basename, dirname, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { Store } from './store';
+import { Startup, STARTUP_ITEM_NAME } from './startup';
 import { prepareLocalData } from './local-data';
 import { requireSecureStorage } from './secure-storage';
 import { Vault } from './vault';
@@ -333,6 +334,8 @@ async function main() {
   const credentialTitle = (title: string) => credentialTitles[title]?.[store.settings().language === 'en' ? 1 : 0] || title;
   // Set the theme before the first paint so a dark-theme user never sees a light flash.
   nativeTheme.themeSource = store.settings().theme;
+  if (process.platform === 'win32') app.setAppUserModelId(STARTUP_ITEM_NAME);
+  const startup = new Startup(app, process.platform, app.isPackaged, process.execPath, Boolean(process.env.STEP_DESKTOP_TEST_HOME));
   // Development smoke tests drive the main window directly; STEP_DESKTOP_SPLASH=1 shows the loading window there too.
   const splash =
     !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME && process.env.STEP_DESKTOP_SPLASH !== '1' ? undefined : new Splash();
@@ -2724,6 +2727,10 @@ async function main() {
         return true;
       case 'snapshot':
         return snapshot();
+      case 'startupState':
+        return startup.state();
+      case 'startupSet':
+        return startup.set(input.enabled);
       case 'diagnostics':
         if (!policyState.policy.features.developmentMode || store.settings().developmentMode !== true) throw new Error('FEATURE_DISABLED');
         return diagnosticsSnapshot(typeof input.limit === 'number' ? input.limit : 250);

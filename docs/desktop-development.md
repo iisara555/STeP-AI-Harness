@@ -6,6 +6,8 @@ For employee setup and everyday use, read the [Desktop guide](../desktop/README.
 
 Local Electron workspace with Thai chat, Tiptap text editing, SQLite history, conflict-safe proposals, source review, and versioned exports. The shared routing service retains the CLI contract. Graphify is developer tooling only.
 
+Windows startup is an immediate per-user OS setting under General settings, through `startupState` / `startupSet` and `electron/startup.ts`. It uses Electron's [login-item API](https://www.electronjs.org/docs/latest/api/app#appsetloginitemsettingssettings-macos-windows) with the stable NSIS executable path and an explicit registry name. It is never enabled automatically at launch, copied into `USER.md`, or registered by development/isolated test builds. Windows Startup apps can override the effective state. macOS and Linux are not supported by this control.
+
 [App entry](employee-login.md) no longer requires employee Google identity in 0.6.8. Workspace service grants
 and AI account sign-in remain separate and optional; retired employee login settings cannot restore the removed gate.
 
