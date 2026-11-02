@@ -65,6 +65,7 @@ import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
 import { searchPublicWeb } from './public-search';
 import { Splash } from './splash';
 import { documentTool } from '../src/document-tools';
+import { documentConversationContext, requestedDocumentTool } from '../src/document-intent';
 import { isDocumentQuestion } from './document-tools';
 import { inspectDocumentTemplate } from './document-template';
 import { DocumentTemplates, readTemplateSnapshot } from './document-template-store';
@@ -4005,10 +4006,15 @@ async function main() {
         const id = inputText(input.id, 60),
           text = inputText(input.text);
         const sending = store.session(id);
+        const requestedId = requestedDocumentTool(
+          text,
+          sending.messages.filter(m => m.role === 'user').map(m => m.text),
+        );
         const aside =
           method === 'sideQuestion' ||
           (!input.skill &&
             !input.documentTool &&
+            !requestedId &&
             !input.attachments?.length &&
             input.mode === 'draft' &&
             isDocumentQuestion(sending.documentTool, text));
@@ -4036,9 +4042,30 @@ async function main() {
           if (unavailable) throw new Error(unavailable);
         }
         if (input.autoContinue && workflow !== 'execute') throw new Error('INVALID_INPUT');
-        const workMode =
-          !workflow && mode === 'chat' && input.autoImage !== false && isImageRequest(text) ? 'image' : workflow ? 'chat' : mode;
-        const draftingTool = input.documentTool === undefined ? undefined : documentTool(input.documentTool);
+        const imageRequest = !workflow && mode === 'chat' && input.autoImage !== false && isImageRequest(text);
+        const requested =
+          !aside &&
+          (!workflow || workflow === 'assistant') &&
+          !imageRequest &&
+          (mode === 'chat' || mode === 'draft') &&
+          !input.documentTool &&
+          !input.coordinator &&
+          !input.retry &&
+          !input.autoContinue &&
+          permissionMode() !== 'plan'
+            ? documentTool(requestedId)
+            : undefined;
+        const hasDraft = Boolean(sending.draft.trim() || sending.proposals.length);
+        const newDocument =
+          /ฉบับใหม่|อีก(?:ฉบับ|เรื่อง|โครงการ)|เรื่องใหม่|(?:tor|โครงการ|เอกสาร|บันทึก|หนังสือ|รายงาน)\s*ใหม่|\bnew\s+(?:document|draft)\b/i.test(
+            text,
+          );
+        const forkDocument = Boolean(requested && hasDraft && (sending.documentTool !== requested.id || newDocument));
+        const autoDocument =
+          requested && (!input.skill || ((!hasDraft || forkDocument) && input.skill === requested.skill)) ? requested : undefined;
+        const workMode = imageRequest ? 'image' : autoDocument ? 'draft' : workflow ? 'chat' : mode;
+        const draftingTool =
+          input.documentTool === undefined ? (!hasDraft || forkDocument ? autoDocument : undefined) : documentTool(input.documentTool);
         if (input.documentTool !== undefined && (!draftingTool || workMode !== 'draft')) throw new Error('INVALID_DOCUMENT_TOOL');
         const coordinated = input.coordinator === true;
         if (draftingTool && coordinated) throw new Error('INVALID_DOCUMENT_TOOL');
@@ -4083,7 +4110,14 @@ async function main() {
         if (typeof input.sourceText === 'string' && input.sourceText.length > 100_000) throw new Error('INPUT_LIMIT');
         const sourceText = typeof input.sourceText === 'string' ? inputText(input.sourceText, 100_000) : '';
         const questionSnapshot = aside ? service.questionSnapshot(id) : undefined;
-        const combinedSource = questionSnapshot?.source || [sourceText, attachmentText].filter(Boolean).join('\n\n---\n\n');
+        const priorDraft =
+          autoDocument &&
+          forkDocument &&
+          /(?:จาก|ตาม|อ้างอิง|อิง|ใช้|based on|from)\s*(?:ร่าง|เอกสาร|ฉบับ|tor\b|บันทึก|หนังสือ|รายงาน|โครงการ)/i.test(text)
+            ? sending.proposals.at(-1)?.text || sending.draft
+            : '';
+        const priorSource = priorDraft ? `Prior document for this request; draft only, not an approval:\n${priorDraft}` : '';
+        const combinedSource = questionSnapshot?.source || [sourceText, attachmentText, priorSource].filter(Boolean).join('\n\n---\n\n');
         if (combinedSource.length > 100_000) throw new Error('INPUT_LIMIT');
         // Only juristic-person numbers (13 digits starting with 0) that the person checked may stay unmasked.
         const allowIds = (Array.isArray(input.allowIdentifiers) ? input.allowIdentifiers : [])
@@ -4110,7 +4144,7 @@ async function main() {
                 keywordOnly: review.keywordOnly,
                 first,
                 attachment: selected.length > 0,
-                source: Boolean(sourceText) || aside,
+                source: Boolean(sourceText || priorSource) || aside,
                 vision,
                 coordinated,
               },
@@ -4127,11 +4161,9 @@ async function main() {
         }
         if (ask) {
           // The in-app dialog answers with a one-time token bound to this exact request, so a later edit needs a new answer.
-          const sourceDigest = (aside ? combinedSource : sourceText)
-            ? createHash('sha256')
-                .update(aside ? combinedSource : sourceText)
-                .digest('hex')
-            : '';
+          const consentSource = aside ? combinedSource : [sourceText, priorSource].filter(Boolean).join('\n\n');
+          const sourceDigest = consentSource ? createHash('sha256').update(consentSource).digest('hex') : '';
+          const conversationDigest = autoDocument ? createHash('sha256').update(documentConversationContext(sending)).digest('hex') : '';
           const fingerprint = createHash('sha256')
             .update(
               [
@@ -4147,6 +4179,8 @@ async function main() {
                 String(aside),
                 String(input.autoContinue === true),
                 sourceDigest,
+                conversationDigest,
+                ...(autoDocument ? [allowIds.join(',')] : []),
                 ...selected.map((a: any) => a.view.id),
               ].join('\0'),
             )
@@ -4165,7 +4199,7 @@ async function main() {
                 labels: review.labels,
                 attachment: selected.length > 0,
                 vision,
-                source: Boolean(sourceText) || aside,
+                source: Boolean(sourceText || priorSource) || aside,
               },
             };
           }
@@ -4197,7 +4231,16 @@ async function main() {
         if ((aside && service.isQuestionActive(id)) || (!aside && (service.isActive(id) || coordinator.has(id))))
           throw new Error('RUN_ALREADY_ACTIVE');
         if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
-        const queued = store.session(id);
+        if (autoDocument) {
+          const current = store.session(id);
+          if (
+            current.revision !== sending.revision ||
+            current.draft !== sending.draft ||
+            JSON.stringify(current.proposals) !== JSON.stringify(sending.proposals) ||
+            documentConversationContext(current) !== documentConversationContext(sending)
+          )
+            throw new Error('DRAFT_CONFLICT');
+        }
         if (aside) {
           void service.sideQuestion(id, text, true, questionSnapshot!).catch(error => {
             diagnose('side-question-failed', { code: errorCode(error) });
@@ -4205,17 +4248,34 @@ async function main() {
           });
           return { started: true, aside: true, mode: 'chat', masked: review.labels, warning };
         }
+        let runId = id;
+        if (autoDocument && forkDocument) {
+          const child = store.forkConversationDocument(id, autoDocument.title);
+          if (allowIds.length) {
+            child.allowedIdentifiers = allowIds;
+            store.save(child);
+          }
+          try {
+            const started = await fireHook({ event: 'session_start', sessionId: child.id });
+            if (started.blocked) throw new Error('HOOK_BLOCKED');
+          } catch (error) {
+            store.remove('session', child.id);
+            throw error;
+          }
+          runId = child.id;
+        }
+        const queued = store.session(runId);
         const templateInfo =
           nativeTemplate && templateDescription
-            ? documentTemplates.save(id, nativeTemplate, draftingTool!.id, selected[0].view.name, templateDescription.font)
+            ? documentTemplates.save(runId, nativeTemplate, draftingTool!.id, selected[0].view.name, templateDescription.font)
             : undefined;
         queued.status = 'queued';
         store.save(queued);
         void (
           coordinated
-            ? coordinator.run(id, text, combinedSource)
+            ? coordinator.run(runId, text, combinedSource)
             : service.run(
-                id,
+                runId,
                 text,
                 combinedSource,
                 true,
@@ -4226,6 +4286,7 @@ async function main() {
                   ...selected.map((a: any) => a.view.name),
                   // Reviewed text handed over by an in-app tool (Terminal, Browser, Files) or the receipt page.
                   ...(sourceText ? ['ผลจากเครื่องมือในแอป'] : []),
+                  ...(priorSource ? ['ร่างเดิมที่อ้างถึง'] : []),
                 ],
                 {
                   retry: input.retry === true,
@@ -4233,22 +4294,23 @@ async function main() {
                   images: selected.flatMap(a => a.images || []),
                   ...(workflow ? { workflow } : {}),
                   ...(draftingTool ? { documentTool: draftingTool.id } : {}),
+                  ...(autoDocument ? { fromConversation: true } : {}),
                   ...(templateInfo ? { documentTemplate: templateInfo } : {}),
                 },
               )
         ).catch(error => {
           diagnose('run-rejected', { code: errorCode(error) });
-          const failed = store.session(id);
+          const failed = store.session(runId);
           failed.status = error.message === 'CANCELLED' ? 'interrupted' : 'error';
           if (failed.messages.at(-1)?.text !== errorCode(error))
             failed.messages.push({ role: 'status', text: errorCode(error), at: new Date().toISOString() });
           store.save(failed);
-          emit({ sessionId: id, type: 'status', text: /^[A-Z_]+$/.test(error.message) ? error.message : 'RUN_FAILED' });
-          emit({ sessionId: id, type: 'changed' });
+          emit({ sessionId: runId, type: 'status', text: /^[A-Z_]+$/.test(error.message) ? error.message : 'RUN_FAILED' });
+          emit({ sessionId: runId, type: 'changed' });
         });
         for (const a of selected) attachments.delete(a.view.id);
         // Without a dialog, the person still learns what was masked before sending.
-        return { started: true, mode: workMode, masked: review.labels, warning };
+        return { started: true, mode: workMode, masked: review.labels, warning, ...(runId !== id ? { sessionId: runId } : {}) };
       }
       case 'cancel':
         coordinator.cancel(input.id);

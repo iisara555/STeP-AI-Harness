@@ -1108,21 +1108,36 @@ export default function App() {
     if (result.started && result.warning) notify(t('ส่งแล้ว ข้อความนี้มีคำที่อาจเป็นข้อมูลอ่อนไหว อย่าใส่ชื่อหรือรหัสของบุคคลในงานนี้'));
     else if (result.started && result.masked?.length) notify(t('ระบบปิดบังก่อนส่งให้ AI: {0}', result.masked.join(', ')));
     if (result.started) {
-      if (documentTool) setConsumedDocumentTask(id);
+      const runId = typeof result.sessionId === 'string' ? result.sessionId : id;
+      const focused = currentId.current === id;
+      if (runId !== id) {
+        if (runningIds.current.get(id) === attempt) runningIds.current.delete(id);
+        runningIds.current.set(runId, attempt);
+        if (focused) {
+          currentId.current = runId;
+          setSelected(runId);
+          notify(t('เริ่มเอกสารใหม่โดยเก็บบทสนทนาและร่างเดิมไว้'), 'info');
+        }
+      }
+      if (documentTool) setConsumedDocumentTask(runId);
       setForcedSkill('');
       setQuery('');
       setPendingSource('');
       setFiles([]);
       setNow(Date.now());
       const updated = await refresh();
-      const state = updated?.sessions.find(s => s.id === id)?.status;
+      const state = updated?.sessions.find(s => s.id === runId)?.status;
       if (state && !['queued', 'running'].includes(state)) {
         setRunning(false);
         setProgress('');
         setStartedAt(0);
         setStream('');
       }
-      if (result.mode === 'image' || result.mode === 'draft') {
+      if (focused && (result.mode === 'image' || result.mode === 'draft')) {
+        if (result.mode === 'draft' && mode === 'chat') {
+          setWorkflow('');
+          setWorkMode('draft');
+        }
         setToolTab('output');
         openPanel();
       }
