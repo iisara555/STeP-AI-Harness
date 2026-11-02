@@ -94,11 +94,13 @@ try {
   await ask('ประกาศวันหยุดราชการปีงบ 2570');
   await sidebar.getByRole('button', { name: 'เริ่มงานใหม่' }).click();
   await expect(page.locator('.message')).toHaveCount(0);
-  await ask('ช่วยร่างรายงานการประชุมทีม');
+  // Keep this a plain chat answer so the sidebar still exercises staging an answer in Output.
+  // Explicit requests for minutes now open a template-backed document directly (chat-document-smoke).
+  await ask('สรุปประเด็นประชุมทีมให้หน่อย');
   assert.equal((await sessions()).length, 2);
   await expect(sidebar.getByRole('region', { name: 'วันนี้' }).locator('.session')).toHaveCount(2);
   const holiday = (await sessions()).find(s => s.messages[0].text.includes('วันหยุด'));
-  const report = (await sessions()).find(s => s.messages[0].text.includes('รายงาน'));
+  const report = (await sessions()).find(s => s.messages[0].text.includes('ประชุม'));
 
   // Opening a task shows its own conversation.
   await task(holiday.title).locator('.session-open').click();

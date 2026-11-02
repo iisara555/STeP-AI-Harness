@@ -32,6 +32,7 @@ test('discussion, partial edits and postponed drafting do not silently become a 
     'ช่วยเขียนชื่อโครงการให้หน่อย',
     'ช่วยสร้างคำสั่ง SQL',
     'สรุปประเด็นจาก TOR นี้',
+    'สรุปประเด็นประชุมทีมให้หน่อย',
   ])
     assert.equal(requestedDocumentTool(message), undefined, message);
 });

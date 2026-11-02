@@ -23,6 +23,18 @@ import { uxToolsEn } from './ux-tools-en';
 import { uxReviewEn } from './ux-review-en';
 import { googleChangesEn } from './google-changes-en';
 export const en: Record<string, string> = {
+  'ขอร่างเอกสารต่อจากบทสนทนาได้ โดยใช้ Skill และแม่แบบเดียวกับหน้าเอกสาร และเก็บร่างเดิมไว้เมื่อเริ่มเอกสารใหม่':
+    'Draft documents from a conversation with the same Skills and templates as the document page, preserving earlier drafts when starting a new document.',
+  'ร่าง TOR ใช้โครงครบ 16 ข้อ พร้อมแจ้งหัวข้อที่ตรวจไม่พบให้ทบทวนก่อนนำไปใช้':
+    'TOR drafts use the complete 16-section outline and flag headings not found for review before use.',
+  'แก้ข้อความไม่ปรากฏหลังกด Enter และวางภาพในช่องแชตเพื่อดูตัวอย่างหรือนำออกก่อนส่งได้':
+    'Keep Enter-submitted messages visible and paste images into chat to preview or remove them before sending.',
+  'ตั้งให้เปิด STeP Desktop เมื่อเข้าสู่ Windows ได้ในหน้าตั้งค่าทั่วไป':
+    'Choose whether STeP Desktop opens when you sign in to Windows in General settings.',
+  'ค้นความจำโครงการจากคำถามภาษาไทยได้ดีขึ้น และถามก่อนบันทึกความจำที่ซ้ำหรือใกล้เคียงของเดิม':
+    'Recall project memories from Thai questions and review duplicate or similar memories before saving.',
+  'เมื่อใช้เครื่องมือล้มเหลวต่อเนื่อง ผู้ช่วยจะหยุดอธิบายและถามข้อมูลที่ต้องการเพื่อทำงานต่อ':
+    'After repeated tool failures, the assistant stops, explains and asks for what it needs to continue.',
   ภาพจากคลิปบอร์ด: 'Clipboard image',
   ตัวอย่างภาพแนบ: 'Attached image preview',
   ช่วยดูไฟล์ที่แนบ: 'Please look at the attached file.',
