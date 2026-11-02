@@ -23,6 +23,18 @@ import { uxToolsEn } from './ux-tools-en';
 import { uxReviewEn } from './ux-review-en';
 import { googleChangesEn } from './google-changes-en';
 export const en: Record<string, string> = {
+  'คำถามเรื่อง STeP ตอบเร็วขึ้น เมื่อเอกสารที่ตรงคำถามสั้นพอ แอปส่งให้ AI อ่านทั้งฉบับตั้งแต่แรก (Gemini ผ่าน Antigravity เหลือราว 20 วินาที จากราว 25 วินาที)':
+    'STeP questions are answered faster: when the matching document is short enough the AI reads it whole from the start (Gemini through Antigravity about 20 seconds, down from about 25)',
+  'เมื่อคำถามใช้คำต่างจากเอกสาร AI เห็นรายชื่อเอกสาร STeP ทั้งหมด จึงเปิดเอกสารที่ถูกได้เอง':
+    'When a question uses different words from the documents, the AI sees the whole list of STeP documents and can open the right one itself',
+  'ถามต่อด้วย "อีกเรื่อง…" หรือ "เปลี่ยนเรื่อง…" แอปค้นเอกสารจากเรื่องใหม่ ไม่ปนกับคำถามแรก':
+    'A follow-up that says it changes the subject ("another thing…", "changing the subject…") searches the documents for the new subject, not the first question',
+  'ระหว่างรอคำตอบ บรรทัดสถานะบอกว่ากำลังเลือก Skill หรือกำลังอ่านเอกสารชื่ออะไร':
+    'While you wait, the status line says when the AI is choosing a Skill and which document it is reading',
+  'แหล่งข้อมูลจาก Web Search ใต้คำตอบแสดงเฉพาะหน้าเว็บที่ใช้ตอบจริง':
+    'Web Search sources under an answer show only the pages the answer used',
+  'ไม่ถามยืนยันข้อมูลส่วนตัวกับคำทั่วไปอย่าง "รายชื่อผู้ให้บริการ" หรือ "นามสกุลไฟล์"':
+    'No personal-data confirmation for ordinary phrases such as "vendor list" or "file extension"',
   'Gemini ผ่าน Antigravity เลือก Skill เร็วขึ้นราว 7 วินาที และแก้ปัญหาข้อความสั้นตอบไม่สำเร็จ (PROVIDER_REQUEST_FAILED) ในรุ่น 0.6.24':
     'Gemini through Antigravity picks a Skill about 7 seconds faster, and short messages no longer fail with PROVIDER_REQUEST_FAILED as in 0.6.24',
   'คำตอบเรื่อง STeP แสดงเสร็จทันที แล้วตรวจกับเอกสาร STeP ต่อเบื้องหลัง ระหว่างนั้นถามข้อต่อไปได้เลย':
@@ -2375,6 +2387,10 @@ export const en: Record<string, string> = {
   'ความจำ: {0}': 'Memory: {0}',
   'กำลังอ่าน Skill {0}': 'Reading Skill {0}',
   'กำลังอ่านเอกสาร {0}': 'Reading document {0}',
+  'กำลังดูรายชื่อเอกสาร STeP': 'Looking through the list of STeP documents',
+  'กำลังเปิดเอกสาร STeP': 'Opening a STeP document',
+  'กำลังเลือก Skill ที่เหมาะกับงาน': 'Choosing the Skill that fits this task',
+  'กำลังเตรียมคำตอบจากเอกสาร {0}': 'Preparing the answer from {0}',
   ข้อตกลงการใช้งาน: 'Terms of use',
   'ข้อความ ไฟล์ และรูปที่คุณส่งจะไปถึงผู้ให้บริการ AI ที่เชื่อมไว้ (เช่น Google, OpenAI, Anthropic) ตามที่พิมพ์':
     'Messages, files and images you send go to the connected AI provider (such as Google, OpenAI or Anthropic) as you wrote them.',
