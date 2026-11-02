@@ -53,3 +53,5 @@ desktop/ocr-runtime/
 desktop/eval-results/
 .npm-cache/
 .codex/hooks.json
+# Local MCP registrations can contain host-specific paths and credentials.
+.codex/config.toml
