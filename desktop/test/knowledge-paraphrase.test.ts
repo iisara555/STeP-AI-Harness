@@ -8,19 +8,16 @@ const routing: any = await import('../../src/modules/router/service.js');
 
 type Case = { q: string; doc: string | string[]; earlier?: string };
 
-// Keyword search on 2026-11-01: 15 of 38 paraphrases, 7 of 8 follow-ups. The misses below are what A1 (pick a document from the table of contents
+// Keyword search on 2026-11-01: 15 of 38 paraphrases, 7 of 8 follow-ups; 16 and 8 on 2026-11-02 (split question words, topic change). The misses below are what A1 (pick a document from the table of contents
 // when keywords find nothing), S1 and A6 (semantic search) must lift; raise the floors when they do, never lower them.
-const PARAPHRASE_FLOOR = 15;
-const FOLLOW_UP_FLOOR = 7;
-
-/** The same query Desktop builds for a chat turn (service.ts): the conversation's first request, then the new message. */
-const turnQuery = (item: Case) => [...new Set([item.earlier, item.q].filter(Boolean))].join('\n');
+const PARAPHRASE_FLOOR = 16;
+const FOLLOW_UP_FLOOR = 8;
 
 async function measure(cases: Case[]) {
   const knowledge = new OrganizationKnowledge(resolve('..'), routing.loadDocumentCatalog);
   const misses: string[] = [];
   for (const item of cases) {
-    const found = await knowledge.search(turnQuery(item));
+    const found = await knowledge.searchTurn(item.earlier, item.q);
     const ok = item.doc === 'none' ? !found.length : [item.doc].flat().includes(found[0]?.id);
     if (!ok)
       misses.push(
