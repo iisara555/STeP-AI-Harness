@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.6.26 (2026-11-02)
+
 - Say what the assistant is really doing while an answer is on its way. The line under a running answer now says "กำลังเลือก Skill ที่เหมาะกับงาน" while the AI picks a Skill, "กำลังเตรียมคำตอบจากเอกสาร …" with the STeP document's title when keyword search is sure of it, and names a document the AI opens by its title instead of its registry ID ("กำลังอ่านเอกสาร step-facility-equipment-inventory-2020" before).
 - Fix two STeP document search misses found in the live knowledge run. A follow-up that says it changes the subject ("อีกเรื่อง FABLAB มีเครื่องอะไรบ้าง", "เปลี่ยนเรื่อง …") is now searched on its own instead of together with the chat's first question, so it finds the equipment inventory instead of nothing. And "ทองคำบาทละเท่าไหร่วันนี้" no longer matches the HR announcement: the pieces the Thai word splitter makes of เท่าไหร่ and บาทละ (เท่า, ไหร่, ละ) now count as question words. Paraphrase set 16/38 (was 15), follow-ups 8/8 (was 7).
 - When keyword search finds a short STeP document (up to 24,000 characters, and at most a quarter of the model's prompt budget), the answer now reads that document whole instead of four excerpts, so it no longer spends two more AI rounds opening its outline and the right section. Search often found the right document but the wrong sections: for "หยุดพักร้อนได้ปีละกี่วัน" it sent the HR announcement's sections on holiday work, travel, leave in general and discipline, not 4.4 on annual leave. Longer documents such as the quality manual and the MIS register, and small local models, keep excerpts.
