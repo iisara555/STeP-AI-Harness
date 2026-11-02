@@ -71,7 +71,7 @@ const QUESTION_WORDS = new Set([
   'ไหร่',
   'ละ',
 ]);
-function topicWords(text: string) {
+export function topicWords(text: string) {
   return new Set(
     [...wordSegmenter.segment(text.toLowerCase())]
       .filter(word => word.isWordLike && word.segment.length > 1 && !QUESTION_WORDS.has(word.segment))
