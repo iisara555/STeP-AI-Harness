@@ -44,6 +44,7 @@ import { selfContainedText } from './text-intent';
 import { selectDiscovery } from './discovery';
 import { highConfidenceSkill, prepareSkillSelection, shouldRunModelSkillSelection } from './skill-selection';
 import { parseDocumentOutput } from '../src/document-output';
+import { missingTorSections } from './tor-coverage';
 import { GOOGLE_CHANGE_LIMIT, type GoogleChange } from '../src/google-changes';
 import { markdownDocument, documentText } from '../src/draft';
 import { documentTarget, patchContract, applyDocumentPatch } from './document-patch';
@@ -1250,7 +1251,8 @@ export class WorkService {
       let result = '',
         handoff = '',
         sources: string[] = [],
-        skillTitle = '';
+        skillTitle = '',
+        torTemplate = '';
       // Providers report cumulative usage per step; keep the latest report of each step.
       let usage: TokenCount = { ...searchUsage },
         stepUsage: TokenCount = { input: 0, output: 0, total: 0 };
@@ -1323,6 +1325,7 @@ export class WorkService {
         }
         paths.splice(0, paths.length, ...new Set(paths));
         const instructions = await Promise.all(paths.map(path => this.contextFile(path)));
+        if (draftingTool?.id === 'tor') torTemplate = instructions[paths.indexOf(draftingTool.template)] || '';
         skillTitle = general ? '' : /^#\s+(.+)$/m.exec(instructions[0] || '')?.[1]?.trim() || String(skillId || '');
         if (routed.selectedPlaybook?.specPath) {
           instructions.push(await this.contextFile(routed.selectedPlaybook.specPath));
@@ -1910,8 +1913,25 @@ export class WorkService {
       const patched = target ? applyDocumentPatch(handoff, target, revisionDocument) : undefined;
       const documentOutput =
         patched || (draftingTool ? parseDocumentOutput(handoff, draftingTool.id, { requireEnvelope: true }) : undefined);
+      let torCoverageNote = '';
       if (documentOutput) {
         handoff = documentOutput.draft;
+        if (draftingTool?.id === 'tor' && !session.documentTemplate) {
+          const missing = missingTorSections(handoff, torTemplate);
+          if (missing?.length) {
+            const labels = missing.map(section => `${section.number}. ${section.title}`).join('; ');
+            torCoverageNote = tm('เทียบโครงกลาง TOR 16 ข้อแล้ว ยังตรวจไม่พบ {0} หัวข้อ ดูรายละเอียดในผลตรวจ', missing.length);
+            documentOutput.review = [
+              tm(
+                '**ตรวจโครงกลาง TOR 16 ข้อ:** ยังตรวจไม่พบหัวข้อต่อไปนี้: {0} ระบบตรวจจากเลขและชื่อหัวข้อ จึงอาจไม่พบรูปแบบบางชนิด หากใช้แบบหน่วยงานอื่น ให้ตรวจเทียบกับแบบที่เลือก',
+                labels,
+              ),
+              documentOutput.review,
+            ]
+              .filter(Boolean)
+              .join('\n\n');
+          }
+        }
         const tableOrCodeWarnings = qualityReport.findings
           .filter(f => f.code === 'TABLE_TOTAL_MISMATCH' || f.code === 'UNGROUNDED_DOC_CODE')
           .map(f => `- [ตรวจคุณภาพอัตโนมัติ] ${f.detail}`);
@@ -2003,7 +2023,11 @@ export class WorkService {
       const answeredAt = new Date().toISOString();
       session.messages.push({
         role: 'assistant',
-        text: chat ? handoff : draftSummary(handoff, working, skillTitle, revising ? (session.followUps || []).at(-1) || '' : ''),
+        text: chat
+          ? handoff
+          : [draftSummary(handoff, working, skillTitle, revising ? (session.followUps || []).at(-1) || '' : ''), torCoverageNote]
+              .filter(Boolean)
+              .join('\n\n'),
         at: answeredAt,
         ...(chat ? {} : { draftSummary: true }),
         ms: Date.now() - started,

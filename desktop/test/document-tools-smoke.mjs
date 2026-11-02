@@ -11,7 +11,7 @@ import { createRequire } from 'node:module';
 const requests = [];
 const fixtures = JSON.parse(await readFile(new URL('./fixtures/document-drafts.json', import.meta.url), 'utf8'));
 const longTor =
-  fixtures.documents.tor +
+  fixtures.documents.tor.replace(/^## ๑๔\.[^\n]*\n[\s\S]*?(?=^## ๑๕\.)/m, '') +
   '\n\n' +
   Array.from({ length: 32 }, (_, index) => {
     const detail = Array.from(
@@ -23,6 +23,7 @@ const longTor =
   }).join('\n\n') +
   '\n\nSYNTHETIC-TOR-END';
 assert.ok(longTor.length > 25000, 'the long synthetic draft should exceed a short one-response fixture');
+assert.doesNotMatch(longTor, /^## ๑๔\./m, 'the fake AI omits one main heading so the employee can see the warning');
 const previewFolder = join(tmpdir(), 'step-document-review');
 await mkdir(previewFolder, { recursive: true });
 const server = createServer(async (req, res) => {
@@ -234,6 +235,10 @@ try {
     assert.ok(call.system.includes('## Workflow'));
     assert.ok(call.system.includes('working template'));
     if (id === 'tor') {
+      await expect(
+        page.getByText('เทียบโครงกลาง TOR 16 ข้อแล้ว ยังตรวจไม่พบ 1 หัวข้อ ดูรายละเอียดในผลตรวจ', { exact: true }),
+      ).toBeVisible();
+      await expect(reviewPanel).toContainText('14. การรับประกัน');
       const torCalls = requests.filter(request => request.system.includes('Primary Skill: tor-government-writing'));
       assert.equal(torCalls.length, 2);
       assert.ok(torCalls.every(request => !request.hasMaxTokens));
@@ -282,7 +287,10 @@ try {
     assert.ok(document.includes(`w:cs="${id === 'memo' ? 'TH Sarabun New' : 'TH SarabunPSK'}"`));
     assert.ok(!document.includes('Skill Verification') && !document.includes('Unresolved Fields'));
     assert.ok(!document.includes('document_draft') && !document.includes('&lt;br'));
-    if (id === 'tor') assert.ok(document.includes('SYNTHETIC-TOR-END'), 'the full long TOR reached the editable Word export');
+    if (id === 'tor') {
+      assert.ok(document.includes('SYNTHETIC-TOR-END'), 'the full long TOR reached the editable Word export');
+      assert.ok(!document.includes('ตรวจโครงกลาง TOR'), 'the coverage warning stays in the review, outside the exported document');
+    }
     const accepted = (await snapshot()).sessions.find(s => s.id === last.id);
     assert.ok(accepted.documentReview.text.includes('Skill Verification'));
     await expect(page.locator('.tiptap')).not.toContainText('Skill Verification');

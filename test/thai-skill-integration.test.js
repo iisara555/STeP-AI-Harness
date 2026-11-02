@@ -8,7 +8,7 @@ const translation = 'thai-english-translation';
 test('TOR tools share one source-gated 16-section skeleton without default procurement terms', async () => {
   const canonical = 'skills/common/thai-official-documents/templates/tor-16-sections-template.md';
   const template = await readFile(canonical, 'utf8');
-  const headings = [...template.matchAll(/^([๐-๙]+)\. /gm)];
+  const headings = [...template.matchAll(/^([๐-๙]+)\. ([^\r\n]+)/gm)];
   assert.equal(headings.length, 16);
   assert.match(template, /working template/i);
   for (const topic of ['ค่าปรับ', 'คุณสมบัติ', 'SLA', 'แหล่ง']) assert.ok(template.includes(topic));
@@ -18,6 +18,13 @@ test('TOR tools share one source-gated 16-section skeleton without default procu
   assert.doesNotMatch(forwarding, /^๑\. /m);
   const profiles = await readFile('desktop/src/document-tools.ts', 'utf8');
   assert.ok(profiles.includes(`template: '${canonical}'`));
+  const skill = await readFile('skills/pm/tor-government-writing/SKILL.md', 'utf8');
+  const outline = skill.split('3. **Draft structure**')[1].split('4. **Make requirements testable**')[0];
+  const skillHeadings = [...outline.matchAll(/(?:^\s*|;\s*)([๐-๙]+)\.\s+([^;\r\n]+)/gm)];
+  const normalized = matches => matches.map(match => `${match[1]}. ${match[2]}`.replace(/\s*\((?:Deliverables|SLA)\)/g, '').trim());
+  assert.deepEqual(normalized(skillHeadings), normalized(headings));
+  assert.match(outline, /รอยืนยัน/);
+  assert.match(outline, /ไม่ใช่ข้อบังคับสากล/);
 });
 const routes = [
   ['ช่วยแปลเป็นภาษาอังกฤษ', translation],

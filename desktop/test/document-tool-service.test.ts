@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { Store } from '../electron/store';
 import { WorkService, type Harness } from '../electron/service';
@@ -33,6 +34,59 @@ function fixture() {
   };
   return { store, session, harness };
 }
+
+test('TOR compares the generated draft with the 16-section outline without changing its text', async () => {
+  const template = await readFile(
+    new URL('../../skills/common/thai-official-documents/templates/tor-16-sections-template.md', import.meta.url),
+    'utf8',
+  );
+  const headings = [...template.matchAll(/^([๐-๙]+)\.\s+(.+)$/gm)];
+  for (const omitted of [[], [7, 14]]) {
+    const { store, session, harness } = fixture();
+    const body = headings
+      .map((match, index) =>
+        omitted.includes(index + 1) ? '' : `## ${match[1]}. ${match[2]}\n\nSYNTHETIC-MANUAL-${index + 1} [รอยืนยัน: ข้อมูล]`,
+      )
+      .filter(Boolean)
+      .join('\n\n');
+    const service = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: root, env: {} },
+        adapter: {
+          run: async (_prompt, _connection, context) => {
+            assert.match(context.system || '', /every numbered main heading 1–16/);
+            assert.match(context.system || '', /explicitly chosen alternative takes precedence/);
+            return envelope(body);
+          },
+        },
+      }),
+      () => {},
+    );
+    try {
+      const request = documentRequest('tor', { title: 'Synthetic TOR' }, 'service');
+      await service.run(session.id, request.text, request.sourceText, true, undefined, 'draft', undefined, [], { documentTool: 'tor' });
+      const done = store.session(session.id);
+      assert.equal(done.status, 'review');
+      assert.equal(done.proposals[0].text, body);
+      assert.match(done.proposals[0].review!, /ตรวจต้นฉบับก่อนเสนอ/);
+      if (omitted.length) {
+        assert.match(done.proposals[0].review!, /7\. ผลผลิต/);
+        assert.match(done.proposals[0].review!, /14\. การรับประกัน/);
+        assert.match(done.proposals[0].review!, /หากใช้แบบหน่วยงานอื่น/);
+        assert.ok(done.messages.some(message => message.text.includes('ยังตรวจไม่พบ 2 หัวข้อ')));
+        assert.doesNotMatch(done.proposals[0].text, /ตรวจโครงกลาง TOR/);
+        store.accept(session.id, done.proposals[0].id);
+        assert.match(store.session(session.id).documentReview!.text, /7\. ผลผลิต/);
+      } else {
+        assert.doesNotMatch(done.proposals[0].review!, /ตรวจโครงกลาง TOR/);
+      }
+    } finally {
+      store.close();
+    }
+  }
+});
 
 test('both TOR variants load task adaptation, acceptance and source guidance without importing the computer example', async () => {
   for (const variant of ['goods', 'service']) {
@@ -121,7 +175,7 @@ test('TOR continues a provider-truncated draft, fences and masks partial text, a
     assert.match(done.proposals[0].text, /\[MASKED\]/);
     assert.match(done.proposals[0].text, /ข้อ ๒ รายละเอียดที่ต่อจากเดิม/);
     assert.match(done.proposals[0].text, /ข้อ ๓ ผลส่งมอบ/);
-    assert.equal(done.proposals[0].review, 'แหล่งข้อมูลรอยืนยัน');
+    assert.match(done.proposals[0].review!, /แหล่งข้อมูลรอยืนยัน/);
     assert.equal(done.usage?.total, 39);
   } finally {
     store.close();
@@ -171,7 +225,7 @@ test('compatible TOR generation continues an actual length stop through the edit
     assert.match(bodies[1].messages.at(-1).content, /<partial_tor_draft>/);
     assert.match(done.proposals[0].text, /ข้อ ๑ ขอบเขตงาน/);
     assert.match(done.proposals[0].text, /ข้อ ๒ ผลส่งมอบ/);
-    assert.equal(done.proposals[0].review, 'รอตรวจแหล่ง');
+    assert.match(done.proposals[0].review!, /รอตรวจแหล่ง/);
     assert.equal(done.usage?.total, 26);
   } finally {
     store.close();
@@ -220,7 +274,7 @@ test('a truncated targeted TOR revision continues without replacing unrelated ma
     assert.equal(calls, 3);
     assert.match(done.proposals[0].text, /วัตถุประสงค์ที่แก้แล้ว/);
     assert.match(done.proposals[0].text, /SYNTHETIC-MANUAL-EDIT/);
-    assert.equal(done.proposals[0].review, 'ตรวจร่างที่แก้แล้ว');
+    assert.match(done.proposals[0].review!, /ตรวจร่างที่แก้แล้ว/);
     assert.match(done.draft, /วัตถุประสงค์เดิม/);
   } finally {
     store.close();

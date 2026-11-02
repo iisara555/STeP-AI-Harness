@@ -69,9 +69,11 @@ Keep unknown factual values and authority-dependent conditions pending: amounts,
    | Budget | … | … | … |
    | Date | … | … | … |
 
-3. **Draft structure** — ใช้ current template ที่ resolve ได้ก่อน เทียบสาระกับหัวข้อในแบบและรักษารูปแบบที่ผู้ใช้ต้องการ ถ้าไม่มีให้ใช้โครงกลาง: ความเป็นมา, วัตถุประสงค์, Scope/specification, Deliverables, Timeline/delivery, Acceptance criteria, Budget facts/payment basis ที่ source รองรับ, Dependencies/owner-provided inputs, Required qualifications เฉพาะที่มี source, Attachments/references
+3. **Draft structure** — ใช้ current template ที่ resolve ได้หรือโครงเฉพาะที่ผู้ใช้เลือกก่อน ถ้าไม่มี ให้ใช้ [แม่แบบกลาง ๑๖ หัวข้อ](../../common/thai-official-documents/templates/tor-16-sections-template.md) โดยร่างหัวข้อทุกข้อตามลำดับต่อไปนี้:
 
-   [แม่แบบกลาง ๑๖ หัวข้อ](../../common/thai-official-documents/templates/tor-16-sections-template.md) ใช้เป็น working template ได้ ไม่อ้างว่า 16 หัวข้อเป็นข้อบังคับสากล current official structure ต้องยืนยันกับ AFP ไม่คัดอัตรา คุณสมบัติ SLA หรือข้อกฎหมายที่ยังไม่ resolve จาก source
+   ๑. หลักการและเหตุผล; ๒. วัตถุประสงค์; ๓. กลุ่มเป้าหมายและผู้มีส่วนได้ส่วนเสีย; ๔. สถานที่ส่งมอบและติดตั้ง / พื้นที่ดำเนินการ; ๕. ระยะเวลาดำเนินโครงการ / ระยะเวลาส่งมอบ; ๖. วงเงินงบประมาณและราคากลาง; ๗. ผลผลิตและรายการส่งมอบ; ๘. ผลลัพธ์และประโยชน์ที่คาดว่าจะได้รับ; ๙. คุณลักษณะเฉพาะของพัสดุ / ขอบเขตของงานและวิธีดำเนินงาน; ๑๐. เงื่อนไขการจ่ายเงินงบประมาณ; ๑๑. คุณสมบัติของผู้ยื่นข้อเสนอ; ๑๒. วิธีการจัดซื้อจัดจ้างและหลักเกณฑ์ในการพิจารณาข้อเสนอ; ๑๓. เงื่อนไขการส่งมอบและอัตราค่าปรับ; ๑๔. การรับประกันความชำรุดบกพร่องและระดับการให้บริการ; ๑๕. สิ่งที่หน่วยงานจัดเตรียมให้ และข้อกำหนดด้านทรัพย์สินทางปัญญา; ๑๖. หน่วยงานผู้รับผิดชอบ
+
+   เมื่อใช้โครงกลาง ตรวจว่ามีหัวข้อ ๑–๑๖ ครบในตัวร่าง ไม่รวมผลตรวจไว้แทนเนื้อหา หัวข้อที่ยังไม่มีข้อมูลให้คงหัวข้อและร่างส่วนที่เสนอได้ โดยระบุ `[รอยืนยัน: …]` เฉพาะข้อมูลหรือเงื่อนไขที่ต้องมีหลักฐาน หากความเกี่ยวข้องยังไม่ชัด ให้ระบุว่ารอเจ้าของเรื่องยืนยัน ห้ามแต่งอัตรา คุณสมบัติ SLA หรือข้อกฎหมาย การแก้เฉพาะจุดให้รักษาร่างและการแก้ไขอื่นของผู้ใช้ไว้ตามเดิม 16 ข้อเป็น working template ไม่ใช่ข้อบังคับสากล และแบบทางการปัจจุบันต้องยืนยันกับ AFP
 
 4. **Make requirements testable** — ทุก deliverable สำคัญเชื่อม `Need → Requirement → Evidence/Test → Acceptance condition` **ห้ามสร้างจำนวน ขนาด spec รอบแก้ไข SLA benchmark หรือ threshold เอง**. Proposed functional requirements and inspection methods may be drafted for owner review; they are not established specifications or procurement rules.
 5. **Neutrality & competition review** — ชี้ requirement ที่อาจล็อก brand/model/vendor หรือจำกัดการแข่งขันโดยไม่มี evidence ใน source แล้วส่งให้ owner หรือ AFP ยืนยัน
