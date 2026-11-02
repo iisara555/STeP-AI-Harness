@@ -43,10 +43,10 @@ await writeFile(
 const send=x=>process.stdout.write(JSON.stringify(x)+'\\n');
 createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line);if(r.id===undefined)return;
  const result=r.method==='thread/start'?{thread:{id:'thread'}}:r.method==='model/list'?{data:[{id:'synthetic-chat',displayName:'Synthetic Chat',isDefault:true}]}:{};
- send({id:r.id,result});if(r.method==='turn/start'){const prompt=r.params.input[0].text;const current=prompt.slice(Math.max(prompt.lastIndexOf('<current_message>'),prompt.lastIndexOf('<request>')));const text=current.includes('Second message')?'Second answer received':current.includes('Draft request')?'# Synthetic draft\\nEditable output':current.includes('Tool proposal')?'Review this request\\n\\n\u0060\u0060\u0060step-tool\\n{"tool":"terminal","input":"echo proposed"}\\n\u0060\u0060\u0060':'First answer received';
+ send({id:r.id,result});if(r.method==='turn/start'){const prompt=r.params.input[0].text;const current=prompt.slice(Math.max(prompt.lastIndexOf('<current_message>'),prompt.lastIndexOf('<request>')));const text=r.params.input.some(i=>i.type==='image')?'Image received':current.includes('Second message')?'Second answer received':current.includes('Draft request')?'# Synthetic draft\\nEditable output':current.includes('Tool proposal')?'Review this request\\n\\n\u0060\u0060\u0060step-tool\\n{"tool":"terminal","input":"echo proposed"}\\n\u0060\u0060\u0060':'First answer received';
  if(prompt.startsWith('Use the live web search tool now')){send({method:'item/started',params:{item:{id:'search',type:'webSearch',action:{type:'search'}}}});setTimeout(()=>{send({method:'item/completed',params:{item:{id:'search',type:'webSearch'}}});send({method:'item/agentMessage/delta',params:{delta:'Synthetic evidence only. [Government fixture](https://www.thaigov.go.th/example)'}});send({method:'turn/completed',params:{turn:{status:'completed'}}});},1600);return;}
  if(prompt.includes('<web_evidence>')){send({method:'item/agentMessage/delta',params:{delta:'Synthetic holiday answer '}});setTimeout(()=>{send({method:'item/agentMessage/delta',params:{delta:'from retrieved evidence'}});send({method:'turn/completed',params:{turn:{status:'completed'}}});},3400);return;}
- setTimeout(()=>{send({method:'item/agentMessage/delta',params:{delta:text}});send({method:'turn/completed',params:{turn:{status:'completed'}}});},120);}
+ setTimeout(()=>{send({method:'item/agentMessage/delta',params:{delta:text}});send({method:'turn/completed',params:{turn:{status:'completed'}}});},text==='Image received'?1600:120);}
 });`,
 );
 const beacons = new Set();
@@ -439,6 +439,85 @@ try {
     .not.toBe('running');
   await page.screenshot({ path: 'release/qa/work-plan.png' });
   await picker.selectOption('chat');
+  // Paste a synthetic image through the real renderer, preload, host, privacy and provider paths.
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGMw7Vz8HwAEuQJhv9Bd3QAAAABJRU5ErkJggg==';
+  const composer = page.locator('.composer textarea');
+  const pasteImage = () =>
+    composer.evaluate((element, encoded) => {
+      const bytes = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
+      const clipboardData = new DataTransfer();
+      clipboardData.items.add(new File([bytes], 'clipboard.png', { type: 'image/png' }));
+      element.dispatchEvent(new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true }));
+    }, png);
+  await pasteImage();
+  const thumbnail = page.getByRole('img', { name: 'ตัวอย่างภาพแนบ' });
+  await expect(thumbnail).toBeVisible();
+  await expect(thumbnail).toHaveAttribute('src', /^data:image\/png;base64,/);
+  await page.getByText('ส่งภาพให้ AI', { exact: true }).waitFor();
+  await page.screenshot({ path: 'release/qa/chat-clipboard.png' });
+  await pasteImage();
+  await page.getByText('แนบได้ครั้งละ 1 ไฟล์ กรุณานำไฟล์เดิมออกก่อนวางภาพ').waitFor();
+  await page.getByRole('button', { name: 'นำไฟล์ออก' }).click();
+  await expect(thumbnail).toHaveCount(0);
+  await pasteImage();
+  await expect(thumbnail).toBeVisible();
+  await composer.fill('');
+  await expect(page.locator('.composer .send')).toBeEnabled();
+  await composer.press('Enter');
+  await page.locator('article.message.user').getByText('ช่วยดูไฟล์ที่แนบ', { exact: true }).waitFor();
+  await page.getByText('Image received', { exact: true }).last().waitFor();
+  await waitComplete(id);
+  await pasteImage();
+  await expect(thumbnail).toBeVisible();
+  await assert.rejects(
+    page.evaluate(id => window.step.call('attachClipboard', { id, mime: 'image/png', bytes: new Uint8Array(4_000_001) }), id),
+    /CLIPBOARD_IMAGE_SIZE/,
+  );
+  await assert.rejects(
+    page.evaluate(id => window.step.call('attachClipboard', { id, mime: 'image/png', bytes: new Uint8Array([1, 2, 3]) }), id),
+    /ATTACH_UNSUPPORTED/,
+  );
+  await composer.fill('Composing text');
+  await composer.evaluate(element => {
+    element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 229, bubbles: true, cancelable: true }));
+  });
+  assert.equal(await composer.inputValue(), 'Composing text');
+  await expect(thumbnail).toBeVisible();
+  await composer.fill('What is in this image?');
+  await composer.press('Enter');
+  await page.locator('article.message.user').getByText('What is in this image?', { exact: true }).waitFor();
+  await expect(thumbnail).toHaveCount(0);
+  await composer.fill('A question for the next turn');
+  await composer.press('Enter');
+  await page.getByText('รอคำตอบปัจจุบันก่อนส่ง ข้อความยังอยู่ในช่องพิมพ์').waitFor();
+  assert.equal(await composer.inputValue(), 'A question for the next turn');
+  await page.getByText('Image received', { exact: true }).last().waitFor();
+  await waitComplete(id);
+  // Managed privacy checks cannot be bypassed by pasting when local OCR is unavailable.
+  await app.evaluate(() => {
+    globalThis.chatSmokeFetch = globalThis.fetch;
+    globalThis.fetch = (input, ...args) =>
+      String(input).endsWith('/api/health')
+        ? Promise.reject(new Error('synthetic OCR offline'))
+        : globalThis.chatSmokeFetch(input, ...args);
+  });
+  await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ checks: { privacy: true }, features: { toolLoop: false } }));
+  await expect
+    .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).policy.checks.privacy, { timeout: 15000 })
+    .toBe(true);
+  await pasteImage();
+  await page.getByText('บริการ OCR ในเครื่องยังไม่เปิด', { exact: false }).waitFor();
+  await expect(thumbnail).toHaveCount(0);
+  assert.equal(await composer.inputValue(), 'A question for the next turn');
+  await app.evaluate(() => {
+    globalThis.fetch = globalThis.chatSmokeFetch;
+    delete globalThis.chatSmokeFetch;
+  });
+  await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { toolLoop: false } }));
+  await expect
+    .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).policy.checks.privacy, { timeout: 15000 })
+    .toBe(false);
+  await composer.fill('');
   // An unready connection reports the blocker and preserves the typed request.
   await app.evaluate(async ({ app }) => {
     const { DatabaseSync } = process.mainModule.require('node:sqlite');
@@ -463,6 +542,9 @@ try {
         profile: 'synthetic',
         checks: [
           'Enter send',
+          'clipboard image preview, removal and provider transmission with or without text',
+          'clipboard image respects managed privacy and OCR availability',
+          'Enter while busy keeps the next message',
           'first-send consent replay',
           'button send',
           'direct chat answer',

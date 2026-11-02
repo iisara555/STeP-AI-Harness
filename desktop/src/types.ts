@@ -316,7 +316,7 @@ export type Session = {
   routeKey?: string;
   checkpoint?: Checkpoint;
   /** How the run in progress (or the one that stopped) treated earlier context, so a retry repeats it exactly. */
-  lastRun?: { revising: boolean; carries: boolean; continuing?: boolean; latest?: string };
+  lastRun?: { revising: boolean; carries: boolean; continuing?: boolean; latest?: string; fromConversation?: boolean };
   runs?: RunTrace[];
 };
 export type Settings = {

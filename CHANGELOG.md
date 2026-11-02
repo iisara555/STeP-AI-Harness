@@ -6,10 +6,17 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.6.27 (2026-11-02)
+
+- Local OCR delivers its refusal before closing untrusted uploads on Windows, discarding only bounded bytes within a short deadline. Rejected requests never reach the OCR worker.
+- Employees can ask in a conversation for a supported TOR, memo, official letter, project, minutes or other official document and use the same Skill-backed draft and export layout as the document forms. A separate document keeps the earlier draft intact; referenced drafts still pass privacy review.
 - TOR drafting now lists the complete 16-section working outline in its Skill and asks the AI to check it before finishing. Desktop reports headings it cannot find in the review and leaves the draft editable; a selected agency outline can still take precedence.
+- Keep an Enter-submitted request in the conversation before routing or model discovery runs, and preserve newly typed text or an unsent request while the previous response is in progress. Paste a PNG or JPEG image into the composer to preview or remove it before sending, with or without a typed question; it follows the existing image, privacy and local OCR rules (one source up to 4 MB).
+- Add an immediate Windows startup switch in General settings. It uses the installed executable and reads Windows startup approval rather than copying an OS setting into the user profile; development and test builds never register for login.
 - When the AI's tool requests fail four turns in a row, it now stops and asks the employee instead of trying new variations until all 40 tool turns are used. Its reply says what it tried, why it failed and the one thing it needs (missing information, a permission or another approach), and the employee replies to carry on. Before, only the same request three times in a row stopped it early. A turn in which any request worked resets the count.
 - Saved memories about a project or a reference now come with Thai requests. The app split a Thai request on spaces, so "ช่วยสรุปรายงานประชุมทีมการตลาดให้หน่อย" was one long word that matched no memory, and only preferences and answer feedback (which go with every task) reached the AI. It now splits Thai with the word segmenter, leaves out question words and fillers such as ช่วย, ให้, หน่อย and การ, and matches whole Thai words only. `desktop/test/memory-recall.test.ts` covers Thai, mixed and English requests.
 - Saving a memory that repeats or nearly repeats a saved one (same name, or mostly the same text, such as "รายงานส่งทุกวันศุกร์" and "รายงานส่งทุกวันจันทร์") now shows the saved one first and asks whether to replace it or keep both, so two memories that disagree do not both reach the AI. Before, such a pair was only reported by the daily maintenance check, and only when the texts were almost identical.
+- Add the pinned REA `reverse-engineer-anything` Skill for repository developers, with its upstream MIT license and setup guidance for a project-scoped MCP server.
 
 ## Desktop v0.6.26 (2026-11-02)
 

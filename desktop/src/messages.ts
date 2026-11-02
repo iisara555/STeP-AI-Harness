@@ -4,6 +4,8 @@ import { formatLocalDate, formatLocalMonth } from './thai-date';
 import { credentialErrorsTh } from './credential-copy';
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = localized({
+  STARTUP_UNAVAILABLE: 'ใช้ได้ใน STeP Desktop ที่ติดตั้งบน Windows',
+  STARTUP_UPDATE_FAILED: 'เปลี่ยนการเริ่มโปรแกรมไม่สำเร็จ กรุณาตรวจ Startup apps ใน Windows',
   DISBURSEMENT_RECEIPT_UNCHECKED: 'กรุณากรอกและตรวจ FM-AF-014 เทียบหลักฐานให้ครบก่อนนำข้อมูลไปเริ่มร่างใบสำคัญจ่าย',
   PACKET_CONFLICT: 'ชุดนี้มีข้อมูลใหม่ที่บันทึกแล้ว โปรดโหลดชุดล่าสุดก่อนแก้ต่อ',
   PACKET_NOT_FOUND: 'ไม่พบชุดเอกสารนี้ โปรดเลือกชุดงานใหม่',
@@ -194,6 +196,8 @@ export const errorText: Record<string, string> = localized({
   ATTACH_SENSITIVE: 'พบข้อมูลความเสี่ยงสูง เช่น รหัสผ่าน token หรือข้อมูลที่ห้ามส่งออก ลบหรือปิดบังส่วนนั้นในไฟล์แล้วแนบใหม่',
   ATTACH_UNSUPPORTED: 'ยังไม่รองรับไฟล์ชนิดนี้ ใช้ PDF, Word (DOCX), TXT, MD, CSV หรือ TSV',
   ATTACH_TOO_LARGE: 'ไฟล์ยาวเกินขอบเขต (ข้อความเกิน 100,000 ตัวอักษร หรือเกิน 200 หน้า) แบ่งไฟล์แล้วแนบทีละส่วน',
+  CLIPBOARD_IMAGE_SIZE: 'ภาพจากคลิปบอร์ดต้องมีขนาดไม่เกิน 4 MB',
+  CLIPBOARD_IMAGE_UNSUPPORTED: 'วางภาพ PNG หรือ JPEG ได้',
   ATTACH_NO_TEXT: 'ไฟล์นี้ไม่มีตัวอักษรให้อ่าน มักเป็น PDF สแกนหรือรูปภาพ ใช้ไฟล์ต้นฉบับ (Word หรือ PDF ที่พิมพ์) แทน',
   ATTACH_PAGES_WITHOUT_TEXT:
     'บางหน้าใน PDF เป็นภาพสแกนที่อ่านตัวอักษรไม่ได้ ระบบจึงยังไม่ส่ง เพื่อไม่ให้ AI สรุปจากเนื้อหาที่ขาดไป ใช้ไฟล์ต้นฉบับหรือตัดหน้าที่เป็นภาพออก',

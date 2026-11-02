@@ -129,6 +129,22 @@ export class Store {
       return forked;
     });
   }
+  /** Start a separate document from the conversation without copying or replacing the existing editable draft. */
+  forkConversationDocument(id: string, title: string) {
+    const source = this.session(id);
+    if (['running', 'queued'].includes(source.status)) throw new Error('RUN_ALREADY_ACTIVE');
+    return this.transaction(() => {
+      const child = this.create(source.connectionId, source.team, source.project);
+      child.parentId = source.id;
+      child.title = `${source.title} · ${title}`;
+      child.messages = structuredClone(source.messages);
+      if (source.files) child.files = structuredClone(source.files);
+      if (source.model !== undefined) child.model = source.model;
+      if (source.effort !== undefined) child.effort = source.effort;
+      this.save(child);
+      return child;
+    });
+  }
   resume(id: string) {
     const s = this.session(id);
     if (['running', 'queued'].includes(s.status)) throw new Error('RUN_ALREADY_ACTIVE');

@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import urllib.parse
 import webbrowser
 from http import HTTPStatus
@@ -101,6 +102,12 @@ class Handler(BaseHTTPRequestHandler):
         if (local and host not in authorities) or len(origins) > 1 or (origins and origins[0] != f"http://{host}"):
             self.close_connection = True
             self._send_json({"ok": False, "error": "untrusted_request"}, 403)
+            try:
+                length = min(max(int(self.headers.get("Content-Length", "0")), 0), 64 * 1024)
+            except ValueError:
+                length = 0
+            # Deliver the refusal before dropping a posted body; never process or retain untrusted bytes.
+            self._discard_unread_upload(length, timeout=0.25)
             return False
         return True
 
@@ -210,16 +217,20 @@ class Handler(BaseHTTPRequestHandler):
         # Release after cleanup but before the response: a sequential next request must not see a completed job as busy.
         return self._send_json(payload, status)
 
-    def _discard_unread_upload(self, length: int) -> None:
+    def _discard_unread_upload(self, length: int, timeout: float = 5) -> None:
         # The answer is already sent and nothing is kept, but closing a socket with unread bytes makes Windows reset
-        # it, and the client then loses the 503 it was about to read. Finish sending, then drain and drop the upload.
+        # it, and the client then loses the refusal it was about to read. Finish sending, then drain and drop the upload.
         try:
             self.wfile.flush()
             self.connection.shutdown(socket.SHUT_WR)
-            self.connection.settimeout(5)
+            deadline = time.monotonic() + timeout
             remaining = length
             while remaining > 0:
-                chunk = self.rfile.read(min(remaining, 64 * 1024))
+                available_time = deadline - time.monotonic()
+                if available_time <= 0:
+                    break
+                self.connection.settimeout(available_time)
+                chunk = self.rfile.read1(min(remaining, 64 * 1024))
                 if not chunk:
                     break
                 remaining -= len(chunk)

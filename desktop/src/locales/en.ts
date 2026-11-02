@@ -23,6 +23,40 @@ import { uxToolsEn } from './ux-tools-en';
 import { uxReviewEn } from './ux-review-en';
 import { googleChangesEn } from './google-changes-en';
 export const en: Record<string, string> = {
+  'ขอร่างเอกสารต่อจากบทสนทนาได้ โดยใช้ Skill และแม่แบบเดียวกับหน้าเอกสาร และเก็บร่างเดิมไว้เมื่อเริ่มเอกสารใหม่':
+    'Draft documents from a conversation with the same Skills and templates as the document page, preserving earlier drafts when starting a new document.',
+  'ร่าง TOR ใช้โครงครบ 16 ข้อ พร้อมแจ้งหัวข้อที่ตรวจไม่พบให้ทบทวนก่อนนำไปใช้':
+    'TOR drafts use the complete 16-section outline and flag headings not found for review before use.',
+  'แก้ข้อความไม่ปรากฏหลังกด Enter และวางภาพในช่องแชตเพื่อดูตัวอย่างหรือนำออกก่อนส่งได้':
+    'Keep Enter-submitted messages visible and paste images into chat to preview or remove them before sending.',
+  'ตั้งให้เปิด STeP Desktop เมื่อเข้าสู่ Windows ได้ในหน้าตั้งค่าทั่วไป':
+    'Choose whether STeP Desktop opens when you sign in to Windows in General settings.',
+  'ค้นความจำโครงการจากคำถามภาษาไทยได้ดีขึ้น และถามก่อนบันทึกความจำที่ซ้ำหรือใกล้เคียงของเดิม':
+    'Recall project memories from Thai questions and review duplicate or similar memories before saving.',
+  'เมื่อใช้เครื่องมือล้มเหลวต่อเนื่อง ผู้ช่วยจะหยุดอธิบายและถามข้อมูลที่ต้องการเพื่อทำงานต่อ':
+    'After repeated tool failures, the assistant stops, explains and asks for what it needs to continue.',
+  ภาพจากคลิปบอร์ด: 'Clipboard image',
+  ตัวอย่างภาพแนบ: 'Attached image preview',
+  ช่วยดูไฟล์ที่แนบ: 'Please look at the attached file.',
+  'ส่งภาพให้ AI': 'Image will be sent to AI',
+  'ส่งเฉพาะข้อความ OCR': 'Only OCR text will be sent',
+  'ภาพต้นฉบับพร้อมส่ง · ตรวจภาพก่อนส่ง': 'Original image ready to send · review before sending',
+  'กำลังเตรียมภาพ…': 'Preparing image…',
+  รอให้งานปัจจุบันเสร็จก่อนวางภาพ: 'Wait for the current task to finish before pasting an image.',
+  'แนบได้ครั้งละ 1 ไฟล์ กรุณานำไฟล์เดิมออกก่อนวางภาพ':
+    'Only one attachment can be sent at a time. Remove the current file before pasting an image.',
+  'วางภาพ PNG หรือ JPEG ได้': 'Paste a PNG or JPEG image.',
+  'ภาพจากคลิปบอร์ดต้องมีขนาดไม่เกิน 4 MB': 'The clipboard image must be no larger than 4 MB.',
+  'กำลังเตรียมภาพ กรุณารอสักครู่ก่อนส่ง': 'Preparing the image. Please wait before sending.',
+  'รอคำตอบปัจจุบันก่อนส่ง ข้อความยังอยู่ในช่องพิมพ์': 'Wait for the current reply before sending. Your message is still in the composer.',
+  การเริ่มโปรแกรม: 'Startup',
+  'เปิด STeP Desktop เมื่อเข้าสู่ Windows': 'Open STeP Desktop when I sign in to Windows',
+  'มีผลทันทีสำหรับผู้ใช้ Windows คนนี้ เปลี่ยนได้ใน Startup apps ของ Windows':
+    'Applies immediately for this Windows user. You can also change it in Windows Startup apps.',
+  'ใช้ได้ใน STeP Desktop ที่ติดตั้งบน Windows': 'Available in the installed Windows version of STeP Desktop.',
+  'กำลังอ่านการตั้งค่า…': 'Reading settings…',
+  'อ่านการตั้งค่าเริ่มโปรแกรมไม่ได้ กรุณาเปิดหน้าตั้งค่าใหม่': 'Could not read the startup setting. Reopen Settings to try again.',
+  'เปลี่ยนการเริ่มโปรแกรมไม่สำเร็จ กรุณาตรวจ Startup apps ใน Windows': 'Could not change startup. Check Windows Startup apps.',
   'คำถามเรื่อง STeP ตอบเร็วขึ้น เมื่อเอกสารที่ตรงคำถามสั้นพอ แอปส่งให้ AI อ่านทั้งฉบับตั้งแต่แรก (Gemini ผ่าน Antigravity เหลือราว 20 วินาที จากราว 25 วินาที)':
     'STeP questions are answered faster: when the matching document is short enough the AI reads it whole from the start (Gemini through Antigravity about 20 seconds, down from about 25)',
   'เมื่อคำถามใช้คำต่างจากเอกสาร AI เห็นรายชื่อเอกสาร STeP ทั้งหมด จึงเปิดเอกสารที่ถูกได้เอง':
@@ -2508,6 +2542,7 @@ export const en: Record<string, string> = {
   '- มี {0} จุดที่ระบบปิดบังข้อมูลส่วนบุคคลไว้ ใส่ข้อมูลจริงเองหลังตรวจร่าง':
     '- {0} pieces of personal data were masked; fill in the real details yourself after review',
   'ตรวจในแผงผลงาน แล้วกด “ใช้ร่างนี้”': 'Review it in the Output panel, then press “Use this draft”',
+  เริ่มเอกสารใหม่โดยเก็บบทสนทนาและร่างเดิมไว้: 'Started a new document while keeping the conversation and previous draft.',
   'เทียบโครงกลาง TOR 16 ข้อแล้ว ยังตรวจไม่พบ {0} หัวข้อ ดูรายละเอียดในผลตรวจ':
     'Compared with the 16-section TOR working outline, {0} headings were not detected. See the review for details.',
   '**ตรวจโครงกลาง TOR 16 ข้อ:** ยังตรวจไม่พบหัวข้อต่อไปนี้: {0} ระบบตรวจจากเลขและชื่อหัวข้อ จึงอาจไม่พบรูปแบบบางชนิด หากใช้แบบหน่วยงานอื่น ให้ตรวจเทียบกับแบบที่เลือก':

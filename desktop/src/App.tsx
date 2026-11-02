@@ -358,8 +358,10 @@ export default function App() {
   const [toolTab, setToolTab] = useState<ToolTab>('output'),
     [toolRequest, setToolRequest] = useState<ToolRequest>();
   const [pendingSource, setPendingSource] = useState(''),
-    [submitting, setSubmitting] = useState(false);
+    [submitting, setSubmitting] = useState(false),
+    [pastingImage, setPastingImage] = useState(false);
   const sendInFlight = useRef(false),
+    pasteInFlight = useRef(false),
     conversationEnd = useRef<HTMLDivElement>(null);
   const session = snapshot?.sessions.find(s => s.id === selected);
   // Per task, the updatedAt the employee last saw with the task open: finished and stopped tasks show a dot until then.
@@ -762,7 +764,7 @@ export default function App() {
     setWorkMode(chosen?.mode || (chosen?.draft ? 'draft' : 'chat'));
     setRunning(['running', 'queued'].includes(chosen?.status || ''));
     setPendingSource('');
-    setFiles([]);
+    discardFiles();
     setStream('');
     setProgress('');
     setDirty(false);
@@ -841,7 +843,7 @@ export default function App() {
     setSettings(false);
     setSelected(id);
     setQuery('');
-    setFiles([]);
+    discardFiles();
     setPendingSource('');
     openPanel();
     setToolTab('output');
@@ -871,7 +873,7 @@ export default function App() {
     setSettings(false);
     setSelected(id);
     setQuery('');
-    setFiles([]);
+    discardFiles();
     setPendingSource('');
     openPanel();
     setToolTab('output');
@@ -890,24 +892,68 @@ export default function App() {
     setPendingSource('');
     setView('chat');
     setSettings(false);
-    setFiles([]);
+    discardFiles();
     setStream('');
     setProgress('');
     setDirty(false);
     dirtyRef.current = false;
     setTimeout(() => composerRef.current?.focus(), 0);
   }
-  async function createTask() {
+  async function createTask(expectedNavigation?: number) {
     if (!connectionId || connectionId === CLAUDE_CODE) {
       needAi();
       return null;
     }
     const s = await api!.call('create', { connectionId, model: pendingModel, effort: pendingEffort });
+    if (expectedNavigation !== undefined && expectedNavigation !== navigationVersion.current) {
+      await api!.call('remove', { id: s.id }).catch(() => undefined);
+      return null;
+    }
     setPendingModel(undefined);
     setPendingEffort('');
     setSelected(s.id);
     await refresh();
     return s;
+  }
+  function discardFiles() {
+    if (selected) for (const file of files) void api!.call('detach', { id: selected, attachmentId: file.id }).catch(() => undefined);
+    setFiles([]);
+  }
+  async function pasteImage(file: File) {
+    if (running || sendInFlight.current || pasteInFlight.current) {
+      notify(t('รอให้งานปัจจุบันเสร็จก่อนวางภาพ'), 'info');
+      return;
+    }
+    if (files.length) {
+      notify(t('แนบได้ครั้งละ 1 ไฟล์ กรุณานำไฟล์เดิมออกก่อนวางภาพ'), 'info');
+      return;
+    }
+    if (!['image/png', 'image/jpeg'].includes(file.type)) {
+      notify(t('วางภาพ PNG หรือ JPEG ได้'), 'error');
+      return;
+    }
+    if (!file.size || file.size > 4_000_000) {
+      notify(t('ภาพจากคลิปบอร์ดต้องมีขนาดไม่เกิน 4 MB'), 'error');
+      return;
+    }
+    const version = navigationVersion.current;
+    pasteInFlight.current = true;
+    setPastingImage(true);
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (version !== navigationVersion.current) return;
+      const id = selected || (await createTask(version))?.id;
+      if (!id || version !== navigationVersion.current) return;
+      const attachment: Attachment = await api!.call('attachClipboard', { id, mime: file.type, bytes });
+      if (version !== navigationVersion.current) {
+        await api!.call('detach', { id, attachmentId: attachment.id });
+        return;
+      }
+      setFiles([attachment]);
+    } finally {
+      pasteInFlight.current = false;
+      setPastingImage(false);
+    }
   }
   async function send() {
     if (/^\/btw\s+/i.test(query.trim())) {
@@ -935,7 +981,16 @@ export default function App() {
       setUsageOpen(true);
       return;
     }
-    if (!query.trim() || running || sendInFlight.current) return;
+    const request = query.trim() ? query : files.some(file => file.imagePreview) ? t('ช่วยดูไฟล์ที่แนบ') : '';
+    if (!request) return;
+    if (pastingImage || pasteInFlight.current) {
+      notify(t('กำลังเตรียมภาพ กรุณารอสักครู่ก่อนส่ง'), 'info');
+      return;
+    }
+    if (running || sendInFlight.current) {
+      notify(t('รอคำตอบปัจจุบันก่อนส่ง ข้อความยังอยู่ในช่องพิมพ์'), 'info');
+      return;
+    }
     // A file that cannot go to the AI is never dropped quietly: the message waits until the person removes or replaces it.
     const refused = files.find(f => !f.usable);
     if (refused) {
@@ -953,9 +1008,9 @@ export default function App() {
     setSubmitting(true);
     try {
       if (!selected && connectionId === CLAUDE_CODE) {
-        const typed = /^\/([a-z0-9-]+)\s+([\s\S]+)$/.exec(query.trim()),
+        const typed = /^\/([a-z0-9-]+)\s+([\s\S]+)$/.exec(request.trim()),
           typedSkill = typed && (skills || []).some(s => s.name === typed[1]) ? typed[1] : '';
-        setHandoffAsk({ text: typedSkill ? typed![2] : query, skill: forcedSkill || typedSkill || undefined });
+        setHandoffAsk({ text: typedSkill ? typed![2] : request, skill: forcedSkill || typedSkill || undefined });
         return;
       }
       await save();
@@ -965,11 +1020,11 @@ export default function App() {
         if (!s) return;
         id = s.id;
       }
-      const typed = /^\/([a-z0-9-]+)\s+([\s\S]+)$/.exec(query.trim());
+      const typed = /^\/([a-z0-9-]+)\s+([\s\S]+)$/.exec(request.trim());
       const typedSkill = typed && routedSkills.some(s => s.name === typed[1]) ? typed[1] : '';
       await start(
         id,
-        typedSkill ? typed![2] : query,
+        typedSkill ? typed![2] : request,
         files.map(f => f.id),
         undefined,
         forcedSkill || typedSkill || undefined,
@@ -1021,6 +1076,7 @@ export default function App() {
     aside: boolean = false,
     autoContinue: boolean = false,
   ) {
+    const submittedQuery = query;
     const attempt = {},
       previousAttempt = runningIds.current.get(id);
     if (!aside) {
@@ -1095,7 +1151,7 @@ export default function App() {
       return;
     }
     if (result.aside) {
-      setQuery('');
+      setQuery(current => (current === submittedQuery ? '' : current));
       const updated = await refresh();
       if (!aside) {
         setRunning(['running', 'queued'].includes(updated?.sessions.find(s => s.id === id)?.status || ''));
@@ -1108,21 +1164,36 @@ export default function App() {
     if (result.started && result.warning) notify(t('ส่งแล้ว ข้อความนี้มีคำที่อาจเป็นข้อมูลอ่อนไหว อย่าใส่ชื่อหรือรหัสของบุคคลในงานนี้'));
     else if (result.started && result.masked?.length) notify(t('ระบบปิดบังก่อนส่งให้ AI: {0}', result.masked.join(', ')));
     if (result.started) {
-      if (documentTool) setConsumedDocumentTask(id);
+      const runId = typeof result.sessionId === 'string' ? result.sessionId : id;
+      const focused = currentId.current === id;
+      if (runId !== id) {
+        if (runningIds.current.get(id) === attempt) runningIds.current.delete(id);
+        runningIds.current.set(runId, attempt);
+        if (focused) {
+          currentId.current = runId;
+          setSelected(runId);
+          notify(t('เริ่มเอกสารใหม่โดยเก็บบทสนทนาและร่างเดิมไว้'), 'info');
+        }
+      }
+      if (documentTool) setConsumedDocumentTask(runId);
       setForcedSkill('');
-      setQuery('');
-      setPendingSource('');
-      setFiles([]);
+      setQuery(current => (current === submittedQuery ? '' : current));
+      setPendingSource(current => (current === sourceText ? '' : current));
+      setFiles(current => current.filter(file => !attachments.includes(file.id)));
       setNow(Date.now());
       const updated = await refresh();
-      const state = updated?.sessions.find(s => s.id === id)?.status;
+      const state = updated?.sessions.find(s => s.id === runId)?.status;
       if (state && !['queued', 'running'].includes(state)) {
         setRunning(false);
         setProgress('');
         setStartedAt(0);
         setStream('');
       }
-      if (result.mode === 'image' || result.mode === 'draft') {
+      if (focused && (result.mode === 'image' || result.mode === 'draft')) {
+        if (result.mode === 'draft' && mode === 'chat') {
+          setWorkflow('');
+          setWorkMode('draft');
+        }
         setToolTab('output');
         openPanel();
       }
@@ -2698,17 +2769,29 @@ export default function App() {
                     <div className="attachments">
                       {files.map(f => (
                         <span key={f.id} className={f.usable ? undefined : 'refused'}>
-                          <button onClick={() => setInspecting(f)} title={f.usable ? f.status : errorText[f.reason || ''] || f.status}>
-                            <Paperclip size={13} />
-                            {f.name}
-                            {!f.usable && <small> {t('· ส่งไม่ได้')}</small>}
+                          <button
+                            className="attachment-preview"
+                            onClick={() => setInspecting(f)}
+                            title={f.usable ? f.status : errorText[f.reason || ''] || f.status}
+                          >
+                            {f.imagePreview ? <img src={f.imagePreview} alt={t('ตัวอย่างภาพแนบ')} /> : <Paperclip size={13} />}
+                            <span className="attachment-label">
+                              {f.name}
+                              {f.imagePreview && f.usable && <small>{t(f.vision ? 'ส่งภาพให้ AI' : 'ส่งเฉพาะข้อความ OCR')}</small>}
+                              {!f.usable && <small>{t('· ส่งไม่ได้')}</small>}
+                            </span>
                           </button>
-                          <button title={t('นำไฟล์ออก')} onClick={() => setFiles(files.filter(x => x.id !== f.id))}>
+                          <button aria-label={t('นำไฟล์ออก')} title={t('นำไฟล์ออก')} onClick={discardFiles}>
                             <X size={13} />
                           </button>
                         </span>
                       ))}
                     </div>
+                  )}
+                  {pastingImage && (
+                    <p className="composer-image-status small muted" role="status">
+                      {t('กำลังเตรียมภาพ…')}
+                    </p>
                   )}
                   {session && !running && !connection?.ready && (
                     <div className="connection-warning" role="status">
@@ -2853,8 +2936,17 @@ export default function App() {
                       setQuery(e.target.value);
                       setSlashIndex(0);
                     }}
+                    onPaste={e => {
+                      const item = Array.from(e.clipboardData.items).find(
+                        value => value.kind === 'file' && value.type.startsWith('image/'),
+                      );
+                      if (!item) return;
+                      if (!e.clipboardData.getData('text/plain')) e.preventDefault();
+                      const file = item.getAsFile();
+                      if (file) void action(() => pasteImage(file));
+                    }}
                     onKeyDown={e => {
-                      if (e.nativeEvent.isComposing) return;
+                      if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
                       if (snapshot.settings.vimMode && !e.ctrlKey && !e.metaKey && !e.altKey) {
                         const next = vimEdit(e.key, query, e.currentTarget.selectionStart, vimNormal);
                         if (next) {
@@ -2932,13 +3024,14 @@ export default function App() {
                       data-tour="attach"
                       aria-label={t('ตรวจและแนบเอกสาร')}
                       title={t('ตรวจและแนบเอกสาร')}
-                      disabled={running || (!session && connectionId === CLAUDE_CODE)}
+                      disabled={running || pastingImage || (!session && connectionId === CLAUDE_CODE)}
                       onClick={() =>
                         void action(async () => {
                           const id = session?.id || (await createTask())?.id;
                           if (!id) return;
                           const f = await api.call('attach', { id });
                           if (f) {
+                            discardFiles();
                             setFiles([f]);
                             setInspecting(f);
                           }
@@ -2951,7 +3044,7 @@ export default function App() {
                       <VoiceButton
                         key={session?.id || 'composer'}
                         api={api}
-                        disabled={running}
+                        disabled={running || pastingImage}
                         onText={text => setQuery(q => (q ? q + '\n' : '') + text)}
                       />
                     )}
@@ -2960,13 +3053,14 @@ export default function App() {
                         className="icon"
                         aria-label={t('แนบภาพให้ AI')}
                         title={t('ตรวจและแนบภาพต้นฉบับให้ AI')}
-                        disabled={running}
+                        disabled={running || pastingImage}
                         onClick={() =>
                           void action(async () => {
                             const id = session?.id || (await createTask())?.id;
                             if (!id) return;
                             const f = await api.call('attach', { id, vision: true });
                             if (f) {
+                              discardFiles();
                               setFiles([f]);
                               setInspecting(f);
                             }
@@ -3156,7 +3250,7 @@ export default function App() {
                       <button
                         className="send"
                         title={t('ส่งคำขอ (Enter) · ขึ้นบรรทัดใหม่ (Shift+Enter)')}
-                        disabled={!query.trim() || submitting}
+                        disabled={(!query.trim() && !files.some(file => file.imagePreview)) || submitting || pastingImage}
                         onClick={() => void action(send)}
                       >
                         {submitting ? <LoaderCircle size={20} className="spin" /> : <ArrowUp size={20} />}
