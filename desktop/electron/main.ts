@@ -2351,6 +2351,8 @@ async function main() {
           proposals: memories.proposals(),
           teamEnabled: Boolean(policyState.policy.features.memoryTeam && policyState.policy.memory?.teamDirectories[store.settings().team]),
         };
+      case 'memorySimilar':
+        return memories.similar(input);
       case 'memorySave':
       case 'memoryConfirm': {
         if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');

@@ -1391,6 +1391,10 @@ export const en: Record<string, string> = {
   'ความสำคัญ (0–1)': 'Importance (0–1)',
   'อายุความจำ (วัน; 0 = ไม่หมดอายุ)': 'Memory lifetime (days; 0 = never expires)',
   ยืนยันบันทึกความจำ: 'Confirm and save memory',
+  'มีความจำที่พูดถึงเรื่องเดียวกันอยู่แล้ว ถ้าเก็บไว้ทั้งคู่และเนื้อหาขัดกัน AI อาจเลือกใช้ผิดอัน':
+    'A saved memory is already about the same thing. If you keep both and they disagree, the AI may use the wrong one.',
+  บันทึกแทนที่ความจำเดิม: 'Save and replace the old memory',
+  บันทึกเพิ่มโดยเก็บของเดิมไว้: 'Save and keep the old one too',
   ข้อเสนอที่รอยืนยัน: 'Proposals awaiting confirmation',
   'หลักฐานจากคำขอ:': 'Evidence from the request:',
   ตรวจและยืนยัน: 'Review and confirm',
