@@ -114,6 +114,8 @@ export async function runKnowledge(options: {
   cases: Case[];
   live: Pick<Live, 'connection' | 'context' | 'run'>;
   onProgress?: (line: string) => void;
+  /** The app's run events (status lines, activity), as the chat screen receives them. */
+  onEvent?: (event: { type: string; text?: string }) => void;
 }): Promise<Outcome[]> {
   const { root, cases, live } = options,
     connection = live.connection;
@@ -176,7 +178,7 @@ export async function runKnowledge(options: {
         store,
         harness,
         async () => ({ context: live.context, adapter: { run: live.run } as any }),
-        () => {},
+        event => options.onEvent?.(event),
       );
       const session = store.create(connection.id, 'cc');
       const started = Date.now();

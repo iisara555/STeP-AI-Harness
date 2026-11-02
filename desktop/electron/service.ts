@@ -52,6 +52,7 @@ import {
   STRONG_MATCH,
   registryText,
   knowledgeText,
+  shortTitle,
   type CatalogEntry,
   type RegistryEntry,
   type KnowledgeSection,
@@ -1024,6 +1025,7 @@ export class WorkService {
             (known[0]?.score || 0) >= STRONG_MATCH,
           )
         ) {
+          activity(tm('กำลังเลือก Skill ที่เหมาะกับงาน'));
           const selection = prepareSkillSelection(
             skillRegistry,
             session.originalQuery,
@@ -1553,7 +1555,12 @@ export class WorkService {
           return result.prompt;
         };
         prompt = await compactPrompt(prompt);
-        activity(tm('กำลังรอ AI เตรียมคำตอบ'));
+        // Name the STeP document the answer reads when keyword search is sure of it, so the wait is not a blank line (S5).
+        activity(
+          (given[0]?.score || 0) >= STRONG_MATCH
+            ? tm('กำลังเตรียมคำตอบจากเอกสาร {0}', shortTitle(given[0].title))
+            : tm('กำลังรอ AI เตรียมคำตอบ'),
+        );
         // The runtime conversation stays open across this step's tool turns (closed below when the step ends).
         const providerSession = new ProviderSession();
         // With the policy feature on, an Antigravity answer turn may call this step's tools through the governed

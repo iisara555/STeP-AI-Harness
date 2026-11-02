@@ -2371,6 +2371,10 @@ export const en: Record<string, string> = {
   'ความจำ: {0}': 'Memory: {0}',
   'กำลังอ่าน Skill {0}': 'Reading Skill {0}',
   'กำลังอ่านเอกสาร {0}': 'Reading document {0}',
+  'กำลังดูรายชื่อเอกสาร STeP': 'Looking through the list of STeP documents',
+  'กำลังเปิดเอกสาร STeP': 'Opening a STeP document',
+  'กำลังเลือก Skill ที่เหมาะกับงาน': 'Choosing the Skill that fits this task',
+  'กำลังเตรียมคำตอบจากเอกสาร {0}': 'Preparing the answer from {0}',
   ข้อตกลงการใช้งาน: 'Terms of use',
   'ข้อความ ไฟล์ และรูปที่คุณส่งจะไปถึงผู้ให้บริการ AI ที่เชื่อมไว้ (เช่น Google, OpenAI, Anthropic) ตามที่พิมพ์':
     'Messages, files and images you send go to the connected AI provider (such as Google, OpenAI or Anthropic) as you wrote them.',

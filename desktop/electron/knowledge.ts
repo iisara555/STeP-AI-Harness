@@ -307,6 +307,9 @@ export class OrganizationKnowledge {
   }
 }
 
+/** A document title short enough for the one-line status under a running answer. */
+export const shortTitle = (title: string, max = 60) => (title.length > max ? title.slice(0, max - 1).trimEnd() + '…' : title);
+
 /** Prompt text for the matched sections, each labelled with its registered document so answers can cite it. */
 export function knowledgeText(sections: KnowledgeSection[]) {
   return sections.map(s => `[${s.id}] ${s.title}\n§ ${s.heading}\n${s.text}`).join('\n\n---\n\n');

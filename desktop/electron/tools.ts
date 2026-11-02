@@ -21,7 +21,7 @@ import { searchUrl } from './public-search';
 import { sheetWorker } from './sheets';
 import { sensitivePath, evaluatePermission, deniedPath, allowedDomain } from './permissions';
 import { RunTransmission, type TransmissionSource } from './transmission';
-import { documentSection, documentHeadings, OrganizationKnowledge } from './knowledge';
+import { documentSection, documentHeadings, OrganizationKnowledge, shortTitle } from './knowledge';
 import { mainLocale, tm } from './i18n';
 import type { Store } from './store';
 import { readHistory, searchHistory } from './session-history';
@@ -509,6 +509,11 @@ export class DesktopTools {
       if (r.tool === 'skill' || r.tool === 'reference') return tm('เอกสาร {0}', name);
       return undefined;
     };
+    // The status line names a STeP document by its title, as staff know it, not by its registry ID.
+    const documentTitles = new Map<string, string>();
+    void Promise.resolve(this.harness.documentCatalog?.())
+      .then(list => (list || []).forEach((e: any) => e?.id && e.title && documentTitles.set(e.id, shortTitle(e.title))))
+      .catch(() => undefined);
     return {
       cancel: scope.cancel,
       enabled: () => this.policy().features.toolLoop,
@@ -544,7 +549,11 @@ export class DesktopTools {
           t.startsWith('skill ')
             ? tm('กำลังอ่าน Skill {0}', t.slice(6))
             : t.startsWith('reference ')
-              ? tm('กำลังอ่านเอกสาร {0}', t.slice(10))
+              ? t.slice(10).trim()
+                ? documentTitles.has(t.slice(10).trim())
+                  ? tm('กำลังอ่านเอกสาร {0}', documentTitles.get(t.slice(10).trim())!)
+                  : tm('กำลังเปิดเอกสาร STeP')
+                : tm('กำลังดูรายชื่อเอกสาร STeP')
               : TOOL_ACTIVITY[t]
                 ? tm(TOOL_ACTIVITY[t])
                 : tm('กำลังใช้เครื่องมือ ') + t,
@@ -1059,6 +1068,7 @@ export class DesktopTools {
               if (named) ref = (await this.harness.documentMetadata?.([named.id]))?.[0];
             }
             if (!ref?.path || ref.status === 'unregistered') throw new Error('REFERENCE_UNAVAILABLE');
+            if (ref.title) scope.activity(tm('กำลังอ่านเอกสาร {0}', shortTitle(ref.title)));
             const text = await this.context(ref.path);
             if (a.action === 'outline') return { id: ref.id, title: ref.title, sections: documentHeadings(text) };
             if (a.sections !== undefined) {
