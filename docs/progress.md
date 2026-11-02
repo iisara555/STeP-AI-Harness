@@ -64,6 +64,8 @@ _Last updated: 2026-11-02_
 
 The owner authorized merging all pending PRs and then releasing. TOR #298 has merged; the release candidate preserves the heads of #297 (REA), #299 (documents from chat), #300 (chat/clipboard) and #301 (Windows startup). H1-H3 are already implemented on main and are included in the release checks. Historical implementation notes below are not a list of unstarted tasks.
 
+Release validation reproduced the sidebar's outdated expectation after explicit minutes requests became template-backed drafts; the fixture now keeps its chat-staging purpose and passes. Repeated Windows root runs also exposed a lost OCR 403 response when an untrusted upload was closed unread. Refusals now flush before a bounded, deadline-limited discard; seven security cases and three unchanged-wrapper reruns pass, without running the OCR worker for rejected requests.
+
 - Release gates: resolve integration conflicts, fix the sidebar smoke's outdated plain-chat document request, pass integration/post-merge CI, publish installers and verify the immutable release and update-feed digests.
 - Quality acceptance: private owner review of TOR/memo/letter/proposal/minutes and Word exports; AFP controlled forms and evidence packets; real OS clipboard/live-provider images; current WI/QP-to-Skill mapping and source revisions.
 - External rollout: authorized LINE channel/server, managed Google Workspace MCP endpoint/scopes and opt-in Antigravity native-bridge acceptance. The historical Claude pilot policy warning has not been rechecked on the current device.

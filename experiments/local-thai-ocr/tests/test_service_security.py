@@ -49,6 +49,20 @@ class ServiceSecurityTests(unittest.TestCase):
         self.assertEqual(self.request({"Host": f"localhost:{self.server.server_port}", "Origin": f"http://localhost:{self.server.server_port}"}), 200)
         self.assertEqual(self.mock_worker.call_count, 3)
 
+    def test_untrusted_request_is_refused_without_waiting_for_its_announced_body(self):
+        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=0.5)
+        try:
+            connection.putrequest("POST", "/api/ocr?filename=synthetic.png")
+            connection.putheader("Origin", "https://attacker.example")
+            connection.putheader("Content-Length", str(1024 * 1024 * 1024))
+            connection.endheaders()
+            response = connection.getresponse()
+            self.assertEqual(response.status, 403)
+            response.read()
+        finally:
+            connection.close()
+        self.mock_worker.assert_not_called()
+
     def test_busy_service_rejects_before_reading_or_queueing_another_document(self):
         app._process_lock.acquire()
         try:

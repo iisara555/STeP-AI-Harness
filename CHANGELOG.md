@@ -8,6 +8,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Desktop v0.6.27 (2026-11-02)
 
+- Local OCR delivers its refusal before closing untrusted uploads on Windows, discarding only bounded bytes within a short deadline. Rejected requests never reach the OCR worker.
 - Employees can ask in a conversation for a supported TOR, memo, official letter, project, minutes or other official document and use the same Skill-backed draft and export layout as the document forms. A separate document keeps the earlier draft intact; referenced drafts still pass privacy review.
 - TOR drafting now lists the complete 16-section working outline in its Skill and asks the AI to check it before finishing. Desktop reports headings it cannot find in the review and leaves the draft editable; a selected agency outline can still take precedence.
 - Keep an Enter-submitted request in the conversation before routing or model discovery runs, and preserve newly typed text or an unsent request while the previous response is in progress. Paste a PNG or JPEG image into the composer to preview or remove it before sending, with or without a typed question; it follows the existing image, privacy and local OCR rules (one source up to 4 MB).
