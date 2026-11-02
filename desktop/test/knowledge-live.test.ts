@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
-import { judge, report, runKnowledge, summary, turnQuery } from '../eval/knowledge-live';
+import { judge, report, runKnowledge, summary } from '../eval/knowledge-live';
 import type { Connection } from '../src/types';
 
 const connection: Connection = { id: 'eval', provider: 'claude', mode: 'api', model: 'fake', executable: '', ready: true, note: '' };
@@ -12,7 +12,6 @@ test('a document counts when search returned it or the AI opened it; a general q
   assert.deepEqual(judge({ q: 'x', doc: ['hr', 'cc'] }, ['cc'], []), { keyword: true, reached: true });
   assert.deepEqual(judge({ q: 'x', doc: 'none' }, [], ['hr']), { keyword: true, reached: false });
   assert.deepEqual(judge({ q: 'x', doc: 'none' }, [], []), { keyword: true, reached: true });
-  assert.equal(turnQuery({ q: 'แล้วลาป่วยล่ะ', earlier: 'ลาพักร้อนกี่วัน', doc: 'hr' }), 'ลาพักร้อนกี่วัน\nแล้วลาป่วยล่ะ');
 });
 
 test('the live run asks through WorkService chat, runs the reference tool and records what the AI opened', async () => {

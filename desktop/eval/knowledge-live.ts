@@ -50,9 +50,6 @@ export type Outcome = {
   answer: string;
 };
 
-/** The query Desktop searches for a chat turn (service.ts): the conversation's first request, then the new message. */
-export const turnQuery = (item: Case) => [...new Set([item.earlier, item.q].filter(Boolean))].join('\n');
-
 /** Right document reached: in the search excerpts or opened by the AI. A general question must reach none. */
 export function judge(item: Case, searched: string[], opened: string[]) {
   const expected = [item.doc].flat();
@@ -197,7 +194,7 @@ export async function runKnowledge(options: {
         const trace = done.runs?.at(-1);
         const turns = (done.runs || []).slice(before);
         code = trace?.code || (done.status === 'error' ? 'RUN_FAILED' : askedBack() ? 'CLARIFY' : '');
-        const searched = [...new Set((await knowledge.search(turnQuery(item))).map(s => s.id))];
+        const searched = [...new Set((await knowledge.searchTurn(item.earlier, item.q)).map(s => s.id))];
         const uniqueOpened = [...new Set(opened)];
         outcomes.push({
           q: item.q,
@@ -257,7 +254,7 @@ async function main(env = process.env) {
       if (
         !judge(
           item,
-          (await knowledge.search(turnQuery(item))).map(s => s.id),
+          (await knowledge.searchTurn(item.earlier, item.q)).map(s => s.id),
           [],
         ).keyword
       )

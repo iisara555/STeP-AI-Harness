@@ -66,6 +66,10 @@ const QUESTION_WORDS = new Set([
   'คือ',
   'ใคร',
   'หน่อย',
+  // The word segmenter splits เท่าไหร่ into เท่า + ไหร่ and บาทละ into บาท + ละ; the pieces are question words too.
+  'เท่า',
+  'ไหร่',
+  'ละ',
 ]);
 function topicWords(text: string) {
   return new Set(
@@ -126,6 +130,8 @@ export const MATCH_THRESHOLD = 0.3;
 export const STRONG_MATCH = 0.5;
 const HISTORY_HEADING = /^(?:\d+\.\s*)?ประวัติการ(?:แก้ไข|เปลี่ยนแปลง)/;
 const REVISION_QUESTION = /รุ่นล่าสุด|รุ่นปัจจุบัน|ฉบับล่าสุด|ฉบับปัจจุบัน|ใช้ฉบับไหน|\brev\b|มีผลวันไหน|วันที่บังคับใช้/i;
+/** A message that starts a new subject in the same chat. */
+const TOPIC_CHANGE = /^(?:ขอ\s*)?(?:ถาม\s*)?(?:อีก\s*เรื่อง|เปลี่ยน\s*เรื่อง|เรื่อง\s*อื่น|อีก\s*คำถาม|คำถาม\s*ใหม่)/;
 const MAX_SECTIONS = 4,
   MAX_CHARS = 9000,
   SECTION_CHARS = 4000;
@@ -292,6 +298,17 @@ export class OrganizationKnowledge {
       });
     }
     return picked;
+  }
+  /**
+   * The search for one chat turn: the first request and the new message together, so a follow-up such as "แล้วลาป่วยล่ะ"
+   * keeps its topic. A message that says it changes the subject ("อีกเรื่อง FABLAB มีเครื่องอะไรบ้าง") is searched alone
+   * (A1 baseline 2026-11-01: that follow-up searched with "ลาพักร้อน…" and found nothing). Searching any follow-up alone
+   * when the pair finds nothing is wrong: "ขอสั้นกว่านี้" alone matched the career-path document.
+   */
+  async searchTurn(earlier: string | undefined, latest: string): Promise<KnowledgeSection[]> {
+    const own = latest.trim();
+    if (!earlier?.trim() || earlier.trim() === own || TOPIC_CHANGE.test(own)) return this.search(own || earlier || '');
+    return this.search([earlier.trim(), own].join('\n'));
   }
   /**
    * The search result as the answer should read it: the leading document whole when it is short and fits `maxTokens`,
