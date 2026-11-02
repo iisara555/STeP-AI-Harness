@@ -40,6 +40,12 @@ trusted project. Reopen the Codex session or restart the client after adding an
 MCP server, and verify with `codex mcp get rea --json`. The existing session's
 tool list does not prove that a newly registered server has connected.
 
+REA 6.8.0's `doctor --client codex --json` inspects its setup-managed global
+Codex registration. It can report `config_drift` there even when Codex reads
+the project-scoped registration. Check the active project configuration and
+connection separately; a global warning alone does not call for changing the
+user's global configuration.
+
 The local installation omits optional dependencies and install scripts. The
 synthetic JavaScript analysis and MCP connection were exercised on Windows with
 Node.js 24.22.1; a listed tool is not proof that its provider is installed.

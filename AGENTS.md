@@ -19,6 +19,7 @@ run the installer inside this checkout, it would overwrite this file.
 | `desktop/` | STeP Desktop (Electron + React): chat, document drafting, receipts, AI connections | [`docs/desktop-development.md`](docs/desktop-development.md) |
 | `desktop/electron/` | Main process: providers, tool loop, policy, permissions, memory, updater | [`docs/desktop-tool-loop.md`](docs/desktop-tool-loop.md), [`docs/desktop-policy.md`](docs/desktop-policy.md) |
 | `src/` | Harness CLI and modules (router, privacy gate, skills, installer) | [`docs/architecture.md`](docs/architecture.md) |
+| `.agents/skills/reverse-engineer-anything/` | REA developer Skill for packaged artifacts and runtime evidence | [`docs/rea-developer-skill.md`](docs/rea-developer-skill.md) |
 | `skills/`, `rules/`, `manifest/` | Skills, writing/safety rules, registries | [`docs/developer-guide.md`](docs/developer-guide.md) |
 | `docs/knowledge/` + `manifest/documents.yaml` | Organization documents the app answers from | [`docs/knowledge/README.md`](docs/knowledge/README.md) |
 | `experiments/local-thai-ocr/` | Local PaddleOCR service for receipts | its README |
