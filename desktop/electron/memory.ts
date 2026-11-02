@@ -6,6 +6,7 @@ import type { PathRule, Policy } from './policy';
 import type { MemoryEntry, MemoryProposal, Session } from '../src/types';
 import { deniedPath, sensitivePath } from './permissions';
 import { ensureGitignored } from '../../src/modules/user-memory.js';
+import { topicWords } from './knowledge';
 
 const hash = (text: string) => createHash('sha256').update(text).digest('hex');
 const TYPES = ['user', 'feedback', 'project', 'reference'];
@@ -110,6 +111,27 @@ function normalize(raw: any): MemoryEntry {
     updated_at: new Date().toISOString(),
     source: 'user-confirmed',
   };
+}
+// Thai words that join or soften a sentence ("การ" makes a verb a noun, "ครับ" is politeness): nearly every memory
+// contains them, so they would make an unrelated memory look relevant. Question words are already left out by topicWords.
+const FILLER_WORDS = new Set(['การ', 'ความ', 'และ', 'จะ', 'ว่า', 'ก็', 'ไป', 'มา', 'เรา', 'ผม', 'ฉัน', 'ครับ', 'ค่ะ', 'คะ', 'นะ']);
+/**
+ * Words a memory is matched on: English words of 3+ letters, and Thai topic words. Thai has no spaces between words,
+ * so it is split with the word segmenter; without that a whole Thai sentence was one "word" and matched no memory.
+ */
+export function memoryTerms(query: string) {
+  const lower = query.toLowerCase();
+  const thai = [...topicWords(lower)].filter(word => /[\u0E00-\u0E7F]/.test(word) && !FILLER_WORDS.has(word));
+  return [...new Set([...(lower.match(/[a-z0-9]{3,}/g) || []), ...thai])];
+}
+/**
+ * How many terms a memory contains. English terms match inside a word ("receipt" in "receipts"); Thai terms must be a
+ * whole word of the memory, or the short word ที would match ทีม and ใบ would match ใบไม้.
+ */
+function matchedTerms(terms: string[], memory: string) {
+  const lower = memory.toLowerCase(),
+    words = topicWords(lower);
+  return terms.filter(t => (/[\u0E00-\u0E7F]/.test(t) ? words.has(t) : lower.includes(t))).length;
 }
 export function memoryMarkdown(m: MemoryEntry) {
   const { text, ...metadata } = m;
@@ -427,16 +449,13 @@ export class Memories {
     return this.queue;
   }
   async relevant(query: string) {
-    const terms = [...new Set(query.toLowerCase().match(/[a-z0-9]{3,}|[\u0E00-\u0E7F]{2,}/g) || [])];
+    const terms = memoryTerms(query);
     return (
       (await this.list())
         .filter(m => !m.expired)
         .map(m => ({
           m,
-          score:
-            terms.filter(t => (m.name + ' ' + m.text).toLowerCase().includes(t)).length +
-            m.importance +
-            (m.type === 'user' ? 2 : m.type === 'feedback' ? 1 : 0),
+          score: matchedTerms(terms, m.name + ' ' + m.text) + m.importance + (m.type === 'user' ? 2 : m.type === 'feedback' ? 1 : 0),
         }))
         // Confirmed preferences and answer feedback apply to every task; other memories only when they match.
         .filter(v => v.m.type === 'user' || v.m.type === 'feedback' || v.score > 1)
