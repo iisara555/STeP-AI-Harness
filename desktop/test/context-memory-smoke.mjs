@@ -146,6 +146,14 @@ try {
   await memory.getByLabel('ชื่อความจำ', { exact: true }).fill('Source preference copy');
   await memory.getByLabel('ข้อความความจำ', { exact: true }).fill('Prefer concise responses and identify missing evidence!');
   await memory.getByRole('button', { name: 'ยืนยันบันทึกความจำ', exact: true }).click();
+  // Saving a near-copy asks first, showing the memory it repeats; keeping both leaves the duplicate for maintenance.
+  const similar = memory.locator('.memory-similar');
+  await expect(similar).toContainText('มีความจำที่พูดถึงเรื่องเดียวกันอยู่แล้ว');
+  await expect(similar).toContainText('Source preference');
+  await expect(memory.locator('.memory-item', { hasText: 'Source preference copy' })).toHaveCount(0);
+  await page.screenshot({ path: 'release/qa/memory-similar.png' });
+  await similar.getByRole('button', { name: 'บันทึกเพิ่มโดยเก็บของเดิมไว้', exact: true }).click();
+  await expect(similar).toHaveCount(0);
   await memory.getByRole('button', { name: 'ตรวจตอนนี้', exact: true }).click();
   const duplicate = memory.locator('.maintenance-item', { hasText: 'Source preference copy' });
   await expect(duplicate).toContainText('ความจำสองรายการเนื้อหาเกือบเหมือนกัน');

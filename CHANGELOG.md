@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Saving a memory that repeats or nearly repeats a saved one (same name, or mostly the same text, such as "รายงานส่งทุกวันศุกร์" and "รายงานส่งทุกวันจันทร์") now shows the saved one first and asks whether to replace it or keep both, so two memories that disagree do not both reach the AI. Before, such a pair was only reported by the daily maintenance check, and only when the texts were almost identical.
+
 ## Desktop v0.6.26 (2026-11-02)
 
 - Say what the assistant is really doing while an answer is on its way. The line under a running answer now says "กำลังเลือก Skill ที่เหมาะกับงาน" while the AI picks a Skill, "กำลังเตรียมคำตอบจากเอกสาร …" with the STeP document's title when keyword search is sure of it, and names a document the AI opens by its title instead of its registry ID ("กำลังอ่านเอกสาร step-facility-equipment-inventory-2020" before).
