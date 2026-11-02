@@ -62,6 +62,7 @@ const allowed = new Set([
   'learningImport',
   'learningDecide',
   'learningRestore',
+  'memorySimilar',
   'memorySave',
   'memoryConfirm',
   'memoryDelete',

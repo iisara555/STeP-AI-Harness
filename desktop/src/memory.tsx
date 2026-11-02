@@ -25,6 +25,7 @@ export function MemoryDialog({
     [edit, setEdit] = useState<Edit>(),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
+    [similar, setSimilar] = useState<MemoryEntry[]>(),
     [version, setVersion] = useState(0);
   const load = async () => {
     setData(await api.call('memoryList'));
@@ -47,6 +48,17 @@ export function MemoryDialog({
       setBusy(false);
     }
   };
+  // Saving asks first when a saved memory is about the same thing, so two that disagree do not both reach the AI.
+  const change = (next?: Edit) => {
+    setEdit(next);
+    setSimilar(undefined);
+  };
+  const persist = async (current: Edit, replace: MemoryEntry[]) => {
+    await api.call(current.proposal ? 'memoryConfirm' : 'memorySave', current);
+    for (const old of replace) await api.call('memoryDelete', { id: old.id });
+    setEdit(undefined);
+    setSimilar(undefined);
+  };
   return (
     <ConfirmDialog info title={t('ความจำ')} confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
       <p className="small muted">
@@ -62,7 +74,7 @@ export function MemoryDialog({
       {error && <p role="alert">{error}</p>}
       <MaintenancePanel api={api} version={version} />
       {!edit && (
-        <button className="quiet" disabled={busy} onClick={() => setEdit(fresh())}>
+        <button className="quiet" disabled={busy} onClick={() => change(fresh())}>
           {t('เพิ่มความจำ')}
         </button>
       )}
@@ -72,8 +84,11 @@ export function MemoryDialog({
           onSubmit={e => {
             e.preventDefault();
             void act(async () => {
-              await api.call(edit.proposal ? 'memoryConfirm' : 'memorySave', edit);
-              setEdit(undefined);
+              const found: MemoryEntry[] = similar
+                ? similar
+                : await api.call('memorySimilar', { id: edit.proposal ? undefined : edit.id, name: edit.name, text: edit.text });
+              if (found.length) setSimilar(found);
+              else await persist(edit, []);
             });
           }}
         >
@@ -83,7 +98,7 @@ export function MemoryDialog({
               aria-label={t('ชื่อความจำ')}
               value={edit.name}
               maxLength={120}
-              onChange={e => setEdit({ ...edit, name: e.target.value })}
+              onChange={e => change({ ...edit, name: e.target.value })}
               required
             />
           </label>
@@ -94,7 +109,7 @@ export function MemoryDialog({
               value={edit.text}
               maxLength={4000}
               rows={5}
-              onChange={e => setEdit({ ...edit, text: e.target.value })}
+              onChange={e => change({ ...edit, text: e.target.value })}
               required
             />
           </label>
@@ -145,10 +160,29 @@ export function MemoryDialog({
               onChange={e => setEdit({ ...edit, ttl_days: Number(e.target.value) })}
             />
           </label>
-          <button type="submit" disabled={busy}>
-            {t('ยืนยันบันทึกความจำ')}
-          </button>
-          <button type="button" className="quiet" onClick={() => setEdit(undefined)}>
+          {similar ? (
+            <div className="memory-similar" role="alert">
+              <p>{t('มีความจำที่พูดถึงเรื่องเดียวกันอยู่แล้ว ถ้าเก็บไว้ทั้งคู่และเนื้อหาขัดกัน AI อาจเลือกใช้ผิดอัน')}</p>
+              <ul>
+                {similar.map(m => (
+                  <li key={m.id}>
+                    <strong>{m.name}</strong> · {scopes[m.scope]}: {m.text.length > 200 ? m.text.slice(0, 200) + '…' : m.text}
+                  </li>
+                ))}
+              </ul>
+              <button type="button" disabled={busy} onClick={() => void act(() => persist(edit, similar))}>
+                {t('บันทึกแทนที่ความจำเดิม')}
+              </button>
+              <button type="button" className="quiet" disabled={busy} onClick={() => void act(() => persist(edit, []))}>
+                {t('บันทึกเพิ่มโดยเก็บของเดิมไว้')}
+              </button>
+            </div>
+          ) : (
+            <button type="submit" disabled={busy}>
+              {t('ยืนยันบันทึกความจำ')}
+            </button>
+          )}
+          <button type="button" className="quiet" onClick={() => change(undefined)}>
             {t('ยกเลิกการแก้ไข')}
           </button>
         </form>
@@ -160,7 +194,7 @@ export function MemoryDialog({
           <p className="muted small">
             {t('หลักฐานจากคำขอ:')} {p.evidence}
           </p>
-          <button className="quiet" disabled={busy} onClick={() => setEdit({ ...p, proposal: true })}>
+          <button className="quiet" disabled={busy} onClick={() => change({ ...p, proposal: true })}>
             {t('ตรวจและยืนยัน')}
           </button>
           <button className="quiet" disabled={busy} onClick={() => void act(() => api.call('memoryDismiss', { id: p.id }))}>
@@ -183,7 +217,7 @@ export function MemoryDialog({
             {m.updated_at !== m.created_at ? ` · ${t('แก้ไขล่าสุด')} ${day(m.updated_at)}` : ''}
             {m.origin_evidence ? ` · ${t('หลักฐาน:')} “${m.origin_evidence}”` : ''}
           </p>
-          <button className="quiet" disabled={busy} onClick={() => setEdit(m)}>
+          <button className="quiet" disabled={busy} onClick={() => change(m)}>
             {t('แก้ไข')}
           </button>
           <button className="quiet" disabled={busy} onClick={() => void act(() => api.call('memoryDelete', { id: m.id }))}>
