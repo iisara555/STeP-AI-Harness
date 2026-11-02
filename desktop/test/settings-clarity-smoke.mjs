@@ -57,10 +57,17 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
+  assert.deepEqual(await page.evaluate(() => window.step.call('startupState')), { supported: false, enabled: false });
+  await assert.rejects(
+    page.evaluate(() => window.step.call('startupSet', { enabled: true })),
+    /STARTUP_UNAVAILABLE/,
+  );
   await app.evaluate(({ ipcMain }) => {
     const original = ipcMain._invokeHandlers.get('step:call');
     globalThis.settingsFixture = {
       failSave: false,
+      startupEnabled: false,
+      failStartup: false,
       suspended: false,
       googleCalls: [],
       sources: [
@@ -81,6 +88,12 @@ try {
     ipcMain.removeHandler('step:call');
     ipcMain.handle('step:call', async (event, method, input) => {
       const f = globalThis.settingsFixture;
+      if (method === 'startupState') return { supported: true, enabled: f.startupEnabled };
+      if (method === 'startupSet') {
+        if (f.failStartup) throw new Error('STARTUP_UPDATE_FAILED');
+        f.startupEnabled = input.enabled;
+        return { supported: true, enabled: f.startupEnabled };
+      }
       if (method === 'settings' && f.failSave) throw new Error('SYNTHETIC_SAVE_FAILED');
       if (method === 'vaultState')
         return { enabled: true, protected: true, suspended: f.suspended, entries: [], browsers: [], sources: f.sources };
@@ -135,6 +148,23 @@ try {
   console.log('Settings clarity: profile and unsaved values');
   await open();
   await tab('ทั่วไป');
+  const startup = panel.getByRole('switch', { name: 'เปิด STeP Desktop เมื่อเข้าสู่ Windows' });
+  await expect(startup).not.toBeChecked();
+  await startup.click();
+  await expect(startup).toBeChecked();
+  assert.equal(await app.evaluate(() => globalThis.settingsFixture.startupEnabled), true);
+  await expect(panel.getByRole('button', { name: 'บันทึกการเปลี่ยนแปลง', exact: true })).toBeDisabled();
+  await app.evaluate(() => {
+    globalThis.settingsFixture.failStartup = true;
+  });
+  await startup.click();
+  await expect(startup).toBeChecked();
+  await page.getByText('เปลี่ยนการเริ่มโปรแกรมไม่สำเร็จ กรุณาตรวจ Startup apps ใน Windows', { exact: true }).waitFor();
+  await app.evaluate(() => {
+    globalThis.settingsFixture.failStartup = false;
+  });
+  await startup.click();
+  await expect(startup).not.toBeChecked();
   await expect(panel.getByRole('radiogroup', { name: 'รูปโปรไฟล์', exact: true })).toHaveCount(0);
   await expect(panel.getByLabel('ชื่อเรียกของคุณ', { exact: true })).toHaveValue('Synthetic user');
   await panel.getByRole('button', { name: 'เปลี่ยนรูป', exact: true }).click();

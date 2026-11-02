@@ -4,6 +4,8 @@ import { formatLocalDate, formatLocalMonth } from './thai-date';
 import { credentialErrorsTh } from './credential-copy';
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = localized({
+  STARTUP_UNAVAILABLE: 'ใช้ได้ใน STeP Desktop ที่ติดตั้งบน Windows',
+  STARTUP_UPDATE_FAILED: 'เปลี่ยนการเริ่มโปรแกรมไม่สำเร็จ กรุณาตรวจ Startup apps ใน Windows',
   DISBURSEMENT_RECEIPT_UNCHECKED: 'กรุณากรอกและตรวจ FM-AF-014 เทียบหลักฐานให้ครบก่อนนำข้อมูลไปเริ่มร่างใบสำคัญจ่าย',
   PACKET_CONFLICT: 'ชุดนี้มีข้อมูลใหม่ที่บันทึกแล้ว โปรดโหลดชุดล่าสุดก่อนแก้ต่อ',
   PACKET_NOT_FOUND: 'ไม่พบชุดเอกสารนี้ โปรดเลือกชุดงานใหม่',

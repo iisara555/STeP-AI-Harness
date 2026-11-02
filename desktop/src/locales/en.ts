@@ -23,6 +23,14 @@ import { uxToolsEn } from './ux-tools-en';
 import { uxReviewEn } from './ux-review-en';
 import { googleChangesEn } from './google-changes-en';
 export const en: Record<string, string> = {
+  การเริ่มโปรแกรม: 'Startup',
+  'เปิด STeP Desktop เมื่อเข้าสู่ Windows': 'Open STeP Desktop when I sign in to Windows',
+  'มีผลทันทีสำหรับผู้ใช้ Windows คนนี้ เปลี่ยนได้ใน Startup apps ของ Windows':
+    'Applies immediately for this Windows user. You can also change it in Windows Startup apps.',
+  'ใช้ได้ใน STeP Desktop ที่ติดตั้งบน Windows': 'Available in the installed Windows version of STeP Desktop.',
+  'กำลังอ่านการตั้งค่า…': 'Reading settings…',
+  'อ่านการตั้งค่าเริ่มโปรแกรมไม่ได้ กรุณาเปิดหน้าตั้งค่าใหม่': 'Could not read the startup setting. Reopen Settings to try again.',
+  'เปลี่ยนการเริ่มโปรแกรมไม่สำเร็จ กรุณาตรวจ Startup apps ใน Windows': 'Could not change startup. Check Windows Startup apps.',
   'คำถามเรื่อง STeP ตอบเร็วขึ้น เมื่อเอกสารที่ตรงคำถามสั้นพอ แอปส่งให้ AI อ่านทั้งฉบับตั้งแต่แรก (Gemini ผ่าน Antigravity เหลือราว 20 วินาที จากราว 25 วินาที)':
     'STeP questions are answered faster: when the matching document is short enough the AI reads it whole from the start (Gemini through Antigravity about 20 seconds, down from about 25)',
   'เมื่อคำถามใช้คำต่างจากเอกสาร AI เห็นรายชื่อเอกสาร STeP ทั้งหมด จึงเปิดเอกสารที่ถูกได้เอง':

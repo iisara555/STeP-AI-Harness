@@ -8,7 +8,7 @@ _Last updated: 2026-11-02_
 
 ## Latest release
 
-- **Desktop v0.6.26 prepared (2026-11-02)**: the owner chose "ออกเลย" on 2026-11-02. 0.6.26 combines #283 (personal-data false positives), #284 (A3 paraphrase set), #285 (Skill selection stays on the chosen model except Antigravity), #286 (`eval:knowledge` answers Skill questions), #288 (web search sources), #289 (whole registry on a weak match), #290 (S1 short document given whole; live 42/46, p50 19.9 s on Gemini), #291 (topic-change follow-ups, split question words) and #292 (S5 status line). Harness remains 0.7.7. Published via `desktop-release.yml` on `main` with `publish=true`. After release: measure with `eval:diagnostics` once staff have used it.
+- **Desktop v0.6.26 published (2026-11-02)**: the owner chose "ออกเลย" on 2026-11-02. 0.6.26 combines #283 (personal-data false positives), #284 (A3 paraphrase set), #285 (Skill selection stays on the chosen model except Antigravity), #286 (`eval:knowledge` answers Skill questions), #288 (web search sources), #289 (whole registry on a weak match), #290 (S1 short document given whole; live 42/46, p50 19.9 s on Gemini), #291 (topic-change follow-ups, split question words) and #292 (S5 status line). Harness remains 0.7.7. Published via `desktop-release.yml` on `main` with `publish=true`. After release: measure with `eval:diagnostics` once staff have used it.
 - **Desktop v0.6.25 prepared (2026-11-01)**: the owner asked to release on 2026-11-01. 0.6.25 combines #274 (receipt pictures to the employee's AI by default), #275 (agy `--effort` fix), #276 (Skill selection on the `-low` id with a retry), #277 (background answer check), #278 (`eval:diagnostics`), #279 (Desktop selection benchmark), #280 (task_state dedupe), #281 (`eval:selection`) and the earlier unreleased Antigravity image, bridge, agy 1.4 refusal and audit fixes. Harness remains 0.7.7. Published via `Build STeP Desktop installers` (`desktop-release.yml`) on `main` with `publish=true`. After release: confirm Gemini timing with `eval:diagnostics` on a real PC.
 
 - **Desktop v0.6.24 prepared (2026-10-31)**: the owner asked to release on 2026-10-31. 0.6.24 combines the merged UX/UI review work (#259–#263: tool pages, first-run setup and Settings, chat room and actions, plan step comments, task status dots, Google Workspace action list, tighter allowlists) with #261 (faster Gemini/Antigravity replies), #264 (prompt caching and self-healing hints) and #265 (code intelligence, approved JavaScript REPL, artifacts viewer, read-only subagents). Harness remains 0.7.7. Published via `Build STeP Desktop installers` (`desktop-release.yml`) on `main` with `publish` ticked after this PR merges; Thai release notes are pasted by the owner.
@@ -58,7 +58,21 @@ _Last updated: 2026-11-02_
 - **Desktop v0.6.2** (2026-10-13) — combined release of PR #158 (สื่อภายใน page, copy-only, with layout preview) and PR #154 (icon rail sidebar with animated icons, retired near-copy avatars, OCR busy reply). Windows x64 and macOS Apple silicon; Harness **0.7.7**.
 - **Desktop v0.5.39** (2026-10-11) — published from PR #135 (`7f33d12`): managed/local Dev mode gates for Claude plan access, bounded cold fallback and idle prewarming cleanup. Windows x64 and macOS Apple silicon installers are published; Harness **0.7.7**. Intel Macs stay on 0.5.35. The audit fixes below are pull requests and are not in this release.
 
+## Current status audit (2026-11-02)
+
+Checked against `origin/main`, published tag `desktop-v0.6.26` and current PR checks. The historical implementation notes below include completed and released work; they are not all outstanding tasks.
+
+- **Windows startup**: this change adds an immediate per-user switch in General settings, backed by the Windows login-item state. Development/test builds never register themselves. The owner's installed 0.6.26 executable has been registered for the current Windows user; actual sign-in after reboot remains untested. The in-app switch needs this PR to merge and a later release.
+- **Ready for owner merge review**: #297 (pinned REA developer Skill), #298 (16-section TOR completeness) and #300 (chat submission and clipboard images) have all checks passing. They are still open and are not in the published app. #299 is stacked on #298.
+- **Blocked PR**: #299 (document templates from a conversation) has a failed macOS Electron check. The log stops in `sidebar-smoke.mjs:133`, waiting for the final assistant message's "Open in Output" button. Reproduce and fix or establish a justified same-source rerun before merge; do not classify it as a timing failure from the log alone.
+- **Merged but unreleased**: H1 Thai memory recall (#294), H2 repeated tool-failure stop (#295), and H3 duplicate-memory warning (#296) are on main after the 0.6.26 tag. The remaining phases of the AI Harness guide need owner scope decisions; this audit does not start them.
+- **Quality and live acceptance still open**: private owner review of TOR/memo/letter/proposal/minutes and exported Word layouts; AFP controlled-form and evidence-packet acceptance; real OS clipboard/live-model image checks; current WI/QP-to-Skill mapping and source revisions. Synthetic checks do not close these items.
+- **Integration/deployment still open**: authorized LINE channel/server rollout, managed Google Workspace MCP endpoint/scopes, real-provider vision and opt-in Antigravity native-bridge acceptance. The old Claude pilot policy warning below has not been rechecked on the current device and must not be treated as a confirmed current fault.
+- **Research/measurement still open**: measure staff latency with `eval:diagnostics`; decide public-holiday/MIS-signing search gaps and a Thai-capable search replacement; team-shared Learning Inbox is not started. Antigravity image input is already implemented and must no longer be listed as not started.
+
 ## In progress
+
+Historical implementation notes follow. Use the current audit above and the release/PR state to distinguish unfinished implementation from work awaiting merge, release or human acceptance.
 
 - **H2: stop and ask after repeated tool failures (2026-11-02, owner said do Desktop first)**: phase 1 of the AI Harness guide plan. `ToolLoop.run` (`desktop/electron/tool-loop.ts`) now counts tool turns in a row where every request failed; at `FAILED_TURNS` (4) it gives the AI a last turn without tools that asks the employee for what it needs. Next in phase 1: H3 (warn when a new memory repeats or contradicts one).
 - **H1: memories for Thai requests (2026-11-02, owner said do Desktop first)**: phase 1 of the AI Harness guide plan (H1–H3). `Memories.relevant` (`desktop/electron/memory.ts`) took a whole Thai sentence as one term, so `project`/`reference` memories almost never matched a Thai request. Now Thai is split with `topicWords` from `knowledge.ts` minus filler words, and Thai terms match whole words of the memory. Next in phase 1: H2 (stop and ask after repeated tool failures) and H3 (warn when a new memory repeats or contradicts one).
@@ -362,4 +376,4 @@ _Last updated: 2026-11-02_
 
 ## Not started (ideas the owner approved in principle)
 
-- Antigravity image input; Learning Inbox shared across a team.
+- Learning Inbox shared across a team.
