@@ -149,6 +149,8 @@ const allowed = new Set([
   'reject',
   'restore',
   'attach',
+  'attachClipboard',
+  'detach',
   'documentImageAdd',
   'documentAsset',
   'export',

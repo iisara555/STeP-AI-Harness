@@ -23,7 +23,7 @@ import {
   net,
   session as electronSession,
 } from 'electron';
-import { mkdir, writeFile, appendFile, rm, readFile, open, stat } from 'node:fs/promises';
+import { mkdir, mkdtemp, rmdir, writeFile, appendFile, rm, readFile, open, stat } from 'node:fs/promises';
 import { ExportWorkspace } from './export-workspace';
 import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -4209,33 +4209,37 @@ async function main() {
           nativeTemplate && templateDescription
             ? documentTemplates.save(id, nativeTemplate, draftingTool!.id, selected[0].view.name, templateDescription.font)
             : undefined;
+        const coordinatorScan = coordinated ? harness.privacy(text, { allowedIdentifiers: queued.allowedIdentifiers || [] }) : undefined;
+        if (coordinatorScan?.action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
+        const previousStatus = queued.status;
         queued.status = 'queued';
         store.save(queued);
-        void (
+        let acceptRequest!: (error?: Error) => void;
+        const accepted = new Promise<Error | undefined>(resolve => {
+          acceptRequest = resolve;
+        });
+        const requestFiles = [
+          ...selected.map((a: any) => a.view.name),
+          // Reviewed text handed over by an in-app tool (Terminal, Browser, Files) or the receipt page.
+          ...(sourceText ? ['ผลจากเครื่องมือในแอป'] : []),
+        ];
+        const execution = (
           coordinated
-            ? coordinator.run(id, text, combinedSource)
-            : service.run(
-                id,
-                text,
-                combinedSource,
-                true,
-                skill || undefined,
-                workMode,
-                selectedImageModel,
-                [
-                  ...selected.map((a: any) => a.view.name),
-                  // Reviewed text handed over by an in-app tool (Terminal, Browser, Files) or the receipt page.
-                  ...(sourceText ? ['ผลจากเครื่องมือในแอป'] : []),
-                ],
-                {
-                  retry: input.retry === true,
-                  autoContinue: input.autoContinue === true,
-                  images: selected.flatMap(a => a.images || []),
-                  ...(workflow ? { workflow } : {}),
-                  ...(draftingTool ? { documentTool: draftingTool.id } : {}),
-                  ...(templateInfo ? { documentTemplate: templateInfo } : {}),
-                },
-              )
+            ? coordinator.run(id, text, combinedSource, {
+                text: coordinatorScan!.redactedText,
+                files: requestFiles,
+                onAccepted: () => acceptRequest(),
+              })
+            : service.run(id, text, combinedSource, true, skill || undefined, workMode, selectedImageModel, requestFiles, {
+                retry: input.retry === true,
+                autoContinue: input.autoContinue === true,
+                images: selected.flatMap(a => a.images || []),
+                onAccepted: () => acceptRequest(),
+                previousStatus,
+                ...(workflow ? { workflow } : {}),
+                ...(draftingTool ? { documentTool: draftingTool.id } : {}),
+                ...(templateInfo ? { documentTemplate: templateInfo } : {}),
+              })
         ).catch(error => {
           diagnose('run-rejected', { code: errorCode(error) });
           const failed = store.session(id);
@@ -4245,7 +4249,12 @@ async function main() {
           store.save(failed);
           emit({ sessionId: id, type: 'status', text: /^[A-Z_]+$/.test(error.message) ? error.message : 'RUN_FAILED' });
           emit({ sessionId: id, type: 'changed' });
+          acceptRequest(error);
         });
+        // Do not clear the composer's text until its masked message is durable, including coordinated runs.
+        void execution.then(() => acceptRequest());
+        const failure = await accepted;
+        if (failure) throw failure;
         for (const a of selected) attachments.delete(a.view.id);
         // Without a dialog, the person still learns what was masked before sending.
         return { started: true, mode: workMode, masked: review.labels, warning };
@@ -4335,138 +4344,179 @@ async function main() {
         if (!version) throw new Error('VERSION_NOT_FOUND');
         return store.edit(s.id, version.text, s.revision, version.document, version.presentation || {});
       }
-      case 'attach': {
+      case 'detach': {
+        const sessionId = inputText(input.id, 60),
+          attachmentId = inputText(input.attachmentId, 60),
+          attachment = attachments.get(attachmentId);
+        if (attachment?.sessionId === sessionId) attachments.delete(attachmentId);
+        return true;
+      }
+      case 'attach':
+      case 'attachClipboard': {
         const sessionId = inputText(input.id, 60);
         const attachingSession = store.session(sessionId);
-        const vision = input.vision === true;
+        const fromClipboard = method === 'attachClipboard';
+        const vision = fromClipboard ? policyState.policy.features.vision : input.vision === true;
         // Pictures go only to a connection that can carry them. Gemini through Antigravity (and Copilot) get the local
         // OCR text of an image or scanned PDF instead (src/vision-transport.ts).
         const imagesAccepted = takesImages(store.get<Connection>('connection', attachingSession.connectionId)?.provider);
         if (vision && !policyState.policy.features.vision) throw new Error('VISION_DISABLED');
-        const result = await dialog.showOpenDialog(window, {
-          properties: ['openFile'],
-          filters: [
-            {
-              name: 'Documents and images',
-              extensions: vision ? ['png', 'jpg', 'jpeg', 'webp'] : ['txt', 'md', 'csv', 'tsv', 'pdf', 'docx', ...OCR_EXTENSIONS],
-            },
-          ],
-        });
-        if (result.canceled) return null;
-        const path = result.filePaths[0],
-          extension = extname(path).slice(1).toLowerCase();
-        const attachmentTool = input.documentTool === undefined ? undefined : documentTool(input.documentTool);
-        if (input.documentTool !== undefined && !attachmentTool) throw new Error('INVALID_DOCUMENT_TOOL');
-        let nativeBytes: Buffer | undefined;
-        let nativeDescription: Awaited<ReturnType<typeof inspectDocumentTemplate>> | undefined;
-        if (extension === 'docx' && attachmentTool && attachmentTool.id !== 'tor') {
-          try {
-            // Snapshot only a natively picked template candidate. General sources retain their own intake limits.
-            nativeBytes = await readTemplateSnapshot(path);
-            nativeDescription = await inspectDocumentTemplate(nativeBytes, attachmentTool.id);
-          } catch {
-            nativeBytes = undefined;
-            // A file unsuitable for native export may still be readable under the ordinary source privacy gate.
+        let temporaryDir: string | undefined;
+        let temporaryPath: string | undefined;
+        let clipboardPreview: string | undefined;
+        try {
+          let path: string;
+          if (fromClipboard) {
+            if (!(input.bytes instanceof Uint8Array) || !input.bytes.byteLength || input.bytes.byteLength > 4_000_000)
+              throw new Error('CLIPBOARD_IMAGE_SIZE');
+            const extension = input.mime === 'image/png' ? 'png' : input.mime === 'image/jpeg' ? 'jpg' : '';
+            if (!extension) throw new Error('CLIPBOARD_IMAGE_UNSUPPORTED');
+            const bytes = Buffer.from(input.bytes);
+            const image = visionImage(extension, bytes);
+            documentImageDimensions(bytes);
+            clipboardPreview = `data:${image.mime};base64,${image.data}`;
+            temporaryDir = await mkdtemp(join(tmpdir(), 'step-paste-'));
+            temporaryPath = join(temporaryDir, `clipboard.${extension}`);
+            await writeFile(temporaryPath, bytes, { flag: 'wx' });
+            path = temporaryPath;
+          } else {
+            const result = await dialog.showOpenDialog(window, {
+              properties: ['openFile'],
+              filters: [
+                {
+                  name: 'Documents and images',
+                  extensions: vision ? ['png', 'jpg', 'jpeg', 'webp'] : ['txt', 'md', 'csv', 'tsv', 'pdf', 'docx', ...OCR_EXTENSIONS],
+                },
+              ],
+            });
+            if (result.canceled) return null;
+            path = result.filePaths[0];
           }
-        }
-        let report: any = await harness.documentPrivacy(path, { includeRedacted: true }),
-          images: VisionInput[] | undefined;
-        // With privacy checks off, an image for a vision model is sent as it is, like other AI apps: no local OCR pass.
-        // That holds whichever attach button picked it (owner, 2026-10-31: local OCR reads too poorly to stand in for the
-        // picture), as long as the organization allows sending images.
-        const directImage =
-          imagesAccepted &&
-          policyState.policy.features.vision &&
-          !policyState.policy.checks.privacy &&
-          ['png', 'jpg', 'jpeg', 'webp'].includes(extension);
-        if (directImage) {
-          const bytes = await readFile(path);
-          if (bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
-          images = [visionImage(extension, bytes)];
-          report = { ...unscanned(''), extractionStatus: 'text-extracted' };
-        }
-        // A scanned PDF goes to the AI as page pictures when privacy checks are off; the vision model reads them,
-        // with whatever text layer the PDF has alongside. No local OCR install is needed.
-        const scannedPdf =
-          !vision &&
-          extension === 'pdf' &&
-          imagesAccepted &&
-          !policyState.policy.checks.privacy &&
-          policyState.policy.features.vision &&
-          ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || '');
-        if (scannedPdf) {
-          images = await pdfPageImages(path, join(root, 'src/vendor/privacy'));
-          report = { ...unscanned(typeof report.redactedText === 'string' ? report.redactedText : ''), extractionStatus: 'text-extracted' };
-        }
-        const scanNeeded =
-          !directImage &&
-          !scannedPdf &&
-          OCR_EXTENSIONS.includes(extension) &&
-          (vision || extension !== 'pdf' || ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || ''));
-        let ocrRan = false;
-        if (scanNeeded && report.action !== 'block-external') {
-          const health = await ocr.health();
-          if (!health.running && (vision || extension !== 'pdf'))
-            throw new Error(imagesAccepted ? 'OCR_UNAVAILABLE' : 'VISION_UNAVAILABLE');
-          if (health.running) {
-            const read = await ocr.recognize(path, health.crosscheck, health.tesseract, health.handwriting);
-            report = ocrAttachmentReport(read.result, harness.privacy);
-            ocrRan = true;
-            // Text redaction cannot mask pixels. Flagged OCR forbids sending the original image.
-            if (vision && imagesAccepted && (report.action !== 'pass' || report.containsPersonalData)) report.action = 'block-external';
-            if (vision && imagesAccepted && !attachmentReason(report)) {
-              if (read.bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
-              images = [visionImage(extension, read.bytes)];
+          const extension = extname(path).slice(1).toLowerCase();
+          const attachmentTool = input.documentTool === undefined ? undefined : documentTool(input.documentTool);
+          if (input.documentTool !== undefined && !attachmentTool) throw new Error('INVALID_DOCUMENT_TOOL');
+          let nativeBytes: Buffer | undefined;
+          let nativeDescription: Awaited<ReturnType<typeof inspectDocumentTemplate>> | undefined;
+          if (extension === 'docx' && attachmentTool && attachmentTool.id !== 'tor') {
+            try {
+              // Snapshot only a natively picked template candidate. General sources retain their own intake limits.
+              nativeBytes = await readTemplateSnapshot(path);
+              nativeDescription = await inspectDocumentTemplate(nativeBytes, attachmentTool.id);
+            } catch {
+              nativeBytes = undefined;
+              // A file unsuitable for native export may still be readable under the ordinary source privacy gate.
             }
           }
+          let report: any = await harness.documentPrivacy(path, { includeRedacted: true }),
+            images: VisionInput[] | undefined;
+          // With privacy checks off, an image for a vision model is sent as it is, like other AI apps: no local OCR pass.
+          // That holds whichever attach button picked it (owner, 2026-10-31: local OCR reads too poorly to stand in for the
+          // picture), as long as the organization allows sending images.
+          const directImage =
+            imagesAccepted &&
+            policyState.policy.features.vision &&
+            !policyState.policy.checks.privacy &&
+            ['png', 'jpg', 'jpeg', 'webp'].includes(extension);
+          if (directImage) {
+            const bytes = await readFile(path);
+            if (bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
+            images = [visionImage(extension, bytes)];
+            report = { ...unscanned(''), extractionStatus: 'text-extracted' };
+          }
+          // A scanned PDF goes to the AI as page pictures when privacy checks are off; the vision model reads them,
+          // with whatever text layer the PDF has alongside. No local OCR install is needed.
+          const scannedPdf =
+            !vision &&
+            extension === 'pdf' &&
+            imagesAccepted &&
+            !policyState.policy.checks.privacy &&
+            policyState.policy.features.vision &&
+            ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || '');
+          if (scannedPdf) {
+            images = await pdfPageImages(path, join(root, 'src/vendor/privacy'));
+            report = {
+              ...unscanned(typeof report.redactedText === 'string' ? report.redactedText : ''),
+              extractionStatus: 'text-extracted',
+            };
+          }
+          const scanNeeded =
+            !directImage &&
+            !scannedPdf &&
+            OCR_EXTENSIONS.includes(extension) &&
+            (vision || extension !== 'pdf' || ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || ''));
+          let ocrRan = false;
+          if (scanNeeded && report.action !== 'block-external') {
+            const health = await ocr.health();
+            if (!health.running && (vision || extension !== 'pdf'))
+              throw new Error(imagesAccepted ? 'OCR_UNAVAILABLE' : 'VISION_UNAVAILABLE');
+            if (health.running) {
+              const read = await ocr.recognize(path, health.crosscheck, health.tesseract, health.handwriting);
+              report = ocrAttachmentReport(read.result, harness.privacy);
+              ocrRan = true;
+              // Text redaction cannot mask pixels. Flagged OCR forbids sending the original image.
+              if (vision && imagesAccepted && (report.action !== 'pass' || report.containsPersonalData)) report.action = 'block-external';
+              if (vision && imagesAccepted && !attachmentReason(report)) {
+                if (read.bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
+                images = [visionImage(extension, read.bytes)];
+              }
+            }
+          }
+          // A scan that could go neither as pictures nor as OCR text says what to change instead of "no text".
+          if (
+            extension === 'pdf' &&
+            !imagesAccepted &&
+            !ocrRan &&
+            !policyState.policy.checks.privacy &&
+            policyState.policy.features.vision &&
+            ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || '')
+          )
+            report = { ...report, extractionStatus: 'unavailable', reviewReasons: ['scanned-needs-vision'] };
+          // The reason travels with the chip; the window refuses to send while any chip cannot be sent.
+          // A sample-free native outline can be used even when original source text must be withheld.
+          // This does not approve sending the original text/images; source mode keeps its original gate.
+          const { sourceUsable, usable, reason } = attachmentCapabilities(report, Boolean(nativeDescription));
+          const view: Attachment = {
+            id: randomUUID(),
+            name: fromClipboard ? `${tm('ภาพจากคลิปบอร์ด')}.${extension}` : basename(path),
+            status: nativeDescription
+              ? tm('แม่แบบ DOCX พร้อมใช้ · ข้อมูลตัวอย่างไม่ส่งให้ AI')
+              : usable
+                ? scannedPdf
+                  ? tm('PDF สแกน · ส่งเป็นภาพ {0} หน้าให้ AI อ่าน', images?.length || 0)
+                  : images
+                    ? directImage
+                      ? tm('ภาพต้นฉบับพร้อมส่ง · ตรวจภาพก่อนส่ง')
+                      : tm('ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน')
+                    : report.ocr
+                      ? tm('อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง')
+                      : report.images
+                        ? tm('ตรวจข้อความแล้ว · รูปภาพ {0} รูปในไฟล์ไม่ได้ส่งให้ AI ถ้ามีข้อมูลสำคัญในรูปให้พิมพ์เพิ่ม', report.images)
+                        : tm('ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง')
+                : tm('ส่งไฟล์นี้ให้ AI ไม่ได้'),
+            preview: nativeDescription ? tm('ใช้โครงแม่แบบและชื่อช่อง กรอกข้อมูลของงานใหม่แยกในฟอร์ม') : usable ? report.redactedText : '',
+            usable,
+            ...(nativeDescription ? { templateReady: true } : {}),
+            sourceUsable,
+            ...(images?.length ? { vision: true } : {}),
+            ...(clipboardPreview || images?.length
+              ? { imagePreview: clipboardPreview || `data:${images![0].mime};base64,${images![0].data}` }
+              : {}),
+            ...(reason ? { reason } : {}),
+          };
+          if (reason) diagnose('attach-refused', { reason, extension: extname(path).toLowerCase().slice(0, 8) });
+          attachments.set(view.id, {
+            view,
+            text: sourceUsable ? ocrAttachmentSource(report, 'attachment:' + view.id) : '',
+            sessionId,
+            images,
+            nativeBytes,
+            sourceUsable,
+          });
+          return view;
+        } finally {
+          if (temporaryPath) await rm(temporaryPath, { force: true }).catch(() => diagnose('clipboard-cleanup-failed'));
+          if (temporaryDir) await rmdir(temporaryDir).catch(() => diagnose('clipboard-cleanup-failed'));
         }
-        // A scan that could go neither as pictures nor as OCR text says what to change instead of "no text".
-        if (
-          extension === 'pdf' &&
-          !imagesAccepted &&
-          !ocrRan &&
-          !policyState.policy.checks.privacy &&
-          policyState.policy.features.vision &&
-          ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || '')
-        )
-          report = { ...report, extractionStatus: 'unavailable', reviewReasons: ['scanned-needs-vision'] };
-        // The reason travels with the chip; the window refuses to send while any chip cannot be sent.
-        // A sample-free native outline can be used even when original source text must be withheld.
-        // This does not approve sending the original text/images; source mode keeps its original gate.
-        const { sourceUsable, usable, reason } = attachmentCapabilities(report, Boolean(nativeDescription));
-        const view: Attachment = {
-          id: randomUUID(),
-          name: basename(path),
-          status: nativeDescription
-            ? tm('แม่แบบ DOCX พร้อมใช้ · ข้อมูลตัวอย่างไม่ส่งให้ AI')
-            : usable
-              ? scannedPdf
-                ? tm('PDF สแกน · ส่งเป็นภาพ {0} หน้าให้ AI อ่าน', images?.length || 0)
-                : images
-                  ? tm('ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน')
-                  : report.ocr
-                    ? tm('อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง')
-                    : report.images
-                      ? tm('ตรวจข้อความแล้ว · รูปภาพ {0} รูปในไฟล์ไม่ได้ส่งให้ AI ถ้ามีข้อมูลสำคัญในรูปให้พิมพ์เพิ่ม', report.images)
-                      : tm('ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง')
-              : tm('ส่งไฟล์นี้ให้ AI ไม่ได้'),
-          preview: nativeDescription ? tm('ใช้โครงแม่แบบและชื่อช่อง กรอกข้อมูลของงานใหม่แยกในฟอร์ม') : usable ? report.redactedText : '',
-          usable,
-          ...(nativeDescription ? { templateReady: true } : {}),
-          sourceUsable,
-          ...(images?.length ? { vision: true, imagePreview: `data:${images[0].mime};base64,${images[0].data}` } : {}),
-          ...(reason ? { reason } : {}),
-        };
-        if (reason) diagnose('attach-refused', { reason, extension: extname(path).toLowerCase().slice(0, 8) });
-        attachments.set(view.id, {
-          view,
-          text: sourceUsable ? ocrAttachmentSource(report, 'attachment:' + view.id) : '',
-          sessionId,
-          images,
-          nativeBytes,
-          sourceUsable,
-        });
-        return view;
       }
       case 'export': {
         const s = store.session(input.id),

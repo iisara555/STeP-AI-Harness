@@ -101,7 +101,21 @@ test('coordinator runs three actual WorkService calls concurrently and merges on
     () => {},
   );
   try {
-    await coordinator.run(parent.id, 'Prepare a bounded synthetic summary.', 'Public source');
+    let accepted = false;
+    await coordinator.run(parent.id, 'Prepare a bounded synthetic summary.', 'Public source', {
+      text: 'Prepare a bounded synthetic summary.',
+      files: ['source.txt'],
+      onAccepted: () => {
+        accepted = true;
+        assert.equal(store.session(parent.id).messages.at(-1)?.text, 'Prepare a bounded synthetic summary.');
+      },
+    });
+    assert.equal(accepted, true);
+    assert.equal(
+      store.session(parent.id).messages.filter(m => m.role === 'user' && m.text === 'Prepare a bounded synthetic summary.').length,
+      1,
+    );
+    assert.deepEqual(store.session(parent.id).messages.find(m => m.role === 'user')?.files, [{ name: 'source.txt' }]);
     assert.equal(peak, MAX_PARALLEL_RUNS);
     assert.equal(tools, 0);
     assert.equal(contexts, 0);

@@ -23,6 +23,20 @@ import { uxToolsEn } from './ux-tools-en';
 import { uxReviewEn } from './ux-review-en';
 import { googleChangesEn } from './google-changes-en';
 export const en: Record<string, string> = {
+  ภาพจากคลิปบอร์ด: 'Clipboard image',
+  ตัวอย่างภาพแนบ: 'Attached image preview',
+  ช่วยดูไฟล์ที่แนบ: 'Please look at the attached file.',
+  'ส่งภาพให้ AI': 'Image will be sent to AI',
+  'ส่งเฉพาะข้อความ OCR': 'Only OCR text will be sent',
+  'ภาพต้นฉบับพร้อมส่ง · ตรวจภาพก่อนส่ง': 'Original image ready to send · review before sending',
+  'กำลังเตรียมภาพ…': 'Preparing image…',
+  รอให้งานปัจจุบันเสร็จก่อนวางภาพ: 'Wait for the current task to finish before pasting an image.',
+  'แนบได้ครั้งละ 1 ไฟล์ กรุณานำไฟล์เดิมออกก่อนวางภาพ':
+    'Only one attachment can be sent at a time. Remove the current file before pasting an image.',
+  'วางภาพ PNG หรือ JPEG ได้': 'Paste a PNG or JPEG image.',
+  'ภาพจากคลิปบอร์ดต้องมีขนาดไม่เกิน 4 MB': 'The clipboard image must be no larger than 4 MB.',
+  'กำลังเตรียมภาพ กรุณารอสักครู่ก่อนส่ง': 'Preparing the image. Please wait before sending.',
+  'รอคำตอบปัจจุบันก่อนส่ง ข้อความยังอยู่ในช่องพิมพ์': 'Wait for the current reply before sending. Your message is still in the composer.',
   'คำถามเรื่อง STeP ตอบเร็วขึ้น เมื่อเอกสารที่ตรงคำถามสั้นพอ แอปส่งให้ AI อ่านทั้งฉบับตั้งแต่แรก (Gemini ผ่าน Antigravity เหลือราว 20 วินาที จากราว 25 วินาที)':
     'STeP questions are answered faster: when the matching document is short enough the AI reads it whole from the start (Gemini through Antigravity about 20 seconds, down from about 25)',
   'เมื่อคำถามใช้คำต่างจากเอกสาร AI เห็นรายชื่อเอกสาร STeP ทั้งหมด จึงเปิดเอกสารที่ถูกได้เอง':
