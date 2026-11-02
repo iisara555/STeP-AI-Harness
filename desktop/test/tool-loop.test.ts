@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ToolLoop, TOOL_RULES, toolRemediationHint, type LoopHost } from '../electron/tool-loop';
+import { ToolLoop, TOOL_RULES, FAILED_TURNS, toolRemediationHint, type LoopHost } from '../electron/tool-loop';
 import { compact } from '../electron/compact';
 import { errorText } from '../src/messages';
 import { brokenRequests, loopRequests } from '../src/tools';
@@ -369,6 +369,59 @@ test('the same requests turn after turn stop early with a progress report', asyn
   assert.equal(report, 'ติดอยู่ที่ขั้นเดิม');
   assert.equal(effects, 2);
   assert.equal(calls, 4);
+});
+test('different requests failing turn after turn stop and ask the employee instead of using every turn', async () => {
+  let effects = 0,
+    stuck = '';
+  const loop = new ToolLoop(
+    host({
+      readOnly: () => false,
+      execute: async () => {
+        effects++;
+        throw new Error('PATCH_NO_MATCH');
+      },
+    }),
+  );
+  const answer = await loop.run(
+    'Fix the export',
+    async prompt => {
+      if (prompt.includes('<tool_limit>')) {
+        stuck = prompt;
+        return 'แก้ไม่สำเร็จ 4 ครั้ง ข้อความที่จะแทนไม่ตรงกับไฟล์ ขอไฟล์ล่าสุดหรือบอกบรรทัดที่ต้องแก้';
+      }
+      return request('patch', 'src/export.ts', { old_string: 'attempt ' + effects, new_string: 'x' });
+    },
+    signal(),
+  );
+  assert.equal(effects, FAILED_TURNS, 'no tool runs after the failure budget is spent');
+  assert.match(answer, /ขอไฟล์ล่าสุด/);
+  assert.match(stuck, new RegExp(`last ${FAILED_TURNS} tool turns all failed`));
+  assert.match(stuck, /the one thing you need from them/);
+  assert.match(stuck, /PATCH_NO_MATCH/, 'the report sees the failure codes it should explain');
+});
+test('a turn with any success resets the failure budget', async () => {
+  let turn = 0;
+  const loop = new ToolLoop(
+    host({
+      readOnly: () => false,
+      execute: async r => {
+        if (r.input.startsWith('bad')) throw new Error('PATCH_NO_MATCH');
+        return 'ok';
+      },
+    }),
+  );
+  // Three failing turns, one turn with a failure and a success, three more failing turns, then an answer.
+  const plan = [['bad1'], ['bad2'], ['bad3'], ['bad4', 'good'], ['bad5'], ['bad6'], ['bad7']];
+  const answer = await loop.run(
+    'Fix the export',
+    async prompt => {
+      assert.ok(!prompt.includes('<tool_limit>'), 'the budget counts failing turns in a row only');
+      const next = plan[turn++];
+      return next ? next.map(input => request('files', input)).join('\n') : 'Done';
+    },
+    signal(),
+  );
+  assert.equal(answer, 'Done');
 });
 test('a running background task may be waited on repeatedly until its result is available', async () => {
   let waits = 0;
