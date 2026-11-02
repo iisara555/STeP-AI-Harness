@@ -2508,6 +2508,10 @@ export const en: Record<string, string> = {
   '- มี {0} จุดที่ระบบปิดบังข้อมูลส่วนบุคคลไว้ ใส่ข้อมูลจริงเองหลังตรวจร่าง':
     '- {0} pieces of personal data were masked; fill in the real details yourself after review',
   'ตรวจในแผงผลงาน แล้วกด “ใช้ร่างนี้”': 'Review it in the Output panel, then press “Use this draft”',
+  'เทียบโครงกลาง TOR 16 ข้อแล้ว ยังตรวจไม่พบ {0} หัวข้อ ดูรายละเอียดในผลตรวจ':
+    'Compared with the 16-section TOR working outline, {0} headings were not detected. See the review for details.',
+  '**ตรวจโครงกลาง TOR 16 ข้อ:** ยังตรวจไม่พบหัวข้อต่อไปนี้: {0} ระบบตรวจจากเลขและชื่อหัวข้อ จึงอาจไม่พบรูปแบบบางชนิด หากใช้แบบหน่วยงานอื่น ให้ตรวจเทียบกับแบบที่เลือก':
+    '**16-section TOR working outline:** These headings were not detected: {0} The check uses heading numbers and titles and may miss some formats. If using a different agency outline, check against that outline instead.',
   งานใหม่: 'New task',
   'ส่งคำค้นให้บริการค้นเว็บ?': 'Send the query to the web search service?',
   'เข้าถึงเว็บปลายทางนี้?': 'Access this web destination?',
