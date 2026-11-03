@@ -7,6 +7,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 ## Unreleased
 
 - Recover the disabled **Use this draft** button after manual edits: save local changes first, compare and confirm a stale AI proposal, and retain the replaced draft in version history. Replacement consent names the reviewed revision, so newer edits still block acceptance.
+- Simplify the chat welcome screen to one motivational caption. Keep the morning brief and team examples under a closed **Help getting started** disclosure, with keyboard access and the first-run tour still available.
 
 ## Desktop v0.6.27 (2026-11-02)
 

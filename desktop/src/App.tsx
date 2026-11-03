@@ -2041,7 +2041,7 @@ export default function App() {
                             ? t('ให้ผู้ช่วยทำงานซ้ำตามเวลา ผลเป็นร่างให้คุณตรวจ')
                             : session
                               ? `${session.project || session.team.toUpperCase() || t('ทุกทีม')} · ${taskStatus(session)}`
-                              : t('เลือกงานตัวอย่าง หรือพิมพ์สิ่งที่อยากให้ช่วยด้านล่าง')}
+                              : ''}
               </small>
             </div>
             {!settings && view === 'chat' && (
@@ -2224,64 +2224,38 @@ export default function App() {
                   <div className="welcome">
                     <div className="welcome-intro">
                       <div className="welcome-heading">
-                        <p className="greet">
-                          {snapshot.settings.userName ? t('สวัสดีครับ คุณ{0}', snapshot.settings.userName) : t('สวัสดีครับ')}
-                          {myTeamName ? ` · ${myTeamName}` : ''}
-                        </p>
-                        <h1>
-                          {t('ให้ AI ร่างงานหนัก')}
-                          <br />
-                          <em>{t('ส่วนคุณตัดสินเรื่องสำคัญ')}</em>
-                        </h1>
-                        {/* In the greeting, where a first-time user looks, not below the starters behind the composer. */}
-                        {!snapshot.settings.tourDone && (
-                          <button className="welcome-tour quiet" onClick={commands.tour}>
-                            <Compass size={15} />
-                            {t('ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน')}
-                          </button>
-                        )}
-                        {/* Under the headline, so the composer never covers the promises a new user reads first. */}
-                        <ul className="welcome-trust">
-                          <li>
-                            <ShieldCheck size={14} />
-                            {t('ข้อมูลอยู่ในเครื่อง ปิดบังข้อมูลส่วนบุคคลก่อนส่ง')}
-                          </li>
-                          <li>
-                            <Check size={14} />
-                            {t('AI ร่าง คนตรวจและอนุมัติ')}
-                          </li>
-                          <li>
-                            <Blocks size={14} />
-                            {t('รู้จักทีมและ Skill ของ STeP')}
-                          </li>
-                        </ul>
+                        <h1>{t('ไอเดียของคุณ ไปได้ไกลกว่างานประจำ')}</h1>
                       </div>
                       <SectionArt scene="chat" className="welcome-illustration" />
                     </div>
-                    <MorningBriefCard call={api.call} onError={e => notify(explainError(e), 'error')} onAsk={setQuery} />
-                    <p className="suggestions-label">
-                      {myTeamName ? t('ลองงานแรกของทีม {0}', myTeamName) : t('ลองงานแรกที่คนส่วนใหญ่ใช้บ่อย')}
-                    </p>
-                    <div className="suggestions" data-tour="starters">
-                      {startersFor(snapshot.settings.team).map(starter => {
-                        const text = starterText(starter);
-                        return (
-                          <button key={text} onClick={() => setQuery(text)}>
-                            <Sparkles size={16} />
-                            <span>
-                              <small className="starter-tag">{starterTag(starter)}</small>
-                              {text}
-                            </span>
-                            <ChevronLeft className="point-right" size={15} />
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="welcome-lede">
-                      {t(
-                        'ผู้ช่วยที่รู้จักงานของ STeP สรุปเอกสารยาว ร่างหนังสือ วางแผนโครงการ และตรวจความพร้อมก่อนส่ง ทุกร่างผ่านตาคุณก่อนใช้จริง',
-                      )}
-                    </p>
+                    <details className="welcome-tools">
+                      <summary data-tour="starters">{t('ตัวช่วยเริ่มงาน')}</summary>
+                      <MorningBriefCard call={api.call} onError={e => notify(explainError(e), 'error')} onAsk={setQuery} />
+                      <p className="suggestions-label">
+                        {myTeamName ? t('ลองงานแรกของทีม {0}', myTeamName) : t('ลองงานแรกที่คนส่วนใหญ่ใช้บ่อย')}
+                      </p>
+                      <div className="suggestions">
+                        {startersFor(snapshot.settings.team).map(starter => {
+                          const text = starterText(starter);
+                          return (
+                            <button key={text} onClick={() => setQuery(text)}>
+                              <Sparkles size={16} />
+                              <span>
+                                <small className="starter-tag">{starterTag(starter)}</small>
+                                {text}
+                              </span>
+                              <ChevronLeft className="point-right" size={15} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </details>
+                    {!snapshot.settings.tourDone && (
+                      <button className="welcome-tour quiet" onClick={commands.tour}>
+                        <Compass size={15} />
+                        {t('ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน')}
+                      </button>
+                    )}
                   </div>
                 )}
                 {session?.messages.map((message, index) => (

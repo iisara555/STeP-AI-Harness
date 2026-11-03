@@ -28,9 +28,12 @@ try {
   await page.getByRole('button', { name: 'Skip, set up later', exact: true }).click();
   await wizard.waitFor({ state: 'detached' });
 
-  // Welcome copy, trust points and starters follow the language; Thai text from the code must not leak.
-  await expect(page.getByRole('heading', { name: /Let AI do the heavy drafting/ })).toBeVisible();
-  await expect(page.locator('.welcome-trust')).toContainText('AI drafts; people review and approve');
+  // The caption and optional starting tools follow the language; Thai text from the code must not leak.
+  await expect(page.getByRole('heading', { name: 'Your ideas can go beyond the everyday.', exact: true })).toBeVisible();
+  await expect(page.locator('.welcome-trust, .welcome-lede, .welcome .greet')).toHaveCount(0);
+  await expect(page.locator('.suggestions button').first()).toBeHidden();
+  await page.locator('.welcome-tools > summary').focus();
+  await page.keyboard.press('Enter');
   await expect(page.locator('.suggestions button')).toHaveCount(3);
   const starter = (await page.locator('.suggestions button').first().innerText()).trim();
   assert.doesNotMatch(starter, /[฀-๿]/, starter);
@@ -49,6 +52,7 @@ try {
     await window.step.call('settings', { assistant: s.assistant, team: 'qs', theme: s.theme });
   });
   await page.reload();
+  await page.locator('.welcome-tools > summary').click();
   await expect(page.locator('.suggestions-label')).toContainText('First tasks for Quality System');
   await expect(page.locator('.suggestions')).toContainText('ISO 9001 internal audit checklist');
   await shot(page, 'en-welcome-qs.png');
