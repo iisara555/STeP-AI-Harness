@@ -128,6 +128,7 @@ import type { WorkAction } from './types';
 import { locale, setLanguage, t, teamName } from './i18n';
 import { startersFor, starterTag, starterText } from './starters';
 import { MorningBriefCard } from './morning-brief';
+import { WelcomeGreeting } from './welcome-greeting';
 import { initialSeen, needsYouCount, taskAlert, TASK_ALERT_LABELS, TASK_SEEN_KEY } from './task-alerts';
 
 const ReceiptApp = lazyScreen(async () => ({ default: (await import('./receipt')).ReceiptApp }));
@@ -289,6 +290,7 @@ export default function App() {
   const [plan, setPlan] = useState<(PlanStep & { state: string })[]>([]);
   const [workActions, setWorkActions] = useState<Record<string, WorkAction[]>>({});
   const [view, setView] = useState<'chat' | 'receipt' | 'skills' | 'documents' | 'media' | 'schedules'>('chat');
+  const [welcomeVisit, setWelcomeVisit] = useState(0);
   const navigate = (next: typeof view) => {
     if (
       guardSettingsExit(() => {
@@ -812,6 +814,7 @@ export default function App() {
     if (!['running', 'queued'].includes(snapshot?.sessions.find(s => s.id === id)?.status || '')) await api!.call('sessionResume', { id });
     if (version !== navigationVersion.current) return;
     setView('chat');
+    setWelcomeVisit(value => value + 1);
     setSelected(id);
     const chosen = snapshot?.sessions.find(s => s.id === id);
     setWorkMode(chosen?.mode || (chosen?.draft ? 'draft' : 'chat'));
@@ -939,6 +942,7 @@ export default function App() {
     const version = ++navigationVersion.current;
     await save();
     if (version !== navigationVersion.current) return;
+    setWelcomeVisit(value => value + 1);
     setSelected('');
     setRunning(false);
     setWorkMode('chat');
@@ -2600,9 +2604,33 @@ export default function App() {
               </div>
               <div className="composer-area">
                 {!session?.messages.length && (
-                  <div className="welcome">
-                    <h1>{t('วันนี้ให้ช่วยอะไรดี')}</h1>
-                  </div>
+                  <WelcomeGreeting
+                    key={JSON.stringify([
+                      snapshot.settings.workspace,
+                      snapshot.settings.team,
+                      snapshot.settings.language,
+                      snapshot.settings.termsVersion,
+                      welcomeVisit,
+                      connection?.id,
+                      connection?.ready,
+                      currentModel,
+                    ])}
+                    call={api.call}
+                    name={snapshot.settings.userName || ''}
+                    connectionId={connection?.id || ''}
+                    model={currentModel}
+                    hasDraft={Boolean(query.trim())}
+                    enabled={
+                      !startupPending &&
+                      !wizard &&
+                      !tour &&
+                      !whatsNew &&
+                      workMode === 'chat' &&
+                      !running &&
+                      !submitting &&
+                      !session?.documentTool
+                    }
+                  />
                 )}
                 {(snapshot.transmissionGrants || [])
                   .filter(g => g.sessionId === selected)

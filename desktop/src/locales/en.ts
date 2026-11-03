@@ -1101,6 +1101,13 @@ export const en: Record<string, string> = {
   'ให้ AI ร่างงานหนัก': 'Let AI do the heavy drafting.',
   'ไอเดียของคุณ ไปได้ไกลกว่างานประจำ': 'Your ideas can go beyond the everyday.',
   วันนี้ให้ช่วยอะไรดี: 'What can I help with today?',
+  'สวัสดี คุณ{0}': 'Hello, {0}',
+  สวัสดี: 'Hello',
+  เริ่มจากเรื่องไหนดี: 'Where shall we start?',
+  ข้อมูลที่บันทึกไว้: 'Saved context',
+  'ใช้ข้อมูลที่บันทึกไว้ปรับคำทักทาย?': 'Use saved context to personalise your greeting?',
+  'ส่งรูปแบบการทำงานจาก USER.md และความจำที่ยืนยันแล้วให้ {0} เพื่อคิดคำทักทาย 5 แบบ':
+    'Send working preferences from USER.md and confirmed memories to {0} to write five welcome headlines',
   ลองเริ่มจาก: 'Try starting with',
   สรุปเอกสาร: 'Summarise a document',
   ร่างเอกสาร: 'Draft a document',

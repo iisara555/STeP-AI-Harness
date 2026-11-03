@@ -4215,6 +4215,12 @@ nav .count {
   line-height: 1.5;
   margin: 0;
 }
+.is-empty .welcome .welcome-greeting {
+  margin: 0 0 8px;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
 .is-empty .composer {
   border-radius: 22px;
 }

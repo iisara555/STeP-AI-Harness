@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 const allowed = new Set([
+  'welcomeGreeting',
+  'welcomeGreetingLeave',
   'sideQuestion',
   'cancelSideQuestion',
   'vaultState',

@@ -7,6 +7,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 ## Unreleased
 
 - Centre the new-chat greeting and composer together, with compact document and brainstorming starters. Keep the morning brief and team examples folded below the prompt; ongoing conversations retain their bottom composer.
+- Personal welcome headlines use working preferences from the workspace's USER.md and confirmed memories. A short request to the selected AI prepares five lines for the day/context; later visits rotate locally, with the profile name displayed separately, ordinary privacy/consent checks and usage accounting, and an immediate neutral fallback.
 
 ## Desktop v0.6.28 (2026-11-03)
 

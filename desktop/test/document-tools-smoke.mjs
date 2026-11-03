@@ -519,6 +519,11 @@ try {
     await window.step.call('settings', { assistant: settings.assistant, team: settings.team, theme: settings.theme, language: 'en' });
   });
   await page.reload();
+  // The strict policy also reviews the optional welcome batch; decline it before returning to the document.
+  await page
+    .getByRole('alertdialog', { name: 'Use saved context to personalise your greeting?' })
+    .getByRole('button', { name: 'Cancel', exact: true })
+    .click();
   await page.locator('aside.sidebar .session-open').filter({ hasText: last.title }).first().click();
   await expect(page.getByLabel('DOCX font', { exact: true })).toHaveValue('auto');
   await page.evaluate(() => {

@@ -29,7 +29,7 @@ try {
   await wizard.waitFor({ state: 'detached' });
 
   // The greeting and optional starting tools follow the language; Thai text from the code must not leak.
-  await expect(page.getByRole('heading', { name: 'What can I help with today?', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Where shall we start?', exact: true })).toBeVisible();
   await expect(page.locator('.welcome-trust, .welcome-lede, .welcome .greet')).toHaveCount(0);
   await expect(page.locator('.suggestions button').first()).toBeHidden();
   await page.locator('.welcome-tools > summary').focus();
