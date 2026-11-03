@@ -343,6 +343,15 @@ export default function App() {
   const [removing, setRemoving] = useState<Session | null>(null),
     [renaming, setRenaming] = useState<{ id: string; title: string } | null>(null),
     [palette, setPalette] = useState(false);
+  const [draftAcceptPending, setDraftAcceptPending] = useState(false);
+  const draftAcceptInFlight = useRef(false);
+  const [replacingDraft, setReplacingDraft] = useState<{
+    id: string;
+    proposalId: string;
+    revision: number;
+    draft: string;
+    proposal: string;
+  } | null>(null);
   const [pendingModel, setPendingModel] = useState<string | undefined>(undefined),
     [pendingEffort, setPendingEffort] = useState(''),
     modelsRequested = useRef(new Set<string>());
@@ -717,6 +726,9 @@ export default function App() {
       setPresentation(resolvePresentation(session?.presentation, session?.documentTool || false));
     }
   }, [editor, selected, session?.revision]);
+  useEffect(() => {
+    editor?.setEditable(!draftAcceptPending, false);
+  }, [editor, draftAcceptPending]);
   const action = async (fn: () => Promise<unknown>) => {
     try {
       await fn();
@@ -748,6 +760,29 @@ export default function App() {
       await task;
     } finally {
       if (saveInFlight.current === task) saveInFlight.current = null;
+    }
+  }
+  async function useProposal(proposalId: string) {
+    if (draftAcceptInFlight.current) return;
+    draftAcceptInFlight.current = true;
+    setDraftAcceptPending(true);
+    const owner = currentId.current;
+    try {
+      await save();
+      const latest = (await refresh())?.sessions.find(s => s.id === owner);
+      if (currentId.current !== owner) return;
+      if (dirtyRef.current) throw new Error('DRAFT_CONFLICT');
+      const proposal = latest?.proposals.find(p => p.id === proposalId);
+      if (!latest || !proposal) throw new Error('PROPOSAL_NOT_FOUND');
+      if (proposal.baseRevision !== latest.revision) {
+        setReplacingDraft({ id: owner, proposalId, revision: latest.revision, draft: latest.draft, proposal: proposal.text });
+      } else {
+        await api!.call('accept', { id: owner, proposalId });
+        await refresh();
+      }
+    } finally {
+      draftAcceptInFlight.current = false;
+      setDraftAcceptPending(false);
     }
   }
   const selectSessionRef = useRef<(id: string) => Promise<void>>(async () => {});
@@ -3468,20 +3503,13 @@ export default function App() {
                           <Sparkles size={16} />
                           <strong>{t('ข้อเสนอจาก AI')}</strong>
                           <div className="proposal-actions">
-                            <button
-                              disabled={dirty || p.baseRevision !== session.revision}
-                              onClick={() =>
-                                void action(async () => {
-                                  await api.call('accept', { id: selected, proposalId: p.id });
-                                  await refresh();
-                                })
-                              }
-                            >
+                            <button disabled={draftAcceptPending} onClick={() => void action(() => useProposal(p.id))}>
                               <Check size={15} />
                               {t('ใช้ร่างนี้')}
                             </button>
                             <button
                               className="quiet"
+                              disabled={draftAcceptPending}
                               onClick={() =>
                                 void action(async () => {
                                   await api.call('reject', { id: selected, proposalId: p.id });
@@ -3494,9 +3522,11 @@ export default function App() {
                           </div>
                         </div>
                         <p className="small muted">
-                          {p.baseRevision === session.revision
-                            ? t('ตรวจร่างนี้ก่อนแทนที่ร่างปัจจุบัน')
-                            : t('ร่างปัจจุบันเปลี่ยนแล้ว ข้อเสนอนี้ถูกเก็บแยกไว้')}
+                          {dirty
+                            ? t('มีการแก้ไขที่ยังไม่บันทึก กดใช้ร่างนี้เพื่อบันทึกและตรวจร่างก่อนแทนที่')
+                            : p.baseRevision === session.revision
+                              ? t('ตรวจร่างนี้ก่อนแทนที่ร่างปัจจุบัน')
+                              : t('ร่างปัจจุบันเปลี่ยนแล้ว กดใช้ร่างนี้เพื่อตรวจและยืนยันก่อนแทนที่')}
                         </p>
                         <details open={!session.draft.trim()}>
                           <summary>{session.draft.trim() ? t('อ่านข้อเสนอและเทียบกับร่างด้านล่าง') : t('อ่านร่างจาก AI')}</summary>
@@ -3526,7 +3556,7 @@ export default function App() {
                         <DocumentToolbar
                           editor={editor}
                           locked={Boolean(session.documentTemplate)}
-                          disabled={exporting}
+                          disabled={exporting || draftAcceptPending}
                           onImage={() =>
                             void action(async () => {
                               const owner = selected;
@@ -3564,7 +3594,7 @@ export default function App() {
                           <DocumentPresentationControls
                             value={presentation}
                             locked={Boolean(session?.documentTemplate)}
-                            disabled={exporting}
+                            disabled={exporting || draftAcceptPending}
                             onChange={value => {
                               setPresentation(value);
                               presentationRef.current = value;
@@ -3960,6 +3990,38 @@ export default function App() {
               </p>
             </ConfirmDialog>
           ))}
+        {replacingDraft && (
+          <ConfirmDialog
+            title={t('ใช้ข้อเสนอ AI แทนร่างปัจจุบัน?')}
+            confirmLabel={t('ยืนยันใช้ร่างนี้')}
+            focusCancel
+            onCancel={() => setReplacingDraft(null)}
+            onConfirm={async () => {
+              setDraftAcceptPending(true);
+              try {
+                await api.call('accept', {
+                  id: replacingDraft.id,
+                  proposalId: replacingDraft.proposalId,
+                  replaceRevision: replacingDraft.revision,
+                });
+                setReplacingDraft(null);
+                await refresh();
+              } finally {
+                setDraftAcceptPending(false);
+              }
+            }}
+          >
+            <p>{t('ร่างปัจจุบันเปลี่ยนไปหลังจาก AI เริ่มร่าง ตรวจทั้งสองฉบับก่อนยืนยัน ฉบับปัจจุบันจะเก็บไว้ในประวัติเวอร์ชัน')}</p>
+            <details>
+              <summary>{t('อ่านร่างปัจจุบัน')}</summary>
+              <RichText text={replacingDraft.draft || t('ยังไม่มีเนื้อหาในร่างปัจจุบัน')} />
+            </details>
+            <details>
+              <summary>{t('อ่านข้อเสนอจาก AI')}</summary>
+              <RichText text={replacingDraft.proposal} />
+            </details>
+          </ConfirmDialog>
+        )}
         {removing && (
           <ConfirmDialog
             title={t('ลบงานนี้?')}
