@@ -442,7 +442,7 @@
   letter-spacing: -0.02em;
 }
 .app .welcome {
-  padding-top: 28px;
+  padding-top: clamp(40px, 10vh, 96px);
 }
 .app .message.user {
   max-width: 86%;

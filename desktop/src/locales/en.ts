@@ -1099,6 +1099,8 @@ export const en: Record<string, string> = {
   'สวัสดีครับ คุณ{0}': 'Hello, {0}',
   สวัสดีครับ: 'Hello',
   'ให้ AI ร่างงานหนัก': 'Let AI do the heavy drafting.',
+  'ไอเดียของคุณ ไปได้ไกลกว่างานประจำ': 'Your ideas can go beyond the everyday.',
+  ตัวช่วยเริ่มงาน: 'Help getting started',
   ส่วนคุณตัดสินเรื่องสำคัญ: 'You make the calls that matter.',
   'ผู้ช่วยที่รู้จักงานของ STeP สรุปเอกสารยาว ร่างหนังสือ วางแผนโครงการ และตรวจความพร้อมก่อนส่ง ทุกร่างผ่านตาคุณก่อนใช้จริง':
     'An assistant that knows how STeP works. It summarises long documents, drafts letters, plans projects and checks your work before you submit — and every draft goes through you first.',
@@ -2057,8 +2059,8 @@ export const en: Record<string, string> = {
     'Each task has its own conversation and draft. Earlier tasks are listed below this button, where you can search, pin or rename them.',
   'แยกงานคนละเรื่องไว้คนละงาน AI จะได้ไม่สับสนข้อมูล': 'Keep unrelated work in separate tasks so the AI does not mix up information.',
   'ไม่รู้จะเริ่มอย่างไร กดตัวอย่างงาน': 'Not sure where to start? Pick an example',
-  'ตัวอย่างงานเลือกมาตามทีมของคุณ กดแล้วข้อความจะไปอยู่ในกล่องพิมพ์ แก้รายละเอียดให้ตรงงานจริงก่อนส่งได้':
-    'The examples are chosen for your team. Picking one puts its text in the message box, so you can adjust the details to your real work before sending.',
+  'เปิดตัวช่วยเริ่มงานเพื่อดูตัวอย่างของทีม กดตัวอย่างแล้วข้อความจะไปอยู่ในกล่องพิมพ์ แก้รายละเอียดให้ตรงงานจริงก่อนส่งได้':
+    'Open Help getting started to see examples for your team. Picking one puts its text in the message box, so you can adjust the details before sending.',
   สั่งงานเป็นภาษาไทยธรรมดา: 'Ask in plain language',
   'บอกเหมือนฝากงานเพื่อนร่วมงาน: อยากได้อะไร ใช้กับใคร ยาวแค่ไหน กด Enter เพื่อส่ง Shift+Enter เพื่อขึ้นบรรทัดใหม่':
     'Describe it as you would to a colleague: what you need, who it is for and how long it should be. Enter sends, Shift+Enter adds a new line.',

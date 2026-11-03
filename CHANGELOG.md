@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Simplify the chat welcome screen to one motivational caption. Keep the morning brief and team examples under a closed **Help getting started** disclosure, with keyboard access and the first-run tour still available.
+
 ## Desktop v0.6.27 (2026-11-02)
 
 - Local OCR delivers its refusal before closing untrusted uploads on Windows, discarding only bounded bytes within a short deadline. Rejected requests never reach the OCR worker.
