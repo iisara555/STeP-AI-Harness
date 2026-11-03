@@ -60,6 +60,29 @@ Shared-folder creation, ACL configuration and organizational approval are admini
 
 ## Workspace instructions and personalization
 
+### Personal welcome headlines
+
+The empty chat greets the employee by the current profile name locally. Its headline uses a cached batch of up to five
+short AI-written lines, rotating on app entry, returning to the empty chat or pressing New task. It does not rotate on
+a timer or replace the line when a background request finishes. Only an idle chat home starts a request, never document
+drafting or a send in progress. Leaving home cancels a context approval still awaiting the employee; an already approved
+provider call may finish and cache its batch for a later visit. The ordinary composer and task history are unchanged.
+
+The host reads only the current workspace's bounded `USER.md` through the Workbench path guard and existing profile
+parser, plus up to five accessible, confirmed and unexpired memories, with user preferences first. It sends selected
+working preferences rather than the raw profile or its name fields. Pending memory proposals and Learning Inbox
+candidates are excluded. Profile data is scanned before fields are bounded; outgoing context and generated/cached
+headlines pass the existing privacy policy. In non-pilot mode, or when the privacy gate needs human confirmation,
+the existing context approval dialog appears before transmission. Current usage terms and a ready account are required.
+
+One short request to the selected account/model prepares a batch for the local day and source version; usage is recorded
+in the ordinary ledger. Language, workspace/team, provider/model, profile, confirmed memories and policy changes
+invalidate the relevant cache. Requests are coalesced, stale results are discarded, and no greeting request creates a
+task or changes a memory. A missing profile/memory, denial, offline provider or invalid response leaves the neutral
+headline available immediately. No live-model greeting-quality claim follows from the synthetic tests.
+
+### Workspace instruction files
+
 The host discovers only root-level `STEP.md`, `AGENTS.md`, `ASSISTANT.md` and the employee-selected `.step/output-styles/<name>.md`. It performs no recursive instruction discovery. These bounded UTF-8 files use canonical Workbench paths, permissions and Privacy Gate. Their content and selected memories require one-time context transmission consent. The conversation shows the exact loaded filenames/memory names.
 
 Workspace instructions and output styles are user preferences beneath organization governance and the current route. They cannot enable tools, change authority or waive confirmation. All reserved prompt tags are fenced in these sections, summaries, memory and task state.

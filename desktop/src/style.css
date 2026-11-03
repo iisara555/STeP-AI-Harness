@@ -883,6 +883,12 @@ nav button,
   overflow: auto;
   padding: 28px max(24px, calc((100% - 720px) / 2));
 }
+.chat-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
 .welcome {
   padding: 45px 8px 25px;
   max-width: 500px;
@@ -4181,30 +4187,72 @@ nav .count {
   color: var(--text);
   box-shadow: 0 1px 2px var(--shadow-soft);
 }
-/* Welcome keeps one caption visible; optional starting tools open on request. */
-.welcome {
-  max-width: 560px;
-  padding-top: 24px;
+/* Keep the first prompt and greeting together; conversation turns retain the bottom composer. */
+.chat-content.is-empty {
+  overflow-y: auto;
 }
-.welcome .welcome-art {
-  width: 84px;
-  height: 84px;
+.chat-content.is-empty > .conversation {
+  flex: 0 0 auto;
+  overflow: visible;
+  padding: 0 24px;
 }
-.welcome h1 {
-  font-size: 30px;
-  margin-bottom: 10px;
+.chat-content.is-empty > .composer-area {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 800px;
+  margin: auto;
+  padding: 40px 28px 60px;
 }
-/* On shorter windows the starters matter more than the illustration. */
-@media (max-height: 900px) {
-  .welcome .welcome-art {
-    display: none;
-  }
+.is-empty .welcome {
+  max-width: none;
+  padding: 0;
+  margin: 0 0 28px;
+  text-align: center;
+}
+.app .is-empty .welcome h1 {
+  font-size: clamp(26px, 2.8vw, 34px);
+  font-weight: 500;
+  line-height: 1.5;
+  margin: 0;
+}
+.is-empty .welcome .welcome-greeting {
+  margin: 0 0 8px;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.is-empty .composer {
+  border-radius: 22px;
+}
+.is-empty .composer textarea {
+  min-height: 78px;
+  padding: 18px 20px 10px;
+}
+.welcome-extras {
+  margin-top: 16px;
+}
+.welcome-quick-starts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.welcome-quick-starts button {
+  border-radius: 20px;
+  padding: 8px 14px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+.welcome-quick-starts button:hover {
+  color: var(--text);
 }
 .welcome-tools {
-  margin-top: 28px;
+  margin-top: 12px;
 }
 .welcome-tools > summary {
   width: fit-content;
+  margin-inline: auto;
   padding: 8px 0;
   font-size: 13px;
   color: var(--muted);
@@ -4215,15 +4263,25 @@ nav .count {
 .welcome-tools[open] > summary {
   margin-bottom: 16px;
 }
-.welcome > .welcome-tour {
-  margin-top: 16px;
+.welcome-extras > .welcome-tour {
+  display: flex;
+  width: fit-content;
+  margin: 12px auto 0;
 }
-.welcome .suggestions-label {
+.welcome-extras .suggestions-label {
   margin: 0 0 4px;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--muted);
+}
+@media (max-width: 920px), (max-height: 650px) {
+  .chat-content.is-empty > .composer-area {
+    padding: 24px 18px;
+  }
+  .is-empty .welcome {
+    margin-bottom: 20px;
+  }
 }
 .suggestions button {
   align-items: flex-start;

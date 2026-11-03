@@ -149,6 +149,7 @@ import { Memories, safeMemory } from './memory';
 import { Learning } from './learning';
 import { MAINTENANCE_EVERY_MS, findMaintenance, mergeBoard, moveItem } from './maintenance';
 import { DRAFT_SYSTEM, draftInput, parseDrafts } from './learning-draft';
+import { Greetings, GREETING_SYSTEM, GREETING_SCHEMA, greetingInput, type GreetingContext } from './greetings';
 import { learningMetrics } from '../src/learning-metrics';
 import { proposalMarkdown, type SkillInfo } from './skill-proposal';
 import { WorkspaceContext } from './workspace-context';
@@ -1253,6 +1254,113 @@ async function main() {
   }, 3600_000);
   maintenanceTimer.unref?.();
   const workspaceContext = new WorkspaceContext(workbench, data, () => store.settings(), harness.privacy);
+  const loadGreetingContext = async (request: { connectionId: string; model: string }): Promise<GreetingContext | undefined> => {
+    const settings = store.settings(),
+      policy = policyState.policy;
+    const saved = store.get<Connection>('connection', request.connectionId);
+    if (!saved?.ready || connecting.has(saved.id) || connectionPolicyBlocked(saved) || settings.termsVersion !== TERMS_VERSION)
+      return undefined;
+    const connection = { ...saved, model: request.model };
+    let raw = '';
+    if (settings.workspace) {
+      try {
+        raw = new TextDecoder('utf-8', { fatal: true }).decode(await workbench.bytes('USER.md', 24_000));
+      } catch (e: any) {
+        if (e.code !== 'ENOENT') throw e;
+      }
+    }
+    const entries = (await memories.list()).filter(m => !m.expired);
+    if (!raw.trim() && !entries.length) return undefined;
+    // Scan the complete file before bounding fields, so clipping cannot split a credential and evade the gate.
+    const checked = scanText(raw);
+    if (checked.action === 'block-external' || typeof checked.redactedText !== 'string') return undefined;
+    const language = settings.language === 'en' ? 'en' : 'th';
+    const input = greetingInput(checked.redactedText, entries, language);
+    const reviewed = scanText(input);
+    if (reviewed.action === 'block-external' || typeof reviewed.redactedText !== 'string') return undefined;
+    const root = settings.workspace ? await workbench.root() : data;
+    if (
+      JSON.stringify(settings) !== JSON.stringify(store.settings()) ||
+      policy !== policyState.policy ||
+      JSON.stringify(saved) !== JSON.stringify(store.get<Connection>('connection', request.connectionId))
+    )
+      return undefined;
+    const scope = JSON.stringify([root, settings.team, language, connection.id, connection.model]);
+    return {
+      scope,
+      fingerprint: createHash('sha256')
+        .update(JSON.stringify([scope, raw, entries, saved, policy, permissionMode()]))
+        .digest('hex'),
+      language,
+      input: reviewed.redactedText,
+      names: [settings.userName || '', userMemory.parseUserMemory(raw).profile.name],
+      connection,
+    };
+  };
+  const greetings = new Greetings(
+    store,
+    async (context, signal, approved) => {
+      const { connection } = context;
+      const request = { connectionId: connection.id, model: connection.model || '' };
+      const stillCurrent = async () => {
+        if (signal.aborted || (await loadGreetingContext(request))?.fingerprint !== context.fingerprint)
+          throw new Error('WORKSPACE_CHANGED');
+      };
+      await stillCurrent();
+      const review = scanText(context.input);
+      if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
+      if (!policyState.policy.pilot || review.action === 'human-confirm') {
+        const allowed = await approvals.request(
+          approvals.rule(store.settings().workspace || data, 'context-data', 'welcome:' + context.fingerprint),
+          {
+            title: tm('ใช้ข้อมูลที่บันทึกไว้ปรับคำทักทาย?'),
+            body:
+              tm('ส่งรูปแบบการทำงานจาก USER.md และความจำที่ยืนยันแล้วให้ {0} เพื่อคิดคำทักทาย 5 แบบ', connection.provider) +
+              (review.action === 'human-confirm' ? '\n\n' + review.redactedText : ''),
+            privacyClass: 'internal',
+            allowRemember: false,
+          },
+          signal,
+        );
+        if (!allowed) throw new Error('CANCELLED');
+      }
+      await stillCurrent();
+      approved();
+      const current = await runtime(connection);
+      await stillCurrent();
+      let counted = { input: 0, output: 0, total: 0 };
+      try {
+        return await current.adapter.run(section('memory_context', context.input), connection, {
+          ...current.context,
+          system: GREETING_SYSTEM,
+          jsonSchema: GREETING_SCHEMA,
+          signal,
+          emit: () => {},
+          onUsage: count => {
+            counted = {
+              ...count,
+              input: Math.max(counted.input, count.input || 0),
+              output: Math.max(counted.output, count.output || 0),
+              total: Math.max(counted.total, count.total || 0),
+            };
+          },
+        });
+      } finally {
+        if (counted.input || counted.output || counted.total) ledger.record(connection, counted);
+      }
+    },
+    text => {
+      const scan = scanText(text);
+      return (
+        scan.action === 'pass' &&
+        scan.redactedText === text &&
+        !scan.containsPersonalData &&
+        !['restricted', 'secret'].includes(scan.classification)
+      );
+    },
+    undefined,
+    error => diagnose('greeting-failed', { code: errorCode(error) }),
+  );
   harness.compactHook = async (event, id, before, after) => {
     const result = await fireHook({ event, sessionId: id, beforeTokens: before, afterTokens: after });
     if (result.blocked) throw new Error('HOOK_BLOCKED');
@@ -2033,6 +2141,15 @@ async function main() {
     }
     if (['vaultSave', 'googleConnect', 'googleImportClient'].includes(method)) ensureCredentialStorage();
     switch (method) {
+      case 'welcomeGreeting': {
+        const connectionId = inputText(input.connectionId ?? '', 120);
+        const model = inputText(input.model ?? '', 300);
+        const visitId = inputText(input.visitId, 120);
+        return greetings.visit(() => loadGreetingContext({ connectionId, model }), store.settings().language || 'th', visitId);
+      }
+      case 'welcomeGreetingLeave':
+        greetings.leave(inputText(input.visitId, 120));
+        return true;
       case 'vaultState':
         return {
           ...vault.state(),
@@ -4714,6 +4831,7 @@ async function main() {
     agentBrowser.close();
     dock.close();
     void Promise.allSettled([
+      greetings.close(),
       voice.close(),
       workbench.close(),
       service.closeAndWait(),

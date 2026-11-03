@@ -12,6 +12,7 @@ const privacyLabels: Record<string, string> = localized({
 // Employees see what the step does; unknown tool ids still show as-is so nothing is hidden.
 const toolLabels: Record<string, string> = localized({
   external_ai: 'ส่งคำขอให้ AI',
+  'context-data': 'ข้อมูลที่บันทึกไว้',
   'tool-data': 'ส่งผลการใช้เครื่องมือให้ AI',
   'web-query': 'ค้นเว็บ',
   'web-url': 'เปิดเว็บปลายทาง',

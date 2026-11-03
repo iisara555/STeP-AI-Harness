@@ -128,6 +128,7 @@ import type { WorkAction } from './types';
 import { locale, setLanguage, t, teamName } from './i18n';
 import { startersFor, starterTag, starterText } from './starters';
 import { MorningBriefCard } from './morning-brief';
+import { WelcomeGreeting } from './welcome-greeting';
 import { initialSeen, needsYouCount, taskAlert, TASK_ALERT_LABELS, TASK_SEEN_KEY } from './task-alerts';
 
 const ReceiptApp = lazyScreen(async () => ({ default: (await import('./receipt')).ReceiptApp }));
@@ -143,6 +144,24 @@ const PERMISSION_SHORT: Record<string, string> = {
   auto: 'อัตโนมัติ',
   plan: 'อ่านอย่างเดียว',
 };
+
+const CHAT_STARTERS = [
+  {
+    label: 'สรุปเอกสาร',
+    request: 'ช่วยสรุปเอกสารที่แนบเป็นประเด็นสำคัญ พร้อมสิ่งที่ต้องทำต่อ',
+    Icon: BookOpen,
+  },
+  {
+    label: 'ร่างเอกสาร',
+    request: 'ช่วยร่างเอกสารให้หน่อย ถามข้อมูลที่จำเป็นก่อนเริ่มร่าง',
+    Icon: FileText,
+  },
+  {
+    label: 'ช่วยคิดไอเดีย',
+    request: 'ช่วยคิดไอเดียสำหรับงานนี้ ถามเป้าหมายและข้อจำกัดก่อนเสนอแนวทาง',
+    Icon: Sparkles,
+  },
+];
 
 const TOOLS_KEY = 'step.sidebarTools';
 /** A background answer check that started within its step budget; a stale mark (the app closed mid-check) shows nothing. */
@@ -271,6 +290,7 @@ export default function App() {
   const [plan, setPlan] = useState<(PlanStep & { state: string })[]>([]);
   const [workActions, setWorkActions] = useState<Record<string, WorkAction[]>>({});
   const [view, setView] = useState<'chat' | 'receipt' | 'skills' | 'documents' | 'media' | 'schedules'>('chat');
+  const [welcomeVisit, setWelcomeVisit] = useState(0);
   const navigate = (next: typeof view) => {
     if (
       guardSettingsExit(() => {
@@ -794,6 +814,7 @@ export default function App() {
     if (!['running', 'queued'].includes(snapshot?.sessions.find(s => s.id === id)?.status || '')) await api!.call('sessionResume', { id });
     if (version !== navigationVersion.current) return;
     setView('chat');
+    setWelcomeVisit(value => value + 1);
     setSelected(id);
     const chosen = snapshot?.sessions.find(s => s.id === id);
     setWorkMode(chosen?.mode || (chosen?.draft ? 'draft' : 'chat'));
@@ -921,6 +942,7 @@ export default function App() {
     const version = ++navigationVersion.current;
     await save();
     if (version !== navigationVersion.current) return;
+    setWelcomeVisit(value => value + 1);
     setSelected('');
     setRunning(false);
     setWorkMode('chat');
@@ -2180,7 +2202,7 @@ export default function App() {
               }
             />
           ) : (
-            <>
+            <div className={`chat-content${!session?.messages.length ? ' is-empty' : ''}`}>
               <div className="conversation" aria-live="polite">
                 {session && (snapshot.policy?.features.coordinator || !!session.loadedContext?.length || session.compaction) && (
                   <div className="context-bar">
@@ -2217,44 +2239,6 @@ export default function App() {
                           session.compaction.after.toLocaleString(locale()),
                         )}
                       </span>
-                    )}
-                  </div>
-                )}
-                {!session?.messages.length && (
-                  <div className="welcome">
-                    <div className="welcome-intro">
-                      <div className="welcome-heading">
-                        <h1>{t('ไอเดียของคุณ ไปได้ไกลกว่างานประจำ')}</h1>
-                      </div>
-                      <SectionArt scene="chat" className="welcome-illustration" />
-                    </div>
-                    <details className="welcome-tools">
-                      <summary data-tour="starters">{t('ตัวช่วยเริ่มงาน')}</summary>
-                      <MorningBriefCard call={api.call} onError={e => notify(explainError(e), 'error')} onAsk={setQuery} />
-                      <p className="suggestions-label">
-                        {myTeamName ? t('ลองงานแรกของทีม {0}', myTeamName) : t('ลองงานแรกที่คนส่วนใหญ่ใช้บ่อย')}
-                      </p>
-                      <div className="suggestions">
-                        {startersFor(snapshot.settings.team).map(starter => {
-                          const text = starterText(starter);
-                          return (
-                            <button key={text} onClick={() => setQuery(text)}>
-                              <Sparkles size={16} />
-                              <span>
-                                <small className="starter-tag">{starterTag(starter)}</small>
-                                {text}
-                              </span>
-                              <ChevronLeft className="point-right" size={15} />
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </details>
-                    {!snapshot.settings.tourDone && (
-                      <button className="welcome-tour quiet" onClick={commands.tour}>
-                        <Compass size={15} />
-                        {t('ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน')}
-                      </button>
                     )}
                   </div>
                 )}
@@ -2619,6 +2603,35 @@ export default function App() {
                 <div ref={conversationEnd} />
               </div>
               <div className="composer-area">
+                {!session?.messages.length && (
+                  <WelcomeGreeting
+                    key={JSON.stringify([
+                      snapshot.settings.workspace,
+                      snapshot.settings.team,
+                      snapshot.settings.language,
+                      snapshot.settings.termsVersion,
+                      welcomeVisit,
+                      connection?.id,
+                      connection?.ready,
+                      currentModel,
+                    ])}
+                    call={api.call}
+                    name={snapshot.settings.userName || ''}
+                    connectionId={connection?.id || ''}
+                    model={currentModel}
+                    hasDraft={Boolean(query.trim())}
+                    enabled={
+                      !startupPending &&
+                      !wizard &&
+                      !tour &&
+                      !whatsNew &&
+                      workMode === 'chat' &&
+                      !running &&
+                      !submitting &&
+                      !session?.documentTool
+                    }
+                  />
+                )}
                 {(snapshot.transmissionGrants || [])
                   .filter(g => g.sessionId === selected)
                   .map(g => (
@@ -3268,8 +3281,62 @@ export default function App() {
                   </div>
                 </div>
                 <div className="composer-note">{t('ตรวจข้อมูลและร่างก่อนนำไปใช้ · ประวัติเก็บในเครื่อง')}</div>
+                {!session?.messages.length && (
+                  <div className="welcome-extras">
+                    <div className="welcome-quick-starts" aria-label={t('ลองเริ่มจาก')}>
+                      {CHAT_STARTERS.map(({ label, request, Icon }) => (
+                        <button
+                          key={label}
+                          className="quiet"
+                          title={t(request)}
+                          onClick={() => {
+                            setQuery(t(request));
+                            composerRef.current?.focus();
+                          }}
+                        >
+                          <Icon size={15} aria-hidden="true" />
+                          {t(label)}
+                        </button>
+                      ))}
+                    </div>
+                    <details className="welcome-tools">
+                      <summary data-tour="starters">{t('ตัวช่วยเริ่มงาน')}</summary>
+                      <MorningBriefCard call={api.call} onError={e => notify(explainError(e), 'error')} onAsk={setQuery} />
+                      <p className="suggestions-label">
+                        {myTeamName ? t('ลองงานแรกของทีม {0}', myTeamName) : t('ลองงานแรกที่คนส่วนใหญ่ใช้บ่อย')}
+                      </p>
+                      <div className="suggestions">
+                        {startersFor(snapshot.settings.team).map(starter => {
+                          const text = starterText(starter);
+                          return (
+                            <button
+                              key={text}
+                              onClick={() => {
+                                setQuery(text);
+                                composerRef.current?.focus();
+                              }}
+                            >
+                              <Sparkles size={16} />
+                              <span>
+                                <small className="starter-tag">{starterTag(starter)}</small>
+                                {text}
+                              </span>
+                              <ChevronLeft className="point-right" size={15} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </details>
+                    {!snapshot.settings.tourDone && (
+                      <button className="welcome-tour quiet" onClick={commands.tour}>
+                        <Compass size={15} />
+                        {t('ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน')}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
-            </>
+            </div>
           )}
           <footer className="statusbar" aria-label={t('สถานะ')}>
             <span className={`status-dot ${connection?.ready ? (runFailed ? 'failed' : 'ok') : ''}`} aria-hidden="true" />
