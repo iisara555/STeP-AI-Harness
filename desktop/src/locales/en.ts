@@ -1100,6 +1100,15 @@ export const en: Record<string, string> = {
   สวัสดีครับ: 'Hello',
   'ให้ AI ร่างงานหนัก': 'Let AI do the heavy drafting.',
   'ไอเดียของคุณ ไปได้ไกลกว่างานประจำ': 'Your ideas can go beyond the everyday.',
+  วันนี้ให้ช่วยอะไรดี: 'What can I help with today?',
+  ลองเริ่มจาก: 'Try starting with',
+  สรุปเอกสาร: 'Summarise a document',
+  ร่างเอกสาร: 'Draft a document',
+  ช่วยคิดไอเดีย: 'Brainstorm ideas',
+  'ช่วยสรุปเอกสารที่แนบเป็นประเด็นสำคัญ พร้อมสิ่งที่ต้องทำต่อ': 'Summarise the attached document into key points and next steps',
+  'ช่วยร่างเอกสารให้หน่อย ถามข้อมูลที่จำเป็นก่อนเริ่มร่าง': 'Help me draft a document. Ask for the details you need before drafting',
+  'ช่วยคิดไอเดียสำหรับงานนี้ ถามเป้าหมายและข้อจำกัดก่อนเสนอแนวทาง':
+    'Help me brainstorm ideas for this task. Ask about the goals and constraints before suggesting options',
   ตัวช่วยเริ่มงาน: 'Help getting started',
   'กดใช้ร่างนี้ได้หลังแก้ไขเอกสาร ระบบบันทึกงานเดิมก่อน และให้ตรวจยืนยันเมื่อร่างเปลี่ยน พร้อมย้อนคืนฉบับเดิมได้':
     'Use this draft after editing a document: save existing work first, review and confirm changed drafts, and restore the previous version when needed',

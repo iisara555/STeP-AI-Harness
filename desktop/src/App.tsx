@@ -144,6 +144,24 @@ const PERMISSION_SHORT: Record<string, string> = {
   plan: 'อ่านอย่างเดียว',
 };
 
+const CHAT_STARTERS = [
+  {
+    label: 'สรุปเอกสาร',
+    request: 'ช่วยสรุปเอกสารที่แนบเป็นประเด็นสำคัญ พร้อมสิ่งที่ต้องทำต่อ',
+    Icon: BookOpen,
+  },
+  {
+    label: 'ร่างเอกสาร',
+    request: 'ช่วยร่างเอกสารให้หน่อย ถามข้อมูลที่จำเป็นก่อนเริ่มร่าง',
+    Icon: FileText,
+  },
+  {
+    label: 'ช่วยคิดไอเดีย',
+    request: 'ช่วยคิดไอเดียสำหรับงานนี้ ถามเป้าหมายและข้อจำกัดก่อนเสนอแนวทาง',
+    Icon: Sparkles,
+  },
+];
+
 const TOOLS_KEY = 'step.sidebarTools';
 /** A background answer check that started within its step budget; a stale mark (the app closed mid-check) shows nothing. */
 const checkStillRunning = (startedAt?: string) => Boolean(startedAt) && Date.now() - Date.parse(startedAt!) < 10 * 60_000;
@@ -2180,7 +2198,7 @@ export default function App() {
               }
             />
           ) : (
-            <>
+            <div className={`chat-content${!session?.messages.length ? ' is-empty' : ''}`}>
               <div className="conversation" aria-live="polite">
                 {session && (snapshot.policy?.features.coordinator || !!session.loadedContext?.length || session.compaction) && (
                   <div className="context-bar">
@@ -2217,44 +2235,6 @@ export default function App() {
                           session.compaction.after.toLocaleString(locale()),
                         )}
                       </span>
-                    )}
-                  </div>
-                )}
-                {!session?.messages.length && (
-                  <div className="welcome">
-                    <div className="welcome-intro">
-                      <div className="welcome-heading">
-                        <h1>{t('ไอเดียของคุณ ไปได้ไกลกว่างานประจำ')}</h1>
-                      </div>
-                      <SectionArt scene="chat" className="welcome-illustration" />
-                    </div>
-                    <details className="welcome-tools">
-                      <summary data-tour="starters">{t('ตัวช่วยเริ่มงาน')}</summary>
-                      <MorningBriefCard call={api.call} onError={e => notify(explainError(e), 'error')} onAsk={setQuery} />
-                      <p className="suggestions-label">
-                        {myTeamName ? t('ลองงานแรกของทีม {0}', myTeamName) : t('ลองงานแรกที่คนส่วนใหญ่ใช้บ่อย')}
-                      </p>
-                      <div className="suggestions">
-                        {startersFor(snapshot.settings.team).map(starter => {
-                          const text = starterText(starter);
-                          return (
-                            <button key={text} onClick={() => setQuery(text)}>
-                              <Sparkles size={16} />
-                              <span>
-                                <small className="starter-tag">{starterTag(starter)}</small>
-                                {text}
-                              </span>
-                              <ChevronLeft className="point-right" size={15} />
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </details>
-                    {!snapshot.settings.tourDone && (
-                      <button className="welcome-tour quiet" onClick={commands.tour}>
-                        <Compass size={15} />
-                        {t('ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน')}
-                      </button>
                     )}
                   </div>
                 )}
@@ -2619,6 +2599,11 @@ export default function App() {
                 <div ref={conversationEnd} />
               </div>
               <div className="composer-area">
+                {!session?.messages.length && (
+                  <div className="welcome">
+                    <h1>{t('วันนี้ให้ช่วยอะไรดี')}</h1>
+                  </div>
+                )}
                 {(snapshot.transmissionGrants || [])
                   .filter(g => g.sessionId === selected)
                   .map(g => (
@@ -3268,8 +3253,62 @@ export default function App() {
                   </div>
                 </div>
                 <div className="composer-note">{t('ตรวจข้อมูลและร่างก่อนนำไปใช้ · ประวัติเก็บในเครื่อง')}</div>
+                {!session?.messages.length && (
+                  <div className="welcome-extras">
+                    <div className="welcome-quick-starts" aria-label={t('ลองเริ่มจาก')}>
+                      {CHAT_STARTERS.map(({ label, request, Icon }) => (
+                        <button
+                          key={label}
+                          className="quiet"
+                          title={t(request)}
+                          onClick={() => {
+                            setQuery(t(request));
+                            composerRef.current?.focus();
+                          }}
+                        >
+                          <Icon size={15} aria-hidden="true" />
+                          {t(label)}
+                        </button>
+                      ))}
+                    </div>
+                    <details className="welcome-tools">
+                      <summary data-tour="starters">{t('ตัวช่วยเริ่มงาน')}</summary>
+                      <MorningBriefCard call={api.call} onError={e => notify(explainError(e), 'error')} onAsk={setQuery} />
+                      <p className="suggestions-label">
+                        {myTeamName ? t('ลองงานแรกของทีม {0}', myTeamName) : t('ลองงานแรกที่คนส่วนใหญ่ใช้บ่อย')}
+                      </p>
+                      <div className="suggestions">
+                        {startersFor(snapshot.settings.team).map(starter => {
+                          const text = starterText(starter);
+                          return (
+                            <button
+                              key={text}
+                              onClick={() => {
+                                setQuery(text);
+                                composerRef.current?.focus();
+                              }}
+                            >
+                              <Sparkles size={16} />
+                              <span>
+                                <small className="starter-tag">{starterTag(starter)}</small>
+                                {text}
+                              </span>
+                              <ChevronLeft className="point-right" size={15} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </details>
+                    {!snapshot.settings.tourDone && (
+                      <button className="welcome-tour quiet" onClick={commands.tour}>
+                        <Compass size={15} />
+                        {t('ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน')}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
-            </>
+            </div>
           )}
           <footer className="statusbar" aria-label={t('สถานะ')}>
             <span className={`status-dot ${connection?.ready ? (runFailed ? 'failed' : 'ok') : ''}`} aria-hidden="true" />

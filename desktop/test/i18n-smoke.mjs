@@ -28,8 +28,8 @@ try {
   await page.getByRole('button', { name: 'Skip, set up later', exact: true }).click();
   await wizard.waitFor({ state: 'detached' });
 
-  // The caption and optional starting tools follow the language; Thai text from the code must not leak.
-  await expect(page.getByRole('heading', { name: 'Your ideas can go beyond the everyday.', exact: true })).toBeVisible();
+  // The greeting and optional starting tools follow the language; Thai text from the code must not leak.
+  await expect(page.getByRole('heading', { name: 'What can I help with today?', exact: true })).toBeVisible();
   await expect(page.locator('.welcome-trust, .welcome-lede, .welcome .greet')).toHaveCount(0);
   await expect(page.locator('.suggestions button').first()).toBeHidden();
   await page.locator('.welcome-tools > summary').focus();
