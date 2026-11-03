@@ -1101,6 +1101,10 @@ export const en: Record<string, string> = {
   'ให้ AI ร่างงานหนัก': 'Let AI do the heavy drafting.',
   'ไอเดียของคุณ ไปได้ไกลกว่างานประจำ': 'Your ideas can go beyond the everyday.',
   วันนี้ให้ช่วยอะไรดี: 'What can I help with today?',
+  'หน้าเริ่มแชตทักชื่อ พร้อมช่องพิมพ์กลางหน้า และปุ่มเริ่มสรุปเอกสาร ร่างเอกสาร หรือคิดไอเดีย':
+    'New chat greets you by name, with a centred composer and quick document and brainstorming starters',
+  'คำทักทายปรับตามรูปแบบการทำงานและความจำที่ยืนยัน เก็บไว้สลับเมื่อเริ่มงานใหม่ โดยใช้บัญชี AI และสิทธิ์ข้อมูลเดิม':
+    'Welcome headlines adapt to working preferences and confirmed memories, rotating from a saved batch with your selected AI and existing data permissions',
   'สวัสดี คุณ{0}': 'Hello, {0}',
   สวัสดี: 'Hello',
   เริ่มจากเรื่องไหนดี: 'Where shall we start?',

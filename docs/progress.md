@@ -8,6 +8,8 @@ _Last updated: 2026-11-03_
 
 ## Latest release
 
+- **Desktop v0.6.29 prepared (2026-11-03, owner authorized release)**: includes #306's centred chat home, compact starters and personalised welcome batches from USER.md and confirmed memories. Harness remains 0.7.7. Package/lockfile, Thai/English in-app notes, both READMEs and CHANGELOG are aligned. PR validation and macOS Electron checks must pass before merge; publish Windows x64/macOS Apple silicon via `desktop-release.yml` on main with `publish=true`, then verify installer and rolling-feed digests. Publication and real-model wording acceptance are not yet claimed.
+
 - **Desktop v0.6.28 prepared (2026-11-03, owner authorized release)**: combines #303 (draft acceptance recovery) and #304 (quieter welcome screen) while preserving both PR heads. Repair the Windows archive-test race by reading tracked attributes instead of traversing disposable workspaces. Harness remains 0.7.7. Integration validation is in progress; merge with the exact tested head, pass post-merge checks, then publish via `desktop-release.yml` on main with `publish=true` and verify installer/update-feed digests. Real employee-document acceptance remains separate.
 
 - **Desktop v0.6.27 published (2026-11-03)**: combines #297-#301 with H1 Thai memory recall, H2 repeated-tool-failure stop and H3 duplicate-memory review. Integration #302 and post-merge CI passed; `desktop-release.yml` run `41559483437` published from `14a506c`. All eight immutable/rolling asset sizes and digests match; both update feeds report 0.6.27. Downloaded Windows EXE and macOS ZIP match their SHA-256 metadata and SHA-512 feeds. Harness remains 0.7.7. Real-document/provider acceptance remains separate.
