@@ -110,6 +110,8 @@ try {
   });
   await page.reload();
   const card = page.locator('.morning-brief');
+  await expect(card).toBeHidden();
+  await page.locator('.welcome-tools > summary').click();
   await expect(card.getByRole('heading', { name: 'สรุปเช้านี้' })).toBeVisible();
   await expect(card).toContainText('fi••••@example.test');
   await card.getByRole('checkbox', { name: 'อนุญาตทุกวัน ไม่ต้องถามอีก' }).check();

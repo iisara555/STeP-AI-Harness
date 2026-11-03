@@ -343,6 +343,15 @@ export default function App() {
   const [removing, setRemoving] = useState<Session | null>(null),
     [renaming, setRenaming] = useState<{ id: string; title: string } | null>(null),
     [palette, setPalette] = useState(false);
+  const [draftAcceptPending, setDraftAcceptPending] = useState(false);
+  const draftAcceptInFlight = useRef(false);
+  const [replacingDraft, setReplacingDraft] = useState<{
+    id: string;
+    proposalId: string;
+    revision: number;
+    draft: string;
+    proposal: string;
+  } | null>(null);
   const [pendingModel, setPendingModel] = useState<string | undefined>(undefined),
     [pendingEffort, setPendingEffort] = useState(''),
     modelsRequested = useRef(new Set<string>());
@@ -717,6 +726,9 @@ export default function App() {
       setPresentation(resolvePresentation(session?.presentation, session?.documentTool || false));
     }
   }, [editor, selected, session?.revision]);
+  useEffect(() => {
+    editor?.setEditable(!draftAcceptPending, false);
+  }, [editor, draftAcceptPending]);
   const action = async (fn: () => Promise<unknown>) => {
     try {
       await fn();
@@ -748,6 +760,29 @@ export default function App() {
       await task;
     } finally {
       if (saveInFlight.current === task) saveInFlight.current = null;
+    }
+  }
+  async function useProposal(proposalId: string) {
+    if (draftAcceptInFlight.current) return;
+    draftAcceptInFlight.current = true;
+    setDraftAcceptPending(true);
+    const owner = currentId.current;
+    try {
+      await save();
+      const latest = (await refresh())?.sessions.find(s => s.id === owner);
+      if (currentId.current !== owner) return;
+      if (dirtyRef.current) throw new Error('DRAFT_CONFLICT');
+      const proposal = latest?.proposals.find(p => p.id === proposalId);
+      if (!latest || !proposal) throw new Error('PROPOSAL_NOT_FOUND');
+      if (proposal.baseRevision !== latest.revision) {
+        setReplacingDraft({ id: owner, proposalId, revision: latest.revision, draft: latest.draft, proposal: proposal.text });
+      } else {
+        await api!.call('accept', { id: owner, proposalId });
+        await refresh();
+      }
+    } finally {
+      draftAcceptInFlight.current = false;
+      setDraftAcceptPending(false);
     }
   }
   const selectSessionRef = useRef<(id: string) => Promise<void>>(async () => {});
@@ -2006,7 +2041,7 @@ export default function App() {
                             ? t('ให้ผู้ช่วยทำงานซ้ำตามเวลา ผลเป็นร่างให้คุณตรวจ')
                             : session
                               ? `${session.project || session.team.toUpperCase() || t('ทุกทีม')} · ${taskStatus(session)}`
-                              : t('เลือกงานตัวอย่าง หรือพิมพ์สิ่งที่อยากให้ช่วยด้านล่าง')}
+                              : ''}
               </small>
             </div>
             {!settings && view === 'chat' && (
@@ -2189,64 +2224,38 @@ export default function App() {
                   <div className="welcome">
                     <div className="welcome-intro">
                       <div className="welcome-heading">
-                        <p className="greet">
-                          {snapshot.settings.userName ? t('สวัสดีครับ คุณ{0}', snapshot.settings.userName) : t('สวัสดีครับ')}
-                          {myTeamName ? ` · ${myTeamName}` : ''}
-                        </p>
-                        <h1>
-                          {t('ให้ AI ร่างงานหนัก')}
-                          <br />
-                          <em>{t('ส่วนคุณตัดสินเรื่องสำคัญ')}</em>
-                        </h1>
-                        {/* In the greeting, where a first-time user looks, not below the starters behind the composer. */}
-                        {!snapshot.settings.tourDone && (
-                          <button className="welcome-tour quiet" onClick={commands.tour}>
-                            <Compass size={15} />
-                            {t('ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน')}
-                          </button>
-                        )}
-                        {/* Under the headline, so the composer never covers the promises a new user reads first. */}
-                        <ul className="welcome-trust">
-                          <li>
-                            <ShieldCheck size={14} />
-                            {t('ข้อมูลอยู่ในเครื่อง ปิดบังข้อมูลส่วนบุคคลก่อนส่ง')}
-                          </li>
-                          <li>
-                            <Check size={14} />
-                            {t('AI ร่าง คนตรวจและอนุมัติ')}
-                          </li>
-                          <li>
-                            <Blocks size={14} />
-                            {t('รู้จักทีมและ Skill ของ STeP')}
-                          </li>
-                        </ul>
+                        <h1>{t('ไอเดียของคุณ ไปได้ไกลกว่างานประจำ')}</h1>
                       </div>
                       <SectionArt scene="chat" className="welcome-illustration" />
                     </div>
-                    <MorningBriefCard call={api.call} onError={e => notify(explainError(e), 'error')} onAsk={setQuery} />
-                    <p className="suggestions-label">
-                      {myTeamName ? t('ลองงานแรกของทีม {0}', myTeamName) : t('ลองงานแรกที่คนส่วนใหญ่ใช้บ่อย')}
-                    </p>
-                    <div className="suggestions" data-tour="starters">
-                      {startersFor(snapshot.settings.team).map(starter => {
-                        const text = starterText(starter);
-                        return (
-                          <button key={text} onClick={() => setQuery(text)}>
-                            <Sparkles size={16} />
-                            <span>
-                              <small className="starter-tag">{starterTag(starter)}</small>
-                              {text}
-                            </span>
-                            <ChevronLeft className="point-right" size={15} />
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="welcome-lede">
-                      {t(
-                        'ผู้ช่วยที่รู้จักงานของ STeP สรุปเอกสารยาว ร่างหนังสือ วางแผนโครงการ และตรวจความพร้อมก่อนส่ง ทุกร่างผ่านตาคุณก่อนใช้จริง',
-                      )}
-                    </p>
+                    <details className="welcome-tools">
+                      <summary data-tour="starters">{t('ตัวช่วยเริ่มงาน')}</summary>
+                      <MorningBriefCard call={api.call} onError={e => notify(explainError(e), 'error')} onAsk={setQuery} />
+                      <p className="suggestions-label">
+                        {myTeamName ? t('ลองงานแรกของทีม {0}', myTeamName) : t('ลองงานแรกที่คนส่วนใหญ่ใช้บ่อย')}
+                      </p>
+                      <div className="suggestions">
+                        {startersFor(snapshot.settings.team).map(starter => {
+                          const text = starterText(starter);
+                          return (
+                            <button key={text} onClick={() => setQuery(text)}>
+                              <Sparkles size={16} />
+                              <span>
+                                <small className="starter-tag">{starterTag(starter)}</small>
+                                {text}
+                              </span>
+                              <ChevronLeft className="point-right" size={15} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </details>
+                    {!snapshot.settings.tourDone && (
+                      <button className="welcome-tour quiet" onClick={commands.tour}>
+                        <Compass size={15} />
+                        {t('ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน')}
+                      </button>
+                    )}
                   </div>
                 )}
                 {session?.messages.map((message, index) => (
@@ -3468,20 +3477,13 @@ export default function App() {
                           <Sparkles size={16} />
                           <strong>{t('ข้อเสนอจาก AI')}</strong>
                           <div className="proposal-actions">
-                            <button
-                              disabled={dirty || p.baseRevision !== session.revision}
-                              onClick={() =>
-                                void action(async () => {
-                                  await api.call('accept', { id: selected, proposalId: p.id });
-                                  await refresh();
-                                })
-                              }
-                            >
+                            <button disabled={draftAcceptPending} onClick={() => void action(() => useProposal(p.id))}>
                               <Check size={15} />
                               {t('ใช้ร่างนี้')}
                             </button>
                             <button
                               className="quiet"
+                              disabled={draftAcceptPending}
                               onClick={() =>
                                 void action(async () => {
                                   await api.call('reject', { id: selected, proposalId: p.id });
@@ -3494,9 +3496,11 @@ export default function App() {
                           </div>
                         </div>
                         <p className="small muted">
-                          {p.baseRevision === session.revision
-                            ? t('ตรวจร่างนี้ก่อนแทนที่ร่างปัจจุบัน')
-                            : t('ร่างปัจจุบันเปลี่ยนแล้ว ข้อเสนอนี้ถูกเก็บแยกไว้')}
+                          {dirty
+                            ? t('มีการแก้ไขที่ยังไม่บันทึก กดใช้ร่างนี้เพื่อบันทึกและตรวจร่างก่อนแทนที่')
+                            : p.baseRevision === session.revision
+                              ? t('ตรวจร่างนี้ก่อนแทนที่ร่างปัจจุบัน')
+                              : t('ร่างปัจจุบันเปลี่ยนแล้ว กดใช้ร่างนี้เพื่อตรวจและยืนยันก่อนแทนที่')}
                         </p>
                         <details open={!session.draft.trim()}>
                           <summary>{session.draft.trim() ? t('อ่านข้อเสนอและเทียบกับร่างด้านล่าง') : t('อ่านร่างจาก AI')}</summary>
@@ -3526,7 +3530,7 @@ export default function App() {
                         <DocumentToolbar
                           editor={editor}
                           locked={Boolean(session.documentTemplate)}
-                          disabled={exporting}
+                          disabled={exporting || draftAcceptPending}
                           onImage={() =>
                             void action(async () => {
                               const owner = selected;
@@ -3564,7 +3568,7 @@ export default function App() {
                           <DocumentPresentationControls
                             value={presentation}
                             locked={Boolean(session?.documentTemplate)}
-                            disabled={exporting}
+                            disabled={exporting || draftAcceptPending}
                             onChange={value => {
                               setPresentation(value);
                               presentationRef.current = value;
@@ -3960,6 +3964,38 @@ export default function App() {
               </p>
             </ConfirmDialog>
           ))}
+        {replacingDraft && (
+          <ConfirmDialog
+            title={t('ใช้ข้อเสนอ AI แทนร่างปัจจุบัน?')}
+            confirmLabel={t('ยืนยันใช้ร่างนี้')}
+            focusCancel
+            onCancel={() => setReplacingDraft(null)}
+            onConfirm={async () => {
+              setDraftAcceptPending(true);
+              try {
+                await api.call('accept', {
+                  id: replacingDraft.id,
+                  proposalId: replacingDraft.proposalId,
+                  replaceRevision: replacingDraft.revision,
+                });
+                setReplacingDraft(null);
+                await refresh();
+              } finally {
+                setDraftAcceptPending(false);
+              }
+            }}
+          >
+            <p>{t('ร่างปัจจุบันเปลี่ยนไปหลังจาก AI เริ่มร่าง ตรวจทั้งสองฉบับก่อนยืนยัน ฉบับปัจจุบันจะเก็บไว้ในประวัติเวอร์ชัน')}</p>
+            <details>
+              <summary>{t('อ่านร่างปัจจุบัน')}</summary>
+              <RichText text={replacingDraft.draft || t('ยังไม่มีเนื้อหาในร่างปัจจุบัน')} />
+            </details>
+            <details>
+              <summary>{t('อ่านข้อเสนอจาก AI')}</summary>
+              <RichText text={replacingDraft.proposal} />
+            </details>
+          </ConfirmDialog>
+        )}
         {removing && (
           <ConfirmDialog
             title={t('ลบงานนี้?')}

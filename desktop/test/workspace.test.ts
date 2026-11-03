@@ -59,6 +59,39 @@ test('accepting a current proposal creates a restorable immutable version', () =
   store.close();
 });
 
+test('explicit replacement of a reviewed revision keeps manual edits in version history', () => {
+  const { store, session } = fixture();
+  store.edit(session.id, 'Human correction', 0);
+  const latest = store.session(session.id);
+  latest.proposals.push({ id: 'p', text: 'Reviewed AI draft', baseRevision: 0, sources: [], at: '' });
+  store.save(latest);
+  const accepted = store.accept(session.id, 'p', latest.revision);
+  assert.equal(accepted.draft, 'Reviewed AI draft');
+  assert.equal(accepted.versions.at(-1)?.text, 'Human correction');
+  assert.equal(accepted.proposals.length, 0);
+  const previous = accepted.versions.at(-1)!;
+  assert.equal(
+    store.edit(session.id, previous.text, accepted.revision, previous.document, previous.presentation).draft,
+    'Human correction',
+  );
+  store.close();
+});
+
+test('replacement rejects changed or invalid revisions without consuming a proposal', () => {
+  const { store, session } = fixture();
+  store.edit(session.id, 'Reviewed manual draft', 0);
+  const reviewed = store.session(session.id);
+  reviewed.proposals.push({ id: 'p', text: 'AI draft', baseRevision: 0, sources: [], at: '' });
+  store.save(reviewed);
+  store.edit(session.id, 'Newer manual correction', reviewed.revision);
+  for (const revision of [reviewed.revision, -1, NaN, Infinity, 1.5, null, '2']) {
+    assert.throws(() => store.accept(session.id, 'p', revision as number), /DRAFT_CONFLICT/);
+    assert.equal(store.session(session.id).draft, 'Newer manual correction');
+    assert.equal(store.session(session.id).proposals.length, 1);
+  }
+  store.close();
+});
+
 test('reopening SQLite preserves drafts and marks interrupted jobs without replay', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'step-store-')),
     path = join(dir, 'workspace.sqlite');

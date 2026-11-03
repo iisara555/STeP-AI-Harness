@@ -2551,10 +2551,6 @@ button.danger {
   background: var(--selection);
   color: var(--text);
 }
-.welcome h1 em {
-  font-style: normal;
-  background: linear-gradient(transparent 62%, var(--accent-soft) 62%);
-}
 .palette-list button.active {
   box-shadow: inset 3px 0 0 var(--accent);
 }
@@ -2621,9 +2617,6 @@ button.danger {
 }
 .app .welcome h1 {
   font-size: clamp(25px, 2.1vw, 30px);
-}
-.welcome .greet {
-  margin: 0 0 12px;
 }
 .welcome-illustration {
   width: clamp(84px, 10vw, 140px);
@@ -4188,7 +4181,7 @@ nav .count {
   color: var(--text);
   box-shadow: 0 1px 2px var(--shadow-soft);
 }
-/* Welcome: a short promise, team-specific first tasks right away, then three trust points. */
+/* Welcome keeps one caption visible; optional starting tools open on request. */
 .welcome {
   max-width: 560px;
   padding-top: 24px;
@@ -4201,36 +4194,29 @@ nav .count {
   font-size: 30px;
   margin-bottom: 10px;
 }
-.welcome .welcome-lede {
-  margin: 22px 0 0;
-  font-size: 13px;
-}
-.welcome h1 + .suggestions-label {
-  margin-top: 18px;
-}
 /* On shorter windows the starters matter more than the illustration. */
 @media (max-height: 900px) {
   .welcome .welcome-art {
     display: none;
   }
 }
-.welcome-trust {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
-  margin: 18px 0 8px;
-  padding: 0;
-  list-style: none;
-  font-size: 12.5px;
+.welcome-tools {
+  margin-top: 28px;
+}
+.welcome-tools > summary {
+  width: fit-content;
+  padding: 8px 0;
+  font-size: 13px;
   color: var(--muted);
 }
-.welcome-trust li {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.welcome-tools > summary:hover {
+  color: var(--text);
 }
-.welcome-trust svg {
-  color: var(--accent-ink);
+.welcome-tools[open] > summary {
+  margin-bottom: 16px;
+}
+.welcome > .welcome-tour {
+  margin-top: 16px;
 }
 .welcome .suggestions-label {
   margin: 0 0 4px;
@@ -6550,10 +6536,6 @@ body:has(.dialog-backdrop) .toasts {
 .workbench-tabs .workbench-advanced {
   flex-shrink: 0;
   margin-left: 4px;
-}
-/* M17: the first-run tour link sits in the greeting. */
-.welcome-heading .welcome-tour {
-  margin-top: 12px;
 }
 /* H8: the task's actions float over its status line, so the title keeps its full width. */
 .sessions .session {

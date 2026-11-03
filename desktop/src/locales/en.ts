@@ -1099,6 +1099,12 @@ export const en: Record<string, string> = {
   'สวัสดีครับ คุณ{0}': 'Hello, {0}',
   สวัสดีครับ: 'Hello',
   'ให้ AI ร่างงานหนัก': 'Let AI do the heavy drafting.',
+  'ไอเดียของคุณ ไปได้ไกลกว่างานประจำ': 'Your ideas can go beyond the everyday.',
+  ตัวช่วยเริ่มงาน: 'Help getting started',
+  'กดใช้ร่างนี้ได้หลังแก้ไขเอกสาร ระบบบันทึกงานเดิมก่อน และให้ตรวจยืนยันเมื่อร่างเปลี่ยน พร้อมย้อนคืนฉบับเดิมได้':
+    'Use this draft after editing a document: save existing work first, review and confirm changed drafts, and restore the previous version when needed',
+  'หน้าเริ่มต้นเหลือแคปชันสั้น ๆ สรุปเช้าและตัวอย่างงานพับไว้ในตัวช่วยเริ่มงาน กดเปิดเมื่อต้องการ':
+    'A simpler welcome screen with a short caption; open Help getting started when you want the morning brief or task examples',
   ส่วนคุณตัดสินเรื่องสำคัญ: 'You make the calls that matter.',
   'ผู้ช่วยที่รู้จักงานของ STeP สรุปเอกสารยาว ร่างหนังสือ วางแผนโครงการ และตรวจความพร้อมก่อนส่ง ทุกร่างผ่านตาคุณก่อนใช้จริง':
     'An assistant that knows how STeP works. It summarises long documents, drafts letters, plans projects and checks your work before you submit — and every draft goes through you first.',
@@ -1267,6 +1273,17 @@ export const en: Record<string, string> = {
   อ่านข้อเสนอและเทียบกับร่างด้านล่าง: 'Read the proposal and compare it with the draft below',
   'อ่านร่างจาก AI': 'Read the AI draft',
   ใช้ร่างนี้: 'Use this draft',
+  'มีการแก้ไขที่ยังไม่บันทึก กดใช้ร่างนี้เพื่อบันทึกและตรวจร่างก่อนแทนที่':
+    'There are unsaved changes. Select Use this draft to save and review before replacing them',
+  'ร่างปัจจุบันเปลี่ยนแล้ว กดใช้ร่างนี้เพื่อตรวจและยืนยันก่อนแทนที่':
+    'The current draft has changed. Select Use this draft to review and confirm a replacement',
+  'ใช้ข้อเสนอ AI แทนร่างปัจจุบัน?': 'Replace the current draft with the AI proposal?',
+  ยืนยันใช้ร่างนี้: 'Confirm use of this draft',
+  'ร่างปัจจุบันเปลี่ยนไปหลังจาก AI เริ่มร่าง ตรวจทั้งสองฉบับก่อนยืนยัน ฉบับปัจจุบันจะเก็บไว้ในประวัติเวอร์ชัน':
+    'The current draft changed after the AI started. Review both versions before confirming. The current version will remain in version history',
+  อ่านร่างปัจจุบัน: 'Read the current draft',
+  ยังไม่มีเนื้อหาในร่างปัจจุบัน: 'The current draft is empty',
+  'อ่านข้อเสนอจาก AI': 'Read the AI proposal',
   ไม่ใช้: 'Discard',
   จัดรูปแบบร่าง: 'Format draft',
   ข้อความ: 'Text',
@@ -1608,8 +1625,8 @@ export const en: Record<string, string> = {
   ผลลัพธ์รูปใหญ่เกินขนาดที่รองรับ: 'The image result is larger than the supported size',
   'กรุณาเชื่อมต่อและทดสอบ AI ในการตั้งค่าก่อน': 'Please connect and test an AI in Settings first',
   'กรุณาเพิ่ม API key': 'Please add an API key',
-  'ร่างมีการแก้ไขหลังจาก AI เริ่มทำงาน ข้อเสนอจึงยังไม่แทนที่ร่าง คุณคัดลอกส่วนที่ต้องการมาแก้เองได้':
-    "The draft changed after the AI started, so the proposal didn't replace it. You can copy the parts you want and edit them yourself",
+  'ร่างเปลี่ยนไปจากฉบับที่กำลังตรวจ จึงยังไม่แทนที่ร่าง กรุณาตรวจฉบับล่าสุดแล้วลองอีกครั้ง':
+    'The draft changed since the version being reviewed, so it was not replaced. Review the latest version and try again',
   'พบข้อมูลที่ต้องตรวจเพิ่มเติม กรุณาปิดบังข้อมูลส่วนบุคคลหรือข้อมูลลับก่อนส่ง':
     'Found data that needs further review. Mask personal or confidential details before sending',
   'การลงชื่อเข้าใช้หมดอายุ กดเชื่อมต่อและทดสอบในหน้าตั้งค่าอีกครั้ง': 'Your sign-in expired. Press Connect and test in Settings again',
@@ -2057,8 +2074,8 @@ export const en: Record<string, string> = {
     'Each task has its own conversation and draft. Earlier tasks are listed below this button, where you can search, pin or rename them.',
   'แยกงานคนละเรื่องไว้คนละงาน AI จะได้ไม่สับสนข้อมูล': 'Keep unrelated work in separate tasks so the AI does not mix up information.',
   'ไม่รู้จะเริ่มอย่างไร กดตัวอย่างงาน': 'Not sure where to start? Pick an example',
-  'ตัวอย่างงานเลือกมาตามทีมของคุณ กดแล้วข้อความจะไปอยู่ในกล่องพิมพ์ แก้รายละเอียดให้ตรงงานจริงก่อนส่งได้':
-    'The examples are chosen for your team. Picking one puts its text in the message box, so you can adjust the details to your real work before sending.',
+  'เปิดตัวช่วยเริ่มงานเพื่อดูตัวอย่างของทีม กดตัวอย่างแล้วข้อความจะไปอยู่ในกล่องพิมพ์ แก้รายละเอียดให้ตรงงานจริงก่อนส่งได้':
+    'Open Help getting started to see examples for your team. Picking one puts its text in the message box, so you can adjust the details before sending.',
   สั่งงานเป็นภาษาไทยธรรมดา: 'Ask in plain language',
   'บอกเหมือนฝากงานเพื่อนร่วมงาน: อยากได้อะไร ใช้กับใคร ยาวแค่ไหน กด Enter เพื่อส่ง Shift+Enter เพื่อขึ้นบรรทัดใหม่':
     'Describe it as you would to a colleague: what you need, who it is for and how long it should be. Enter sends, Shift+Enter adds a new line.',

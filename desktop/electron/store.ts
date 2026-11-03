@@ -262,13 +262,20 @@ export class Store {
     }
     return session;
   }
-  accept(id: string, proposalId: string) {
+  accept(id: string, proposalId: string, replaceRevision?: number) {
     const session = this.session(id),
       proposal = session.proposals.find(p => p.id === proposalId);
     if (!proposal) throw new Error('PROPOSAL_NOT_FOUND');
+    // A reviewed replacement names the exact current revision; ordinary acceptance still rejects stale proposals.
+    if (replaceRevision !== undefined && (!Number.isSafeInteger(replaceRevision) || replaceRevision < 0)) throw new Error('DRAFT_CONFLICT');
     // Proposals are Markdown from the model; keep their headings, lists, and emphasis in the editable draft.
     const output = session.documentTool ? parseDocumentOutput(proposal.text, session.documentTool) : { draft: proposal.text, review: '' };
-    const edited = this.edit(id, output.draft, proposal.baseRevision, proposal.document || markdownDocument(output.draft));
+    const edited = this.edit(
+      id,
+      output.draft,
+      replaceRevision ?? proposal.baseRevision,
+      proposal.document || markdownDocument(output.draft),
+    );
     const review = [proposal.review, output.review].filter(Boolean).join('\n\n');
     if (review) edited.documentReview = { text: review, revision: edited.revision };
     else delete edited.documentReview;
