@@ -1101,6 +1101,10 @@ export const en: Record<string, string> = {
   'ให้ AI ร่างงานหนัก': 'Let AI do the heavy drafting.',
   'ไอเดียของคุณ ไปได้ไกลกว่างานประจำ': 'Your ideas can go beyond the everyday.',
   ตัวช่วยเริ่มงาน: 'Help getting started',
+  'กดใช้ร่างนี้ได้หลังแก้ไขเอกสาร ระบบบันทึกงานเดิมก่อน และให้ตรวจยืนยันเมื่อร่างเปลี่ยน พร้อมย้อนคืนฉบับเดิมได้':
+    'Use this draft after editing a document: save existing work first, review and confirm changed drafts, and restore the previous version when needed',
+  'หน้าเริ่มต้นเหลือแคปชันสั้น ๆ สรุปเช้าและตัวอย่างงานพับไว้ในตัวช่วยเริ่มงาน กดเปิดเมื่อต้องการ':
+    'A simpler welcome screen with a short caption; open Help getting started when you want the morning brief or task examples',
   ส่วนคุณตัดสินเรื่องสำคัญ: 'You make the calls that matter.',
   'ผู้ช่วยที่รู้จักงานของ STeP สรุปเอกสารยาว ร่างหนังสือ วางแผนโครงการ และตรวจความพร้อมก่อนส่ง ทุกร่างผ่านตาคุณก่อนใช้จริง':
     'An assistant that knows how STeP works. It summarises long documents, drafts letters, plans projects and checks your work before you submit — and every draft goes through you first.',

@@ -10,6 +10,14 @@ const PLUGIN = join(ROOT, 'plugins', 'step');
 const walk = (dir) =>
   readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)]));
 
+const archiveAttributeRules = (dir) =>
+  execFileSync('git', ['ls-files', '--cached', '-z', '--', '.gitattributes', '**/.gitattributes'], { cwd: dir, encoding: 'utf8' })
+    .split('\0')
+    .filter(Boolean)
+    .flatMap((file) => readFileSync(join(dir, file), 'utf8').split(/\r?\n/)
+      .filter((line) => /\bexport-(ignore|subst)\b/.test(line.replace(/#.*/, '')))
+      .map((line) => `${file}: ${line}`));
+
 test('the Claude plugin is rebuilt from skills/, rules/, docs/ and manifest/ (no hand edits, nothing stale)', () => {
   // Fails with the files that differ when someone edits a Skill without running scripts/build-claude-plugin.mjs.
   execFileSync(process.execPath, [join(ROOT, 'scripts', 'build-claude-plugin.mjs'), '--check'], { stdio: 'pipe' });
@@ -214,10 +222,32 @@ test('Setup: installs into the tools found, skips the rest with what to do, then
 });
 
 test('Plugin directory: no export-ignore or export-subst rule, so the validated archive is what people install', () => {
-  const rules = walk(ROOT)
-    .filter((f) => f.endsWith('.gitattributes') && !/[\\/](node_modules|\.git)[\\/]/.test(f))
-    .flatMap((f) => readFileSync(f, 'utf8').split(/\r?\n/).filter((line) => /\bexport-(ignore|subst)\b/.test(line.replace(/#.*/, ''))).map((line) => `${relative(ROOT, f)}: ${line}`));
-  assert.deepEqual(rules, []);
+  // Only tracked attributes affect the distributed archive. Other tests create and remove ignored workspaces concurrently.
+  assert.deepEqual(archiveAttributeRules(ROOT), []);
+});
+
+test('archive checks inspect tracked nested attributes and ignore disposable workspace contents', async () => {
+  const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const dir = mkdtempSync(join(tmpdir(), 'step-archive-attributes-'));
+  try {
+    execFileSync('git', ['init', '-q', dir]);
+    mkdirSync(join(dir, 'nested'));
+    mkdirSync(join(dir, 'tmp', 'unit-test-workspace'), { recursive: true });
+    writeFileSync(join(dir, '.gitignore'), 'tmp/\n');
+    writeFileSync(join(dir, '.gitattributes'), '* text=auto\n# export-ignore in a comment\n');
+    writeFileSync(join(dir, 'nested', '.gitattributes'), '*.md export-ignore\n*.txt export-subst\n');
+    writeFileSync(join(dir, 'tmp', 'unit-test-workspace', '.gitattributes'), '* export-ignore\n');
+    execFileSync('git', ['add', '--', '.gitignore', '.gitattributes', 'nested/.gitattributes'], { cwd: dir });
+    assert.deepEqual(archiveAttributeRules(dir), [
+      'nested/.gitattributes: *.md export-ignore',
+      'nested/.gitattributes: *.txt export-subst',
+    ]);
+    rmSync(join(dir, 'tmp'), { recursive: true, force: true });
+    assert.equal(archiveAttributeRules(dir).length, 2);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('Legacy Install/Update launchers hand over to Setup-STeP-Skills in a GitHub download, and stay as they are in the Pilot bundle', async () => {
