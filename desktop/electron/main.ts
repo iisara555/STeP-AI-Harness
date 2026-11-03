@@ -4400,7 +4400,7 @@ async function main() {
       case 'edit':
         return store.edit(inputText(input.id, 60), inputText(input.text, 150000), input.revision, input.document, input.presentation);
       case 'accept':
-        return store.accept(input.id, input.proposalId);
+        return store.accept(input.id, input.proposalId, input.replaceRevision);
       case 'reject': {
         const s = store.session(input.id);
         s.proposals = s.proposals.filter(p => p.id !== input.proposalId);
