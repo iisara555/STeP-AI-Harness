@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Keep Windows development/test taskbar and notification identity separate from the installed app, so an Electron development shortcut cannot supply the installed STeP app's icon.
+
 ## Desktop v0.6.29 (2026-11-03)
 
 - Centre the new-chat greeting and composer together, with compact document and brainstorming starters. Keep the morning brief and team examples folded below the prompt; ongoing conversations retain their bottom composer.
