@@ -119,6 +119,7 @@ test('DOCX and PDF use the latest draft and QR payloads for zero, one and two li
       assert.equal(text.replace(/\s/g, ''), (documentText(doc) + qrs.map(q => q.label).join('')).replace(/\s/g, ''));
       assert.match(xml, /w:cantSplit/);
       assert.match(xml, /w:lineRule="exact"/);
+      assert.match(xml, /w:hanging="510"/);
       const decoded: string[] = [];
       for (const path of Object.keys(zip.files).filter(p => p.startsWith('word/media/') && !p.endsWith('/'))) {
         const data = decode(await zip.file(path)!.async('nodebuffer'));
@@ -140,6 +141,7 @@ test('DOCX and PDF use the latest draft and QR payloads for zero, one and two li
       assert.match(html, /ผู้รับแก้ไขล่าสุด/);
       assert.equal((html.match(/<figure>/g) || []).length, expected.length);
       assert.match(html, /grid-template-columns:6cm 3cm 7cm/);
+      assert.match(html, /padding-left:0.9cm;text-indent:-0.9cm/);
       assert.match(html, /font-family:'TH SarabunPSK';font-weight:400;src:url\(data:font\/ttf;base64,/);
       const embedded = [...html.matchAll(/data:image\/png;base64,([A-Za-z\d+/=]+)/g)]
         .map(m => decode(Buffer.from(m[1], 'base64')))

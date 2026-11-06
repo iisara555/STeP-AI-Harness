@@ -27,6 +27,9 @@ export function resolveInvitation(value: unknown): InvitationPresentation {
 
 /** Physical measurements shared by both exporters; the original PDFs remain private. */
 export const INVITATION_LAYOUT = {
+  frontHangCm: 0.9,
+  dateBeforeCm: 0.4,
+  dateAfterCm: 0.2,
   points: 16,
   line: 1.13,
   indent: 2.5,

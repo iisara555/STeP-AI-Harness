@@ -251,7 +251,7 @@ export function pdfHtml(
     const body = parts.body
       .map(
         n =>
-          `<div class="invitation-block ${/^(?:เรื่อง|เรียน|อ้างถึง|สิ่งที่ส่งมาด้วย)(?:\s|$)/.test(documentText(n).trim()) ? 'field' : 'body'}">${richHtml(n, images)}</div>`,
+          `<div class="invitation-block ${/^(?:เรื่อง|เรียน|อ้างถึง|สิ่งที่ส่งมาด้วย)(?:\s|$)/.test(documentText(n).trim()) ? 'field' : 'body'}${/^(?:เรื่อง|เรียน)(?:\s|$)/.test(documentText(n).trim()) ? ' hanging' : ''}">${richHtml(n, images)}</div>`,
       )
       .join('');
     return `<!doctype html><html lang="th"><meta charset="utf-8"><style>${style}
@@ -259,9 +259,10 @@ export function pdfHtml(
       body{font-size:16pt;line-height:${INVITATION_LAYOUT.line}}
       .invitation-head{display:grid;grid-template-columns:6cm 3cm 7cm;align-items:start;break-inside:avoid;break-after:avoid}
       .invitation-head img{width:3cm;height:3cm;align-self:start}.invitation-head p{margin:0}
-      .invitation-number,.invitation-sender{padding-top:1.8cm}.invitation-sender{padding-left:1cm}.invitation-date{text-align:center;margin:.4cm 0 .2cm;break-after:avoid}
+      .invitation-number,.invitation-sender{padding-top:1.8cm}.invitation-sender{padding-left:1cm}.invitation-date{text-align:center;margin:${INVITATION_LAYOUT.dateBeforeCm}cm 0 ${INVITATION_LAYOUT.dateAfterCm}cm;break-after:avoid}
       .invitation-block{margin:0 0 8pt}.invitation-block p{margin:0}
       .invitation-block.field{break-inside:avoid;break-after:avoid}
+      .invitation-block.hanging>p{padding-left:${INVITATION_LAYOUT.frontHangCm}cm;text-indent:-${INVITATION_LAYOUT.frontHangCm}cm}
       .invitation-block.body>p{text-indent:2.5cm;text-align:justify}
       .invitation-signature{margin-left:4cm;width:10cm;text-align:center;break-inside:avoid;break-after:avoid}
       .invitation-signature p{margin:0}.invitation-signature p:first-child{margin-bottom:1.2cm}
@@ -647,12 +648,31 @@ function invitationWordBlocks(document: DraftNode, layout: WordLayout): (Paragra
     ],
   );
   const body: (Paragraph | Table)[] = [header];
-  body.push(...parts.date.flatMap(n => docxBlocks(n, layout, 'date')));
+  body.push(
+    ...parts.date.map(
+      n =>
+        new Paragraph({
+          children: runs(n, 32, false, layout.font, false, layout.presentation.thaiBreaks),
+          alignment: AlignmentType.CENTER,
+          keepNext: true,
+          keepLines: true,
+          spacing: {
+            before: Math.round(INVITATION_LAYOUT.dateBeforeCm * CM),
+            after: Math.round(INVITATION_LAYOUT.dateAfterCm * CM),
+            line: Math.round(INVITATION_LAYOUT.points * INVITATION_LAYOUT.line * 20),
+            lineRule: LineRuleType.EXACT,
+          },
+        }),
+    ),
+  );
   for (const n of parts.body) {
     if (n.type === 'paragraph' && /^(?:เรื่อง|เรียน|อ้างถึง|สิ่งที่ส่งมาด้วย)(?:\s|$)/.test(documentText(n).trim())) {
       body.push(
         new Paragraph({
           children: runs(n, 32, false, layout.font, false, layout.presentation.thaiBreaks),
+          ...(/^(?:เรื่อง|เรียน)(?:\s|$)/.test(documentText(n).trim())
+            ? { indent: { left: Math.round(INVITATION_LAYOUT.frontHangCm * CM), hanging: Math.round(INVITATION_LAYOUT.frontHangCm * CM) } }
+            : {}),
           keepLines: true,
           keepNext: true,
           spacing: {
