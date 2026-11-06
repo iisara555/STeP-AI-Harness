@@ -10,7 +10,7 @@
 
 **STeP Desktop** คือหน้าจอทำงานหลักของ STeP AI สำหรับพนักงาน STeP / RSP North ใช้ภาษาไทยได้ ไม่ต้องจำชื่อ Skill หรือพิมพ์คำสั่งติดตั้งเอง ภาพในหน้านี้ใช้ข้อมูลตัวอย่าง หน้าจอจริงอาจต่างตามรุ่นและการตั้งค่าขององค์กร
 
-Source version: Desktop **0.6.29**. A centred chat composer with a personal greeting, cached AI welcome headlines from working preferences and confirmed memories, and compact starters. Download published installers from the links above. Generated drafts still require source comparison and human review.
+Source version: Desktop **0.6.30**. Invitation letters use the STeP standard from form or chat, with matching Word/PDF layout, local RSVP/map QR codes and separate consistency review. Download published installers from the links above. Generated drafts still require source comparison and human review.
 
 Desktop **0.6.15** กดปุ่มเข้าสู่ระบบเว็บอย่าง STeP MBS ให้เองหลังกรอกบัญชีจาก Vault ไม่ต้องสลับไปกดเอง
 
@@ -211,6 +211,6 @@ AI ช่วยเตรียมงานให้ตรวจต่อ ส่�
 
 ประวัติการเปลี่ยนแปลงของแต่ละรุ่นอยู่ใน [CHANGELOG](CHANGELOG.md)
 
-รุ่นใน source ปัจจุบัน: **STeP Desktop v0.6.29** / **Harness v0.7.7** ดูตัวติดตั้งที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การใช้งานในหน่วยงานให้ยึดรุ่นที่ผู้ดูแลอนุมัติ
+รุ่นใน source ปัจจุบัน: **STeP Desktop v0.6.30** / **Harness v0.7.7** ดูตัวติดตั้งที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การใช้งานในหน่วยงานให้ยึดรุ่นที่ผู้ดูแลอนุมัติ
 
 โค้ดเผยแพร่ภายใต้ [MIT License](LICENSE) ไฟล์บุคคลที่สามมีเงื่อนไขของตน เช่น [ภาพตราครุฑ](docs/third-party-notices/thai-garuda.md) Repository นี้เป็น public จึงไม่ใช่ที่เก็บเอกสารภายในหรือข้อมูลของผู้ใช้
