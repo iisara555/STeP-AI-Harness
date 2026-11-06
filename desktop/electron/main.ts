@@ -65,8 +65,9 @@ import { isImageRequest } from '../src/image-routing';
 import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
 import { searchPublicWeb } from './public-search';
 import { Splash } from './splash';
-import { documentTool } from '../src/document-tools';
-import { documentConversationContext, requestedDocumentTool } from '../src/document-intent';
+import { documentTool, documentVariant } from '../src/document-tools';
+import { resolveInvitation } from '../src/invitation';
+import { documentConversationContext, requestedDocumentTool, requestedLetterVariant } from '../src/document-intent';
 import { isDocumentQuestion } from './document-tools';
 import { inspectDocumentTemplate } from './document-template';
 import { DocumentTemplates, readTemplateSnapshot } from './document-template-store';
@@ -4179,18 +4180,37 @@ async function main() {
           permissionMode() !== 'plan'
             ? documentTool(requestedId)
             : undefined;
+        const requestedVariant =
+          requestedId === 'letter'
+            ? requestedLetterVariant(
+                text,
+                sending.messages.filter(m => m.role === 'user').map(m => m.text),
+              )
+            : undefined;
         const hasDraft = Boolean(sending.draft.trim() || sending.proposals.length);
         const newDocument =
           /ฉบับใหม่|อีก(?:ฉบับ|เรื่อง|โครงการ)|เรื่องใหม่|(?:tor|โครงการ|เอกสาร|บันทึก|หนังสือ|รายงาน)\s*ใหม่|\bnew\s+(?:document|draft)\b/i.test(
             text,
           );
-        const forkDocument = Boolean(requested && hasDraft && (sending.documentTool !== requested.id || newDocument));
+        const forkDocument = Boolean(
+          requested &&
+          hasDraft &&
+          (sending.documentTool !== requested.id || newDocument || (requestedVariant && sending.documentVariant !== requestedVariant)),
+        );
         const autoDocument =
           requested && (!input.skill || ((!hasDraft || forkDocument) && input.skill === requested.skill)) ? requested : undefined;
         const workMode = imageRequest ? 'image' : autoDocument ? 'draft' : workflow ? 'chat' : mode;
         const draftingTool =
           input.documentTool === undefined ? (!hasDraft || forkDocument ? autoDocument : undefined) : documentTool(input.documentTool);
         if (input.documentTool !== undefined && (!draftingTool || workMode !== 'draft')) throw new Error('INVALID_DOCUMENT_TOOL');
+        const variant = documentVariant(
+          draftingTool?.id,
+          input.documentVariant ?? (draftingTool?.id === 'letter' ? requestedVariant : undefined),
+        );
+        if (input.invitation !== undefined && (draftingTool?.id !== 'letter' || variant !== 'invitation'))
+          throw new Error('INVALID_DOCUMENT_VARIANT');
+        const invitation =
+          draftingTool?.id === 'letter' && variant === 'invitation' ? resolveInvitation(input.invitation ?? {}) : undefined;
         const coordinated = input.coordinator === true;
         if (draftingTool && coordinated) throw new Error('INVALID_DOCUMENT_TOOL');
         if (coordinated && (!policyState.policy.features.coordinator || workMode !== 'draft' || input.skill || input.retry))
@@ -4295,6 +4315,8 @@ async function main() {
                 text,
                 skill,
                 draftingTool?.id || '',
+                variant || '',
+                JSON.stringify(invitation || null),
                 attachmentRole,
                 workMode,
                 workflow || '',
@@ -4390,7 +4412,7 @@ async function main() {
         }
         const queued = store.session(runId);
         const templateInfo =
-          nativeTemplate && templateDescription
+          nativeTemplate && templateDescription && variant !== 'invitation'
             ? documentTemplates.save(runId, nativeTemplate, draftingTool!.id, selected[0].view.name, templateDescription.font)
             : undefined;
         const coordinatorScan = coordinated ? harness.privacy(text, { allowedIdentifiers: queued.allowedIdentifiers || [] }) : undefined;
@@ -4422,7 +4444,7 @@ async function main() {
                 onAccepted: () => acceptRequest(),
                 previousStatus,
                 ...(workflow ? { workflow } : {}),
-                ...(draftingTool ? { documentTool: draftingTool.id } : {}),
+                ...(draftingTool ? { documentTool: draftingTool.id, documentVariant: variant, invitation } : {}),
                 ...(autoDocument ? { fromConversation: true } : {}),
                 ...(templateInfo ? { documentTemplate: templateInfo } : {}),
               })
@@ -4710,6 +4732,10 @@ async function main() {
         if (!exportFormats.includes(format) || !s.draft.trim()) throw new Error('INVALID_EXPORT');
         // The stored task selects the layout; renderer input cannot replace its Skill or template.
         const layout = ['docx', 'pdf'].includes(format) ? resolveDocumentLayout(s.documentTool, input.font, input.garuda) : undefined;
+        if (layout && s.presentation?.invitation) {
+          layout.font = 'TH SarabunPSK';
+          layout.garudaHeightCm = 3;
+        }
         if (s.documentTemplate && format === 'pdf') throw new Error('DOCUMENT_TEMPLATE_DOCX_ONLY');
         if (s.documentTemplate && format === 'docx' && (input.font || (input.garuda && input.garuda !== 'auto')))
           throw new Error('DOCUMENT_TEMPLATE_LAYOUT_LOCKED');

@@ -23,6 +23,7 @@ import {
   TabStopType,
   WidthType,
   BorderStyle,
+  VerticalAlign,
   type ParagraphChild,
   type INumberingOptions,
 } from 'docx';
@@ -35,9 +36,11 @@ import { GARUDA_DATA_URI, GARUDA_PNG } from './garuda-image';
 import { renderDocumentTemplate } from './document-template';
 import { longestWordUnits, textUnits, THAI_DOCUMENT_CSS, THAI_DOCUMENT_LANGUAGE, withThaiBreaks } from '../src/thai-typography';
 import { DOCUMENT_PRESETS, resolvePresentation, type DocumentPresentation } from '../src/document-presentation';
-import { embedDocumentFonts } from './document-fonts';
+import { embedDocumentFonts, documentPrintFontCss } from './document-fonts';
 import { TOR_LAYOUT, torFooterText, torNumberedBlock, torPreset } from './tor-layout';
 import { torPdfFurniture, torWordHeader } from './tor-furniture';
+import { INVITATION_LAYOUT, invitationParts } from '../src/invitation';
+import { invitationQrs, type InvitationQr } from './invitation-qr';
 
 export const exportFormats = ['md', 'docx', 'pdf', 'xlsx', 'pptx'] as const;
 
@@ -193,6 +196,7 @@ export function pdfHtml(
   layout = resolveDocumentLayout(),
   images: ReadonlyMap<string, DocumentImage> = new Map(),
   presentation = resolvePresentation({}, layout.id || false),
+  qrs: InvitationQr[] = [],
 ) {
   // TH Sarabun New when installed (the family brings its real bold); otherwise a common Thai font scaled down to the
   // same visual size, since TH Sarabun is drawn much smaller than other fonts at the same point size.
@@ -241,6 +245,36 @@ export function pdfHtml(
         ]
       : []),
   ].join('');
+  if (layout.id === 'letter' && presentation.invitation) {
+    const parts = invitationParts(document);
+    const render = (nodes: DraftNode[]) => nodes.map(n => richHtml(n, images)).join('');
+    const body = parts.body
+      .map(
+        n =>
+          `<div class="invitation-block ${/^(?:เรื่อง|เรียน|อ้างถึง|สิ่งที่ส่งมาด้วย)(?:\s|$)/.test(documentText(n).trim()) ? 'field' : 'body'}${/^(?:เรื่อง|เรียน)(?:\s|$)/.test(documentText(n).trim()) ? ' hanging' : ''}">${richHtml(n, images)}</div>`,
+      )
+      .join('');
+    return `<!doctype html><html lang="th"><meta charset="utf-8"><style>${style}
+      @page{size:A4;margin:1.5cm 2cm 1.5cm 3cm}
+      body{font-size:16pt;line-height:${INVITATION_LAYOUT.line}}
+      .invitation-head{display:grid;grid-template-columns:6cm 3cm 7cm;align-items:start;break-inside:avoid;break-after:avoid}
+      .invitation-head img{width:3cm;height:3cm;align-self:start}.invitation-head p{margin:0}
+      .invitation-number,.invitation-sender{padding-top:1.8cm}.invitation-sender{padding-left:1cm}.invitation-date{text-align:center;margin:${INVITATION_LAYOUT.dateBeforeCm}cm 0 ${INVITATION_LAYOUT.dateAfterCm}cm;break-after:avoid}
+      .invitation-block{margin:0 0 8pt}.invitation-block p{margin:0}
+      .invitation-block.field{break-inside:avoid;break-after:avoid}
+      .invitation-block.hanging>p{padding-left:${INVITATION_LAYOUT.frontHangCm}cm;text-indent:-${INVITATION_LAYOUT.frontHangCm}cm}
+      .invitation-block.body>p{text-indent:2.5cm;text-align:justify}
+      .invitation-signature{margin-left:4cm;width:10cm;text-align:center;break-inside:avoid;break-after:avoid}
+      .invitation-signature p{margin:0}.invitation-signature p:first-child{margin-bottom:1.2cm}
+      .invitation-footer{display:flex;gap:0;align-items:start;margin-top:.5cm;break-inside:avoid}
+      .invitation-contact{flex:1;min-width:0}.invitation-contact p{margin:0}
+      .invitation-qrs{display:flex;gap:0}.invitation-qrs figure{width:3cm;margin:0;text-align:center}
+      .invitation-qrs img{width:2.5cm;height:2.5cm}.invitation-qrs figcaption{font-size:12pt}
+      </style><body><header class="invitation-head"><div class="invitation-number">${render(parts.number)}</div><img alt="ตราครุฑ" src="${GARUDA_DATA_URI}"><div class="invitation-sender">${render(parts.sender)}</div></header>
+      <div class="invitation-date">${render(parts.date)}</div>${body}
+      <div class="invitation-signature">${render(parts.signature)}</div>
+      <section class="invitation-footer"><div class="invitation-contact">${render(parts.contact)}</div><div class="invitation-qrs">${qrs.map(q => `<figure><img alt="${escapeHtml(q.label)}" src="data:image/png;base64,${q.bytes.toString('base64')}"><figcaption>${escapeHtml(q.label)}</figcaption></figure>`).join('')}</div></section></body></html>`;
+  }
   const blocks = document.content || [];
   const title =
     layout.id === 'memo' && layout.garudaHeightCm && ['heading', 'title'].includes(blocks[0]?.type || '') ? blocks[0] : undefined;
@@ -341,12 +375,17 @@ function runs(node: DraftNode, size: number, bold = false, font = OFFICIAL_FONT,
 }
 
 type WordLayout = DocumentLayout & {
+  qrs?: InvitationQr[];
   presentation: DocumentPresentation;
   images: ReadonlyMap<string, DocumentImage>;
   lists: Map<DraftNode, string>;
 };
 const wordPreset = (layout: WordLayout) =>
-  layout.id === 'tor' ? torPreset(layout.presentation) : DOCUMENT_PRESETS[layout.presentation.preset];
+  layout.id === 'letter' && layout.presentation.invitation
+    ? INVITATION_LAYOUT
+    : layout.id === 'tor'
+      ? torPreset(layout.presentation)
+      : DOCUMENT_PRESETS[layout.presentation.preset];
 const wordWidth = (layout: WordLayout) => 11906 - Math.round((wordPreset(layout).margins.left + wordPreset(layout).margins.right) * CM);
 
 function docxTable(table: DraftNode, layout: WordLayout) {
@@ -473,7 +512,7 @@ function docxBlocks(
         alignment:
           centered || centerFrontMatter(layout, role)
             ? AlignmentType.CENTER
-            : layout.id === 'tor' && body
+            : (layout.id === 'tor' || layout.presentation.invitation) && body
               ? AlignmentType.JUSTIFIED
               : AlignmentType.LEFT,
         indent: numbering
@@ -502,6 +541,9 @@ function docxBlocks(
         keepLines: title || caption || node.type === 'heading' || role === 'signature',
         widowControl: true,
         spacing: {
+          ...(layout.presentation.invitation
+            ? { line: Math.round(INVITATION_LAYOUT.points * INVITATION_LAYOUT.line * 20), lineRule: LineRuleType.EXACT }
+            : {}),
           before: firstPageSpace
             ? Math.round(0.5 * CM)
             : layout.id === 'tor' && title
@@ -554,6 +596,155 @@ function docxBlocks(
       ),
     );
   return (node.content || []).flatMap(child => docxBlocks(child, layout, 'body', undefined, depth));
+}
+
+function invitationWordBlocks(document: DraftNode, layout: WordLayout): (Paragraph | Table)[] {
+  const parts = invitationParts(document);
+  const borders = Object.fromEntries(
+    ['top', 'bottom', 'left', 'right'].map(key => [key, { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }]),
+  );
+  const cell = (width: number, children: (Paragraph | Table)[], left = 0) =>
+    new TableCell({
+      width: { size: Math.round(width * CM), type: WidthType.DXA },
+      borders,
+      verticalAlign: VerticalAlign.TOP,
+      margins: { top: 0, bottom: 0, left: Math.round(left * CM), right: 0 },
+      children: children.length ? children : [new Paragraph({ children: [] })],
+    });
+  const table = (widths: number[], cells: TableCell[]) =>
+    new Table({
+      width: { size: wordWidth(layout), type: WidthType.DXA },
+      columnWidths: widths.map(w => Math.round(w * CM)),
+      layout: TableLayoutType.FIXED,
+      borders,
+      rows: [new TableRow({ cantSplit: true, children: cells })],
+    });
+  const plain = (nodes: DraftNode[]) => nodes.flatMap(n => docxBlocks(n, layout, 'field'));
+  const headerText = (nodes: DraftNode[]) =>
+    nodes.length
+      ? [
+          new Paragraph({ spacing: { before: 0, after: 0, line: Math.round(1.8 * CM), lineRule: LineRuleType.EXACT }, children: [] }),
+          ...plain(nodes),
+        ]
+      : [];
+  const header = table(
+    [...INVITATION_LAYOUT.headerColumnsCm],
+    [
+      cell(6, headerText(parts.number)),
+      cell(3, [
+        new Paragraph({
+          spacing: { before: 0, after: 0 },
+          children: [
+            new ImageRun({
+              type: 'png',
+              data: GARUDA_PNG,
+              transformation: { width: (3 * 96) / 2.54, height: (3 * 96) / 2.54 },
+              altText: { name: 'Garuda', title: 'ตราครุฑ', description: 'Garuda' },
+            }),
+          ],
+        }),
+      ]),
+      cell(7, headerText(parts.sender), 1),
+    ],
+  );
+  const body: (Paragraph | Table)[] = [header];
+  body.push(
+    ...parts.date.map(
+      n =>
+        new Paragraph({
+          children: runs(n, 32, false, layout.font, false, layout.presentation.thaiBreaks),
+          alignment: AlignmentType.CENTER,
+          keepNext: true,
+          keepLines: true,
+          spacing: {
+            before: Math.round(INVITATION_LAYOUT.dateBeforeCm * CM),
+            after: Math.round(INVITATION_LAYOUT.dateAfterCm * CM),
+            line: Math.round(INVITATION_LAYOUT.points * INVITATION_LAYOUT.line * 20),
+            lineRule: LineRuleType.EXACT,
+          },
+        }),
+    ),
+  );
+  for (const n of parts.body) {
+    if (n.type === 'paragraph' && /^(?:เรื่อง|เรียน|อ้างถึง|สิ่งที่ส่งมาด้วย)(?:\s|$)/.test(documentText(n).trim())) {
+      body.push(
+        new Paragraph({
+          children: runs(n, 32, false, layout.font, false, layout.presentation.thaiBreaks),
+          ...(/^(?:เรื่อง|เรียน)(?:\s|$)/.test(documentText(n).trim())
+            ? { indent: { left: Math.round(INVITATION_LAYOUT.frontHangCm * CM), hanging: Math.round(INVITATION_LAYOUT.frontHangCm * CM) } }
+            : {}),
+          keepLines: true,
+          keepNext: true,
+          spacing: {
+            before: 0,
+            after: 160,
+            line: Math.round(INVITATION_LAYOUT.points * INVITATION_LAYOUT.line * 20),
+            lineRule: LineRuleType.EXACT,
+          },
+        }),
+      );
+    } else body.push(...docxBlocks(n, layout, 'body'));
+  }
+  for (const [index, n] of parts.signature.entries()) {
+    if (n.type !== 'paragraph') {
+      body.push(...docxBlocks(n, layout, 'signature'));
+      continue;
+    }
+    body.push(
+      new Paragraph({
+        children: runs(n, 32, false, layout.font, false, layout.presentation.thaiBreaks),
+        alignment: AlignmentType.CENTER,
+        indent: { left: 4 * CM, right: 2 * CM },
+        keepLines: true,
+        keepNext: index < parts.signature.length - 1,
+        spacing: {
+          before: 0,
+          after: index === 0 ? Math.round(INVITATION_LAYOUT.signatureGapCm * CM) : 0,
+          line: Math.round(INVITATION_LAYOUT.points * INVITATION_LAYOUT.line * 20),
+          lineRule: LineRuleType.EXACT,
+        },
+      }),
+    );
+  }
+  const qrs = layout.qrs || [];
+  if (parts.contact.length || qrs.length) {
+    body.push(new Paragraph({ spacing: { before: 100, after: 0 }, keepNext: true, children: [] }));
+    const contactWidth = 16 - 3 * qrs.length;
+    body.push(
+      table(
+        [contactWidth, ...qrs.map(() => 3)],
+        [
+          cell(contactWidth, plain(parts.contact)),
+          ...qrs.map(q =>
+            cell(3, [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                keepNext: true,
+                spacing: { before: 0, after: 0 },
+                children: [
+                  new ImageRun({
+                    type: 'png',
+                    data: q.bytes,
+                    transformation: { width: (INVITATION_LAYOUT.qrCm * 96) / 2.54, height: (INVITATION_LAYOUT.qrCm * 96) / 2.54 },
+                    altText: { name: 'QR', title: q.label, description: q.label },
+                  }),
+                ],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                keepLines: true,
+                spacing: { before: 0, after: 0 },
+                children: [
+                  new TextRun({ text: q.label, font: layout.font, size: 24, sizeComplexScript: 24, language: THAI_DOCUMENT_LANGUAGE }),
+                ],
+              }),
+            ]),
+          ),
+        ],
+      ),
+    );
+  }
+  return body;
 }
 
 function docx(document: DraftNode, layout: WordLayout) {
@@ -658,30 +849,31 @@ function docx(document: DraftNode, layout: WordLayout) {
     });
   const hasHeader = layout.id === 'tor' || Boolean(appearance.headerText || pageAt('header'));
   const hasFooter = layout.id === 'tor' || Boolean(appearance.footerText || pageAt('footer'));
-  const firstHeader = layout.garudaHeightCm
-    ? new Header({
-        children: [
-          new Paragraph({
-            alignment: layout.id === 'memo' ? AlignmentType.LEFT : AlignmentType.CENTER,
-            indent: { left: layout.id === 'letter' ? -CM : 0, firstLine: 0 },
-            spacing: { before: 0, after: 0 },
-            tabStops: layout.id === 'memo' ? [{ type: TabStopType.CENTER, position: 8 * CM }] : undefined,
-            children: [
-              new ImageRun({
-                type: 'png',
-                data: GARUDA_PNG,
-                transformation: { width: (layout.garudaHeightCm * 96) / 2.54, height: (layout.garudaHeightCm * 96) / 2.54 },
-                altText: { name: 'Garuda', title: 'ตราครุฑ', description: 'Garuda' },
-              }),
-              ...(title
-                ? [new TextRun({ children: [new Tab()] }), ...runs(title, 60, true, layout.font, false, appearance.thaiBreaks)]
-                : []),
-            ],
-          }),
-          ...headerLines(),
-        ],
-      })
-    : undefined;
+  const firstHeader =
+    layout.garudaHeightCm && !layout.presentation.invitation
+      ? new Header({
+          children: [
+            new Paragraph({
+              alignment: layout.id === 'memo' ? AlignmentType.LEFT : AlignmentType.CENTER,
+              indent: { left: layout.id === 'letter' ? -CM : 0, firstLine: 0 },
+              spacing: { before: 0, after: 0 },
+              tabStops: layout.id === 'memo' ? [{ type: TabStopType.CENTER, position: 8 * CM }] : undefined,
+              children: [
+                new ImageRun({
+                  type: 'png',
+                  data: GARUDA_PNG,
+                  transformation: { width: (layout.garudaHeightCm * 96) / 2.54, height: (layout.garudaHeightCm * 96) / 2.54 },
+                  altText: { name: 'Garuda', title: 'ตราครุฑ', description: 'Garuda' },
+                }),
+                ...(title
+                  ? [new TextRun({ children: [new Tab()] }), ...runs(title, 60, true, layout.font, false, appearance.thaiBreaks)]
+                  : []),
+              ],
+            }),
+            ...headerLines(),
+          ],
+        })
+      : undefined;
   const tocBlocks = appearance.toc
     ? [
         new Paragraph({
@@ -693,16 +885,18 @@ function docx(document: DraftNode, layout: WordLayout) {
     : [];
   const body: (Paragraph | Table | TableOfContents)[] = [];
   let breakBefore = false;
-  for (const [index, node] of blocks.entries()) {
-    if (node === title) continue;
-    if (node.type === 'pageBreak') {
-      if (breakBefore) body.push(...docxBlocks(node, layout));
-      breakBefore = true;
-      continue;
+  if (layout.id === 'letter' && appearance.invitation) body.push(...invitationWordBlocks(document, layout));
+  else
+    for (const [index, node] of blocks.entries()) {
+      if (node === title) continue;
+      if (node.type === 'pageBreak') {
+        if (breakBefore) body.push(...docxBlocks(node, layout));
+        breakBefore = true;
+        continue;
+      }
+      body.push(...docxBlocks(node, layout, roles[index], undefined, 0, Boolean(firstHeader && index === (title ? 1 : 0)), breakBefore));
+      breakBefore = false;
     }
-    body.push(...docxBlocks(node, layout, roles[index], undefined, 0, Boolean(firstHeader && index === (title ? 1 : 0)), breakBefore));
-    breakBefore = false;
-  }
   if (breakBefore) body.push(...docxBlocks({ type: 'pageBreak' }, layout));
   const tocIndex = !title && blocks[0]?.type === 'title' ? 1 : 0;
   body.splice(tocIndex, 0, ...tocBlocks);
@@ -1004,6 +1198,17 @@ export async function exportDocument(
   if (format === 'md') return writeFile(path, rich ? documentMarkdown(rich) : text, 'utf8');
   // A draft without structure is plain text: one paragraph per line, nothing read as Markdown.
   const content = rich || plainDocument(text);
+  const invitation = resolvePresentation(
+    options.presentation,
+    typeof options.documentTool === 'string' ? options.documentTool : false,
+  ).invitation;
+  if (invitation && (options.documentTool !== 'letter' || options.template)) throw new Error('INVALID_DOCUMENT_PRESENTATION');
+  const qrs = invitation && ['docx', 'pdf'].includes(format) ? await invitationQrs(invitation) : [];
+  const exportLayout = () =>
+    invitation
+      ? resolveDocumentLayout('letter', 'TH SarabunPSK', 'auto')
+      : resolveDocumentLayout(options.documentTool, options.font, options.garuda);
+
   if (format === 'docx') {
     const presentation = resolvePresentation(options.presentation, typeof options.documentTool === 'string' ? options.documentTool : false);
     if (
@@ -1019,7 +1224,8 @@ export async function exportDocument(
       ? await renderDocumentTemplate(options.template, options.documentTool, content, presentation.thaiBreaks)
       : await Packer.toBuffer(
           docx(content, {
-            ...resolveDocumentLayout(options.documentTool, options.font, options.garuda),
+            ...exportLayout(),
+            qrs,
             presentation,
             images: options.images || new Map(),
             lists: new Map(),
@@ -1035,13 +1241,14 @@ export async function exportDocument(
     };
   }
   if (format === 'pdf') {
-    const layout = resolveDocumentLayout(options.documentTool, options.font, options.garuda);
+    const layout = exportLayout();
     const presentation = resolvePresentation(options.presentation, typeof options.documentTool === 'string' ? options.documentTool : false);
     const furniture = layout.id === 'tor' ? torPdfFurniture(content, layout.font, presentation) : undefined;
+    const printFonts = invitation ? await documentPrintFontCss('TH SarabunPSK') : '';
     return writeFile(
       path,
       await pdf(
-        pdfHtml(content, layout, options.images, presentation),
+        pdfHtml(content, layout, options.images, presentation, qrs).replace('<style>', '<style>' + printFonts),
         furniture
           ? {
               displayHeaderFooter: true,

@@ -256,6 +256,7 @@ export type Session = {
   }[];
   /** The selected form's Skill/template contract, retained for revisions and retry. */
   documentTool?: DocumentToolId;
+  documentVariant?: string;
   /** Reference to a private, host-owned DOCX snapshot; bytes never go to the renderer or AI. */
   documentTemplate?: DocumentTemplateInfo;
   /** Checks for an accepted AI draft, kept outside editable/exported document content. */

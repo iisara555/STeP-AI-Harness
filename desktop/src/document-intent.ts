@@ -18,7 +18,7 @@ const GENERIC =
 const TYPES: { id: DocumentToolId; pattern: RegExp }[] = [
   { id: 'tor', pattern: /\btor\b|ทีโออาร์|ขอบเขตของงาน/gi },
   { id: 'memo', pattern: /บันทึกข้อความ|หนังสือภายใน|บันทึกราชการ/gi },
-  { id: 'letter', pattern: /หนังสือราชการ|หนังสือภายนอก|จดหมายราชการ/gi },
+  { id: 'letter', pattern: /หนังสือราชการ|หนังสือภายนอก|จดหมายราชการ|หนังสือเชิญ|หนังสือตอบกลับ|หนังสือประสานงาน/gi },
   { id: 'minutes', pattern: /รายงานการประชุม|บันทึกการประชุม/gi },
   { id: 'project', pattern: /(?:ข้อเสนอ|เอกสาร)โครงการ|(?<!ชื่อ)โครงการ/gi },
   { id: 'other', pattern: /หนังสือรับรอง|ประกาศ|คำสั่ง|ข้อตกลง|สัญญา|รายงาน(?:ผล|ความคืบหน้า|สรุปผล)/gi },
@@ -28,6 +28,21 @@ function mentionedTypes(value: string) {
   return TYPES.flatMap(({ id, pattern }) =>
     [...value.matchAll(pattern)].map(match => ({ id, start: match.index!, end: match.index! + match[0].length, name: match[0] })),
   ).filter(match => !(match.name === 'คำสั่ง' && /(?:sql|shell|terminal|command|โค้ด|โปรแกรม)/i.test(value)));
+}
+
+/** Subtypes come from user requests, never from generated prose or attached examples. */
+export function requestedLetterVariant(text: string, priorUserMessages: string[] = []): string | undefined {
+  const values = [text, ...(GENERIC.test(text.trim()) ? priorUserMessages.slice(-20).reverse() : [])];
+  for (const value of values) {
+    const found = [...value.matchAll(/หนังสือ(เชิญ|ตอบกลับ|ประสานงาน|ภายนอก)/g)];
+    if (found.length) {
+      const kinds = [
+        ...new Set(found.map(m => ({ เชิญ: 'invitation', ตอบกลับ: 'reply', ประสานงาน: 'coordination', ภายนอก: 'external' })[m[1]])),
+      ];
+      return kinds.length === 1 ? kinds[0] : undefined;
+    }
+  }
+  return undefined;
 }
 
 /** The conversation fields sent for drafting, excluding status and mutable UI/check metadata. */

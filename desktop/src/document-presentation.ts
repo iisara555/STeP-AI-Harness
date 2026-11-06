@@ -1,3 +1,5 @@
+import { resolveInvitation, type InvitationPresentation } from './invitation';
+
 export const DOCUMENT_PRESETS = {
   saraban: { points: 16, margins: { top: 2.5, bottom: 2, left: 3, right: 2 }, line: 1, indent: 1.25, after: 0 },
   report: { points: 14, margins: { top: 2.54, bottom: 2.54, left: 2.54, right: 2.54 }, line: 1.5, indent: 0, after: 6 },
@@ -5,6 +7,7 @@ export const DOCUMENT_PRESETS = {
 } as const;
 
 export type DocumentPresentation = {
+  invitation?: InvitationPresentation;
   preset: keyof typeof DOCUMENT_PRESETS;
   thaiBreaks: boolean;
   embedFonts: boolean;
@@ -21,7 +24,18 @@ export function resolvePresentation(value: unknown = {}, official: boolean | str
   const input = value as Partial<DocumentPresentation>;
   if (
     Object.keys(input).some(
-      key => !['preset', 'thaiBreaks', 'embedFonts', 'toc', 'headerText', 'footerText', 'pageNumber', 'pageNumberPosition'].includes(key),
+      key =>
+        ![
+          'invitation',
+          'preset',
+          'thaiBreaks',
+          'embedFonts',
+          'toc',
+          'headerText',
+          'footerText',
+          'pageNumber',
+          'pageNumberPosition',
+        ].includes(key),
     )
   )
     throw new Error('INVALID_DOCUMENT_PRESENTATION');
@@ -39,6 +53,7 @@ export function resolvePresentation(value: unknown = {}, official: boolean | str
   if (input.pageNumberPosition !== undefined && !['footer-center', 'footer-right', 'header-right'].includes(input.pageNumberPosition))
     throw new Error('INVALID_DOCUMENT_PRESENTATION');
   return {
+    ...(input.invitation !== undefined ? { invitation: resolveInvitation(input.invitation) } : {}),
     preset: input.preset ?? (official ? 'saraban' : 'report'),
     thaiBreaks: input.thaiBreaks ?? true,
     embedFonts: input.embedFonts ?? true,

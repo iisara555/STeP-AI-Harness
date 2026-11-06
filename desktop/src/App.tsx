@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { DocumentPresentationControls, readExportSettingsOpen, saveExportSettingsOpen } from './document-presentation-controls';
 import { resolvePresentation } from './document-presentation';
+import type { InvitationPresentation } from './invitation';
+import { InvitationLinks, invalidInvitationLinks } from './invitation-links';
 import {
   DocumentTitle,
   DocumentCaption,
@@ -350,6 +352,8 @@ export default function App() {
     retry?: boolean;
     coordinator?: boolean;
     documentTool?: DocumentToolId;
+    documentVariant?: string;
+    invitation?: InvitationPresentation;
     attachmentRole?: DocumentAttachmentRole;
     isolated?: boolean;
     aside?: boolean;
@@ -918,6 +922,13 @@ export default function App() {
       false,
       tool,
       form.source ? form.sourceRole : 'source',
+      false,
+      false,
+      false,
+      form.variant,
+      tool === 'letter' && form.variant === 'invitation'
+        ? { rsvpUrl: form.values.rsvpUrl || '', venueUrl: form.values.venueUrl || '' }
+        : undefined,
     );
   }
   async function reviseDocument(id: string, changes: string) {
@@ -1132,6 +1143,8 @@ export default function App() {
     isolated: boolean = false,
     aside: boolean = false,
     autoContinue: boolean = false,
+    documentVariant?: string,
+    invitation?: InvitationPresentation,
   ) {
     const submittedQuery = query;
     const attempt = {},
@@ -1164,6 +1177,8 @@ export default function App() {
         retry,
         coordinator,
         documentTool,
+        documentVariant,
+        invitation,
         attachmentRole,
         autoContinue,
         ...(isolated ? { autoImage: false } : mode === 'chat' && workflowRef.current ? { workflow: workflowRef.current } : {}),
@@ -1199,6 +1214,8 @@ export default function App() {
         retry,
         coordinator,
         documentTool,
+        documentVariant,
+        invitation,
         attachmentRole,
         isolated,
         aside,
@@ -3631,7 +3648,20 @@ export default function App() {
                     </details>
                     {exportSettings && ['docx', 'pdf'].includes(format) && (
                       <div className="export-settings" id="export-settings">
-                        {format === 'docx' && (
+                        {presentation.invitation && (
+                          <InvitationLinks
+                            value={presentation.invitation}
+                            disabled={exporting || draftAcceptPending}
+                            onChange={value => {
+                              const next = { ...presentationRef.current, invitation: value };
+                              setPresentation(next);
+                              presentationRef.current = next;
+                              setDirty(true);
+                              dirtyRef.current = true;
+                            }}
+                          />
+                        )}
+                        {format === 'docx' && !presentation.invitation && (
                           <DocumentPresentationControls
                             value={presentation}
                             locked={Boolean(session?.documentTemplate)}
@@ -3644,7 +3674,7 @@ export default function App() {
                             }}
                           />
                         )}
-                        {['docx', 'pdf'].includes(format) && (
+                        {['docx', 'pdf'].includes(format) && !presentation.invitation && (
                           <label className="document-export-font">
                             {t(format === 'docx' ? 'ฟอนต์ DOCX' : 'ฟอนต์ PDF')}
                             <select
@@ -3669,6 +3699,7 @@ export default function App() {
                           </label>
                         )}
                         {!session.documentTemplate &&
+                          !presentation.invitation &&
                           ['docx', 'pdf'].includes(format) &&
                           ['memo', 'letter'].includes(session.documentTool || '') && (
                             <label className="document-export-font">
@@ -3725,7 +3756,11 @@ export default function App() {
                         </button>
                       )}
                       <button
-                        disabled={exporting || (!session.draft && !dirty)}
+                        disabled={
+                          exporting ||
+                          (!session.draft && !dirty) ||
+                          Boolean(presentation.invitation && invalidInvitationLinks(presentation.invitation).length)
+                        }
                         onClick={() =>
                           void action(async () => {
                             if (exportPending.current) return;
@@ -3789,16 +3824,22 @@ export default function App() {
                             {exportInfo.fontEmbedding?.status === 'unavailable' && (
                               <p>{t('แม่แบบใช้ฟอนต์ที่ไม่มีในชุดแอป ตรวจฟอนต์บนเครื่องปลายทางก่อนใช้งาน')}</p>
                             )}
-                            {exportInfo.fontEmbedding?.status !== 'embedded' && exportInfo.fontStatus === 'missing' && (
-                              <p>{t('ตรวจไม่พบฟอนต์นี้บนเครื่อง ติดตั้งฟอนต์ให้ตรงแบบก่อนตรวจหน้าใน Word')}</p>
+                            {exportInfo.fontEmbedding?.status !== 'embedded' &&
+                              exportInfo.fontStatus === 'missing' &&
+                              !(presentation.invitation && format === 'pdf') && (
+                                <p>{t('ตรวจไม่พบฟอนต์นี้บนเครื่อง ติดตั้งฟอนต์ให้ตรงแบบก่อนตรวจหน้าใน Word')}</p>
+                              )}
+                            {exportInfo.fontStatus === 'unknown' && !(presentation.invitation && format === 'pdf') && (
+                              <p>{t('ตรวจฟอนต์บนเครื่องไม่ได้ โปรดตรวจฟอนต์และหน้าใน Word')}</p>
                             )}
-                            {exportInfo.fontStatus === 'unknown' && <p>{t('ตรวจฟอนต์บนเครื่องไม่ได้ โปรดตรวจฟอนต์และหน้าใน Word')}</p>}
                             {exportInfo.documentTool && (
                               <p>
                                 {t(
                                   exportInfo.templateName
                                     ? 'ใช้รูปแบบต้นฉบับ DOCX ตรวจทุกหน้าใน Word ก่อนเสนอ'
-                                    : 'จัดหน้าตามแม่แบบร่าง ต้องเทียบแบบหน่วยงานก่อนเสนอ',
+                                    : presentation.invitation
+                                      ? 'หนังสือเชิญใช้มาตรฐาน STeP ทั้งภาษาและการจัดหน้า'
+                                      : 'จัดหน้าตามแม่แบบร่าง ต้องเทียบแบบหน่วยงานก่อนเสนอ',
                                 )}
                               </p>
                             )}
@@ -3926,6 +3967,8 @@ export default function App() {
                   ask.isolated,
                   ask.aside,
                   ask.autoContinue,
+                  ask.documentVariant,
+                  ask.invitation,
                 ),
               );
             }}

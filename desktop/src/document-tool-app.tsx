@@ -7,6 +7,7 @@ import { t } from './i18n';
 import { skillDisplayName } from './skill-display';
 import { ThaiText } from './thai-text';
 import './document-tools.css';
+import { InvitationLinks, invalidInvitationLinks } from './invitation-links';
 
 export type DocumentAttachment = { sessionId: string; file: Attachment };
 export type DocumentForm = {
@@ -49,6 +50,9 @@ export function DocumentTools({
   const ready = connections.filter(c => c.ready);
   const connected = ready.some(c => c.id === connectionId);
   const disabled = busy || working;
+  const invitation = selected === 'letter' && form.variant === 'invitation';
+  const links = { rsvpUrl: form.values.rsvpUrl || '', venueUrl: form.values.venueUrl || '' };
+  const invalidLinks = invitation && invalidInvitationLinks(links).length > 0;
   const hasInput = Object.values(form.values).some(v => v.trim()) || Boolean(form.source?.file.usable);
   const sourceBlocked = Boolean(
     form.source && (!form.source.file.usable || (form.sourceRole !== 'template' && form.source.file.sourceUsable === false)),
@@ -112,7 +116,7 @@ export function DocumentTools({
         className="document-form"
         onSubmit={e => {
           e.preventDefault();
-          if (!disabled && connected && hasInput && !sourceBlocked) void run(() => draft(selected, form));
+          if (!disabled && connected && hasInput && !sourceBlocked && !invalidLinks) void run(() => draft(selected, form));
         }}
       >
         <header>
@@ -126,7 +130,9 @@ export function DocumentTools({
               ? t('เลือกประเภทงานให้ตรงต้นเรื่อง หากไม่มีแบบหน่วยงานจะใช้โครงร่าง TOR และแยกข้อมูลที่ต้องยืนยัน')
               : selected === 'other'
                 ? t('ระบุประเภทและผลลัพธ์ที่ต้องการ แนบต้นเรื่องได้ ส่งออกเป็น Word/PDF แล้วให้เจ้าของเรื่องตรวจ ก่อนออกเลขหรือลงนาม')
-                : t('แนบไฟล์ Word จาก MIS เป็นแม่แบบได้ เพื่อรักษารูปแบบต้นฉบับ หากไม่แนบจะใช้แบบร่างทั่วไป')}
+                : invitation
+                  ? t('หนังสือเชิญใช้มาตรฐาน STeP ทั้งภาษาและการจัดหน้า')
+                  : t('แนบไฟล์ Word จาก MIS เป็นแม่แบบได้ เพื่อรักษารูปแบบต้นฉบับ หากไม่แนบจะใช้แบบร่างทั่วไป')}
           </p>
         </header>
         {existingDraft?.tool === selected && (
@@ -262,7 +268,9 @@ export function DocumentTools({
               {form.sourceRole === 'template' && (
                 <p className="small muted">
                   {t(
-                    'เลือกแม่แบบ DOCX ข้อมูลตัวอย่างไม่ส่งให้ AI รักษาฟอนต์ ตาราง ระยะขอบและตราของแบบเมื่อส่งออก DOCX ส่วน PDF ให้เปิดจาก Word หลังตรวจหน้า',
+                    invitation
+                      ? 'หนังสือเชิญใช้มาตรฐาน STeP ทั้งภาษาและการจัดหน้า'
+                      : 'เลือกแม่แบบ DOCX ข้อมูลตัวอย่างไม่ส่งให้ AI รักษาฟอนต์ ตาราง ระยะขอบและตราของแบบเมื่อส่งออก DOCX ส่วน PDF ให้เปิดจาก Word หลังตรวจหน้า',
                   )}
                 </p>
               )}
@@ -290,35 +298,43 @@ export function DocumentTools({
           </p>
         </div>
         <div className="document-fields">
-          {profile.fields.map(f => (
-            <label key={f.key} className={f.multiline ? 'wide' : ''}>
-              {t(f.label)}
-              {f.multiline ? (
-                <textarea
-                  aria-label={t(f.label)}
-                  rows={3}
-                  maxLength={6000}
-                  value={form.values[f.key] || ''}
-                  disabled={disabled}
-                  placeholder={t('เว้นได้หากยังไม่มีข้อมูล')}
-                  onChange={e => update({ values: { ...form.values, [f.key]: e.target.value } })}
-                />
-              ) : (
-                <input
-                  aria-label={t(f.label)}
-                  maxLength={6000}
-                  value={form.values[f.key] || ''}
-                  disabled={disabled}
-                  placeholder={t('เว้นได้หากยังไม่มีข้อมูล')}
-                  onChange={e => update({ values: { ...form.values, [f.key]: e.target.value } })}
-                />
-              )}
-              {f.missingAction === 'draft-proposal' && <small className="muted">{t('เว้นได้ AI ช่วยเสนอร่างให้พิจารณา')}</small>}
-              {f.hint && <small className="muted">{t(f.hint)}</small>}
-            </label>
-          ))}
+          {profile.fields
+            .filter(f => (!f.invitationOnly || invitation) && !['rsvpUrl', 'venueUrl'].includes(f.key))
+            .map(f => (
+              <label key={f.key} className={f.multiline ? 'wide' : ''}>
+                {t(f.label)}
+                {f.multiline ? (
+                  <textarea
+                    aria-label={t(f.label)}
+                    rows={3}
+                    maxLength={6000}
+                    value={form.values[f.key] || ''}
+                    disabled={disabled}
+                    placeholder={t('เว้นได้หากยังไม่มีข้อมูล')}
+                    onChange={e => update({ values: { ...form.values, [f.key]: e.target.value } })}
+                  />
+                ) : (
+                  <input
+                    aria-label={t(f.label)}
+                    maxLength={6000}
+                    value={form.values[f.key] || ''}
+                    disabled={disabled}
+                    placeholder={t('เว้นได้หากยังไม่มีข้อมูล')}
+                    onChange={e => update({ values: { ...form.values, [f.key]: e.target.value } })}
+                  />
+                )}
+                {f.missingAction === 'draft-proposal' && <small className="muted">{t('เว้นได้ AI ช่วยเสนอร่างให้พิจารณา')}</small>}
+                {f.hint && <small className="muted">{t(f.hint)}</small>}
+              </label>
+            ))}
         </div>
         {/* Sticky: the only primary action stays in reach on a form that is several screens tall. */}
+        {invitation && (
+          <>
+            <p className="small muted">{t('หนังสือเชิญใช้มาตรฐาน STeP ทั้งภาษาและการจัดหน้า')}</p>
+            <InvitationLinks value={links} disabled={disabled} onChange={value => update({ values: { ...form.values, ...value } })} />
+          </>
+        )}
         <footer className="document-form-actions">
           <p className="small muted">{t('AI ช่วยร่าง การตรวจข้อมูลจริง การอนุมัติ และการลงนามเป็นของเจ้าของเรื่องและผู้มีอำนาจ')}</p>
           <div className="document-form-submit">
@@ -331,7 +347,7 @@ export function DocumentTools({
               className="primary"
               type="submit"
               aria-describedby={blockedReason ? 'document-draft-reason' : undefined}
-              disabled={disabled || !connected || !hasInput || sourceBlocked}
+              disabled={disabled || !connected || !hasInput || sourceBlocked || invalidLinks}
             >
               {working ? <LoaderCircle size={17} className="spin" /> : <Sparkles size={17} />}
               {t('ให้ AI ร่างเอกสาร')}
