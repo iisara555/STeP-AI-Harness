@@ -1101,6 +1101,12 @@ export const en: Record<string, string> = {
   'ให้ AI ร่างงานหนัก': 'Let AI do the heavy drafting.',
   'ไอเดียของคุณ ไปได้ไกลกว่างานประจำ': 'Your ideas can go beyond the everyday.',
   วันนี้ให้ช่วยอะไรดี: 'What can I help with today?',
+  'ร่างหนังสือเชิญจากฟอร์มหรือแชตตามมาตรฐาน STeP พร้อมจัดหน้า Word และ PDF':
+    'Draft invitation letters from the form or chat using the STeP standard, with Word and PDF layout',
+  'สร้าง QR ตอบรับและแผนที่ในเครื่อง ลิงก์เก็บพร้อมเวอร์ชันร่างโดยไม่ส่งให้ AI':
+    'Generate RSVP and map QR codes locally, with links saved alongside draft versions without sending them to AI',
+  'ตรวจข้อมูลค้างและวันที่ตอบรับหรือวันจัดงานที่ไม่สอดคล้อง แยกจากตัวหนังสือให้ทบทวนก่อนใช้':
+    'Review pending facts and inconsistent RSVP or event dates separately from the letter before use',
   'หน้าเริ่มแชตทักชื่อ พร้อมช่องพิมพ์กลางหน้า และปุ่มเริ่มสรุปเอกสาร ร่างเอกสาร หรือคิดไอเดีย':
     'New chat greets you by name, with a centred composer and quick document and brainstorming starters',
   'คำทักทายปรับตามรูปแบบการทำงานและความจำที่ยืนยัน เก็บไว้สลับเมื่อเริ่มงานใหม่ โดยใช้บัญชี AI และสิทธิ์ข้อมูลเดิม':
