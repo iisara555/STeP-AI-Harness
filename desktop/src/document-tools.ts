@@ -1,10 +1,18 @@
 import { parseThaiDate, formatThaiDate } from './thai-date';
 import { stepOrganizationReference } from './organization-profile';
+import { invitationUrl } from './invitation';
 
 /** Fixed document profiles: the host selects actual Skills and working templates from this allowlist. */
 export type DocumentToolId = 'tor' | 'memo' | 'letter' | 'project' | 'minutes' | 'other';
 export type DocumentAttachmentRole = 'source' | 'template';
-export type DocumentField = { key: string; label: string; hint?: string; multiline?: boolean; missingAction?: 'draft-proposal' | 'omit' };
+export type DocumentField = {
+  key: string;
+  label: string;
+  hint?: string;
+  multiline?: boolean;
+  invitationOnly?: boolean;
+  missingAction?: 'draft-proposal' | 'omit';
+};
 export type DocumentTool = {
   id: DocumentToolId;
   title: string;
@@ -142,6 +150,10 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
       draftable('background', 'เหตุที่มีหนังสือ / ต้นเรื่อง', true),
       draftable('content', 'สาระ / สิ่งที่ขอประสาน', true),
       field('schedule', 'วัน เวลา สถานที่ (ถ้ามี)'),
+      { ...field('recipientPosition', 'ตำแหน่ง / หน่วยงานผู้รับ'), invitationOnly: true },
+      { ...field('rsvpDeadline', 'วันปิดตอบรับ', false, 'ระบุปีเต็ม แยกจากวันจัดงาน'), invitationOnly: true },
+      { ...field('rsvpUrl', 'ลิงก์ตอบรับเข้าร่วมงาน'), invitationOnly: true, missingAction: 'omit' },
+      { ...field('venueUrl', 'ลิงก์แผนที่สถานที่จัดงาน'), invitationOnly: true, missingAction: 'omit' },
       field('contact', 'ผู้ประสานงาน / ช่องทางติดต่อ'),
       field('sources', 'แบบหน่วยงาน / แหล่งอ้างอิง', true),
     ],
@@ -222,6 +234,11 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
   },
 ];
 export const documentTool = (id: unknown) => DOCUMENT_TOOLS.find(p => p.id === id);
+export function documentVariant(id: unknown, variant: unknown): string | undefined {
+  if (variant === undefined) return undefined;
+  if (typeof variant !== 'string' || !documentTool(id)?.variants.some(v => v.id === variant)) throw new Error('INVALID_DOCUMENT_VARIANT');
+  return variant;
+}
 export function documentRequest(
   id: unknown,
   values: Record<string, string>,
@@ -235,28 +252,42 @@ export function documentRequest(
   if (!kind) throw new Error('INVALID_DOCUMENT_VARIANT');
   if (Object.keys(values).some(key => !profile.fields.some(f => f.key === key))) throw new Error('INVALID_DOCUMENT_FIELDS');
   const fields = Object.fromEntries(
-    profile.fields.map(f => {
-      const raw = values[f.key];
-      if (raw !== undefined && typeof raw !== 'string') throw new Error('INVALID_DOCUMENT_FIELDS');
-      if ((raw?.length || 0) > 6000) throw new Error('INPUT_LIMIT');
-      const value = raw?.trim() || null;
-      // Keep the source string. Formatting is a presentation aid, not source verification.
-      const isDate = value && f.key === 'date' && ['memo', 'letter', 'other'].includes(profile.id);
-      const date = isDate ? parseThaiDate(value) : null;
-      return [
-        f.key,
-        {
-          label: f.label,
-          value,
-          ...(value
-            ? { provenance: 'USER_INPUT' }
-            : f.missingAction
-              ? { missingAction: f.missingAction }
-              : { missingAction: 'confirm', placeholder: `[รอยืนยัน: ${f.label}]` }),
-          ...(isDate ? (date ? { formatted: formatThaiDate(date, 'official') } : { review: 'DATE_NEEDS_REVIEW' }) : {}),
-        },
-      ];
-    }),
+    profile.fields
+      .filter(f => !f.invitationOnly || kind.id === 'invitation')
+      .map(f => {
+        const raw = values[f.key];
+        if (raw !== undefined && typeof raw !== 'string') throw new Error('INVALID_DOCUMENT_FIELDS');
+        if ((raw?.length || 0) > 6000) throw new Error('INPUT_LIMIT');
+        const value = raw?.trim() || null;
+        if (profile.id === 'letter' && ['rsvpUrl', 'venueUrl'].includes(f.key)) {
+          const url = invitationUrl(value ?? '');
+          return [
+            f.key,
+            {
+              label: f.label,
+              value: url ? (f.key === 'rsvpUrl' ? 'ใช้ QR ตอบรับท้ายหนังสือ' : 'ใช้ QR แผนที่ท้ายหนังสือ') : null,
+              localOnly: true,
+              ...(url ? { provenance: 'USER_INPUT' } : { missingAction: 'omit' }),
+            },
+          ];
+        }
+        // Keep the source string. Formatting is a presentation aid, not source verification.
+        const isDate = value && ['date', 'rsvpDeadline'].includes(f.key) && ['memo', 'letter', 'other'].includes(profile.id);
+        const date = isDate ? parseThaiDate(value) : null;
+        return [
+          f.key,
+          {
+            label: f.label,
+            value,
+            ...(value
+              ? { provenance: 'USER_INPUT' }
+              : f.missingAction
+                ? { missingAction: f.missingAction }
+                : { missingAction: 'confirm', placeholder: `[รอยืนยัน: ${f.label}]` }),
+            ...(isDate ? (date ? { formatted: formatThaiDate(date, 'official') } : { review: 'DATE_NEEDS_REVIEW' }) : {}),
+          },
+        ];
+      }),
   );
   const sourceText = JSON.stringify(
     {

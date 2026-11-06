@@ -33,6 +33,7 @@ export const errorText: Record<string, string> = localized({
   TASK_NOT_FOUND: 'ไม่พบงานเบื้องหลังนี้ในงานและพื้นที่งานปัจจุบัน',
   SECURE_STORAGE_UNAVAILABLE: 'ยังบันทึกข้อมูลบัญชีไม่ได้ ตรวจว่าปลดล็อกเครื่องแล้วลองใหม่ หากยังไม่ได้ให้แจ้งผู้ดูแล',
   INVALID_DOCUMENT_TOOL: 'ชนิดเครื่องมือร่างเอกสารไม่ถูกต้อง หรือ Skill ที่เลือกไม่ตรงกับเครื่องมือ',
+  INVALID_INVITATION_URL: 'กรอกลิงก์ http:// หรือ https:// ที่ถูกต้อง',
   INVALID_DOCUMENT_VARIANT: 'ชนิดเอกสารย่อยไม่ถูกต้อง กรุณาเลือกใหม่',
   INVALID_DOCUMENT_FIELDS: 'ข้อมูลฟอร์มร่างเอกสารไม่ถูกต้อง กรุณาตรวจช่องที่กรอก',
   INVALID_DOCUMENT_SOURCE_ROLE: 'กรุณาเลือกใช้ไฟล์เป็นต้นเรื่องหรือแบบฟอร์มตัวอย่าง',

@@ -1,4 +1,17 @@
 export const documentToolsEn: Record<string, string> = {
+  'ตำแหน่ง / หน่วยงานผู้รับ': 'Recipient position / organization',
+  วันปิดตอบรับ: 'RSVP deadline',
+  'ระบุปีเต็ม แยกจากวันจัดงาน': 'Include the full year, separately from the event date',
+  ลิงก์ตอบรับเข้าร่วมงาน: 'RSVP link',
+  ลิงก์แผนที่สถานที่จัดงาน: 'Venue map link',
+  'QR สำหรับหนังสือเชิญ': 'Invitation QR codes',
+  'สร้าง QR ในเครื่องจากลิงก์ที่กรอก เว้นว่างได้': 'Create QR codes locally from your links. Optional.',
+  'กรอกลิงก์ http:// หรือ https:// ที่ถูกต้อง': 'Enter a valid http:// or https:// link',
+  'QR ตอบรับเข้าร่วมงาน': 'RSVP QR code',
+  'QR แผนที่สถานที่จัดงาน': 'Venue map QR code',
+  'สร้าง QR ไม่ได้ กรุณาตรวจลิงก์อีกครั้ง': 'Could not create the QR code. Check the link.',
+  'หนังสือเชิญใช้มาตรฐาน STeP ทั้งภาษาและการจัดหน้า': 'Invitations use the STeP writing and layout standard',
+
   ร่างเอกสารอื่น: 'Draft another document',
   'ประกาศ คำสั่ง หนังสือรับรอง รายงาน ข้อตกลง หรือระบุแบบที่ต้องการ':
     'Announcements, orders, certificates, reports, draft agreements or your own format',

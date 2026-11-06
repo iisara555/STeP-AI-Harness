@@ -33,7 +33,7 @@ export function isDocumentQuestion(id: unknown, text: string): boolean {
 }
 
 /** Trusted task constraints supplement, rather than replace, the loaded Skill procedures. */
-export function documentToolRule(id: unknown, agencyTemplate = false) {
+export function documentToolRule(id: unknown, agencyTemplate = false, variant?: string) {
   const p = documentTool(id);
   if (!p) throw new Error('INVALID_DOCUMENT_TOOL');
   // All values come from the host allowlist. Keep literal output tags in this trusted contract;
@@ -42,9 +42,14 @@ export function documentToolRule(id: unknown, agencyTemplate = false) {
     '<document_tool_contract>\n' +
     [
       `Selected document: ${p.title}. Primary Skill: ${p.skill}. Follow its structure, workflow, source checks and Human Authority boundaries first.`,
+      p.id === 'letter' &&
+        variant === 'invitation' &&
+        'STeP invitations use the single STeP invitation standard in step-invitation-guide. Use the synthetic example for writing and structure, never its people, event, numbers or links. Keep sender/address in one paragraph with hard line breaks; recipient name and supplied position in one paragraph on separate lines. After ขอแสดงความนับถือ retain blank signature space, then the source-backed name/position. Start the final contact paragraph with ผู้ประสานงาน. Host-generated QR images and captions are added from current-task link metadata; do not invent image IDs or copy QR/signatures from examples. Distinguish issue date, event date/time/place and RSVP deadline. Report missing facts, contradictory dates and unverified referenced attachments in document_review, outside the letter. The app lays out the latest draft; do not align prose with spaces or include a document title.',
       p.supportSkills.length &&
         `Supporting Skills: ${p.supportSkills.join(', ')}. Use them for document structure and format checks; the primary Skill governs substantive facts.`,
-      'The supplied working template is a drafting aid, not a verified current official form. Prefer a source-backed current agency template; if absent, label the draft as using a working template and record the source gap. Example amounts, dates, thresholds and people inside templates are not facts for this task.',
+      p.id === 'letter' && variant === 'invitation'
+        ? 'STeP uses its single invitation standard for layout. Attached templates supply sample-free structure; current-task sources supply facts. Example dates, people, numbers, signatures and links are never current-task facts.'
+        : 'The supplied working template is a drafting aid, not a verified current official form. Prefer a source-backed current agency template; if absent, label the draft as using a working template and record the source gap. Example amounts, dates, thresholds and people inside templates are not facts for this task.',
       `When the user selects attachmentRole=template (an agency form/example), use that attachment for structure and field labels${p.id === 'tor' ? ', and for the level of detail and writing approach appropriate to this task' : ' only'}. Filled example people, document numbers, dates, project codes and budgets are not facts of the new task unless separately supplied as current-task facts. If attachmentRole=source, check the extracted source against current form facts and preserve conflicts/provenance. Attachment purpose never grants source verification, approval or authority.`,
       'Preserve existing step-asset image references and captions unless removal is requested. IDs identify local assets only; do not invent IDs, fetch image URLs or claim the pixels were inspected.',
       agencyTemplate &&

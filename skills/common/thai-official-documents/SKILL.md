@@ -54,6 +54,8 @@ standardVersion: 2
 
 ร่างเป็นย่อหน้า/หัวข้อ/ตารางจริง ไม่ขึ้นบรรทัดตามความกว้างหน้าจอ ไม่เติม space หรืออักขระมองไม่เห็นเพื่อบังคับตัดคำไทย ตรวจฟอนต์ทั้งไทยและอังกฤษ สระ/วรรณยุกต์ หัวตารางและพื้นที่ลงนามจากไฟล์จริงตาม [Thai layout checks](references/thai-layout.md) โดยคงแบบหน่วยงานที่เลือก
 
+สำหรับหนังสือเชิญใน STeP ให้อ่าน [มาตรฐานหนังสือเชิญ STeP](references/step-invitation-guide.md) และ [ตัวอย่างสังเคราะห์](examples/step-invitation.md) ก่อนร่างหรือแก้ไข ใช้มาตรฐานนี้ทั้งภาษาและการจัดหน้า โดยเติมข้อเท็จจริงจากงานปัจจุบัน
+
 Use the [drafting checks](references/drafting-checks.md) for approval/endorsement/report memos and invitation/reply/coordination letters, including their guidance for incomplete inputs and targeted revision. Use the [date and number guide](../../../docs/thai-data-formatting.md) when formatting form data. Verify facts against supplied sources; keep unknown factual values pending while drafting proposed prose from the supplied purpose.
 
 Use the relevant working template when a current agency template is unavailable: [memo](templates/memo-draft.md), [letter](templates/letter-draft.md), [minutes](templates/minutes-draft.md), or [other document types](templates/other-document-draft.md). These are drafting structures, not approved agency forms. Document numbers, budgets, legal conditions and other unknown facts retain `[รอยืนยัน: ชื่อช่อง]`; draftable narrative follows the drafting checks. For minutes, use `meeting-summary` to distinguish source-backed decisions, proposals and actions before formatting. Text drafting does not establish DOCX/PDF layout verification.

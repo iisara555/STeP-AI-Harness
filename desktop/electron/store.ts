@@ -232,6 +232,12 @@ export class Store {
       }
     const appearanceInput = presentation === undefined ? session.presentation : presentation;
     const appearance = appearanceInput === undefined ? undefined : resolvePresentation(appearanceInput, session.documentTool || false);
+    if (
+      appearance?.invitation &&
+      (session.documentTool !== 'letter' || session.documentVariant !== 'invitation' || session.documentTemplate)
+    )
+      throw new Error('INVALID_DOCUMENT_PRESENTATION');
+    if (session.documentVariant === 'invitation' && !appearance?.invitation) throw new Error('INVALID_DOCUMENT_PRESENTATION');
     if (session.documentTemplate && appearance) {
       const original = resolvePresentation(session.presentation, session.documentTool || true);
       if (
