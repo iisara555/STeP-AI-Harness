@@ -72,11 +72,34 @@ export function invitationParts(document: DraftNode) {
   };
 }
 
+const MISSING_VALUE = /\[รอยืนยัน:[ \t]*([^\]\n]+)\]/g;
+const PROPOSED_WORDING = /\[AI_PROPOSED\][ \t]*/g;
+const EMPTY_FIELD_LINE =
+  /^(?:(?:ที่|วันที่|เรียน|อ้างถึง|สิ่งที่ส่งมาด้วย|ผู้ประสานงาน|โทรศัพท์|โทร\.|ไปรษณีย์อิเล็กทรอนิกส์|อีเมล)\s*:?\s*)?(?:\(\s*\))?\s*\\?$/;
+
+/** A new model draft may still use the general letter's status markers. Keep any inline gap editable. */
+export function invitationDraft(draft: string): string {
+  const wording = draft.replace(PROPOSED_WORDING, '');
+  if (!wording.includes('[รอยืนยัน:')) return wording.trim();
+  return wording
+    .split('\n')
+    .map(line => {
+      const blank = line.replace(MISSING_VALUE, '');
+      if (blank === line) return line;
+      return EMPTY_FIELD_LINE.test(blank.trim()) ? '' : line.replace(MISSING_VALUE, '________');
+    })
+    .join('\n')
+    .replace(/\\(?=\n(?:\n|$)|$)/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 /** Local consistency hints are evidence for review, never edits or a certification of the source. */
 export function invitationReview(draft: string): string[] {
   const notes: string[] = [];
-  const pending = [...new Set(draft.match(/\[รอยืนยัน:[^\]\n]+\]/g) || [])];
+  const pending = [...new Set([...draft.matchAll(MISSING_VALUE)].map(match => match[1].trim()).filter(Boolean))];
   if (pending.length) notes.push('ข้อมูลที่ยังต้องยืนยัน: ' + pending.join(', '));
+  if (draft.match(PROPOSED_WORDING)) notes.push('ถ้อยคำที่ AI เสนอเป็นร่างสำหรับเจ้าของเรื่องพิจารณา');
   const months = 'มกราคม|กุมภาพันธ์|มีนาคม|เมษายน|พฤษภาคม|มิถุนายน|กรกฎาคม|สิงหาคม|กันยายน|ตุลาคม|พฤศจิกายน|ธันวาคม';
   const days = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
   const matches = [

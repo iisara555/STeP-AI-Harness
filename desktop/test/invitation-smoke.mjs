@@ -99,6 +99,12 @@ try {
     .click();
   const form = page.locator('.document-form');
   await form.getByLabel('ชนิด / เรื่อง', { exact: true }).selectOption('invitation');
+  const number = form.getByLabel('เลขหนังสือ', { exact: true });
+  await expect(number).toHaveAttribute('placeholder', 'เช่น ศธ 0000/0123');
+  await expect(number).toHaveValue('');
+  await expect(form.getByLabel('วันปิดตอบรับ', { exact: true })).toHaveAttribute('placeholder', 'เช่น 15 มกราคม 2570');
+  await expect(form.getByLabel('ลิงก์ตอบรับเข้าร่วมงาน')).toHaveAttribute('placeholder', 'https://example.org/rsvp');
+  await expect(form.getByRole('button', { name: 'ให้ AI ร่างเอกสาร' })).toBeDisabled();
   await form.getByLabel('เรื่อง', { exact: true }).fill('กิจกรรมสังเคราะห์');
   await form.getByLabel('ตำแหน่ง / หน่วยงานผู้รับ').fill('ตำแหน่งสังเคราะห์');
   await form.getByLabel('วันปิดตอบรับ', { exact: true }).fill('15 มกราคม 2570');
@@ -148,6 +154,7 @@ try {
       const xml = (await zip.file('word/document.xml').async('string')).replaceAll('\u200b', '');
       assert.ok(xml.includes('บรรทัดที่เจ้าของแก้ไขเอง'));
       assert.ok(!xml.includes('ผลตรวจสังเคราะห์'));
+      assert.ok(!xml.includes('[รอยืนยัน:') && !xml.includes('ศธ 0000/0123'));
     } else assert.equal(bytes.subarray(0, 5).toString(), '%PDF-');
     if (qa) await copyFile(exported.path, join(qa, 'invitation.' + format));
   }

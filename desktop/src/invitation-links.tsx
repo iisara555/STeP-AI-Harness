@@ -63,6 +63,7 @@ export function InvitationLinks({
               type="url"
               aria-invalid={invalid.includes(key)}
               value={value[key]}
+              placeholder={key === 'rsvpUrl' ? 'https://example.org/rsvp' : 'https://example.org/map'}
               maxLength={2048}
               onChange={e => onChange({ ...value, [key]: e.target.value })}
             />

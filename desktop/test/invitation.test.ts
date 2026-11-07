@@ -49,6 +49,8 @@ test('invitation intent and subtype are allowlisted independently from model out
   ).fields;
   assert.equal(fields.recipientPosition.provenance, 'USER_INPUT');
   assert.equal(fields.rsvpDeadline.value, '15 มกราคม 2570');
+  assert.deepEqual(fields.number, { label: 'เลขหนังสือ', value: null, missingAction: 'confirm' });
+  assert.match(JSON.parse(documentRequest('letter', {}, 'external').sourceText).fields.number.placeholder, /รอยืนยัน/);
   const qr = documentRequest(
     'letter',
     { rsvpUrl: 'https://example.org/rsvp?code=0007', venueUrl: 'https://example.org/map' },

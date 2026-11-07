@@ -79,6 +79,8 @@ Release validation reproduced the sidebar's outdated expectation after explicit 
 
 ## In progress
 
+- **Invitation field examples and cleaner drafts (2026-11-07, source only)**: the form shows distinct Thai/English examples as placeholders, with empty values and QR links kept separate from sample text. The Skill and Desktop contract leave missing facts blank and place the follow-up list in the review. New model proposals with legacy status markers move those details into the review before export. Saved drafts and targeted user edits keep their existing content. Publication awaits owner instruction.
+
 - **STeP invitation acceptance**: the 0.6.30 release includes the verified layout and local QR flow. Owner review of wording from an employee-selected AI and employee-document/device acceptance remain open. No explicit live evaluation provider was configured for #309.
 
 - **Desktop 0.6.28 release validation (2026-11-03)**: #303 passed all CI. #304 passed Desktop and full macOS Electron checks, but its Windows root run hit `ENOENT` while the archive guard traversed `tmp/unit-test-workspace` concurrently with installer cleanup. The release branch retains the export-rule guard, tests tracked nested attributes and ignores disposable workspace contents. Validate the combined source and release metadata before publication.
