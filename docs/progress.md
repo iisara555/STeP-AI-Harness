@@ -79,6 +79,8 @@ Release validation reproduced the sidebar's outdated expectation after explicit 
 
 ## In progress
 
+- **Project proposal drafting guide and consistency checks (2026-11-07)**: upgraded `skills/pm/project-plan/` (`SKILL.md`, `references/project-writing-guide.md`, `templates/project-proposal-template.md`, `examples/proposal-good-output.md`) and the Desktop `project` drafting profile (`desktop/src/document-tools.ts`, `desktop/src/project-proposal.ts`, `desktop/electron/document-tools.ts`, `desktop/electron/service.ts`) with CMU 3-paragraph rationale structure, 5 proposal subtypes (`proposal`, `policy`, `problem`, `innovation`, `logframe`), measurable behavioral verb guidance, PDCA + disbursement schedule tables, 3-category budget structure, 4D Output/Outcome indicators, 4-level approval blocks, and deterministic review checks for vague objective verbs, rationale paragraph count, and target-vs-budget headcount consistency.
+
 - **STeP invitation acceptance**: the 0.6.30 release includes the verified layout and local QR flow. Owner review of wording from an employee-selected AI and employee-document/device acceptance remain open. No explicit live evaluation provider was configured for #309.
 
 - **Desktop 0.6.28 release validation (2026-11-03)**: #303 passed all CI. #304 passed Desktop and full macOS Electron checks, but its Windows root run hit `ENOENT` while the archive guard traversed `tmp/unit-test-workspace` concurrently with installer cleanup. The release branch retains the export-rule guard, tests tracked nested attributes and ignores disposable workspace contents. Validate the combined source and release metadata before publication.

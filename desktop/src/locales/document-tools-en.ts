@@ -233,6 +233,20 @@ export const documentToolsEn: Record<string, string> = {
   'ผู้ประสานงาน / ช่องทางติดต่อ': 'Contact person / channel',
   'แบบหน่วยงาน / แหล่งอ้างอิง': 'Agency form / sources',
   ข้อเสนอโครงการเพื่อพิจารณา: 'Project proposal for review',
+  'โครงการตามนโยบาย / ยุทธศาสตร์': 'Policy / strategy-driven project',
+  'โครงการแก้ไขปัญหา / พัฒนา': 'Problem-solving / improvement project',
+  'โครงการริเริ่มสร้างสรรค์ / นวัตกรรม': 'Creative / innovation initiative',
+  'ข้อเสนอโครงการแบบตารางเหตุผลต่อเนื่อง (Logframe 4×4)': 'Logical Framework project proposal (4×4 matrix)',
+  'เว้นได้ AI ช่วยขึ้นร่าง 3 ย่อหน้า (ที่มา/ปัญหา → แนวทางแก้ไข → จุดมุ่งหมายโครงการ)':
+    'Optional: AI drafts 3 paragraphs (background/problem → approach → project purpose)',
+  'ใช้คำกริยาเชิงพฤติกรรมที่วัดผลได้ เช่น เพื่อพัฒนาศักยภาพ เพื่อประเมิน เพื่อสร้างเสริม':
+    'Use measurable action verbs such as to develop capacity, to evaluate or to strengthen',
+  'แยกผู้เข้าร่วม (ภายใน/ภายนอก) และคณะผู้ดำเนินงาน': 'Separate participants (internal/external) and operating staff',
+  'แบ่ง 4 ระยะ (PDCA: เตรียมการ → ดำเนินการ → ติดตามประเมินผล → สรุปผล)': 'Organize into 4 PDCA phases (Plan → Do → Check → Act)',
+  'แยกหมวดค่าตอบแทน ค่าใช้สอย ค่าวัสดุ พร้อมสูตรคำนวณที่มีหลักฐาน':
+    'Group into remuneration, operating and materials with source-backed formulas',
+  'ตัวชี้วัดผลผลิต (Output) และผลลัพธ์ (Outcome) เชิงปริมาณ คุณภาพ เวลา ต้นทุน':
+    'Output and Outcome indicators across quantity, quality, time and cost',
   หลักการและเหตุผล: 'Rationale',
   'กลุ่มเป้าหมาย / จำนวนที่มีหลักฐาน': 'Target group / source-backed count',
   'กิจกรรม / วิธีดำเนินงาน': 'Activities / implementation',
