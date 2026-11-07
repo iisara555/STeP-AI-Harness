@@ -747,9 +747,17 @@ export default function App() {
   useEffect(() => {
     if (editor && !dirtyRef.current) {
       editor.commands.setContent(session?.document || toDoc(session?.draft || ''), { emitUpdate: false });
-      setPresentation(resolvePresentation(session?.presentation, session?.documentTool || false));
     }
   }, [editor, selected, session?.revision]);
+  useEffect(() => {
+    const saved = session?.presentation;
+    // The host sets the invitation layout before the first proposal, without changing the draft revision.
+    // Adopt a layout change without resetting unsaved editor text or QR edits within the same layout.
+    if (dirtyRef.current && Boolean(saved?.invitation) === Boolean(presentationRef.current.invitation)) return;
+    const next = resolvePresentation(saved, session?.documentTool || false);
+    presentationRef.current = next;
+    setPresentation(next);
+  }, [selected, session?.revision, session?.documentTool, session?.presentation]);
   useEffect(() => {
     editor?.setEditable(!draftAcceptPending, false);
   }, [editor, draftAcceptPending]);

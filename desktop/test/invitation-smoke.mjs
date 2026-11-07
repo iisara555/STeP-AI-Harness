@@ -120,8 +120,42 @@ try {
   const session = (await snapshot()).sessions.find(s => s.documentVariant === 'invitation');
   assert.ok(calls.at(-1).includes('STeP invitations use the single STeP invitation standard'));
   assert.ok(session.proposals[0].sources.some(p => p.endsWith('step-invitation-guide.md')));
-  await page.getByRole('button', { name: 'ใช้ร่างนี้', exact: true }).click();
   const editor = page.locator('.tiptap');
+  const accept = page.getByRole('button', { name: 'ใช้ร่างนี้', exact: true });
+  const format = page.getByLabel('รูปแบบส่งออก');
+  const exportDraft = 'ร่างสังเคราะห์ที่แก้ก่อนรับข้อเสนอ';
+  await expect(accept).toBeVisible();
+  await editor.fill(exportDraft);
+  await format.selectOption('pdf');
+  await page.getByRole('button', { name: 'ส่งออก', exact: true }).click();
+  const invalidLayout = page.getByRole('alert').filter({ hasText: 'การตั้งค่ารูปแบบเอกสารไม่ถูกต้อง' });
+  const exportStatus = page.locator('.document-export-info');
+  await expect(exportStatus.or(invalidLayout)).toBeVisible();
+  assert.equal(await invalidLayout.count(), 0, 'exporting the edited invitation before acceptance must save its STeP presentation');
+  await expect(exportStatus).toContainText('TH SarabunPSK');
+  const current = async () => (await snapshot()).sessions.find(s => s.id === session.id);
+  assert.equal((await current()).draft, exportDraft);
+  assert.deepEqual((await current()).presentation.invitation, session.presentation.invitation);
+
+  // A chat beside the pending proposal also saves edits first and keeps the invitation and its QR links.
+  const unsaved = 'ร่างสังเคราะห์ที่แก้ก่อนคุยต่อ';
+  const followUp = 'ควรตรวจข้อมูลส่วนไหนก่อนส่งเอกสารนี้?';
+  await editor.fill(unsaved);
+  const composer = page.locator('.composer textarea');
+  await composer.fill(followUp);
+  await composer.press('Enter');
+  const answer = page.getByText('Synthetic connection check', { exact: true });
+  await expect(consent.or(answer)).toBeVisible({ timeout: 30000 });
+  if (await consent.isVisible()) await consent.click();
+  await expect(answer).toBeVisible({ timeout: 30000 });
+  assert.equal((await current()).draft, unsaved);
+  assert.equal((await current()).documentVariant, 'invitation');
+  assert.deepEqual((await current()).presentation.invitation, session.presentation.invitation);
+  await expect(accept).toBeVisible();
+  await accept.click();
+  await page.getByRole('button', { name: 'ยืนยันใช้ร่างนี้', exact: true }).click();
+  await expect(accept).toHaveCount(0);
+  await format.selectOption('docx');
   await editor.click();
   await editor.press(process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End');
   await editor.press('Enter');
@@ -187,9 +221,7 @@ try {
   const other = (await snapshot()).sessions.find(s => s.id !== session.id && s.documentVariant === 'invitation');
   assert.deepEqual(other.presentation.invitation, { rsvpUrl: '', venueUrl: '' }, 'new chat invitations do not inherit another event QR');
   assert.deepEqual(errors, []);
-  console.log(
-    'PASS: STeP invitation form/chat, QR validation/preview, revision persistence, latest-edit DOCX/PDF and long-letter exports.',
-  );
+  console.log('PASS: STeP invitation form/chat, export and follow-up before acceptance, QR persistence, latest edits and long letters.');
 } catch (error) {
   if (app && qa) await (await app.firstWindow()).screenshot({ path: join(qa, 'failure.png'), fullPage: true }).catch(() => {});
   throw error;
@@ -197,11 +229,11 @@ try {
   if (app) {
     await app
       .evaluate(({ BrowserWindow }) => {
-        for (const window of BrowserWindow.getAllWindows()) window.webContents.removeAllListeners('will-prevent-unload');
+        for (const window of BrowserWindow.getAllWindows()) window.destroy();
       })
       .catch(() => {});
     await app.close().catch(() => {});
   }
   await new Promise(r => server.close(r));
-  await rm(home, { recursive: true, force: true });
+  await rm(home, { recursive: true, force: true, maxRetries: 5 });
 }
