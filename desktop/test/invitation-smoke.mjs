@@ -158,6 +158,44 @@ try {
     } else assert.equal(bytes.subarray(0, 5).toString(), '%PDF-');
     if (qa) await copyFile(exported.path, join(qa, 'invitation.' + format));
   }
+  const register = page.locator('.export-settings .invitation-register');
+  await register.getByRole('button', { name: 'เพิ่มผู้รับ / หน่วยงาน', exact: true }).click();
+  await register.getByRole('button', { name: 'เพิ่มผู้รับ / หน่วยงาน', exact: true }).click();
+  const rows = register.locator('.invitation-recipient-row');
+  await expect(rows).toHaveCount(2);
+  await rows.nth(0).getByLabel('เลขหนังสือรายฉบับ').fill('ศธ 0000/0201');
+  await rows.nth(0).getByLabel('ผู้รับ (เรียน)').fill('ผู้อำนวยการสำนักงานตัวอย่างที่ 1');
+  await rows.nth(0).getByLabel('ตำแหน่ง / หน่วยงานผู้รับ').fill('สำนักงานตัวอย่างที่ 1');
+  await rows.nth(0).getByLabel('จำนวนที่นั่งที่เชิญ').fill('2');
+  await rows.nth(0).getByLabel('สถานะตอบรับ').selectOption('confirmed');
+  await rows.nth(1).getByLabel('เลขหนังสือรายฉบับ').fill('ศธ 0000/0202');
+  await rows.nth(1).getByLabel('ผู้รับ (เรียน)').fill('คณบดีคณะตัวอย่างที่ 2');
+  await rows.nth(1).getByLabel('ตำแหน่ง / หน่วยงานผู้รับ').fill('มหาวิทยาลัยตัวอย่างที่ 2');
+  await rows.nth(1).getByLabel('จำนวนที่นั่งที่เชิญ').fill('3');
+  await rows.nth(1).getByLabel('สถานะตอบรับ').selectOption('delegate');
+  await rows.nth(1).getByLabel('จำนวนผู้ยืนยันเข้าร่วม').fill('1');
+  await expect(register.locator('.invitation-summary')).toContainText(
+    'หนังสือ 2 ฉบับ · ที่นั่งเชิญรวม 5 ที่นั่ง · ตอบรับแล้ว 2 ฉบับ (ยืนยันเข้าร่วม 3 คน)',
+  );
+  await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+  await expect
+    .poll(async () => (await snapshot()).sessions.find(s => s.id === session.id)?.presentation?.invitation?.recipients?.length)
+    .toBe(2);
+  const batchDocx = await page.evaluate(({ id }) => window.step.call('export', { id, format: 'docx' }), { id: session.id });
+  assert.equal(batchDocx.count, 2);
+  assert.equal(batchDocx.paths.length, 2);
+  for (const [index, expectedText] of [
+    [0, 'ผู้อำนวยการสำนักงานตัวอย่างที่ 1'],
+    [1, 'คณบดีคณะตัวอย่างที่ 2'],
+  ]) {
+    const zip = await JSZip.loadAsync(await readFile(batchDocx.paths[index]));
+    const xml = (await zip.file('word/document.xml').async('string')).replaceAll('\u200b', '');
+    assert.ok(xml.includes(expectedText));
+  }
+  const registerXlsx = await page.evaluate(({ id }) => window.step.call('export', { id, format: 'xlsx' }), { id: session.id });
+  const xlsxZip = await JSZip.loadAsync(await readFile(registerXlsx.path));
+  const workbookXml = await xlsxZip.file('xl/workbook.xml').async('string');
+  assert.ok(workbookXml.includes('ทะเบียนหนังสือเชิญ'));
   // A long letter retains the signature/contact/QR group while its narrative flows to later pages.
   await page.evaluate(async id => {
     const current = (await window.step.call('snapshot')).sessions.find(s => s.id === id);

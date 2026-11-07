@@ -1,6 +1,6 @@
 import { parseThaiDate, formatThaiDate } from './thai-date';
 import { stepOrganizationReference } from './organization-profile';
-import { invitationUrl } from './invitation';
+import { invitationSummary, invitationUrl, resolveInvitation, type InvitationRecipient } from './invitation';
 
 /** Fixed document profiles: the host selects actual Skills and working templates from this allowlist. */
 export type DocumentToolId = 'tor' | 'memo' | 'letter' | 'project' | 'minutes' | 'other';
@@ -244,6 +244,7 @@ export function documentRequest(
   values: Record<string, string>,
   variant?: string,
   attachmentRole: DocumentAttachmentRole = 'source',
+  recipients?: InvitationRecipient[],
 ) {
   const profile = documentTool(id);
   if (!profile) throw new Error('INVALID_DOCUMENT_TOOL');
@@ -251,6 +252,9 @@ export function documentRequest(
   const kind = profile.variants.find(v => v.id === (variant || profile.variants[0].id));
   if (!kind) throw new Error('INVALID_DOCUMENT_VARIANT');
   const invitation = profile.id === 'letter' && kind.id === 'invitation';
+  if (recipients !== undefined && !invitation) throw new Error('INVALID_DOCUMENT_PRESENTATION');
+  const resolvedRecipients =
+    invitation && recipients?.length ? resolveInvitation({ rsvpUrl: '', venueUrl: '', recipients }).recipients : undefined;
   if (Object.keys(values).some(key => !profile.fields.some(f => f.key === key))) throw new Error('INVALID_DOCUMENT_FIELDS');
   const fields = Object.fromEntries(
     profile.fields
@@ -290,6 +294,7 @@ export function documentRequest(
         ];
       }),
   );
+  const registerSummary = resolvedRecipients?.length ? invitationSummary(resolvedRecipients) : undefined;
   const sourceText = JSON.stringify(
     {
       document: profile.title,
@@ -297,6 +302,15 @@ export function documentRequest(
       attachmentRole,
       organizationReference: stepOrganizationReference,
       fields,
+      ...(registerSummary
+        ? {
+            invitationRegister: {
+              letters: registerSummary.letters,
+              invitedSeats: registerSummary.invitedSeats,
+              localOnly: true,
+            },
+          }
+        : {}),
     },
     null,
     2,

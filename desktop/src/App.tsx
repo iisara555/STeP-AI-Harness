@@ -747,9 +747,15 @@ export default function App() {
   useEffect(() => {
     if (editor && !dirtyRef.current) {
       editor.commands.setContent(session?.document || toDoc(session?.draft || ''), { emitUpdate: false });
-      setPresentation(resolvePresentation(session?.presentation, session?.documentTool || false));
     }
   }, [editor, selected, session?.revision]);
+  useEffect(() => {
+    const saved = session?.presentation;
+    if (dirtyRef.current && Boolean(saved?.invitation) === Boolean(presentationRef.current.invitation)) return;
+    const next = resolvePresentation(saved, session?.documentTool || false);
+    presentationRef.current = next;
+    setPresentation(next);
+  }, [selected, session?.revision, session?.documentTool, session?.presentation]);
   useEffect(() => {
     editor?.setEditable(!draftAcceptPending, false);
   }, [editor, draftAcceptPending]);
@@ -893,7 +899,7 @@ export default function App() {
     if (form.source && !form.source.file.usable) throw new Error('ATTACHMENT_NOT_APPROVED');
     if (form.source && form.sourceRole !== 'template' && form.source.file.sourceUsable === false)
       throw new Error('ATTACHMENT_NOT_APPROVED');
-    const request = documentRequest(tool, form.values, form.variant, form.source ? form.sourceRole : 'source');
+    const request = documentRequest(tool, form.values, form.variant, form.source ? form.sourceRole : 'source', form.recipients);
     const id = form.source?.sessionId || (await createDocumentTask(tool))?.id;
     if (!id) return;
     await save();
@@ -927,7 +933,11 @@ export default function App() {
       false,
       form.variant,
       tool === 'letter' && form.variant === 'invitation'
-        ? { rsvpUrl: form.values.rsvpUrl || '', venueUrl: form.values.venueUrl || '' }
+        ? {
+            rsvpUrl: form.values.rsvpUrl || '',
+            venueUrl: form.values.venueUrl || '',
+            ...(form.recipients?.length ? { recipients: form.recipients } : {}),
+          }
         : undefined,
     );
   }
@@ -3646,7 +3656,7 @@ export default function App() {
                         <p key={path}>{path}</p>
                       ))}
                     </details>
-                    {exportSettings && ['docx', 'pdf'].includes(format) && (
+                    {exportSettings && (['docx', 'pdf'].includes(format) || Boolean(presentation.invitation)) && (
                       <div className="export-settings" id="export-settings">
                         {presentation.invitation && (
                           <InvitationLinks
@@ -3740,7 +3750,7 @@ export default function App() {
                           </option>
                         ))}
                       </select>
-                      {['docx', 'pdf'].includes(format) && (
+                      {(['docx', 'pdf'].includes(format) || Boolean(presentation.invitation)) && (
                         <button
                           className="icon"
                           aria-label={t('ตั้งค่าส่งออก')}

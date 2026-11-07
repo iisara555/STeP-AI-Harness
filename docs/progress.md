@@ -79,6 +79,8 @@ Release validation reproduced the sidebar's outdated expectation after explicit 
 
 ## In progress
 
+- **Multi-organization invitation register and per-recipient exports (2026-11-07, source only)**: add a local recipient and RSVP register for STeP invitations that separates letter count from seat count, records per-letter document numbers, addressees, positions, invited seats, RSVP status and confirmed attendees, exports individual Word/PDF letters per recipient, and exports the register worksheet to Excel (`.xlsx`). Recipient names and document numbers stay local when drafting. Publication awaits owner instruction.
+
 - **Invitation field examples and cleaner drafts (2026-11-07, source only)**: the form shows distinct Thai/English examples as placeholders, with empty values and QR links kept separate from sample text. The Skill and Desktop contract leave missing facts blank and place the follow-up list in the review. New model proposals with legacy status markers move those details into the review before export. Saved drafts and targeted user edits keep their existing content. Publication awaits owner instruction.
 
 - **STeP invitation acceptance**: the 0.6.30 release includes the verified layout and local QR flow. Owner review of wording from an employee-selected AI and employee-document/device acceptance remain open. No explicit live evaluation provider was configured for #309.

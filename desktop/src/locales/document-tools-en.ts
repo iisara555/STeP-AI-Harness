@@ -11,6 +11,25 @@ export const documentToolsEn: Record<string, string> = {
   'QR แผนที่สถานที่จัดงาน': 'Venue map QR code',
   'สร้าง QR ไม่ได้ กรุณาตรวจลิงก์อีกครั้ง': 'Could not create the QR code. Check the link.',
   'หนังสือเชิญใช้มาตรฐาน STeP ทั้งภาษาและการจัดหน้า': 'Invitations use the STeP writing and layout standard',
+  'ทะเบียนหนังสือเชิญและยอดตอบรับ (หลายหน่วยงาน)': 'Invitation & RSVP register (multiple organizations)',
+  'แยกจำนวนหนังสือจากจำนวนที่นั่ง เช่น หนังสือ 1 ฉบับเชิญผู้แทน 2 คน เพื่อสรุปยอดจัดงานและส่งออกรายฉบับ':
+    'Separate letter count from seat count (e.g. one letter inviting two representatives) to track attendance and export per recipient',
+  'สรุปยอดทะเบียน: หนังสือ {0} ฉบับ · ที่นั่งเชิญรวม {1} ที่นั่ง · ตอบรับแล้ว {2} ฉบับ (ยืนยันเข้าร่วม {3} คน) · รอตอบรับ {4} ฉบับ · ขัดข้อง {5} ฉบับ':
+    'Register summary: {0} letters · {1} invited seats · {2} responded ({3} confirmed attendees) · {4} pending · {5} declined',
+  'หนังสือฉบับที่ {0}': 'Letter {0}',
+  'ลบผู้รับลำดับที่ {0}': 'Remove recipient {0}',
+  เลขหนังสือรายฉบับ: 'Per-letter number',
+  'ผู้รับ (เรียน)': 'Recipient (Addressee)',
+  จำนวนที่นั่งที่เชิญ: 'Invited seats',
+  สถานะตอบรับ: 'RSVP status',
+  รอตอบรับ: 'Pending',
+  ตอบรับเข้าร่วม: 'Confirmed',
+  มอบผู้แทน: 'Sending delegate',
+  ขัดข้อง: 'Declined',
+  จำนวนผู้ยืนยันเข้าร่วม: 'Confirmed attendees',
+  'รายชื่อผู้เข้าร่วม / หมายเหตุ': 'Attendee names / notes',
+  'เช่น ผู้แทน 2 คน หรือหมายเหตุการเข้าร่วม': 'e.g. Two representatives or attendance notes',
+  'เพิ่มผู้รับ / หน่วยงาน': 'Add recipient / organization',
 
   ร่างเอกสารอื่น: 'Draft another document',
   'ประกาศ คำสั่ง หนังสือรับรอง รายงาน ข้อตกลง หรือระบุแบบที่ต้องการ':

@@ -7,6 +7,7 @@ import { t } from './i18n';
 import { skillDisplayName } from './skill-display';
 import { ThaiText } from './thai-text';
 import './document-tools.css';
+import type { InvitationPresentation, InvitationRecipient } from './invitation';
 import { InvitationLinks, invalidInvitationLinks } from './invitation-links';
 
 // Form examples are display text only. They never become form values or source evidence.
@@ -31,6 +32,7 @@ export type DocumentAttachment = { sessionId: string; file: Attachment };
 export type DocumentForm = {
   values: Record<string, string>;
   variant: string;
+  recipients?: InvitationRecipient[];
   source?: DocumentAttachment;
   sourceRole?: DocumentAttachmentRole;
 };
@@ -69,9 +71,14 @@ export function DocumentTools({
   const connected = ready.some(c => c.id === connectionId);
   const disabled = busy || working;
   const invitation = selected === 'letter' && form.variant === 'invitation';
-  const links = { rsvpUrl: form.values.rsvpUrl || '', venueUrl: form.values.venueUrl || '' };
+  const links: InvitationPresentation = {
+    rsvpUrl: form.values.rsvpUrl || '',
+    venueUrl: form.values.venueUrl || '',
+    ...(form.recipients?.length ? { recipients: form.recipients } : {}),
+  };
   const invalidLinks = invitation && invalidInvitationLinks(links).length > 0;
-  const hasInput = Object.values(form.values).some(v => v.trim()) || Boolean(form.source?.file.usable);
+  const hasRecipients = Boolean(invitation && form.recipients?.some(r => r.recipient.trim() || r.position.trim() || r.number.trim()));
+  const hasInput = Object.values(form.values).some(v => v.trim()) || hasRecipients || Boolean(form.source?.file.usable);
   const sourceBlocked = Boolean(
     form.source && (!form.source.file.usable || (form.sourceRole !== 'template' && form.source.file.sourceUsable === false)),
   );
@@ -351,7 +358,16 @@ export function DocumentTools({
         {invitation && (
           <>
             <p className="small muted">{t('หนังสือเชิญใช้มาตรฐาน STeP ทั้งภาษาและการจัดหน้า')}</p>
-            <InvitationLinks value={links} disabled={disabled} onChange={value => update({ values: { ...form.values, ...value } })} />
+            <InvitationLinks
+              value={links}
+              disabled={disabled}
+              onChange={value =>
+                update({
+                  values: { ...form.values, rsvpUrl: value.rsvpUrl, venueUrl: value.venueUrl },
+                  recipients: value.recipients,
+                })
+              }
+            />
           </>
         )}
         <footer className="document-form-actions">

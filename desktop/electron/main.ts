@@ -4747,38 +4747,58 @@ async function main() {
           const workspace = await exportWorkspace.resolve();
           if (!workspace) return { canceled: true };
           if (actions.evaluateActionGate(draftExportAction).status !== 'allowed') throw new Error('ACTION_BLOCKED');
-          const result = await harness.nextOutput({ workspaceDir: workspace, team: s.team, title: s.title, extension: format });
-          const exported = await exportDocument(
-            result.path,
-            format,
-            s.draft,
-            async (html, pageSettings) => {
-              const print = new BrowserWindow({
-                show: false,
-                webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, javascript: false },
+          const recipients =
+            ['docx', 'pdf'].includes(format) && s.presentation?.invitation?.recipients
+              ? s.presentation.invitation.recipients.filter(r => r.recipient.trim() || r.position.trim() || r.number.trim())
+              : [];
+          const renderPdf = async (html: string, pageSettings?: any) => {
+            const print = new BrowserWindow({
+              show: false,
+              webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, javascript: false },
+            });
+            try {
+              await print.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+              return await print.webContents.printToPDF({
+                printBackground: true,
+                pageSize: 'A4',
+                margins: PDF_MARGINS,
+                preferCSSPageSize: true,
+                ...pageSettings,
               });
-              try {
-                await print.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
-                return await print.webContents.printToPDF({
-                  printBackground: true,
-                  pageSize: 'A4',
-                  margins: PDF_MARGINS,
-                  preferCSSPageSize: true,
-                  ...pageSettings,
-                });
-              } finally {
-                print.destroy();
-              }
-            },
-            s.document,
-            {
+            } finally {
+              print.destroy();
+            }
+          };
+          const images = s.document ? documentAssets.resolve(s.id, s.document) : undefined;
+          const items = recipients.length > 1 ? recipients : [recipients[0]];
+          const results: any[] = [];
+          let exported: any;
+          for (const item of items) {
+            const title =
+              recipients.length > 1 && item ? [s.title, item.number, item.recipient || item.position].filter(Boolean).join('-') : s.title;
+            const target = await harness.nextOutput({ workspaceDir: workspace, team: s.team, title, extension: format });
+            exported = await exportDocument(target.path, format, s.draft, renderPdf, s.document, {
               ...(layout ? { font: layout.font, garuda: input.garuda, template } : {}),
               documentTool: s.documentTool,
-              presentation: s.presentation,
-              images: s.document ? documentAssets.resolve(s.id, s.document) : undefined,
-            },
-          );
-          exportPaths.add(result.path);
+              presentation:
+                item && s.presentation?.invitation
+                  ? { ...s.presentation, invitation: { ...s.presentation.invitation, recipients: [item] } }
+                  : s.presentation,
+              images,
+            });
+            exportPaths.add(target.path);
+            results.push(target);
+          }
+          const result = {
+            ...results[0],
+            ...(results.length > 1
+              ? {
+                  paths: results.map(r => r.path),
+                  count: results.length,
+                  filename: `${results[0].filename} (+${results.length - 1})`,
+                }
+              : {}),
+          };
           if (!layout) return result;
           const font = template ? s.documentTemplate!.font : layout.font;
           const fontStatus = await window.webContents

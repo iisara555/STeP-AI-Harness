@@ -1973,7 +1973,7 @@ export class WorkService {
       if (documentOutput) {
         handoff = documentOutput.draft;
         if (draftingTool?.id === 'letter' && session.documentVariant === 'invitation') {
-          const notes = invitationReview(handoff);
+          const notes = invitationReview(handoff, session.presentation?.invitation);
           if (notes.length) documentOutput.review = [documentOutput.review, ...notes.map(note => '- ' + note)].filter(Boolean).join('\n');
           if (!patched && !revising) {
             handoff = invitationDraft(handoff);

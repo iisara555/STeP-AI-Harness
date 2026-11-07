@@ -39,7 +39,14 @@ import { DOCUMENT_PRESETS, resolvePresentation, type DocumentPresentation } from
 import { embedDocumentFonts, documentPrintFontCss } from './document-fonts';
 import { TOR_LAYOUT, torFooterText, torNumberedBlock, torPreset } from './tor-layout';
 import { torPdfFurniture, torWordHeader } from './tor-furniture';
-import { INVITATION_LAYOUT, invitationParts } from '../src/invitation';
+import {
+  INVITATION_LAYOUT,
+  INVITATION_RSVP_LABELS,
+  invitationForRecipient,
+  invitationParts,
+  invitationSummary,
+  type InvitationPresentation,
+} from '../src/invitation';
 import { invitationQrs, type InvitationQr } from './invitation-qr';
 
 export const exportFormats = ['md', 'docx', 'pdf', 'xlsx', 'pptx'] as const;
@@ -1033,12 +1040,69 @@ const numberFormat = (text: string) => {
   return percent ? '0' + places + '%' : (text.includes(',') ? '#,##0' : '0') + places;
 };
 
-async function xlsx(path: string, document: DraftNode) {
+async function xlsx(path: string, document: DraftNode, invitation?: InvitationPresentation) {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'STeP';
   const { lines, tables } = outline(document);
   const font = { name: SCREEN_FONT, size: 12 };
   const border = { style: 'thin' as const, color: { argb: 'FF999999' } };
+  if (invitation?.recipients?.length) {
+    const recipients = invitation.recipients;
+    const summary = invitationSummary(recipients);
+    const sheet = workbook.addWorksheet('ทะเบียนหนังสือเชิญ', { views: [{ state: 'frozen', ySplit: 1 }] });
+    const headers = [
+      'ลำดับ',
+      'เลขหนังสือ',
+      'ผู้รับ (เรียน)',
+      'ตำแหน่ง / หน่วยงาน',
+      'จำนวนที่นั่งที่เชิญ',
+      'สถานะตอบรับ',
+      'จำนวนผู้ยืนยันเข้าร่วม',
+      'รายชื่อผู้เข้าร่วม / หมายเหตุ',
+    ];
+    const rows: (string | number)[][] = [
+      headers,
+      ...recipients.map((r, index) => [
+        index + 1,
+        r.number,
+        r.recipient,
+        r.position,
+        r.seats,
+        INVITATION_RSVP_LABELS[r.status],
+        r.confirmedSeats,
+        r.attendees,
+      ]),
+      [
+        'รวม',
+        `${summary.letters} ฉบับ`,
+        `ตอบรับ ${summary.respondedLetters} · รอ ${summary.pendingLetters}` +
+          (summary.declinedLetters ? ` · ขัดข้อง ${summary.declinedLetters}` : ''),
+        '',
+        summary.invitedSeats,
+        '',
+        summary.confirmedSeats,
+        '',
+      ],
+    ];
+    rows.forEach((cells, rowIndex) => {
+      const isHeader = rowIndex === 0;
+      const isTotal = rowIndex === rows.length - 1;
+      const row = sheet.addRow(cells);
+      row.eachCell({ includeEmpty: true }, cell => {
+        cell.font = isHeader || isTotal ? { ...font, bold: true } : font;
+        cell.border = { top: border, bottom: border, left: border, right: border };
+        cell.alignment = { wrapText: true, vertical: 'top' };
+        if (isHeader) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEEEE' } };
+        else if (isTotal) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F7F6' } };
+        if (typeof cell.value === 'number') cell.numFmt = '#,##0';
+      });
+    });
+    for (let column = 1; column <= headers.length; column++) {
+      const longest = Math.max(...rows.map(row => String(row[column - 1] ?? '').length));
+      sheet.getColumn(column).width = Math.min(Math.max(longest + 4, 10), 60);
+    }
+    sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
+  }
   // Tables first, one per sheet with a header row, filter and frozen header: ready to open in Google Sheets.
   tables.forEach((table, index) => {
     const rows = tableRows(table);
@@ -1197,12 +1261,17 @@ export async function exportDocument(
   }
   if (format === 'md') return writeFile(path, rich ? documentMarkdown(rich) : text, 'utf8');
   // A draft without structure is plain text: one paragraph per line, nothing read as Markdown.
-  const content = rich || plainDocument(text);
+  const baseContent = rich || plainDocument(text);
   const invitation = resolvePresentation(
     options.presentation,
     typeof options.documentTool === 'string' ? options.documentTool : false,
   ).invitation;
   if (invitation && (options.documentTool !== 'letter' || options.template)) throw new Error('INVALID_DOCUMENT_PRESENTATION');
+  const activeRecipient =
+    invitation && ['docx', 'pdf'].includes(format)
+      ? invitation.recipients?.find(r => r.recipient.trim() || r.position.trim() || r.number.trim())
+      : undefined;
+  const content = activeRecipient ? invitationForRecipient(baseContent, activeRecipient) : baseContent;
   const qrs = invitation && ['docx', 'pdf'].includes(format) ? await invitationQrs(invitation) : [];
   const exportLayout = () =>
     invitation
@@ -1259,6 +1328,6 @@ export async function exportDocument(
       ),
     );
   }
-  if (format === 'xlsx') return xlsx(path, content);
+  if (format === 'xlsx') return xlsx(path, content, invitation);
   return pptx(path, content);
 }
