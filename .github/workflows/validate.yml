@@ -120,6 +120,8 @@ jobs:
     # native WebContentsView regressions are caught before a desktop-v* tag is created.
     runs-on: macos-latest
     timeout-minutes: 20
+    env:
+      ELECTRON_MIRROR: https://cdn.npmmirror.com/binaries/electron/
     defaults:
       run:
         working-directory: desktop

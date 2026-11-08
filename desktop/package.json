@@ -193,6 +193,9 @@
     },
     "electronDownload": {
       "force": false,
+      "mirrorOptions": {
+        "mirror": "https://cdn.npmmirror.com/binaries/electron/"
+      },
       "checksums": {
         "electron-v44.4.5-darwin-arm64.zip": "a212eee63ba2f45fd83bd28f77a3e3313a336ad17a4c25adf617942eef5e0e2c",
         "electron-v44.4.5-darwin-x64.zip": "778350cc572c36484dd56c130cae96ad1a9a5b695ba22dd06abd23ba0a46c9de",
