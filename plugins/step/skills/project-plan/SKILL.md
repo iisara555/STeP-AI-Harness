@@ -8,11 +8,11 @@ standardVersion: 2
 
 ## Purpose
 
-แปลงข้อเสนอโครงการ (Proposal), ขอบเขตงาน (TOR) หรืองานวิจัย ให้เป็น **แผนปฏิบัติการโครงการที่ใช้ได้จริง** ซึ่งระบุงวดงาน เส้นทางวิกฤต ความเสี่ยง และจุดอนุมัติ ให้สอดคล้องกับจังหวะการจัดซื้อและการเบิกจ่ายของ STeP
+แปลงข้อเสนอโครงการ (Proposal), ขอบเขตงาน (TOR) หรืองานวิจัย ให้เป็น **ข้อเสนอโครงการเพื่อพิจารณา** หรือ **แผนปฏิบัติการโครงการที่ใช้ได้จริง** ซึ่งระบุงวดงาน เส้นทางวิกฤต ความเสี่ยง และจุดอนุมัติ ให้สอดคล้องกับจังหวะการจัดซื้อและการเบิกจ่ายของ STeP
 
 ใช้กับทีมบริหารโครงการ (PM), โครงการภาครัฐ (PubSec), ทีมบ่มเพาะ (PITI, ISI) และฝ่ายยุทธศาสตร์ (SIT)
 
-รองรับ **ข้อเสนอโครงการเพื่อพิจารณา** ก่อนมีแผนปฏิบัติการ โดยจัดหลักการและเหตุผล วัตถุประสงค์ กิจกรรม งบที่มีหลักฐาน และตัวชี้วัดให้ตรวจกลับได้ ไม่บังคับให้ข้อเสนอเป็น WBS/Gantt อย่างเดียว
+รองรับ **ข้อเสนอโครงการเพื่อพิจารณา** ก่อนมีแผนปฏิบัติการ โดยจัดหลักการและเหตุผล 3 ย่อหน้า วัตถุประสงค์เชิงพฤติกรรม กลุ่มเป้าหมาย ขั้นตอนดำเนินงาน PDCA งบประมาณแยกหมวดที่มีหลักฐาน ตัวชี้วัด Output/Outcome 4 มิติ และสายอนุมัติ 4 ระดับให้ตรวจกลับได้ ไม่บังคับให้ข้อเสนอเป็น WBS/Gantt อย่างเดียว
 
 ## เมื่อควรใช้
 
@@ -47,7 +47,7 @@ standardVersion: 2
 
 - แหล่งหลักคือ **เอกสารโครงการที่ผู้ใช้ให้มา**
 - ระเบียบพัสดุ การเงิน และเงื่อนไขแหล่งทุน ต้อง resolve จาก Controlled Source ใน `../../manifest/documents.yaml` ไม่ hard-code ลงในแผน
-- แม่แบบในโฟลเดอร์นี้: `templates/project-plan-template.md`, `templates/rice-scoring-sheet.md`
+- แม่แบบและคู่มือในโฟลเดอร์นี้: `templates/project-plan-template.md`, `templates/rice-scoring-sheet.md`, [คู่มือการเขียนข้อเสนอโครงการ](references/project-writing-guide.md) (`references/project-writing-guide.md`)
 - ข้อเสนอโครงการใช้ [working template](templates/project-proposal-template.md) เมื่อยังไม่มีแบบหน่วยงาน/แหล่งทุนที่ตรวจฉบับปัจจุบันได้ แม่แบบนี้ไม่ใช่หลักฐานว่าแบบทางการหรือเงื่อนไขงบได้รับการยืนยันแล้ว
 
 ## Workflow
@@ -58,10 +58,10 @@ standardVersion: 2
 
 1. ทำตารางข้อเท็จจริงและแหล่งข้อมูลจากฟอร์ม/ต้นเรื่อง เก็บตัวเลขและขอบเขตตามต้นทาง ฟอร์มเป็น `USER_INPUT` ไม่ใช่ `POLICY` หรือหลักฐานอนุมัติ ข้อมูล OCR/AI ที่ยังไม่ตรวจคง `EXTRACTED_UNVERIFIED`
 2. ตรวจแบบหน่วยงาน เงื่อนไขแหล่งทุน และกฎที่อ้างจาก Controlled Source ตาม Source Gate ถ้ายังขาดให้บอกแหล่งที่ขาด ไม่อ้างจากความจำว่าเป็นกฎปัจจุบัน
-3. Draft the proposal structure: rationale, objectives, target group, activities, timing, budget, indicators, expected outcomes and approval points. Proposed project prose may fill blank rationale, objectives, activities, qualitative indicators/evaluation methods and expected outcomes from the supplied purpose; mark its assumptions as `AI_PROPOSED` in the separate review. Keep quantities, target thresholds, dates, locations, prices, budgets and approval facts pending when absent. Template placeholders are field guides. For revisions, preserve unrequested sections and user edits, applying explicit corrections to the latest draft.
-4. เชื่อมวัตถุประสงค์ → กิจกรรม → ผลผลิต → ตัวชี้วัด/หลักฐาน ห้ามแต่งจำนวนคน เป้าตัวชี้วัด กำหนดเวลา ราคาต่อหน่วย หรือวงเงิน ข้อเสนอเพิ่มเติมติดป้าย `RECOMMENDATION` แยกจากเนื้อหาที่ตกลงแล้ว
-5. ตรวจยอดงบเฉพาะเมื่อมีจำนวน/ราคาในต้นทางครบ ระบุสูตรและ `DERIVED` เมื่อคำนวณเอง เปิดเผย conflict และข้อมูลที่ต้องขอจากเจ้าของเรื่อง/AFP
-6. ส่งร่างเพื่อพิจารณาพร้อมรายการที่ต้องยืนยันและผู้มีอำนาจ ไม่ถือว่าอนุมัติโครงการหรือเบิกงบได้แล้ว
+3. Draft the proposal structure following [project-writing-guide.md](references/project-writing-guide.md): rationale (3 paragraphs: ที่มา/สภาพปัญหา → แนวทางแก้ไข/พัฒนา → สรุปเข้าสู่จุดมุ่งหมายโครงการ, adapted to Policy-based, Problem-based or Creative/Innovation-based context), objectives (`เพื่อ + คำกริยาเชิงพฤติกรรมที่วัดผลได้ + สิ่งที่ต้องการให้เกิดขึ้น + กลุ่มเป้าหมาย`), target group (separating internal/external participants from operating staff), PDCA activities with a disbursement schedule row, timing/venue, 3-category budget (`หมวดค่าตอบแทน`, `หมวดค่าใช้สอย`, `หมวดค่าวัสดุ`), 4D Output/Outcome indicators (เชิงปริมาณ, เชิงคุณภาพ, เชิงเวลา, เชิงต้นทุน), expected outcomes, optional Logical Framework 4×4 matrix when requested, and the 4-level approval sign-off block. Proposed project prose may fill blank rationale, objectives, activities, qualitative indicators/evaluation methods and expected outcomes from the supplied purpose; mark its assumptions as `AI_PROPOSED` in the separate review. Keep quantities, target thresholds, dates, locations, prices, budgets and approval facts pending when absent. Template placeholders are field guides. For revisions, preserve unrequested sections and user edits, applying explicit corrections to the latest draft.
+4. เชื่อมวัตถุประสงค์ → กิจกรรม (PDCA) → ผลผลิต (Output) → ผลลัพธ์ (Outcome) และตรวจคำกริยาวัตถุประสงค์ในผลตรวจ (`document_review`): หากต้นเรื่องหรือร่างใช้คำกริยานามธรรมที่วัดผลยาก (`เพื่อเข้าใจถึง`, `เพื่อทราบถึง`, `เพื่อคุ้นเคยกับ`, `เพื่อซาบซึ้งใน`, `เพื่อรู้ซึ้งถึง`, `เพื่อสนใจใน`, `เพื่อสำนึกใน`, `เพื่อเชื่อถือใน`) ให้แจ้งเตือนใน `document_review` พร้อมเสนอคำกริยาเชิงพฤติกรรมที่วัดผลได้แทน ห้ามแต่งจำนวนคน เป้าตัวชี้วัด กำหนดเวลา ราคาต่อหน่วย หรือวงเงิน ข้อเสนอเพิ่มเติมติดป้าย `RECOMMENDATION` แยกจากเนื้อหาที่ตกลงแล้ว
+5. ตรวจยอดงบเฉพาะเมื่อมีจำนวน/ราคาในต้นทางครบ แสดงสูตรคูณต่อหน่วยและระบุ `DERIVED` เมื่อคำนวณเอง ตรวจความสอดคล้องข้ามหัวข้อระหว่างจำนวนคนในกลุ่มเป้าหมายกับตัวคูณจำนวนคนในหมวดค่าใช้สอย/ค่าวัสดุ เปิดเผย conflict และข้อมูลที่ต้องขอจากเจ้าของเรื่อง/AFP
+6. ส่งร่างเพื่อพิจารณาพร้อมบล็อกสายอนุมัติ 4 ระดับ (ผู้เสนอ → ผู้ตรวจสอบ → ผู้เห็นชอบ → ผู้อนุมัติ ที่เว้นช่องลงนามและคำสั่งว่างไว้) และรายการที่ต้องยืนยันใน `document_review` ไม่ถือว่าอนุมัติโครงการหรือเบิกงบได้แล้ว
 
 ### Planning workflow
 
@@ -73,7 +73,7 @@ standardVersion: 2
 
 ## Output
 
-- เมื่อขอข้อเสนอ: ร่างข้อเสนอโครงการตาม [แม่แบบ](templates/project-proposal-template.md), ตารางเชื่อมวัตถุประสงค์/กิจกรรม/ตัวชี้วัด, fact/source checks และรายการ `[รอยืนยัน]` พร้อมเจ้าของคำตอบ ตัวอย่างสังเคราะห์: [ข้อเสนอโครงการที่ข้อมูลไม่ครบ](examples/proposal-good-output.md)
+- เมื่อขอข้อเสนอ: ร่างข้อเสนอโครงการตาม [แม่แบบ](templates/project-proposal-template.md) และ [คู่มือการเขียนข้อเสนอโครงการ](references/project-writing-guide.md), ตารางเชื่อมวัตถุประสงค์/กิจกรรม/ตัวชี้วัด Output-Outcome 4 มิติ, การตรวจคำกริยาวัตถุประสงค์และความสอดคล้องของจำนวนกลุ่มเป้าหมายกับงบประมาณใน fact/source checks และรายการ `[รอยืนยัน]` พร้อมเจ้าของคำตอบ ตัวอย่างสังเคราะห์: [ข้อเสนอโครงการที่ข้อมูลไม่ครบ](examples/proposal-good-output.md)
 
 - แผนโครงการตามแม่แบบ ประกอบด้วย WBS, ตารางงวดงานพร้อมเกณฑ์ตรวจรับ, แผนผัง dependency, Risk Register และตาราง DACI
 - รายการข้อมูลที่ยังไม่ยืนยัน ติดป้าย `[รอยืนยัน]` แยกให้เห็นชัด

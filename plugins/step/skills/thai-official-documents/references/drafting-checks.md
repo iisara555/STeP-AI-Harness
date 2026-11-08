@@ -19,7 +19,7 @@
 
 ลำดับเรื่องเดิม/ข้อเท็จจริง/ข้อพิจารณา/ข้อเสนอเป็นลำดับสาระ ไม่ได้บังคับให้บันทึกทุกฉบับพิมพ์หัวข้อเลข ๑–๔ สำหรับบันทึกสั้นให้ร่างเป็นย่อหน้าต่อเนื่องตามแบบหน่วยงาน ใช้หัวข้อเมื่อแบบหรือความซับซ้อนของเรื่องต้องการ ไม่อ้าง “ตามที่ได้รับอนุมัติ” ถ้าต้นทางไม่มีหลักฐานการอนุมัติเดิม ส่วนงาน/ส่วนราชการใช้ชื่อช่องตามแบบที่ได้รับ ช่องผู้เสนอความเห็นและผู้พิจารณาเพิ่มเฉพาะเมื่อแบบหรือเจ้าของเรื่องระบุ เว้นพื้นที่คำสั่งและลายมือชื่อไว้
 
-Display checks and unresolved items separately from the document; they are not exported letter pages or implied attachments. Keep `[รอยืนยัน: ชื่อช่อง]` for unknown factual values.
+Display checks and unresolved items separately from the document. For STeP invitations, follow the [invitation guide](step-invitation-guide.md) and leave unknown values blank in the letter. For other documents, keep `[รอยืนยัน: ชื่อช่อง]` for unknown factual values.
 
 ## Draft assistance and revision
 
@@ -27,7 +27,7 @@ Draft narrative from the supplied subject and intended purpose even when prose f
 
 For a targeted revision, use the latest draft and change only the requested parts. Preserve unrelated text, tables and user edits; explicit corrections replace the corresponding earlier form value without implying approval.
 
-เลขหนังสือ งบ ผู้ลงนาม และข้อกฎหมายที่ยังไม่มีให้ใช้ `[รอยืนยัน: ชื่อช่อง]` พร้อมรายการข้อมูลที่เจ้าของต้องเติม ข้อความร่างและไฟล์ส่งออกต้องแยกสถานะการตรวจ: ร่างข้อความ → ตรวจความหมาย/แหล่ง → ตรวจจัดหน้าจริง → ผู้มีอำนาจพิจารณา
+ระบุเลขหนังสือ งบ ผู้ลงนาม และข้อกฎหมายที่ยังขาดในรายการที่เจ้าของเรื่องต้องเติม แยกสถานะร่างข้อความ การตรวจความหมายและแหล่ง การตรวจจัดหน้าจริง และการพิจารณาของผู้มีอำนาจ
 
 กฎ PDF/A ลายเซ็นอิเล็กทรอนิกส์ และช่องทางส่งต้อง resolve จากข้อกำหนดหน่วยงานและแหล่งทางการปัจจุบัน ไม่รับรองผลทางกฎหมายของภาพลายเซ็นหรือบังคับ CA จากคู่มือนี้ ฟอนต์ต้องตรงแบบที่ตรวจแล้ว ไม่ถือ TH Sarabun PSK กับ TH Sarabun New เป็นไฟล์เดียวกัน
 

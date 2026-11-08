@@ -39,7 +39,7 @@ test('STeP invitation standard is loaded for form/chat, retains local links and 
   for (const fromConversation of [false, true]) {
     const { store, session, harness } = fixture();
     const draft =
-      'ที่ TEST/0007\n\nหน่วยงานสังเคราะห์\n\nวันที่ [รอยืนยัน: วันที่ออกหนังสือ]\n\nเรื่อง ขอเชิญร่วมกิจกรรม\n\nเรียน ผู้รับสังเคราะห์\n\nด้วยหน่วยงานกำหนดจัดกิจกรรม ในวันที่ 20 มกราคม 2570\n\nกรุณาตอบรับภายในวันที่ 21 มกราคม 2570\n\nขอแสดงความนับถือ\n\n([รอยืนยัน: ผู้ลงนาม])\n\nผู้ประสานงาน [รอยืนยัน: ช่องทางติดต่อ]';
+      'ที่ TEST/0007\n\nหน่วยงานสังเคราะห์\n\nวันที่ [รอยืนยัน: วันที่ออกหนังสือ]\n\nเรื่อง [AI_PROPOSED] ขอเชิญร่วมกิจกรรม\n\nเรียน ผู้รับสังเคราะห์\\\n[รอยืนยัน: ตำแหน่งผู้รับ]\n\nด้วยหน่วยงานกำหนดจัดกิจกรรม ในวันที่ 20 มกราคม 2570\n\nกรุณาตอบรับภายในวันที่ 21 มกราคม 2570 ทาง [รอยืนยัน: ช่องทางตอบรับ]\n\nขอแสดงความนับถือ\n\n([รอยืนยัน: ผู้ลงนาม])\n\nผู้ประสานงาน [รอยืนยัน: ช่องทางติดต่อ]';
     let combined = '';
     const service = new WorkService(
       store,
@@ -69,10 +69,18 @@ test('STeP invitation standard is loaded for form/chat, retains local links and 
       assert.match(combined, /มาตรฐานหนังสือเชิญ STeP/);
       assert.match(combined, /ตัวอย่างสังเคราะห์ — หนังสือเชิญ/);
       assert.match(done.proposals[0].review!, /วันปิดตอบรับอยู่หลังวันจัดงาน/);
-      assert.equal(done.proposals[0].text, draft);
+      assert.match(
+        done.proposals[0].review!,
+        /ข้อมูลที่ยังต้องยืนยัน: วันที่ออกหนังสือ, ตำแหน่งผู้รับ, ช่องทางตอบรับ, ผู้ลงนาม, ช่องทางติดต่อ/,
+      );
+      assert.match(done.proposals[0].review!, /ถ้อยคำที่ AI เสนอ/);
+      assert.equal(
+        done.proposals[0].text,
+        'ที่ TEST/0007\n\nหน่วยงานสังเคราะห์\n\nเรื่อง ขอเชิญร่วมกิจกรรม\n\nเรียน ผู้รับสังเคราะห์\n\nด้วยหน่วยงานกำหนดจัดกิจกรรม ในวันที่ 20 มกราคม 2570\n\nกรุณาตอบรับภายในวันที่ 21 มกราคม 2570 ทาง ________\n\nขอแสดงความนับถือ',
+      );
       store.accept(session.id, done.proposals[0].id);
       assert.equal(store.session(session.id).presentation?.invitation?.rsvpUrl, 'https://example.org/rsvp?code=0007');
-      assert.doesNotMatch(store.session(session.id).draft, /วันปิดตอบรับอยู่หลังวันจัดงาน/);
+      assert.doesNotMatch(store.session(session.id).draft, /รอยืนยัน|AI_PROPOSED|วันปิดตอบรับอยู่หลังวันจัดงาน/);
     } finally {
       store.close();
     }

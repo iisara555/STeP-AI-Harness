@@ -111,7 +111,7 @@ import { ChatMarkdown } from './chat-markdown';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
 import { publicSourceUrl } from './web';
 import { QuestionCard } from './tool-question';
-import { UsageDialog } from './usage';
+import { AccountQuotaMenuSummary, InlineQuotaChip, UsageDialog } from './usage';
 import { MemoryDialog } from './memory';
 import { LearningDialog } from './learning';
 import { FeedbackButtons, FeedbackDialog, ReportDialog, type FeedbackAsk, type ReportAsk } from './feedback';
@@ -747,9 +747,17 @@ export default function App() {
   useEffect(() => {
     if (editor && !dirtyRef.current) {
       editor.commands.setContent(session?.document || toDoc(session?.draft || ''), { emitUpdate: false });
-      setPresentation(resolvePresentation(session?.presentation, session?.documentTool || false));
     }
   }, [editor, selected, session?.revision]);
+  useEffect(() => {
+    const saved = session?.presentation;
+    // The host sets the invitation layout before the first proposal, without changing the draft revision.
+    // Adopt a layout change without resetting unsaved editor text or QR edits within the same layout.
+    if (dirtyRef.current && Boolean(saved?.invitation) === Boolean(presentationRef.current.invitation)) return;
+    const next = resolvePresentation(saved, session?.documentTool || false);
+    presentationRef.current = next;
+    setPresentation(next);
+  }, [selected, session?.revision, session?.documentTool, session?.presentation]);
   useEffect(() => {
     editor?.setEditable(!draftAcceptPending, false);
   }, [editor, draftAcceptPending]);
@@ -893,7 +901,7 @@ export default function App() {
     if (form.source && !form.source.file.usable) throw new Error('ATTACHMENT_NOT_APPROVED');
     if (form.source && form.sourceRole !== 'template' && form.source.file.sourceUsable === false)
       throw new Error('ATTACHMENT_NOT_APPROVED');
-    const request = documentRequest(tool, form.values, form.variant, form.source ? form.sourceRole : 'source');
+    const request = documentRequest(tool, form.values, form.variant, form.source ? form.sourceRole : 'source', form.recipients);
     const id = form.source?.sessionId || (await createDocumentTask(tool))?.id;
     if (!id) return;
     await save();
@@ -927,7 +935,11 @@ export default function App() {
       false,
       form.variant,
       tool === 'letter' && form.variant === 'invitation'
-        ? { rsvpUrl: form.values.rsvpUrl || '', venueUrl: form.values.venueUrl || '' }
+        ? {
+            rsvpUrl: form.values.rsvpUrl || '',
+            venueUrl: form.values.venueUrl || '',
+            ...(form.recipients?.length ? { recipients: form.recipients } : {}),
+          }
         : undefined,
     );
   }
@@ -1317,6 +1329,18 @@ export default function App() {
         .join(' · ')
     : aiLabel;
   const [aiPicker, setAiPicker] = useState(false);
+  const [quotaRefreshing, setQuotaRefreshing] = useState(false);
+  const activeUsageAccount = connection ? snapshot?.usage?.accounts?.find(a => a.connectionId === connection.id) : undefined;
+  async function refreshActiveQuota() {
+    if (!api || !connection || quotaRefreshing) return;
+    setQuotaRefreshing(true);
+    try {
+      await api.call('providerUsage', { id: connection.id });
+      await refresh();
+    } finally {
+      setQuotaRefreshing(false);
+    }
+  }
   const aiPickerRef = useRef<HTMLDivElement>(null);
   // The AI picker closes on a click outside it or Escape, like a menu.
   useEffect(() => {
@@ -3182,6 +3206,7 @@ export default function App() {
                     <span className="spacer" />
                     {/* One pill for the AI account, model and reasoning level: the full choice opens above it, so the row
                         stays on one line and the account is not repeated in the status bar. */}
+                    <InlineQuotaChip account={activeUsageAccount} onClick={() => setUsageOpen(true)} />
                     <div className="ai-picker" ref={aiPickerRef}>
                       <button
                         type="button"
@@ -3278,6 +3303,15 @@ export default function App() {
                               </select>
                             </label>
                           ) : null}
+                          <AccountQuotaMenuSummary
+                            account={activeUsageAccount}
+                            busy={quotaRefreshing}
+                            onRefresh={() => void action(refreshActiveQuota)}
+                            onOpenUsage={() => {
+                              setAiPicker(false);
+                              setUsageOpen(true);
+                            }}
+                          />
                         </div>
                       )}
                     </div>
@@ -3646,7 +3680,7 @@ export default function App() {
                         <p key={path}>{path}</p>
                       ))}
                     </details>
-                    {exportSettings && ['docx', 'pdf'].includes(format) && (
+                    {exportSettings && (['docx', 'pdf'].includes(format) || Boolean(presentation.invitation)) && (
                       <div className="export-settings" id="export-settings">
                         {presentation.invitation && (
                           <InvitationLinks
@@ -3740,7 +3774,7 @@ export default function App() {
                           </option>
                         ))}
                       </select>
-                      {['docx', 'pdf'].includes(format) && (
+                      {(['docx', 'pdf'].includes(format) || Boolean(presentation.invitation)) && (
                         <button
                           className="icon"
                           aria-label={t('ตั้งค่าส่งออก')}
@@ -3858,7 +3892,7 @@ export default function App() {
             </aside>
           </>
         )}
-        {usageOpen && api && <UsageDialog api={api} onClose={() => setUsageOpen(false)} />}
+        {usageOpen && api && <UsageDialog api={api} onClose={() => setUsageOpen(false)} onUpdated={() => void refresh()} />}
         {learningOpen && api && (
           <LearningDialog api={api} initialText={learningText} sessionId={session?.id} onClose={() => setLearningOpen(false)} />
         )}

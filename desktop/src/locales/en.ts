@@ -1018,6 +1018,14 @@ export const en: Record<string, string> = {
   โมเดลคุยและให้เหตุผลราคาประหยัด: 'Low-cost chat and reasoning models',
   'โมเดล Qwen ของ Alibaba Cloud': 'Qwen models from Alibaba Cloud',
   'โมเดล MiniMax สำหรับคุยและเขียนงานยาว': 'MiniMax models for chat and long writing',
+  'โมเดล GLM สำหรับเขียนโค้ดและงานเอกสาร': 'GLM models for coding and document work',
+  'โมเดล Kimi สำหรับอ่านและวิเคราะห์บริบทยาว': 'Kimi models for reading and analyzing long context',
+  'แสดงโควตาคงเหลือแบบถังพลังงาน พร้อมชิปดูโควตาข้างตัวเลือกโมเดล และรองรับ MiniMax, Z.AI (GLM) และ Kimi':
+    'Remaining-quota tank meters, an inline quota chip beside the model picker, and quota support for MiniMax, Z.AI (GLM) and Kimi.',
+  'ทะเบียนหนังสือเชิญหลายหน่วยงาน แยกจำนวนหนังสือจากจำนวนที่นั่ง พร้อมส่งออกรายฉบับและตารางคุมยอดตอบรับ Excel':
+    'Multi-organization invitation register separating letter count from seat count, with per-recipient exports and an Excel RSVP worksheet.',
+  'ยกระดับการร่างโครงการตามแนวทาง มช. ครบ 10 หัวข้อ พร้อมตรวจคำกริยาวัตถุประสงค์และยอดผู้เข้าร่วมกับงบประมาณ':
+    'CMU-guided 10-section project proposals with behavioral-objective verb checks and headcount-to-budget consistency review.',
   'โมเดลเปิด ตอบเร็วมาก': 'Open models with very fast replies',
   โมเดลจากยุโรป: 'Models from Europe',
   'โมเดล Grok ของ xAI': "xAI's Grok models",

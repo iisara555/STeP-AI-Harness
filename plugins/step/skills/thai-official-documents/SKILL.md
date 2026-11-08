@@ -54,11 +54,11 @@ standardVersion: 2
 
 ร่างเป็นย่อหน้า/หัวข้อ/ตารางจริง ไม่ขึ้นบรรทัดตามความกว้างหน้าจอ ไม่เติม space หรืออักขระมองไม่เห็นเพื่อบังคับตัดคำไทย ตรวจฟอนต์ทั้งไทยและอังกฤษ สระ/วรรณยุกต์ หัวตารางและพื้นที่ลงนามจากไฟล์จริงตาม [Thai layout checks](references/thai-layout.md) โดยคงแบบหน่วยงานที่เลือก
 
-สำหรับหนังสือเชิญใน STeP ให้อ่าน [มาตรฐานหนังสือเชิญ STeP](references/step-invitation-guide.md) และ [ตัวอย่างสังเคราะห์](examples/step-invitation.md) ก่อนร่างหรือแก้ไข ใช้มาตรฐานนี้ทั้งภาษาและการจัดหน้า โดยเติมข้อเท็จจริงจากงานปัจจุบัน
+สำหรับหนังสือเชิญใน STeP ให้อ่าน [มาตรฐานหนังสือเชิญ STeP](references/step-invitation-guide.md) และ [ตัวอย่างสังเคราะห์](examples/step-invitation.md) ก่อนร่างหรือแก้ไข ใช้มาตรฐานนี้ทั้งภาษา การจัดหน้า และการเว้นข้อมูลที่ยังไม่ทราบในตัวหนังสือ พร้อมแจ้งสิ่งที่ต้องเติมในผลตรวจ
 
 Use the [drafting checks](references/drafting-checks.md) for approval/endorsement/report memos and invitation/reply/coordination letters, including their guidance for incomplete inputs and targeted revision. Use the [date and number guide](../../docs/thai-data-formatting.md) when formatting form data. Verify facts against supplied sources; keep unknown factual values pending while drafting proposed prose from the supplied purpose.
 
-Use the relevant working template when a current agency template is unavailable: [memo](templates/memo-draft.md), [letter](templates/letter-draft.md), [minutes](templates/minutes-draft.md), or [other document types](templates/other-document-draft.md). These are drafting structures, not approved agency forms. Document numbers, budgets, legal conditions and other unknown facts retain `[รอยืนยัน: ชื่อช่อง]`; draftable narrative follows the drafting checks. For minutes, use `meeting-summary` to distinguish source-backed decisions, proposals and actions before formatting. Text drafting does not establish DOCX/PDF layout verification.
+Use the relevant working template when a current agency template is unavailable: [memo](templates/memo-draft.md), [letter](templates/letter-draft.md), [minutes](templates/minutes-draft.md), or [other document types](templates/other-document-draft.md). These are drafting structures, not approved agency forms. For STeP invitations, leave unknown values blank and list the gaps in the review. For other documents, unknown facts retain `[รอยืนยัน: ชื่อช่อง]`. Draftable narrative follows the drafting checks. For minutes, use `meeting-summary` to distinguish source-backed decisions, proposals and actions before formatting. Text drafting does not establish DOCX/PDF layout verification.
 
 - **หนังสือราชการมาตรฐาน** มีส่วนราชการ เลขที่ วันที่ เรื่อง เรียน ข้อความ คำลงท้าย ลายมือชื่อ ตำแหน่ง และสิ่งที่ส่งมาด้วยตามกรณี หนังสือภายนอกแบ่งเป็นหัวหนังสือ ภาคเหตุ ภาคประสงค์ และท้ายหนังสือ (ส่วนราชการเจ้าของเรื่อง โทร โทรสาร สำเนาส่ง) ตาม [หลักการเขียน](references/saraban-writing-guide.md)
 - **TOR** มีชื่อโครงการ หน่วยงาน ประเภทงาน ความเป็นมา วัตถุประสงค์ ขอบเขต ผลส่งมอบ กำหนดส่งมอบ เกณฑ์ตรวจรับ งบประมาณ การจ่ายเงิน ค่าปรับ การรับประกัน และผู้รับผิดชอบ
@@ -90,7 +90,7 @@ Use the relevant working template when a current agency template is unavailable:
 - ใช้ภาษาราชการที่ชัดเจน ตรงประเด็น สุภาพ ไม่ใช้ถ้อยคำโฆษณาหรือคำกำกวมเป็นเกณฑ์บังคับ
 - รักษาชื่อหน่วยงาน ตำแหน่ง ชื่อโครงการ วัน เดือน ปี เลขข้อ จำนวน และหน่วยนับให้ตรงกันทุกหน้า
 - ตรวจคำขึ้นต้น คำลงท้าย สรรพนาม และการลงชื่อให้ตรงกับผู้รับและประเภทหนังสือ
-- **ชื่อและตำแหน่งผู้ลงนาม:** เมื่อผู้ใช้ระบุตำแหน่งหรือชื่อผู้ลงนาม (ทั้งชื่อเต็มหรือชื่อย่อ เช่น "ผอ.", "รอง ผอ. ที่กำกับ GA", "อาจารย์ปิติวัฒน์") ให้เติมชื่อเต็มพร้อมคำนำหน้าและตำแหน่งจาก `../../manifest/organization.yaml` → `executiveOversight` ซึ่งเป็นข้อมูลสาธารณะที่ผู้ดูแลยืนยันแล้ว และบอกวันที่ `lastChecked` ท้ายร่าง ถ้าตำแหน่งนั้นมีหลายคน (เช่น รองผู้อำนวยการ) ให้เลือกจากทีมที่ผู้ใช้ระบุผ่านช่อง `teams` ถ้ายังเลือกไม่ได้ให้ถามหนึ่งคำถาม ถ้าผู้ใช้ไม่ได้ระบุว่าใครลงนาม ให้เขียน `รอยืนยัน` เพราะการเลือกผู้มีอำนาจลงนามเป็นการตัดสินของเจ้าของเรื่อง
+- **ชื่อและตำแหน่งผู้ลงนาม:** เมื่อผู้ใช้ระบุตำแหน่งหรือชื่อผู้ลงนาม (ทั้งชื่อเต็มหรือชื่อย่อ เช่น "ผอ.", "รอง ผอ. ที่กำกับ GA", "อาจารย์ปิติวัฒน์") ให้เติมชื่อเต็มพร้อมคำนำหน้าและตำแหน่งจาก `../../manifest/organization.yaml` → `executiveOversight` ซึ่งเป็นข้อมูลสาธารณะที่ผู้ดูแลยืนยันแล้ว บอกวันที่ `lastChecked` ท้ายร่าง ส่วนหนังสือเชิญ STeP ให้บอกในผลตรวจ ถ้าตำแหน่งนั้นมีหลายคน (เช่น รองผู้อำนวยการ) ให้เลือกจากทีมที่ผู้ใช้ระบุผ่านช่อง `teams` ถ้ายังเลือกไม่ได้ให้ถามหนึ่งคำถาม ถ้ายังไม่ทราบผู้ลงนามให้ระบุข้อมูลค้างตามแบบที่ใช้ เพราะการเลือกผู้มีอำนาจลงนามเป็นการตัดสินของเจ้าของเรื่อง
 - แยกข้อเท็จจริง ข้อเสนอ และผลที่คาดว่าจะได้รับ ไม่เขียนความคาดหวังเป็นผลที่รับรองได้โดยไม่มีตัวชี้วัด
 - ตรวจข้อมูลส่วนบุคคล ชั้นความลับ อีเมล เบอร์โทร และไฟล์แนบให้เปิดเผยเท่าที่จำเป็น
 
@@ -116,7 +116,7 @@ TOR โครงการสื่อประชาสัมพันธ์ม�
 
 ผลตรวจต้องมีตารางอย่างน้อย:
 
-ตัวเอกสารที่ใช้เสนอและผลตรวจเป็นคนละส่วน: เก็บคำอธิบายการทำงาน ตารางตรวจ Skill รายการข้อมูลที่ต้องยืนยัน และคำแนะนำการส่งออกไว้นอกตัวหนังสือ บันทึก TOR โครงการ หรือรายงานประชุม คงเฉพาะช่องรอยืนยันที่อยู่ในตำแหน่งข้อมูลขาดในเอกสาร ไม่เพิ่มหน้าผลตรวจเป็นเอกสารแนบท้ายเอง เมื่อ host มีช่องผลตรวจแยกให้ใช้ช่องนั้น ส่วนช่องลงนามหรือคำสั่งเป็นพื้นที่สำหรับมนุษย์ ไม่ใช่หลักฐานว่าอนุมัติแล้ว
+แยกตัวเอกสารที่ใช้เสนอออกจากผลตรวจ เก็บคำอธิบายการทำงาน ตารางตรวจ Skill รายการข้อมูลที่ต้องยืนยัน และคำแนะนำการส่งออกไว้ในผลตรวจของ host คงช่องข้อมูลที่ขาดตามแบบที่ใช้ ส่วนช่องลงนามหรือคำสั่งเป็นพื้นที่ให้ผู้มีอำนาจพิจารณา
 
 | รายการ | เกณฑ์หรือแหล่งอ้างอิง | ผลตรวจ | หลักฐาน | การดำเนินการ |
 |---|---|---|---|---|
@@ -153,7 +153,7 @@ AI ช่วยได้: ตรวจรูปแบบ โครงสร้�
 
 ## Guardrails
 
-- ร่างหนังสือภายนอกที่ขาดผู้รับ เรื่อง เลขที่ หรือผู้ลงนามต้องแสดงช่องรอยืนยัน ไม่เรียกว่าเอกสารพร้อมออกและไม่สร้างข้อมูลให้ครบเอง
+- ร่างหนังสือภายนอกที่ขาดผู้รับ เรื่อง เลขที่ หรือผู้ลงนามต้องระบุข้อมูลค้างตามแบบที่ใช้ สำหรับหนังสือเชิญ STeP ให้ระบุในผลตรวจและเว้นช่องในตัวหนังสือ ข้อมูลที่ยังขาดทำให้ร่างยังไม่พร้อมออก
 - ไม่บังคับเกณฑ์ของหนังสือชนิดหนึ่งกับเอกสารอีกชนิด
 - ไม่เติมองค์ประกอบทางการที่เอกสารนั้นไม่ต้องมี เพื่อให้ดูเป็นราชการ
 - ไม่รับรองอำนาจลงนามหรือความถูกต้องตามกฎหมาย

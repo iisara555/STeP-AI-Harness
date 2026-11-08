@@ -12,6 +12,9 @@ export function usageSourceName(source: ProviderUsageData['source'] | string) {
     copilot: 'GitHub Copilot',
     openrouter: 'OpenRouter',
     deepseek: 'DeepSeek',
+    minimax: 'MiniMax',
+    zai: 'Z.AI (GLM)',
+    kimi: 'Kimi (Moonshot AI)',
   };
   return Object.hasOwn(names, source) ? names[source as ProviderUsageData['source']] : '—';
 }

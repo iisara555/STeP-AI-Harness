@@ -1,5 +1,6 @@
 import { resolvePresentation } from '../src/document-presentation';
-import { resolveInvitation, invitationReview, type InvitationPresentation } from '../src/invitation';
+import { resolveInvitation, invitationDraft, invitationReview, type InvitationPresentation } from '../src/invitation';
+import { projectProposalReview } from '../src/project-proposal';
 import { createHash, randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve, relative, isAbsolute } from 'node:path';
@@ -1973,7 +1974,15 @@ export class WorkService {
       if (documentOutput) {
         handoff = documentOutput.draft;
         if (draftingTool?.id === 'letter' && session.documentVariant === 'invitation') {
-          const notes = invitationReview(handoff);
+          const notes = invitationReview(handoff, session.presentation?.invitation);
+          if (notes.length) documentOutput.review = [documentOutput.review, ...notes.map(note => '- ' + note)].filter(Boolean).join('\n');
+          if (!patched && !revising) {
+            handoff = invitationDraft(handoff);
+            if (!handoff) throw new Error('DOCUMENT_OUTPUT_INVALID');
+          }
+        }
+        if (draftingTool?.id === 'project') {
+          const notes = projectProposalReview(handoff);
           if (notes.length) documentOutput.review = [documentOutput.review, ...notes.map(note => '- ' + note)].filter(Boolean).join('\n');
         }
         if (draftingTool?.id === 'tor' && !session.documentTemplate) {

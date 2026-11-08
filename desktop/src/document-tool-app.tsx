@@ -7,12 +7,32 @@ import { t } from './i18n';
 import { skillDisplayName } from './skill-display';
 import { ThaiText } from './thai-text';
 import './document-tools.css';
+import type { InvitationPresentation, InvitationRecipient } from './invitation';
 import { InvitationLinks, invalidInvitationLinks } from './invitation-links';
+
+// Form examples are display text only. They never become form values or source evidence.
+const invitationExamples: Readonly<Record<string, string>> = {
+  unit: 'เช่น หน่วยงานตัวอย่าง เลขที่ 99 ถนนตัวอย่าง',
+  subject: 'เช่น ขอเชิญเข้าร่วมกิจกรรมแลกเปลี่ยนผลงาน',
+  number: 'เช่น ศธ 0000/0123',
+  date: 'เช่น 2 ตุลาคม 2569',
+  recipient: 'เช่น คุณกานต์ ตัวอย่าง',
+  signer: 'เช่น คุณพิม ตัวอย่าง — ผู้อำนวยการ',
+  references: 'เช่น สิ่งที่ส่งมาด้วย กำหนดการ 1 ฉบับ',
+  background: 'เช่น จัดเวทีแลกเปลี่ยนแนวทางทำงานระหว่างทีม',
+  content: 'เช่น ขอเชิญเข้าร่วมและแลกเปลี่ยนประสบการณ์',
+  schedule: 'เช่น 20 มกราคม 2570 เวลา 09.00–12.00 น. ณ ห้องประชุมตัวอย่าง',
+  recipientPosition: 'เช่น ผู้จัดการโครงการ หน่วยงานตัวอย่าง',
+  rsvpDeadline: 'เช่น 15 มกราคม 2570',
+  contact: 'เช่น คุณเมย์ ตัวอย่าง · events@example.org',
+  sources: 'เช่น กำหนดการฉบับเจ้าของงานยืนยัน',
+};
 
 export type DocumentAttachment = { sessionId: string; file: Attachment };
 export type DocumentForm = {
   values: Record<string, string>;
   variant: string;
+  recipients?: InvitationRecipient[];
   source?: DocumentAttachment;
   sourceRole?: DocumentAttachmentRole;
 };
@@ -51,9 +71,14 @@ export function DocumentTools({
   const connected = ready.some(c => c.id === connectionId);
   const disabled = busy || working;
   const invitation = selected === 'letter' && form.variant === 'invitation';
-  const links = { rsvpUrl: form.values.rsvpUrl || '', venueUrl: form.values.venueUrl || '' };
+  const links: InvitationPresentation = {
+    rsvpUrl: form.values.rsvpUrl || '',
+    venueUrl: form.values.venueUrl || '',
+    ...(form.recipients?.length ? { recipients: form.recipients } : {}),
+  };
   const invalidLinks = invitation && invalidInvitationLinks(links).length > 0;
-  const hasInput = Object.values(form.values).some(v => v.trim()) || Boolean(form.source?.file.usable);
+  const hasRecipients = Boolean(invitation && form.recipients?.some(r => r.recipient.trim() || r.position.trim() || r.number.trim()));
+  const hasInput = Object.values(form.values).some(v => v.trim()) || hasRecipients || Boolean(form.source?.file.usable);
   const sourceBlocked = Boolean(
     form.source && (!form.source.file.usable || (form.sourceRole !== 'template' && form.source.file.sourceUsable === false)),
   );
@@ -297,6 +322,7 @@ export function DocumentTools({
             )}
           </p>
         </div>
+        {invitation && <p className="small muted">{t('กรอกเท่าที่ทราบ ตัวอย่างในช่องมีไว้ดูวิธีกรอก')}</p>}
         <div className="document-fields">
           {profile.fields
             .filter(f => (!f.invitationOnly || invitation) && !['rsvpUrl', 'venueUrl'].includes(f.key))
@@ -310,7 +336,7 @@ export function DocumentTools({
                     maxLength={6000}
                     value={form.values[f.key] || ''}
                     disabled={disabled}
-                    placeholder={t('เว้นได้หากยังไม่มีข้อมูล')}
+                    placeholder={t((invitation && invitationExamples[f.key]) || 'เว้นได้หากยังไม่มีข้อมูล')}
                     onChange={e => update({ values: { ...form.values, [f.key]: e.target.value } })}
                   />
                 ) : (
@@ -319,7 +345,7 @@ export function DocumentTools({
                     maxLength={6000}
                     value={form.values[f.key] || ''}
                     disabled={disabled}
-                    placeholder={t('เว้นได้หากยังไม่มีข้อมูล')}
+                    placeholder={t((invitation && invitationExamples[f.key]) || 'เว้นได้หากยังไม่มีข้อมูล')}
                     onChange={e => update({ values: { ...form.values, [f.key]: e.target.value } })}
                   />
                 )}
@@ -332,7 +358,16 @@ export function DocumentTools({
         {invitation && (
           <>
             <p className="small muted">{t('หนังสือเชิญใช้มาตรฐาน STeP ทั้งภาษาและการจัดหน้า')}</p>
-            <InvitationLinks value={links} disabled={disabled} onChange={value => update({ values: { ...form.values, ...value } })} />
+            <InvitationLinks
+              value={links}
+              disabled={disabled}
+              onChange={value =>
+                update({
+                  values: { ...form.values, rsvpUrl: value.rsvpUrl, venueUrl: value.venueUrl },
+                  recipients: value.recipients,
+                })
+              }
+            />
           </>
         )}
         <footer className="document-form-actions">
