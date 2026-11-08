@@ -79,6 +79,8 @@ Release validation reproduced the sidebar's outdated expectation after explicit 
 
 ## In progress
 
+- **Provider remaining-quota tank meters, inline composer chip, and MiniMax/Z.AI/Kimi quota readers (2026-11-08, source only, unreleased)**: adds `usage-readings.ts` and upgrades `UsageDialog` (`usage.tsx`, `usage.css`) with Remaining Quota (`คงเหลือ X%`, `100 - usedPercent`) tank meters, dual-horizon `warm`/`cool` color ramps, 25% graduation ticks, reset countdowns, per-account `ขาเข้า / ขาออก / Cache` token breakdown, a batch `รีเฟรชทั้งหมด` action, an inline `.quota-mini-pill` chip beside the composer's AI selector, and a compact quota summary inside `.ai-picker-menu`. Expands `provider-usage.ts` and `provider-presets.ts` with read-only quota/balance normalization for `minimax` (`MiniMax Token Plan`), `zai` (`Z.AI (GLM)`), and `kimi` (`Kimi (Moonshot AI)`). Preserves in-memory-only provider usage snapshots (never persisted to SQLite) and 60s per-account cooldown. Waits on the owner: review and merge.
+
 - **STeP invitation acceptance**: the 0.6.30 release includes the verified layout and local QR flow. Owner review of wording from an employee-selected AI and employee-document/device acceptance remain open. No explicit live evaluation provider was configured for #309.
 
 - **Desktop 0.6.28 release validation (2026-11-03)**: #303 passed all CI. #304 passed Desktop and full macOS Electron checks, but its Windows root run hit `ENOENT` while the archive guard traversed `tmp/unit-test-workspace` concurrently with installer cleanup. The release branch retains the export-rule guard, tests tracked nested attributes and ignores disposable workspace contents. Validate the combined source and release metadata before publication.
