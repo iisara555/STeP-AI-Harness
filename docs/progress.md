@@ -4,9 +4,11 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-07_
+_Last updated: 2026-11-08_
 
 ## Latest release
+
+- **Desktop v0.6.31 prepared (2026-11-08, owner authorized release)**: combines #312 (invitation draft save recovery before acceptance), #313 (invitation field examples and review-only missing facts), #314 (multi-organization invitation and RSVP register with per-recipient Word/PDF and Excel exports), #315 (CMU 10-section project proposal writing guide and headcount-to-budget consistency checks) and #316 (Token Bar remaining-quota tank meters, inline composer chip and MiniMax/Z.AI/Kimi quota readers) while preserving all five PR heads. Harness remains 0.7.7. Merge after exact-head CI passes, then publish via `desktop-release.yml` on `main` with `publish=true`.
 
 - **Desktop v0.6.30 published (2026-11-07, Bangkok)**: [release](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.30) includes #309’s single STeP invitation standard, Word/PDF layout, local RSVP/map QR codes and separate review. Release preparation #310 and post-merge main passed all four CI jobs, including full macOS Electron. Their Git trees match. [Installer run 42379771044](https://github.com/iisara555/STeP-AI-Harness/actions/runs/42379771044) passed Windows Electron checks, both builds, packaged Mac signature/launch checks and publication. The release tag resolves to `2b369d8cb5fd75215b03c2e5dbfe303afacdaebd`. All eight immutable/rolling asset sizes and SHA-256 digests match, and both update feeds report 0.6.30. Public Windows EXE and macOS ZIP downloads match their SHA-256 metadata and SHA-512 feeds. Native Windows Word and app PDF passed short, long and long-recipient layout checks, and all eight sampled QR codes decoded to the current links. Knowledge benchmark: 61/61. Harness: 0.7.7.
 
