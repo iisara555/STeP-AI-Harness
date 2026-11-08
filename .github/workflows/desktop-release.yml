@@ -45,6 +45,9 @@ jobs:
             feed: latest-mac.yml
           # Intel Mac builds stopped after 0.5.35; `npm run dist:mac:x64` still builds one by hand.
     runs-on: ${{ matrix.os }}
+    env:
+      ELECTRON_MIRROR: https://cdn.npmmirror.com/binaries/electron/
+      ELECTRON_BUILDER_BINARIES_MIRROR: https://cdn.npmmirror.com/binaries/electron-builder-binaries/
     defaults:
       run:
         shell: bash
