@@ -1980,7 +1980,7 @@ async function main() {
   };
   const snapshot = async () => ({
     appVersion: app.getVersion(),
-    usage: ledger.report(),
+    usage: { ...ledger.report(), accounts: store.connections().map(c => providerUsage.snapshot(c)) },
     features: {
       claudeSubscription: claudeSubscriptionOn(),
       providerPresets: policyState.policy.features.providerPresets,

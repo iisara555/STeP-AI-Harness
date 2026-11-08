@@ -13,9 +13,13 @@ type Dependencies = {
 };
 const object = (v: unknown): Record<string, any> => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
 const number = (v: unknown): number | undefined => {
-  if (typeof v !== 'number' && !(typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v))) return;
-  const n = Number(v);
+  if (typeof v !== 'number' && !(typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v.trim()))) return;
+  const n = Number(typeof v === 'string' ? v.trim() : v);
   return Number.isFinite(n) && Math.abs(n) <= 1e15 ? n : undefined;
+};
+const numberOrPercent = (v: unknown): number | undefined => {
+  if (typeof v === 'string' && v.trim().endsWith('%')) return number(v.trim().slice(0, -1));
+  return number(v);
 };
 const nonnegative = (v: unknown) => {
   const n = number(v);
@@ -23,10 +27,11 @@ const nonnegative = (v: unknown) => {
 };
 const percent = (v: unknown) => {
   const n = nonnegative(v);
-  return n !== undefined && n <= 100 ? n : undefined;
+  return n !== undefined && n <= 100 ? Math.round(n * 100) / 100 : undefined;
 };
 const timestamp = (v: unknown): string | undefined => {
-  const n = typeof v === 'number' ? v * 1000 : typeof v === 'string' ? Date.parse(v) : NaN;
+  const raw = typeof v === 'string' && /^\d+$/.test(v.trim()) ? Number(v.trim()) : v;
+  const n = typeof raw === 'number' ? (raw > 100_000_000_000 ? raw : raw * 1000) : typeof raw === 'string' ? Date.parse(raw) : NaN;
   return Number.isFinite(n) && n >= 0 && n <= 8640000000000000 ? new Date(n).toISOString() : undefined;
 };
 const scope = (v: unknown) => (typeof v === 'string' && /^[\p{L}\p{N} ._:/()-]{1,80}$/u.test(v) ? v : undefined);
@@ -153,6 +158,232 @@ export function normalizeCopilotUsage(raw: unknown): ProviderUsageData {
   return finish(result);
 }
 
+/** MiniMax Token Plan remaining quota (adapted from Token Bar `minimax.rs`). */
+export function normalizeMiniMaxUsage(raw: unknown): ProviderUsageData {
+  const top = object(raw),
+    baseResp = object(top.base_resp),
+    statusCode = number(baseResp.status_code);
+  if (statusCode === 1004 || statusCode === 401 || statusCode === 403) throw new Error('USAGE_AUTH_REQUIRED');
+  if (statusCode !== undefined && statusCode !== 0) throw new Error('USAGE_RESPONSE_INVALID');
+  const dataObj = object(top.data);
+  const result = data('minimax');
+  const planName =
+    typeof dataObj.plan_name === 'string' ? dataObj.plan_name.trim() : typeof top.plan_name === 'string' ? top.plan_name.trim() : '';
+  if (planName) result.plan = planName.slice(0, 48);
+  type FoundQuota = { path: string; usedPercent: number; used: number; total: number; resetsAt?: string };
+  const found: FoundQuota[] = [];
+  const walk = (value: unknown, path: string, depth: number) => {
+    if (depth > 6 || found.length >= 20 || !value || typeof value !== 'object') return;
+    if (Array.isArray(value)) {
+      for (const child of value.slice(0, 20)) walk(child, path, depth + 1);
+      return;
+    }
+    const map = value as Record<string, unknown>;
+    const limit = nonnegative(map.limit ?? map.total ?? map.current_interval_total_count);
+    const usedRaw = nonnegative(map.used ?? map.current_interval_usage_count);
+    const remainingRaw = nonnegative(map.remaining ?? map.remain);
+    if (limit !== undefined && limit > 0) {
+      const used = usedRaw !== undefined ? usedRaw : remainingRaw !== undefined ? Math.max(0, limit - remainingRaw) : undefined;
+      const usedPercent = used !== undefined ? percent(Math.min(100, (used / limit) * 100)) : undefined;
+      if (used !== undefined && usedPercent !== undefined) {
+        found.push({
+          path: typeof map.model_name === 'string' && map.model_name.trim() ? map.model_name.trim() : path,
+          usedPercent,
+          used,
+          total: limit,
+          resetsAt: timestamp(map.resetTime ?? map.reset_at ?? map.nextResetTime ?? map.end_time),
+        });
+      }
+    }
+    for (const [key, child] of Object.entries(map).slice(0, 30)) {
+      walk(child, path ? `${path}.${key}` : key, depth + 1);
+    }
+  };
+  walk(raw, '', 0);
+  let hasFiveHour = false,
+    hasWeek = false;
+  for (const q of found) {
+    const lower = q.path.toLowerCase();
+    const isWeek = lower.includes('week') || lower.includes('7day') || lower.includes('weekly');
+    if (isWeek && !hasWeek) {
+      hasWeek = true;
+      result.limits.push({
+        name: 'seven_day',
+        windowMinutes: 10080,
+        usedPercent: q.usedPercent,
+        used: q.used,
+        total: q.total,
+        resetsAt: q.resetsAt,
+      });
+    } else if (!hasFiveHour) {
+      hasFiveHour = true;
+      result.limits.push({
+        name: 'five_hour',
+        windowMinutes: 300,
+        usedPercent: q.usedPercent,
+        used: q.used,
+        total: q.total,
+        resetsAt: q.resetsAt,
+      });
+    } else if (!hasWeek) {
+      hasWeek = true;
+      result.limits.push({
+        name: 'seven_day',
+        windowMinutes: 10080,
+        usedPercent: q.usedPercent,
+        used: q.used,
+        total: q.total,
+        resetsAt: q.resetsAt,
+      });
+    }
+  }
+  return finish(result);
+}
+
+/** Z.AI (GLM) coding-plan quota monitor (adapted from Token Bar `zai.rs`). */
+export function normalizeZaiUsage(raw: unknown): ProviderUsageData {
+  const top = object(raw),
+    code = number(top.code);
+  if (code === 401 || code === 403 || code === 1001) throw new Error('USAGE_AUTH_REQUIRED');
+  if (code !== undefined && code !== 200 && code !== 0) throw new Error('USAGE_RESPONSE_INVALID');
+  const dataObj = object(top.data);
+  const result = data('zai');
+  const level = typeof dataObj.level === 'string' ? dataObj.level.trim() : typeof top.level === 'string' ? top.level.trim() : '';
+  if (level) result.plan = level.slice(0, 48);
+  type FoundLimit = { name: string; usedPercent: number; used?: number; total?: number; resetsAt?: string };
+  const found: FoundLimit[] = [];
+  const walk = (value: unknown, path: string, depth: number) => {
+    if (depth > 6 || found.length >= 20 || !value || typeof value !== 'object') return;
+    if (Array.isArray(value)) {
+      for (const child of value.slice(0, 20)) walk(child, path, depth + 1);
+      return;
+    }
+    const map = value as Record<string, unknown>;
+    const limit = nonnegative(map.limit ?? map.total ?? map.usage);
+    const used = nonnegative(map.used ?? map.currentValue);
+    const pct = numberOrPercent(map.percentage ?? map.usedPercentage);
+    if ((limit !== undefined && limit > 0 && used !== undefined) || pct !== undefined) {
+      const computedPct = pct !== undefined ? pct : limit && used !== undefined ? (used / limit) * 100 : undefined;
+      const usedPercent = computedPct !== undefined ? percent(Math.min(100, Math.max(0, computedPct))) : undefined;
+      if (usedPercent !== undefined) {
+        found.push({
+          name: typeof map.type === 'string' && map.type.trim() ? map.type.trim() : path,
+          usedPercent,
+          used,
+          total: limit && limit > 0 ? limit : undefined,
+          resetsAt: timestamp(map.nextResetTime ?? map.resetTime),
+        });
+      }
+    }
+    for (const [key, child] of Object.entries(map).slice(0, 30)) {
+      walk(child, path ? `${path}.${key}` : key, depth + 1);
+    }
+  };
+  walk(raw, '', 0);
+  let hasFiveHour = false,
+    hasWeek = false;
+  for (const item of found) {
+    const lower = item.name.toLowerCase();
+    const isWeek = lower.includes('week') || lower.includes('7day') || lower.includes('seven');
+    if (isWeek && !hasWeek) {
+      hasWeek = true;
+      result.limits.push({
+        name: 'seven_day',
+        windowMinutes: 10080,
+        usedPercent: item.usedPercent,
+        used: item.used,
+        total: item.total,
+        resetsAt: item.resetsAt,
+      });
+    } else if ((lower.includes('token') || !hasFiveHour) && !hasFiveHour) {
+      hasFiveHour = true;
+      result.limits.push({
+        name: 'five_hour',
+        windowMinutes: 300,
+        usedPercent: item.usedPercent,
+        used: item.used,
+        total: item.total,
+        resetsAt: item.resetsAt,
+      });
+    } else if (!hasWeek) {
+      hasWeek = true;
+      result.limits.push({
+        name: 'seven_day',
+        windowMinutes: 10080,
+        usedPercent: item.usedPercent,
+        used: item.used,
+        total: item.total,
+        resetsAt: item.resetsAt,
+      });
+    }
+  }
+  return finish(result);
+}
+
+/** Kimi Code plan quota & Moonshot AI balance (adapted from Token Bar `kimi.rs`). */
+export function normalizeKimiUsage(raw: unknown): ProviderUsageData {
+  const response = object(raw),
+    result = data('kimi');
+  const parseWindow = (value: unknown, windowMinutes: number, name: string) => {
+    const row = object(value),
+      limit = nonnegative(row.limit);
+    if (!limit || limit <= 0) return undefined;
+    const usedRaw = nonnegative(row.used);
+    const remainingRaw = nonnegative(row.remaining ?? row.remain);
+    const used = usedRaw !== undefined ? usedRaw : remainingRaw !== undefined ? Math.max(0, limit - remainingRaw) : undefined;
+    const usedPercent = used !== undefined ? percent(Math.min(100, (used / limit) * 100)) : undefined;
+    if (usedPercent === undefined) return undefined;
+    return {
+      name,
+      windowMinutes,
+      usedPercent,
+      used,
+      total: limit,
+      resetsAt: timestamp(row.resetTime ?? row.reset_at),
+    };
+  };
+  let fiveHour: ProviderUsageData['limits'][number] | undefined, week: ProviderUsageData['limits'][number] | undefined;
+  if (response.usage && typeof response.usage === 'object') {
+    week = parseWindow(response.usage, 10080, 'seven_day');
+  }
+  const topLimits = Array.isArray(response.limits) ? response.limits : [];
+  const usages = Array.isArray(response.usages) ? response.usages : [];
+  for (const u of usages.slice(0, 5)) {
+    const uObj = object(u);
+    if (!week && uObj.detail && typeof uObj.detail === 'object') {
+      week = parseWindow(uObj.detail, 10080, 'seven_day');
+    }
+    if (Array.isArray(uObj.limits)) topLimits.push(...uObj.limits);
+  }
+  if (topLimits.length > 0) {
+    for (const item of topLimits.slice(0, 10)) {
+      const entry = object(item),
+        win = object(entry.window),
+        duration = nonnegative(win.duration) || 0,
+        unit = typeof (win.timeUnit ?? win.time_unit) === 'string' ? String(win.timeUnit ?? win.time_unit).toUpperCase() : '';
+      const minutes = Math.round(unit.includes('DAY') ? duration * 1440 : unit.includes('HOUR') ? duration * 60 : duration);
+      const isWeek = minutes >= 6 * 1440;
+      const parsed = parseWindow(entry.detail ?? entry, isWeek ? 10080 : minutes > 0 ? minutes : 300, isWeek ? 'seven_day' : 'five_hour');
+      if (!parsed) continue;
+      if (isWeek && !week) week = parsed;
+      else if (!fiveHour) fiveHour = parsed;
+    }
+  }
+  if (fiveHour) result.limits.push(fiveHour);
+  if (week) result.limits.push(week);
+  const balanceObj = response.data && typeof response.data === 'object' ? object(response.data) : response;
+  const available = number(balanceObj.available_balance ?? balanceObj.balance);
+  if (available !== undefined) {
+    const unit = balanceObj.currency === 'CNY' ? 'CNY' : 'USD';
+    result.credits.push({
+      name: 'balance',
+      unit,
+      remaining: available,
+    });
+  }
+  return finish(result);
+}
+
 /** Fixed-origin, read-only endpoints only. A custom/overridden preset does not gain access to its account API. */
 function apiService(c: Connection) {
   const preset = presetFor(c.preset);
@@ -161,7 +392,7 @@ function apiService(c: Connection) {
     c.mode !== 'api' ||
     c.protocol === 'anthropic' ||
     !preset ||
-    !['openrouter', 'deepseek'].includes(preset.id) ||
+    !['openrouter', 'deepseek', 'minimax', 'zai', 'kimi'].includes(preset.id) ||
     !c.baseUrl
   )
     return;
@@ -177,7 +408,7 @@ function apiService(c: Connection) {
       actual.pathname.replace(/\/$/, '') !== official.pathname
     )
       return;
-    return preset.id as 'openrouter' | 'deepseek';
+    return preset.id as 'openrouter' | 'deepseek' | 'minimax' | 'zai' | 'kimi';
   } catch {
     return;
   }
@@ -366,6 +597,24 @@ export async function readProviderUsage(c: Connection, context: Context, deps: D
     if (finish(result).status !== 'ok') throw new Error('USAGE_RESPONSE_INVALID');
     return result;
   }
+  if (source === 'minimax') {
+    const response = await accountJson('https://api.minimax.io/v1/token_plan/remains', context.key, fetcher);
+    const result = normalizeMiniMaxUsage(response);
+    if (result.status !== 'ok') throw new Error('USAGE_RESPONSE_INVALID');
+    return result;
+  }
+  if (source === 'zai') {
+    const response = await accountJson('https://api.z.ai/api/monitor/usage/quota/limit', context.key, fetcher);
+    const result = normalizeZaiUsage(response);
+    if (result.status !== 'ok') throw new Error('USAGE_RESPONSE_INVALID');
+    return result;
+  }
+  if (source === 'kimi') {
+    const response = await accountJson('https://api.moonshot.ai/v1/users/me/balance', context.key, fetcher);
+    const result = normalizeKimiUsage(response);
+    if (result.status !== 'ok') throw new Error('USAGE_RESPONSE_INVALID');
+    return result;
+  }
   const response = await accountJson('https://api.deepseek.com/user/balance', context.key, fetcher),
     result = data('deepseek');
   for (const value of (Array.isArray(response.balance_infos) ? response.balance_infos : []).slice(0, 10)) {
@@ -417,7 +666,7 @@ export class ProviderUsage {
         }[c.provider],
       status: !c.ready ? 'disconnected' : source ? 'idle' : 'unsupported',
       source,
-      experimental: source === 'claude' || source === 'copilot' ? true : undefined,
+      experimental: source === 'claude' || source === 'copilot' || source === 'zai' ? true : undefined,
       canRefresh,
       hasDashboard: Boolean(usageDashboard(c)),
       limits: [],

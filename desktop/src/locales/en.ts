@@ -1018,6 +1018,8 @@ export const en: Record<string, string> = {
   โมเดลคุยและให้เหตุผลราคาประหยัด: 'Low-cost chat and reasoning models',
   'โมเดล Qwen ของ Alibaba Cloud': 'Qwen models from Alibaba Cloud',
   'โมเดล MiniMax สำหรับคุยและเขียนงานยาว': 'MiniMax models for chat and long writing',
+  'โมเดล GLM สำหรับเขียนโค้ดและงานเอกสาร': 'GLM models for coding and document work',
+  'โมเดล Kimi สำหรับอ่านและวิเคราะห์บริบทยาว': 'Kimi models for reading and analyzing long context',
   'โมเดลเปิด ตอบเร็วมาก': 'Open models with very fast replies',
   โมเดลจากยุโรป: 'Models from Europe',
   'โมเดล Grok ของ xAI': "xAI's Grok models",

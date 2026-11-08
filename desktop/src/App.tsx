@@ -111,7 +111,7 @@ import { ChatMarkdown } from './chat-markdown';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
 import { publicSourceUrl } from './web';
 import { QuestionCard } from './tool-question';
-import { UsageDialog } from './usage';
+import { AccountQuotaMenuSummary, InlineQuotaChip, UsageDialog } from './usage';
 import { MemoryDialog } from './memory';
 import { LearningDialog } from './learning';
 import { FeedbackButtons, FeedbackDialog, ReportDialog, type FeedbackAsk, type ReportAsk } from './feedback';
@@ -1329,6 +1329,18 @@ export default function App() {
         .join(' · ')
     : aiLabel;
   const [aiPicker, setAiPicker] = useState(false);
+  const [quotaRefreshing, setQuotaRefreshing] = useState(false);
+  const activeUsageAccount = connection ? snapshot?.usage?.accounts?.find(a => a.connectionId === connection.id) : undefined;
+  async function refreshActiveQuota() {
+    if (!api || !connection || quotaRefreshing) return;
+    setQuotaRefreshing(true);
+    try {
+      await api.call('providerUsage', { id: connection.id });
+      await refresh();
+    } finally {
+      setQuotaRefreshing(false);
+    }
+  }
   const aiPickerRef = useRef<HTMLDivElement>(null);
   // The AI picker closes on a click outside it or Escape, like a menu.
   useEffect(() => {
@@ -3194,6 +3206,7 @@ export default function App() {
                     <span className="spacer" />
                     {/* One pill for the AI account, model and reasoning level: the full choice opens above it, so the row
                         stays on one line and the account is not repeated in the status bar. */}
+                    <InlineQuotaChip account={activeUsageAccount} onClick={() => setUsageOpen(true)} />
                     <div className="ai-picker" ref={aiPickerRef}>
                       <button
                         type="button"
@@ -3290,6 +3303,15 @@ export default function App() {
                               </select>
                             </label>
                           ) : null}
+                          <AccountQuotaMenuSummary
+                            account={activeUsageAccount}
+                            busy={quotaRefreshing}
+                            onRefresh={() => void action(refreshActiveQuota)}
+                            onOpenUsage={() => {
+                              setAiPicker(false);
+                              setUsageOpen(true);
+                            }}
+                          />
                         </div>
                       )}
                     </div>
@@ -3870,7 +3892,7 @@ export default function App() {
             </aside>
           </>
         )}
-        {usageOpen && api && <UsageDialog api={api} onClose={() => setUsageOpen(false)} />}
+        {usageOpen && api && <UsageDialog api={api} onClose={() => setUsageOpen(false)} onUpdated={() => void refresh()} />}
         {learningOpen && api && (
           <LearningDialog api={api} initialText={learningText} sessionId={session?.id} onClose={() => setLearningOpen(false)} />
         )}

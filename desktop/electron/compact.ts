@@ -36,6 +36,8 @@ const PRESET_WINDOWS: Record<string, number> = {
   deepseek: 128_000,
   qwen: 128_000,
   minimax: 200_000,
+  zai: 128_000,
+  kimi: 128_000,
   groq: 128_000,
   mistral: 128_000,
   xai: 256_000,
