@@ -2,7 +2,100 @@ import { documentText, type DraftNode } from './draft';
 import { parseThaiDate } from './thai-date';
 
 /** Only current-task URLs enter a QR. Formatting never follows or fetches a URL. */
-export type InvitationPresentation = { rsvpUrl: string; venueUrl: string };
+export const INVITATION_RSVP_STATUSES = ['pending', 'confirmed', 'delegate', 'declined'] as const;
+export type InvitationRsvpStatus = (typeof INVITATION_RSVP_STATUSES)[number];
+export const INVITATION_RSVP_LABELS: Readonly<Record<InvitationRsvpStatus, string>> = {
+  pending: 'รอตอบรับ',
+  confirmed: 'ตอบรับเข้าร่วม',
+  delegate: 'มอบผู้แทน',
+  declined: 'ขัดข้อง',
+};
+export type InvitationRecipient = {
+  number: string;
+  recipient: string;
+  position: string;
+  seats: number;
+  status: InvitationRsvpStatus;
+  confirmedSeats: number;
+  attendees: string;
+};
+export type InvitationSummary = {
+  letters: number;
+  invitedSeats: number;
+  pendingLetters: number;
+  respondedLetters: number;
+  declinedLetters: number;
+  confirmedSeats: number;
+};
+export type InvitationPresentation = { rsvpUrl: string; venueUrl: string; recipients?: InvitationRecipient[] };
+export const blankInvitationRecipient = (): InvitationRecipient => ({
+  number: '',
+  recipient: '',
+  position: '',
+  seats: 1,
+  status: 'pending',
+  confirmedSeats: 0,
+  attendees: '',
+});
+function invitationFieldText(value: unknown, maxLength = 500): string {
+  if (value === undefined || value === '') return '';
+  if (typeof value !== 'string') throw new Error('INVALID_DOCUMENT_PRESENTATION');
+  const text = value.trim();
+  if (text.length > maxLength || /[\r\n\u0000-\u001f\u007f]/.test(text)) throw new Error('INVALID_DOCUMENT_PRESENTATION');
+  return text;
+}
+function invitationSeatCount(value: unknown, min: number, fallback: number): number {
+  if (value === undefined) return fallback;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > 500) throw new Error('INVALID_DOCUMENT_PRESENTATION');
+  return value;
+}
+export function resolveInvitationRecipient(value: unknown): InvitationRecipient {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    Object.keys(value).some(key => !['number', 'recipient', 'position', 'seats', 'status', 'confirmedSeats', 'attendees'].includes(key))
+  )
+    throw new Error('INVALID_DOCUMENT_PRESENTATION');
+  const input = value as Partial<InvitationRecipient>;
+  const status = input.status ?? 'pending';
+  if (!INVITATION_RSVP_STATUSES.includes(status as InvitationRsvpStatus)) throw new Error('INVALID_DOCUMENT_PRESENTATION');
+  const seats = invitationSeatCount(input.seats, 1, 1);
+  const confirmedSeats = invitationSeatCount(input.confirmedSeats, 0, 0);
+  return {
+    number: invitationFieldText(input.number, 160),
+    recipient: invitationFieldText(input.recipient),
+    position: invitationFieldText(input.position),
+    seats,
+    status,
+    confirmedSeats,
+    attendees: invitationFieldText(input.attendees),
+  };
+}
+export function invitationSummary(recipients: readonly InvitationRecipient[] = []): InvitationSummary {
+  let invitedSeats = 0,
+    pendingLetters = 0,
+    respondedLetters = 0,
+    declinedLetters = 0,
+    confirmedSeats = 0;
+  for (const item of recipients) {
+    invitedSeats += item.seats;
+    if (item.status === 'pending') pendingLetters++;
+    else if (item.status === 'declined') declinedLetters++;
+    else {
+      respondedLetters++;
+      confirmedSeats += item.confirmedSeats;
+    }
+  }
+  return {
+    letters: recipients.length,
+    invitedSeats,
+    pendingLetters,
+    respondedLetters,
+    declinedLetters,
+    confirmedSeats,
+  };
+}
 export function invitationUrl(value: unknown): string {
   if (value === undefined || value === '') return '';
   if (typeof value !== 'string') throw new Error('INVALID_INVITATION_URL');
@@ -19,10 +112,22 @@ export function invitationUrl(value: unknown): string {
   return text;
 }
 export function resolveInvitation(value: unknown): InvitationPresentation {
-  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !['rsvpUrl', 'venueUrl'].includes(key)))
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    Object.keys(value).some(key => !['rsvpUrl', 'venueUrl', 'recipients'].includes(key))
+  )
     throw new Error('INVALID_DOCUMENT_PRESENTATION');
   const input = value as Partial<InvitationPresentation>;
-  return { rsvpUrl: invitationUrl(input.rsvpUrl), venueUrl: invitationUrl(input.venueUrl) };
+  if (input.recipients !== undefined && (!Array.isArray(input.recipients) || input.recipients.length > 200))
+    throw new Error('INVALID_DOCUMENT_PRESENTATION');
+  const recipients = input.recipients?.map(resolveInvitationRecipient);
+  return {
+    rsvpUrl: invitationUrl(input.rsvpUrl),
+    venueUrl: invitationUrl(input.venueUrl),
+    ...(recipients?.length ? { recipients } : {}),
+  };
 }
 
 /** Physical measurements shared by both exporters; the original PDFs remain private. */
@@ -39,6 +144,35 @@ export const INVITATION_LAYOUT = {
   qrCm: 2.5,
   signatureGapCm: 1.2,
 } as const;
+
+/** Apply one recipient row's document number, addressee name and position to a clone of the letter. */
+export function invitationForRecipient(document: DraftNode, recipient: InvitationRecipient): DraftNode {
+  const blocks = (document.content || []).map(node => structuredClone(node));
+  const num = recipient.number.trim();
+  if (num) {
+    const text = /^ที่(?:\s|$)/.test(num) ? num : `ที่ ${num}`;
+    const node: DraftNode = { type: 'paragraph', content: [{ type: 'text', text }] };
+    const subject = blocks.findIndex(n => /^เรื่อง(?:\s|$)/.test(documentText(n).trim()));
+    const limit = subject >= 0 ? subject : blocks.length;
+    const existing = blocks.findIndex((n, i) => i < limit && /^ที่\s/.test(documentText(n).trim()));
+    if (existing >= 0) blocks[existing] = node;
+    else blocks.unshift(node);
+  }
+  const name = recipient.recipient.trim().replace(/^เรียน\s+/, '');
+  const position = recipient.position.trim();
+  if (name || position) {
+    const content: DraftNode[] = [{ type: 'text', text: `เรียน ${name || position}` }];
+    if (name && position) content.push({ type: 'hardBreak' }, { type: 'text', text: position });
+    const node: DraftNode = { type: 'paragraph', content };
+    const existing = blocks.findIndex(n => /^เรียน(?:\s|$)/.test(documentText(n).trim()));
+    if (existing >= 0) blocks[existing] = node;
+    else {
+      const subject = blocks.findIndex(n => /^เรื่อง(?:\s|$)/.test(documentText(n).trim()));
+      blocks.splice(subject >= 0 ? subject + 1 : 0, 0, node);
+    }
+  }
+  return { ...document, content: blocks };
+}
 
 /** Classify the latest editable blocks, never cached form prose. Every block is retained exactly once. */
 export function invitationParts(document: DraftNode) {
@@ -72,11 +206,44 @@ export function invitationParts(document: DraftNode) {
   };
 }
 
+const MISSING_VALUE = /\[รอยืนยัน:[ \t]*([^\]\n]+)\]/g;
+const PROPOSED_WORDING = /\[AI_PROPOSED\][ \t]*/g;
+const EMPTY_FIELD_LINE =
+  /^(?:(?:ที่|วันที่|เรียน|อ้างถึง|สิ่งที่ส่งมาด้วย|ผู้ประสานงาน|โทรศัพท์|โทร\.|ไปรษณีย์อิเล็กทรอนิกส์|อีเมล)\s*:?\s*)?(?:\(\s*\))?\s*\\?$/;
+
+/** A new model draft may still use the general letter's status markers. Keep any inline gap editable. */
+export function invitationDraft(draft: string): string {
+  const wording = draft.replace(PROPOSED_WORDING, '');
+  if (!wording.includes('[รอยืนยัน:')) return wording.trim();
+  return wording
+    .split('\n')
+    .map(line => {
+      const blank = line.replace(MISSING_VALUE, '');
+      if (blank === line) return line;
+      return EMPTY_FIELD_LINE.test(blank.trim()) ? '' : line.replace(MISSING_VALUE, '________');
+    })
+    .join('\n')
+    .replace(/\\(?=\n(?:\n|$)|$)/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 /** Local consistency hints are evidence for review, never edits or a certification of the source. */
-export function invitationReview(draft: string): string[] {
+export function invitationReview(draft: string, invitation?: InvitationPresentation): string[] {
   const notes: string[] = [];
-  const pending = [...new Set(draft.match(/\[รอยืนยัน:[^\]\n]+\]/g) || [])];
+  const pending = [...new Set([...draft.matchAll(MISSING_VALUE)].map(match => match[1].trim()).filter(Boolean))];
   if (pending.length) notes.push('ข้อมูลที่ยังต้องยืนยัน: ' + pending.join(', '));
+  if (draft.match(PROPOSED_WORDING)) notes.push('ถ้อยคำที่ AI เสนอเป็นร่างสำหรับเจ้าของเรื่องพิจารณา');
+  if (invitation?.recipients?.length) {
+    const summary = invitationSummary(invitation.recipients);
+    notes.push(
+      `ทะเบียนหนังสือเชิญ: หนังสือ ${summary.letters} ฉบับ · ที่นั่งเชิญรวม ${summary.invitedSeats} ที่นั่ง · ตอบรับแล้ว ${summary.respondedLetters} ฉบับ (ยืนยันเข้าร่วม ${summary.confirmedSeats} คน) · รอตอบรับ ${summary.pendingLetters} ฉบับ` +
+        (summary.declinedLetters ? ` · ขัดข้อง ${summary.declinedLetters} ฉบับ` : ''),
+    );
+    if (invitation.recipients.some(r => !r.recipient.trim())) notes.push('มีรายการในทะเบียนหนังสือเชิญที่ยังไม่ได้ระบุชื่อผู้รับ');
+    if (invitation.recipients.some(r => (r.status === 'confirmed' || r.status === 'delegate') && r.confirmedSeats === 0))
+      notes.push('มีหน่วยงานที่ตอบรับเข้าร่วมแต่ยังระบุจำนวนผู้ยืนยันเข้าร่วมเป็น 0 คน');
+  }
   const months = 'มกราคม|กุมภาพันธ์|มีนาคม|เมษายน|พฤษภาคม|มิถุนายน|กรกฎาคม|สิงหาคม|กันยายน|ตุลาคม|พฤศจิกายน|ธันวาคม';
   const days = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
   const matches = [

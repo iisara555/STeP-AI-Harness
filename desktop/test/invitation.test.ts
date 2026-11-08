@@ -4,10 +4,18 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
+import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import jsQR from 'jsqr';
 import { DOMParser } from '@xmldom/xmldom';
-import { invitationUrl, resolveInvitation, invitationParts, invitationReview } from '../src/invitation';
+import {
+  invitationForRecipient,
+  invitationParts,
+  invitationReview,
+  invitationSummary,
+  invitationUrl,
+  resolveInvitation,
+} from '../src/invitation';
 import { resolvePresentation } from '../src/document-presentation';
 import { requestedDocumentTool, requestedLetterVariant } from '../src/document-intent';
 import { documentRequest, documentVariant } from '../src/document-tools';
@@ -49,6 +57,8 @@ test('invitation intent and subtype are allowlisted independently from model out
   ).fields;
   assert.equal(fields.recipientPosition.provenance, 'USER_INPUT');
   assert.equal(fields.rsvpDeadline.value, '15 มกราคม 2570');
+  assert.deepEqual(fields.number, { label: 'เลขหนังสือ', value: null, missingAction: 'confirm' });
+  assert.match(JSON.parse(documentRequest('letter', {}, 'external').sourceText).fields.number.placeholder, /รอยืนยัน/);
   const qr = documentRequest(
     'letter',
     { rsvpUrl: 'https://example.org/rsvp?code=0007', venueUrl: 'https://example.org/map' },
@@ -148,6 +158,91 @@ test('DOCX and PDF use the latest draft and QR payloads for zero, one and two li
         .filter(Boolean);
       assert.deepEqual(embedded.sort(), expected.toSorted());
     }
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+});
+
+test('multi-organization register separates letter count from seat count and exports per-recipient letters and Excel register', async () => {
+  const recipients = [
+    {
+      number: 'ศธ 0000/0201',
+      recipient: 'ผู้อำนวยการสำนักงานตัวอย่างที่ 1',
+      position: 'สำนักงานตัวอย่างที่ 1',
+      seats: 2,
+      status: 'confirmed' as const,
+      confirmedSeats: 2,
+      attendees: 'ผู้แทน 2 คน',
+    },
+    {
+      number: 'ศธ 0000/0202',
+      recipient: 'คณบดีคณะตัวอย่างที่ 2',
+      position: 'มหาวิทยาลัยตัวอย่างที่ 2',
+      seats: 3,
+      status: 'delegate' as const,
+      confirmedSeats: 1,
+      attendees: 'ผู้แทน 1 คน',
+    },
+    {
+      number: 'ศธ 0000/0203',
+      recipient: 'ผู้อำนวยการศูนย์ตัวอย่างที่ 3',
+      position: 'ศูนย์ตัวอย่างที่ 3',
+      seats: 1,
+      status: 'pending' as const,
+      confirmedSeats: 0,
+      attendees: '',
+    },
+  ];
+  const resolved = resolveInvitation({ rsvpUrl: 'https://example.org/rsvp', venueUrl: '', recipients });
+  const summary = invitationSummary(resolved.recipients);
+  assert.deepEqual(summary, {
+    letters: 3,
+    invitedSeats: 6,
+    pendingLetters: 1,
+    respondedLetters: 2,
+    declinedLetters: 0,
+    confirmedSeats: 3,
+  });
+  const req = documentRequest('letter', { subject: 'กิจกรรมสังเคราะห์' }, 'invitation', 'source', recipients);
+  assert.doesNotMatch(req.sourceText, /ผู้อำนวยการสำนักงานตัวอย่างที่ 1|0201/);
+  assert.deepEqual(JSON.parse(req.sourceText).invitationRegister, { letters: 3, invitedSeats: 6, localOnly: true });
+  const notes = invitationReview(sample, resolved).join('\n');
+  assert.match(notes, /หนังสือ 3 ฉบับ · ที่นั่งเชิญรวม 6 ที่นั่ง · ตอบรับแล้ว 2 ฉบับ \(ยืนยันเข้าร่วม 3 คน\) · รอตอบรับ 1 ฉบับ/);
+
+  for (const invalid of [
+    [{ ...recipients[0], seats: 0 }],
+    [{ ...recipients[0], confirmedSeats: -1 }],
+    [{ ...recipients[0], status: 'unknown' }],
+    [{ ...recipients[0], recipient: 'บรรทัดแรก\nบรรทัดสอง' }],
+    [{ ...recipients[0], extra: true }],
+  ]) {
+    assert.throws(() => resolveInvitation({ rsvpUrl: '', venueUrl: '', recipients: invalid as any }), /INVALID_DOCUMENT_PRESENTATION/);
+  }
+
+  const folder = await mkdtemp(join(tmpdir(), 'step-invitation-register-'));
+  try {
+    const baseDoc = markdownDocument(sample);
+    const secondDoc = invitationForRecipient(baseDoc, recipients[1]);
+    assert.match(documentText(secondDoc), /ที่ ศธ 0000\/0202/);
+    assert.match(documentText(secondDoc), /เรียน คณบดีคณะตัวอย่างที่ 2\nมหาวิทยาลัยตัวอย่างที่ 2/);
+
+    const xlsxPath = join(folder, 'register.xlsx');
+    await exportDocument(xlsxPath, 'xlsx', documentText(baseDoc), async () => Buffer.alloc(0), baseDoc, {
+      documentTool: 'letter',
+      presentation: { invitation: resolved, pageNumber: 'none', embedFonts: false },
+    });
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.readFile(xlsxPath);
+    const sheet = wb.getWorksheet('ทะเบียนหนังสือเชิญ');
+    assert.ok(sheet);
+    assert.equal(sheet.getRow(2).getCell(2).value, 'ศธ 0000/0201');
+    assert.equal(sheet.getRow(2).getCell(3).value, 'ผู้อำนวยการสำนักงานตัวอย่างที่ 1');
+    assert.equal(sheet.getRow(2).getCell(5).value, 2);
+    assert.equal(sheet.getRow(3).getCell(6).value, 'มอบผู้แทน');
+    assert.equal(sheet.getRow(3).getCell(7).value, 1);
+    assert.equal(sheet.getRow(5).getCell(2).value, '3 ฉบับ');
+    assert.equal(sheet.getRow(5).getCell(5).value, 6);
+    assert.equal(sheet.getRow(5).getCell(7).value, 3);
   } finally {
     await rm(folder, { recursive: true, force: true });
   }

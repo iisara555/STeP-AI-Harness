@@ -79,6 +79,9 @@ Release validation reproduced the sidebar's outdated expectation after explicit 
 
 ## In progress
 
+- **Multi-organization invitation register and per-recipient exports (2026-11-07, source only)**: add a local recipient and RSVP register for STeP invitations that separates letter count from seat count, records per-letter document numbers, addressees, positions, invited seats, RSVP status and confirmed attendees, exports individual Word/PDF letters per recipient, and exports the register worksheet to Excel (`.xlsx`). Recipient names and document numbers stay local when drafting. Publication awaits owner instruction.
+
+- **Invitation field examples and cleaner drafts (2026-11-07, source only)**: the form shows distinct Thai/English examples as placeholders, with empty values and QR links kept separate from sample text. The Skill and Desktop contract leave missing facts blank and place the follow-up list in the review. New model proposals with legacy status markers move those details into the review before export. Saved drafts and targeted user edits keep their existing content. Publication awaits owner instruction.
 - **Invitation draft save recovery (2026-11-07, source only)**: reproduced the 0.6.30 export error when saving an edited invitation before accepting its AI proposal. The host sets the STeP presentation at the same draft revision, so the renderer now synchronizes presentation separately from editor content. The invitation Electron smoke checks PDF export and a chat follow-up before acceptance, preservation of local QR links and edits, and reviewed replacement of the saved draft. The installed release remains 0.6.30. Publication of the fix awaits owner instruction.
 
 - **STeP invitation acceptance**: the 0.6.30 release includes the verified layout and local QR flow. Owner review of wording from an employee-selected AI and employee-document/device acceptance remain open. No explicit live evaluation provider was configured for #309.

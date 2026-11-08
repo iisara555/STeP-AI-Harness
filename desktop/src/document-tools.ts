@@ -1,6 +1,6 @@
 import { parseThaiDate, formatThaiDate } from './thai-date';
 import { stepOrganizationReference } from './organization-profile';
-import { invitationUrl } from './invitation';
+import { invitationSummary, invitationUrl, resolveInvitation, type InvitationRecipient } from './invitation';
 
 /** Fixed document profiles: the host selects actual Skills and working templates from this allowlist. */
 export type DocumentToolId = 'tor' | 'memo' | 'letter' | 'project' | 'minutes' | 'other';
@@ -244,12 +244,17 @@ export function documentRequest(
   values: Record<string, string>,
   variant?: string,
   attachmentRole: DocumentAttachmentRole = 'source',
+  recipients?: InvitationRecipient[],
 ) {
   const profile = documentTool(id);
   if (!profile) throw new Error('INVALID_DOCUMENT_TOOL');
   if (!['source', 'template'].includes(attachmentRole)) throw new Error('INVALID_DOCUMENT_SOURCE_ROLE');
   const kind = profile.variants.find(v => v.id === (variant || profile.variants[0].id));
   if (!kind) throw new Error('INVALID_DOCUMENT_VARIANT');
+  const invitation = profile.id === 'letter' && kind.id === 'invitation';
+  if (recipients !== undefined && !invitation) throw new Error('INVALID_DOCUMENT_PRESENTATION');
+  const resolvedRecipients =
+    invitation && recipients?.length ? resolveInvitation({ rsvpUrl: '', venueUrl: '', recipients }).recipients : undefined;
   if (Object.keys(values).some(key => !profile.fields.some(f => f.key === key))) throw new Error('INVALID_DOCUMENT_FIELDS');
   const fields = Object.fromEntries(
     profile.fields
@@ -283,12 +288,13 @@ export function documentRequest(
               ? { provenance: 'USER_INPUT' }
               : f.missingAction
                 ? { missingAction: f.missingAction }
-                : { missingAction: 'confirm', placeholder: `[รอยืนยัน: ${f.label}]` }),
+                : { missingAction: 'confirm', ...(!invitation ? { placeholder: `[รอยืนยัน: ${f.label}]` } : {}) }),
             ...(isDate ? (date ? { formatted: formatThaiDate(date, 'official') } : { review: 'DATE_NEEDS_REVIEW' }) : {}),
           },
         ];
       }),
   );
+  const registerSummary = resolvedRecipients?.length ? invitationSummary(resolvedRecipients) : undefined;
   const sourceText = JSON.stringify(
     {
       document: profile.title,
@@ -296,6 +302,15 @@ export function documentRequest(
       attachmentRole,
       organizationReference: stepOrganizationReference,
       fields,
+      ...(registerSummary
+        ? {
+            invitationRegister: {
+              letters: registerSummary.letters,
+              invitedSeats: registerSummary.invitedSeats,
+              localOnly: true,
+            },
+          }
+        : {}),
     },
     null,
     2,
@@ -303,8 +318,11 @@ export function documentRequest(
   if (sourceText.length > 90_000) throw new Error('INPUT_LIMIT');
   const task =
     profile.id === 'memo' ? profile.title + kind.label : profile.variants.length > 1 ? `${profile.title} (${kind.label})` : profile.title;
+  const missingFacts = invitation
+    ? 'เว้นข้อมูลที่ยังไม่ทราบในตัวหนังสือ ตัดบรรทัดเสริมที่ยังไม่มีข้อมูล และใช้ถ้อยคำร่างตามต้นเรื่อง'
+    : 'คง [รอยืนยัน: ชื่อช่อง] เฉพาะข้อเท็จจริงหรือเงื่อนไขที่ต้องมีหลักฐาน';
   return {
-    text: `${task} จากข้อมูลในฟอร์มและไฟล์ที่แนบ ใช้ Skill ที่เลือกเป็นหลักและแม่แบบที่โหลดในบริบท จัดทำตัวเอกสารที่แก้ไขและส่งออกได้ใน document_draft ช่วยขึ้นร่างเนื้อหาที่เสนอได้จากบริบทตาม Skill และแม่แบบ แม้ผู้ใช้ยังไม่ได้กรอกช่องนั้น ระบุข้อความที่เสนอเป็นร่างเพื่อพิจารณาและแยกสมมติฐานในผลตรวจ คง [รอยืนยัน: ชื่อช่อง] เฉพาะข้อเท็จจริงหรือเงื่อนไขที่ต้องมีหลักฐาน แยกผลตรวจ รายการข้อมูลและแหล่งอ้างอิงที่ต้องยืนยันไว้ใน document_review ซึ่งแสดงในแอปและไม่เป็นส่วนหนึ่งของเอกสาร${attachmentRole === 'template' ? ` ไฟล์ที่แนบเป็นแบบฟอร์ม/ตัวอย่าง ใช้${profile.id === 'tor' ? 'โครงสร้าง ชื่อช่อง แนวการเขียนและระดับรายละเอียดที่เหมาะกับงานนี้' : 'เฉพาะโครงสร้างและชื่อช่อง'} ไม่ใช้ชื่อบุคคล เลขหนังสือ วันที่ รหัสโครงการ งบ หรือข้อมูลที่กรอกเป็นตัวอย่างในไฟล์นั้นเป็นข้อเท็จจริงของงานใหม่ เติมข้อมูลของงานนี้จากฟอร์มหรือหลักฐานต้นเรื่องที่เจ้าของยืนยันแยกเท่านั้น` : ' ไฟล์ที่แนบเป็นต้นเรื่องของงานนี้ คง provenance และตรวจความขัดแย้งกับฟอร์มตาม Skill'}`,
+    text: `${task} จากข้อมูลในฟอร์มและไฟล์ที่แนบ ใช้ Skill ที่เลือกเป็นหลักและแม่แบบที่โหลดในบริบท จัดทำตัวเอกสารที่แก้ไขและส่งออกได้ใน document_draft ช่วยขึ้นร่างเนื้อหาที่เสนอได้จากบริบทตาม Skill และแม่แบบ แม้ผู้ใช้ยังไม่ได้กรอกช่องนั้น ระบุข้อความที่เสนอเป็นร่างเพื่อพิจารณาและแยกสมมติฐานในผลตรวจ ${missingFacts} แยกผลตรวจ รายการข้อมูลและแหล่งอ้างอิงที่ต้องยืนยันไว้ใน document_review ซึ่งแสดงในแอปและไม่เป็นส่วนหนึ่งของเอกสาร${attachmentRole === 'template' ? ` ไฟล์ที่แนบเป็นแบบฟอร์ม/ตัวอย่าง ใช้${profile.id === 'tor' ? 'โครงสร้าง ชื่อช่อง แนวการเขียนและระดับรายละเอียดที่เหมาะกับงานนี้' : 'เฉพาะโครงสร้างและชื่อช่อง'} ไม่ใช้ชื่อบุคคล เลขหนังสือ วันที่ รหัสโครงการ งบ หรือข้อมูลที่กรอกเป็นตัวอย่างในไฟล์นั้นเป็นข้อเท็จจริงของงานใหม่ เติมข้อมูลของงานนี้จากฟอร์มหรือหลักฐานต้นเรื่องที่เจ้าของยืนยันแยกเท่านั้น` : ' ไฟล์ที่แนบเป็นต้นเรื่องของงานนี้ คง provenance และตรวจความขัดแย้งกับฟอร์มตาม Skill'}`,
     sourceText,
   };
 }

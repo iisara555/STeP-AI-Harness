@@ -19,13 +19,41 @@
   display: grid;
   gap: 0.3rem;
 }
-.invitation-links input {
+.invitation-links input,
+.invitation-links select {
   width: 100%;
   min-width: 0;
 }
 .invitation-links img {
   display: block;
   margin-top: 0.5rem;
+}
+.invitation-summary {
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  background: var(--surface-muted, rgba(127, 127, 127, 0.08));
+}
+.invitation-recipient-row {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.invitation-recipient-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.invitation-recipient-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.6rem;
+}
+.invitation-recipient-grid label.wide {
+  grid-column: 1 / -1;
 }
 .document-presentation label {
   display: flex;
