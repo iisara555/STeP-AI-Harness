@@ -74,7 +74,7 @@ export type Usage = { input: number; output: number; total: number; runs: number
 /** Only provider-reported account meters. Unknown values stay absent, never zero. */
 export type ProviderUsageData = {
   status: 'ok' | 'unavailable';
-  source: 'codex' | 'claude' | 'copilot' | 'openrouter' | 'deepseek' | 'minimax' | 'zai' | 'kimi';
+  source: 'codex' | 'claude' | 'copilot' | 'antigravity' | 'openrouter' | 'deepseek' | 'minimax' | 'zai' | 'kimi';
   experimental?: boolean;
   plan?: string;
   reason?: string;

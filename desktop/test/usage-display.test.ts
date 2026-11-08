@@ -25,6 +25,7 @@ test('usage sources name providers without presenting unknown backend codes as p
   assert.equal(usageSourceName('codex'), 'ChatGPT');
   assert.equal(usageSourceName('claude'), 'Claude');
   assert.equal(usageSourceName('copilot'), 'GitHub Copilot');
+  assert.equal(usageSourceName('antigravity'), 'Antigravity');
   assert.equal(usageSourceName('openrouter'), 'OpenRouter');
   assert.equal(usageSourceName('deepseek'), 'DeepSeek');
   assert.equal(usageSourceName('minimax'), 'MiniMax');

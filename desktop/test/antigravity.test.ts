@@ -9,6 +9,7 @@ import {
   ANTIGRAVITY_DENY,
   antigravityHome,
   antigravityModels,
+  antigravityQuota,
   antigravityUsage,
   runAntigravity,
 } from '../electron/antigravity';
@@ -34,6 +35,7 @@ const args=process.argv.slice(2);
 if(args[0]==='--version'){console.log(${JSON.stringify(version)});process.exit(0);}
 fs.appendFileSync(log, JSON.stringify({args,cwd:process.cwd(),home:process.env.HOME,api:!!process.env.GEMINI_API_KEY,settings:JSON.parse(fs.readFileSync(path.join(process.env.HOME,'.gemini','antigravity-cli','settings.json'),'utf8')),agent:fs.readFileSync(path.join(process.env.HOME,'.gemini','config','agents','step-draft','agent.md'),'utf8'),updaterCheck:Date.now()-fs.statSync(path.join(process.env.HOME,'.gemini','antigravity-cli','last_check.timestamp')).mtimeMs})+'\\n');
 if(args[0]==='models'){console.log('gemini-test\\tGemini test\\ngemini-test\\tDuplicate\\nclaude-other\\tOther provider\\ngemini-second\\tSecond');process.exit(0);}
+if(args.includes('/usage')){if(kind==='auth'){console.error('authentication required');process.exit(1);}console.log(JSON.stringify({status:'SUCCESS',num_turns:0,command:{name:'usage',data:{groups:[{name:'Gemini Models',buckets:[{id:'gemini-5h',window:'5h',remaining_fraction:0.4}]}]}}}));process.exit(0);}
 const send=x=>console.log(JSON.stringify(x));
 const runNumber=fs.readFileSync(log,'utf8').trim().split('\\n').map(x=>JSON.parse(x)).filter(x=>x.args?.includes('--input-format')).length;
 if(kind==='auth'){send({event:'result',result:{status:'ERROR',error:'authentication required: user@example.com https://accounts.google.com/oauth?code=private-code',usage:{input_tokens:0,output_tokens:0,total_tokens:0}}});process.exit(1);}
@@ -410,6 +412,32 @@ test('Antigravity cancellation and timeout terminate the process before cleanup'
       clearTimeout(timer);
       await f.close();
     }
+  }
+});
+
+test('Antigravity quota asks agy only for its read-only /usage answer, in an isolated home that is removed', async () => {
+  const f = await fixture('success', '1.3.2');
+  try {
+    const value: any = await antigravityQuota(f.connection, f.context);
+    assert.equal(value.command.name, 'usage');
+    assert.equal(value.num_turns, 0);
+    const calls = await f.calls();
+    assert.equal(calls.length, 1, 'no agent turn and no stdin message');
+    assert.deepEqual(calls[0].args, ['--agent', 'step-draft', '--print', '/usage', '--output-format', 'json', '--print-timeout', '30s']);
+    assert.equal(calls[0].api, false, 'no API key reaches agy');
+    assert.equal(calls[0].settings.toolPermission, 'strict');
+    assert.notEqual(resolve(calls[0].home), resolve(f.root));
+    assert.deepEqual((await readdir(f.root)).sort(), ['agy.mjs', 'calls.jsonl']);
+    await assert.rejects(antigravityQuota({ ...f.connection, mode: 'api' }, f.context), { message: 'INVALID_CONNECTION' });
+    assert.equal((await f.calls()).length, 1);
+  } finally {
+    await f.close();
+  }
+  const auth = await fixture('auth', '1.3.2');
+  try {
+    await assert.rejects(antigravityQuota(auth.connection, auth.context), { message: 'LOGIN_REQUIRED' });
+  } finally {
+    await auth.close();
   }
 });
 
