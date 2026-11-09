@@ -211,6 +211,38 @@ try {
   await expect(register.locator('.invitation-summary')).toContainText(
     'หนังสือ 2 ฉบับ · ที่นั่งเชิญรวม 5 ที่นั่ง · ตอบรับแล้ว 2 ฉบับ (ยืนยันเข้าร่วม 3 คน)',
   );
+  // Retyping a count from an empty field keeps exactly what staff typed (it once became "1" + "25" = 125).
+  await register.getByRole('button', { name: 'เพิ่มผู้รับ / หน่วยงาน', exact: true }).click();
+  await expect(rows).toHaveCount(3);
+  const thirdSeats = rows.nth(2).getByLabel('จำนวนที่นั่งที่เชิญ');
+  await thirdSeats.click();
+  await thirdSeats.press('ControlOrMeta+A');
+  await thirdSeats.press('Backspace');
+  await expect(thirdSeats).toHaveValue('');
+  await thirdSeats.pressSequentially('25');
+  await expect(thirdSeats).toHaveValue('25');
+  await thirdSeats.press('ControlOrMeta+A');
+  await thirdSeats.press('Backspace');
+  await thirdSeats.blur();
+  await expect(thirdSeats).toHaveValue('25');
+  // Confirmed attendees cannot exceed the invited seats.
+  const firstConfirmed = rows.nth(0).getByLabel('จำนวนผู้ยืนยันเข้าร่วม');
+  await firstConfirmed.fill('9');
+  await firstConfirmed.blur();
+  await expect(firstConfirmed).toHaveValue('2');
+  // Removing a row offers undo and moves focus off the next row's remove button.
+  await rows.nth(2).getByRole('button', { name: 'ลบผู้รับลำดับที่ 3', exact: true }).click();
+  await expect(rows).toHaveCount(2);
+  const undo = register.getByRole('button', { name: 'เลิกทำ', exact: true });
+  await expect(undo).toBeFocused();
+  await undo.click();
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(2).getByLabel('จำนวนที่นั่งที่เชิญ')).toHaveValue('25');
+  await rows.nth(2).getByRole('button', { name: 'ลบผู้รับลำดับที่ 3', exact: true }).click();
+  await expect(rows).toHaveCount(2);
+  await expect(register.locator('.invitation-summary')).toContainText(
+    'หนังสือ 2 ฉบับ · ที่นั่งเชิญรวม 5 ที่นั่ง · ตอบรับแล้ว 2 ฉบับ (ยืนยันเข้าร่วม 3 คน)',
+  );
   await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
   await expect
     .poll(async () => (await snapshot()).sessions.find(s => s.id === session.id)?.presentation?.invitation?.recipients?.length)

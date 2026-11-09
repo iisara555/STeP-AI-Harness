@@ -243,6 +243,8 @@ export function invitationReview(draft: string, invitation?: InvitationPresentat
     if (invitation.recipients.some(r => !r.recipient.trim())) notes.push('มีรายการในทะเบียนหนังสือเชิญที่ยังไม่ได้ระบุชื่อผู้รับ');
     if (invitation.recipients.some(r => (r.status === 'confirmed' || r.status === 'delegate') && r.confirmedSeats === 0))
       notes.push('มีหน่วยงานที่ตอบรับเข้าร่วมแต่ยังระบุจำนวนผู้ยืนยันเข้าร่วมเป็น 0 คน');
+    const overSeats = invitation.recipients.flatMap((r, index) => (r.confirmedSeats > r.seats ? [index + 1] : []));
+    if (overSeats.length) notes.push('จำนวนผู้ยืนยันเข้าร่วมเกินจำนวนที่นั่งที่เชิญ ในหนังสือฉบับที่ ' + overSeats.join(', '));
   }
   const months = 'มกราคม|กุมภาพันธ์|มีนาคม|เมษายน|พฤษภาคม|มิถุนายน|กรกฎาคม|สิงหาคม|กันยายน|ตุลาคม|พฤศจิกายน|ธันวาคม';
   const days = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
