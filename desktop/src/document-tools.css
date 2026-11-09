@@ -94,6 +94,80 @@
   justify-content: space-between;
   gap: 12px;
 }
+/* Invitation form: one section per part of the printed letter, top to bottom. */
+.invitation-sections {
+  display: grid;
+  gap: 16px;
+}
+.invitation-section {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px 16px;
+}
+.invitation-section > header {
+  margin-bottom: 12px;
+}
+.invitation-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 2px;
+  font-size: 1rem;
+}
+.invitation-section-number {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  font-size: 0.8rem;
+}
+.invitation-section > header p {
+  margin: 0;
+}
+.invitation-section-extra > summary {
+  cursor: pointer;
+}
+.invitation-section-extra[open] > summary {
+  margin-bottom: 12px;
+}
+/* The date sits under the sender block on the right, as on the letter. */
+.document-fields .invitation-date {
+  grid-column: 2;
+}
+.invitation-number-note {
+  align-self: center;
+  margin: 0;
+}
+.invitation-recipient-mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.invitation-recipient-mode legend {
+  float: left;
+  margin-right: 4px;
+  padding: 0;
+}
+.document-form .invitation-recipient-mode label {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.document-form .invitation-recipient-mode input {
+  width: auto;
+}
+.invitation-recipient-mode small {
+  flex-basis: 100%;
+}
+.invitation-section .invitation-links {
+  margin: 0;
+}
 @media (max-width: 680px) {
   .document-tools {
     padding: 16px;
@@ -101,6 +175,9 @@
   .document-form-options,
   .document-fields {
     grid-template-columns: 1fr;
+  }
+  .document-fields .invitation-date {
+    grid-column: auto;
   }
 }
 

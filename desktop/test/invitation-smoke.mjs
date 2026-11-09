@@ -115,6 +115,19 @@ try {
   await form.getByLabel('ลิงก์แผนที่สถานที่จัดงาน').fill('https://example.org/map#room');
   await expect(form.getByRole('img')).toHaveCount(2);
   if (qa) await page.screenshot({ path: join(qa, 'form.png'), fullPage: true });
+  // The form follows the printed letter: header, subject and addressee, body, closing (with the QR links).
+  await expect(form.locator('.invitation-section h3')).toHaveText([/หัวหนังสือ/, /เรื่องและผู้รับ/, /เนื้อความ/, /ท้ายหนังสือ/]);
+  await expect(form.locator('.invitation-section').nth(3).getByLabel('ลิงก์ตอบรับเข้าร่วมงาน')).toBeVisible();
+  // Several organizations carries the addressee into the first letter and back; RSVP tracking is not part of drafting.
+  await form.getByLabel('หลายหน่วยงาน (แยกเลขที่และผู้รับรายฉบับ)').check();
+  const draftRows = form.locator('.invitation-register .invitation-recipient-row');
+  await expect(draftRows).toHaveCount(1);
+  await expect(draftRows.nth(0).getByLabel('ตำแหน่ง / หน่วยงานผู้รับ')).toHaveValue('ตำแหน่งสังเคราะห์');
+  await expect(form.getByLabel('ตำแหน่ง / หน่วยงานผู้รับ')).toHaveCount(1);
+  await expect(form.getByLabel('สถานะตอบรับ')).toHaveCount(0);
+  await form.getByLabel('ผู้รับคนเดียว').check();
+  await expect(draftRows).toHaveCount(0);
+  await expect(form.getByLabel('ตำแหน่ง / หน่วยงานผู้รับ', { exact: true })).toHaveValue('ตำแหน่งสังเคราะห์');
   await form.getByRole('button', { name: 'ให้ AI ร่างเอกสาร' }).click();
   const consent = page.getByRole('button', { name: 'มีสิทธิ์ส่งข้อมูลนี้', exact: true });
   await expect(consent).toBeVisible();

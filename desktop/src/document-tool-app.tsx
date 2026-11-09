@@ -1,14 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { FileText, LoaderCircle, Paperclip, Sparkles, X } from './icons';
 import type { Attachment, Connection } from './types';
-import { DOCUMENT_TOOLS, documentTool, type DocumentToolId, type DocumentAttachmentRole } from './document-tools';
+import { DOCUMENT_TOOLS, documentTool, type DocumentField, type DocumentToolId, type DocumentAttachmentRole } from './document-tools';
 import { connectionName, errorText } from './messages';
 import { t } from './i18n';
 import { skillDisplayName } from './skill-display';
 import { ThaiText } from './thai-text';
 import './document-tools.css';
-import type { InvitationPresentation, InvitationRecipient } from './invitation';
-import { InvitationLinks, invalidInvitationLinks } from './invitation-links';
+import { blankInvitationRecipient, type InvitationPresentation, type InvitationRecipient } from './invitation';
+import { InvitationQrLinks, InvitationRegister, invalidInvitationLinks } from './invitation-links';
+
+/**
+ * The invitation form follows the printed letter from top to bottom, so staff fill each part where they will
+ * later see it. RSVP links and source notes are placed by `InvitationFormSections` itself.
+ */
+const INVITATION_SECTIONS: readonly { title: string; hint: string; keys: readonly string[] }[] = [
+  { title: 'หัวหนังสือ', hint: 'ส่วนบนสุดของหนังสือ: เลขที่ ส่วนราชการเจ้าของหนังสือ และวันที่', keys: ['number', 'unit', 'date'] },
+  {
+    title: 'เรื่องและผู้รับ',
+    hint: 'เรื่อง คำขึ้นต้น (เรียน) อ้างถึง และสิ่งที่ส่งมาด้วย',
+    keys: ['subject', 'recipient', 'recipientPosition', 'references'],
+  },
+  {
+    title: 'เนื้อความ',
+    hint: 'เหตุที่มีหนังสือ วันจัดงาน ความประสงค์ และกำหนดตอบรับ',
+    keys: ['background', 'schedule', 'content', 'rsvpDeadline'],
+  },
+  { title: 'ท้ายหนังสือ', hint: 'ผู้ลงนาม ผู้ประสานงาน และ QR ท้ายหนังสือ', keys: ['signer', 'contact'] },
+];
+const INVITATION_PLACED = new Set(['rsvpUrl', 'venueUrl', 'sources', ...INVITATION_SECTIONS.flatMap(s => s.keys)]);
+const INVITATION_WIDE = new Set(['subject', 'schedule']);
 
 // Form examples are display text only. They never become form values or source evidence.
 const invitationExamples: Readonly<Record<string, string>> = {
@@ -33,6 +54,8 @@ export type DocumentForm = {
   values: Record<string, string>;
   variant: string;
   recipients?: InvitationRecipient[];
+  /** Invitation only: one addressee in the letter fields, or one letter per row of the register. */
+  recipientMode?: 'single' | 'multi';
   source?: DocumentAttachment;
   sourceRole?: DocumentAttachmentRole;
 };
@@ -93,6 +116,33 @@ export function DocumentTools({
           ? t('กรอกอย่างน้อยหนึ่งช่อง หรือแนบต้นเรื่อง แล้วจึงให้ AI ร่าง')
           : '';
   const update = (patch: Partial<DocumentForm>) => setForms(old => ({ ...old, [selected]: { ...form, ...patch } }));
+  const renderField = (f: DocumentField, className = f.multiline ? 'wide' : '') => (
+    <label key={f.key} className={className}>
+      {t(f.label)}
+      {f.multiline ? (
+        <textarea
+          aria-label={t(f.label)}
+          rows={3}
+          maxLength={6000}
+          value={form.values[f.key] || ''}
+          disabled={disabled}
+          placeholder={t((invitation && invitationExamples[f.key]) || 'เว้นได้หากยังไม่มีข้อมูล')}
+          onChange={e => update({ values: { ...form.values, [f.key]: e.target.value } })}
+        />
+      ) : (
+        <input
+          aria-label={t(f.label)}
+          maxLength={6000}
+          value={form.values[f.key] || ''}
+          disabled={disabled}
+          placeholder={t((invitation && invitationExamples[f.key]) || 'เว้นได้หากยังไม่มีข้อมูล')}
+          onChange={e => update({ values: { ...form.values, [f.key]: e.target.value } })}
+        />
+      )}
+      {f.missingAction === 'draft-proposal' && <small className="muted">{t('เว้นได้ AI ช่วยเสนอร่างให้พิจารณา')}</small>}
+      {f.hint && <small className="muted">{t(f.hint)}</small>}
+    </label>
+  );
   useEffect(() => setRevisionRequest(''), [existingDraft?.id, selected]);
   // Consent is handled by the normal send dialog. Only a started send consumes the attachment.
   useEffect(() => {
@@ -323,53 +373,12 @@ export function DocumentTools({
           </p>
         </div>
         {invitation && <p className="small muted">{t('กรอกเท่าที่ทราบ ตัวอย่างในช่องมีไว้ดูวิธีกรอก')}</p>}
-        <div className="document-fields">
-          {profile.fields
-            .filter(f => (!f.invitationOnly || invitation) && !['rsvpUrl', 'venueUrl'].includes(f.key))
-            .map(f => (
-              <label key={f.key} className={f.multiline ? 'wide' : ''}>
-                {t(f.label)}
-                {f.multiline ? (
-                  <textarea
-                    aria-label={t(f.label)}
-                    rows={3}
-                    maxLength={6000}
-                    value={form.values[f.key] || ''}
-                    disabled={disabled}
-                    placeholder={t((invitation && invitationExamples[f.key]) || 'เว้นได้หากยังไม่มีข้อมูล')}
-                    onChange={e => update({ values: { ...form.values, [f.key]: e.target.value } })}
-                  />
-                ) : (
-                  <input
-                    aria-label={t(f.label)}
-                    maxLength={6000}
-                    value={form.values[f.key] || ''}
-                    disabled={disabled}
-                    placeholder={t((invitation && invitationExamples[f.key]) || 'เว้นได้หากยังไม่มีข้อมูล')}
-                    onChange={e => update({ values: { ...form.values, [f.key]: e.target.value } })}
-                  />
-                )}
-                {f.missingAction === 'draft-proposal' && <small className="muted">{t('เว้นได้ AI ช่วยเสนอร่างให้พิจารณา')}</small>}
-                {f.hint && <small className="muted">{t(f.hint)}</small>}
-              </label>
-            ))}
-        </div>
-        {/* Sticky: the only primary action stays in reach on a form that is several screens tall. */}
-        {invitation && (
-          <>
-            <p className="small muted">{t('หนังสือเชิญใช้มาตรฐาน STeP ทั้งภาษาและการจัดหน้า')}</p>
-            <InvitationLinks
-              value={links}
-              disabled={disabled}
-              onChange={value =>
-                update({
-                  values: { ...form.values, rsvpUrl: value.rsvpUrl, venueUrl: value.venueUrl },
-                  recipients: value.recipients,
-                })
-              }
-            />
-          </>
+        {invitation ? (
+          <InvitationFormSections fields={profile.fields} form={form} disabled={disabled} update={update} renderField={renderField} />
+        ) : (
+          <div className="document-fields">{profile.fields.filter(f => !f.invitationOnly).map(f => renderField(f))}</div>
         )}
+        {/* Sticky: the only primary action stays in reach on a form that is several screens tall. */}
         <footer className="document-form-actions">
           <p className="small muted">{t('AI ช่วยร่าง การตรวจข้อมูลจริง การอนุมัติ และการลงนามเป็นของเจ้าของเรื่องและผู้มีอำนาจ')}</p>
           <div className="document-form-submit">
@@ -390,6 +399,149 @@ export function DocumentTools({
           </div>
         </footer>
       </form>
+    </div>
+  );
+}
+
+const limit = (value: string | undefined, max: number) => (value || '').trim().slice(0, max);
+
+/** Invitation fields grouped and ordered like the printed letter: header, subject and addressee, body, closing. */
+function InvitationFormSections({
+  fields,
+  form,
+  disabled,
+  update,
+  renderField,
+}: {
+  fields: DocumentField[];
+  form: DocumentForm;
+  disabled: boolean;
+  update: (patch: Partial<DocumentForm>) => void;
+  renderField: (field: DocumentField, className?: string) => ReactNode;
+}) {
+  const byKey = new Map(fields.map(f => [f.key, f]));
+  const recipients = form.recipients || [];
+  const multi = form.recipientMode === 'multi' || recipients.length > 0;
+  const field = (key: string, className?: string) => {
+    const f = byKey.get(key);
+    if (!f) return null;
+    return renderField(f, className ?? (f.multiline || INVITATION_WIDE.has(key) ? 'wide' : ''));
+  };
+  // Moving between modes carries the addressee across instead of leaving a hidden value behind.
+  const toMulti = () => {
+    const v = form.values;
+    const seed = {
+      ...blankInvitationRecipient(),
+      number: limit(v.number, 160),
+      recipient: limit(v.recipient, 500),
+      position: limit(v.recipientPosition, 500),
+    };
+    update({
+      recipientMode: 'multi',
+      recipients: recipients.length ? recipients : [seed],
+      values: { ...v, number: '', recipient: '', recipientPosition: '' },
+    });
+  };
+  const toSingle = () => {
+    if (recipients.length > 1) return;
+    const row = recipients[0];
+    update({
+      recipientMode: 'single',
+      recipients: undefined,
+      values: row ? { ...form.values, number: row.number, recipient: row.recipient, recipientPosition: row.position } : form.values,
+    });
+  };
+  const sectionBody = (keys: readonly string[]) => {
+    switch (keys[0]) {
+      case 'number':
+        return (
+          <>
+            {multi ? (
+              <p className="small muted invitation-number-note">{t('เลขที่หนังสือแยกรายฉบับ กรอกในส่วนเรื่องและผู้รับ')}</p>
+            ) : (
+              field('number')
+            )}
+            {field('unit')}
+            {field('date', 'invitation-date')}
+          </>
+        );
+      case 'subject':
+        return (
+          <>
+            {field('subject')}
+            <fieldset className="invitation-recipient-mode wide" disabled={disabled}>
+              <legend>{t('ส่งหนังสือถึง')}</legend>
+              <label>
+                <input
+                  type="radio"
+                  name="invitation-recipient-mode"
+                  checked={!multi}
+                  disabled={recipients.length > 1}
+                  onChange={toSingle}
+                />
+                {t('ผู้รับคนเดียว')}
+              </label>
+              <label>
+                <input type="radio" name="invitation-recipient-mode" checked={multi} onChange={toMulti} />
+                {t('หลายหน่วยงาน (แยกเลขที่และผู้รับรายฉบับ)')}
+              </label>
+              {multi && recipients.length > 1 && <small className="muted">{t('ลบให้เหลือ 1 ฉบับก่อน จึงกลับไปแบบผู้รับคนเดียวได้')}</small>}
+            </fieldset>
+            {multi ? (
+              <div className="wide">
+                <InvitationRegister
+                  recipients={recipients}
+                  disabled={disabled}
+                  tracking={false}
+                  onChange={next => update({ recipientMode: 'multi', recipients: next.length ? next : undefined })}
+                />
+              </div>
+            ) : (
+              <>
+                {field('recipient')}
+                {field('recipientPosition')}
+              </>
+            )}
+            {field('references')}
+          </>
+        );
+      default:
+        return <>{keys.map(key => field(key))}</>;
+    }
+  };
+  const unplaced = fields.filter(f => !INVITATION_PLACED.has(f.key));
+  return (
+    <div className="invitation-sections">
+      {INVITATION_SECTIONS.map((section, index) => (
+        <section key={section.title} className="invitation-section" aria-labelledby={`invitation-section-${index}`}>
+          <header>
+            <h3 id={`invitation-section-${index}`}>
+              <span className="invitation-section-number" aria-hidden="true">
+                {index + 1}
+              </span>
+              {t(section.title)}
+            </h3>
+            <p className="small muted">{t(section.hint)}</p>
+          </header>
+          <div className="document-fields">
+            {sectionBody(section.keys)}
+            {section.keys[0] === 'signer' && (
+              <div className="wide">
+                <InvitationQrLinks
+                  value={{ rsvpUrl: form.values.rsvpUrl || '', venueUrl: form.values.venueUrl || '' }}
+                  disabled={disabled}
+                  onChange={links => update({ values: { ...form.values, rsvpUrl: links.rsvpUrl, venueUrl: links.venueUrl } })}
+                />
+              </div>
+            )}
+          </div>
+        </section>
+      ))}
+      {unplaced.length > 0 && <div className="document-fields">{unplaced.map(f => renderField(f))}</div>}
+      <details className="invitation-section invitation-section-extra">
+        <summary>{t('ข้อมูลประกอบสำหรับ AI (ไม่ปรากฏในหนังสือ)')}</summary>
+        <div className="document-fields">{field('sources')}</div>
+      </details>
     </div>
   );
 }
