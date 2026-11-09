@@ -37,7 +37,7 @@ import { renderDocumentTemplate } from './document-template';
 import { longestWordUnits, textUnits, THAI_DOCUMENT_CSS, THAI_DOCUMENT_LANGUAGE, withThaiBreaks } from '../src/thai-typography';
 import { DOCUMENT_PRESETS, resolvePresentation, type DocumentPresentation } from '../src/document-presentation';
 import { embedDocumentFonts, documentPrintFontCss } from './document-fonts';
-import { TOR_LAYOUT, torFooterText, torNumberedBlock, torPreset } from './tor-layout';
+import { TOR_LAYOUT, torClauseDocument, torFooterText, torNumberedBlock, torPreset } from './tor-layout';
 import { torPdfFurniture, torWordHeader } from './tor-furniture';
 import {
   INVITATION_LAYOUT,
@@ -1271,7 +1271,9 @@ export async function exportDocument(
     invitation && ['docx', 'pdf'].includes(format)
       ? invitation.recipients?.find(r => r.recipient.trim() || r.position.trim() || r.number.trim())
       : undefined;
-  const content = activeRecipient ? invitationForRecipient(baseContent, activeRecipient) : baseContent;
+  const recipientContent = activeRecipient ? invitationForRecipient(baseContent, activeRecipient) : baseContent;
+  // TOR clauses typed on the next line of a paragraph are laid out as their own numbered paragraphs.
+  const content = options.documentTool === 'tor' && !options.template ? torClauseDocument(recipientContent) : recipientContent;
   const qrs = invitation && ['docx', 'pdf'].includes(format) ? await invitationQrs(invitation) : [];
   const exportLayout = () =>
     invitation
