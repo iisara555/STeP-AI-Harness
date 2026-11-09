@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import JSZip from 'jszip';
 import { DOMParser } from '@xmldom/xmldom';
 import { exportDocument, pdfHtml } from '../electron/export';
-import { torNumberedBlock, TOR_ORGANIZATION } from '../electron/tor-layout';
+import { torClauseDocument, torNumberedBlock, TOR_ORGANIZATION } from '../electron/tor-layout';
 import { documentText, markdownDocument } from '../src/draft';
 import { resolveDocumentLayout } from '../src/document-layout';
 import { resolvePresentation } from '../src/document-presentation';
@@ -35,6 +35,65 @@ test('TOR labels retain all source characters and emphasis without interpreting 
   assert.ok(split.body.content!.some(n => n.marks?.some(m => m.type === 'bold')));
   assert.equal(torNumberedBlock(markdownDocument('2569 เป็นปีจากต้นเรื่อง').content![0]), undefined);
   assert.equal(torNumberedBlock(markdownDocument('1'.repeat(40) + '. ข้อความ').content![0]), undefined);
+});
+
+test('Thai clause lines are separate paragraphs, and siblings share one text column under their parent', () => {
+  // One paragraph per point, even when the draft puts clauses on consecutive lines.
+  const parsed = markdownDocument('๒.๑ เพื่อผลิตสื่อ\n๒.๒ เพื่อลงพื้นที่\nต่อจากข้อ ๒.๒\n(๑) รับมอบข้อมูล\n2.3 ข้อแบบเลขอารบิก');
+  assert.deepEqual(
+    parsed.content!.map(n => documentText(n)),
+    ['๒.๑ เพื่อผลิตสื่อ', '๒.๒ เพื่อลงพื้นที่ ต่อจากข้อ ๒.๒', '(๑) รับมอบข้อมูล', '2.3 ข้อแบบเลขอารบิก'],
+  );
+
+  // A saved draft whose clauses were typed with line breaks inside one paragraph or heading.
+  const t = (text: string, bold = false) => ({ type: 'text', text, ...(bold ? { marks: [{ type: 'bold' }] } : {}) });
+  const br = { type: 'hardBreak' };
+  const saved = {
+    type: 'doc',
+    content: [
+      { type: 'heading', attrs: { level: 2 }, content: [t('๘. ผลลัพธ์'), br, t('๘.๑ ได้วิดีโอ')] },
+      { type: 'paragraph', content: [t('๘.๒ '), t('ส่งเสริม', true), br, t('บรรทัดต่อของข้อ ๘.๒'), br, t(' ๘.๓ ฐานข้อมูล')] },
+      {
+        type: 'bulletList',
+        content: ['(๑) รับมอบข้อมูล', '(๒) จัดเตรียมทีมงาน'].map(text => ({
+          type: 'listItem',
+          content: [{ type: 'paragraph', content: [t(text)] }],
+        })),
+      },
+      { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [t('D-01 แผนการผลิต')] }] }] },
+    ],
+  };
+  const prepared = torClauseDocument(saved);
+  assert.deepEqual(
+    prepared.content!.map(n => [n.type, documentText(n)]),
+    [
+      ['heading', '๘. ผลลัพธ์'],
+      ['paragraph', '๘.๑ ได้วิดีโอ'],
+      ['paragraph', '๘.๒ ส่งเสริม\nบรรทัดต่อของข้อ ๘.๒'],
+      ['paragraph', '๘.๓ ฐานข้อมูล'],
+      ['paragraph', '(๑) รับมอบข้อมูล'],
+      ['paragraph', '(๒) จัดเตรียมทีมงาน'],
+      ['bulletList', 'D-01 แผนการผลิต'],
+    ],
+  );
+  assert.ok(
+    prepared.content![2].content!.some(n => n.marks?.some(m => m.type === 'bold')),
+    'marks are kept',
+  );
+
+  const block = (text: string) => torNumberedBlock(prepared.content!.find(n => documentText(n).startsWith(text))!)!;
+  const textColumn = (text: string) => block(text).leftCm + block(text).widthCm;
+  // Siblings line up; each level's label starts where its parent's text starts.
+  assert.equal(textColumn('๘.๑'), textColumn('๘.๒'));
+  assert.equal(textColumn('๘.๒'), textColumn('๘.๓'));
+  assert.equal(block('๘.๑').leftCm, textColumn('๘.'));
+  assert.equal(block('(๑)').leftCm, textColumn('๘.๑'), '(๑) after a ๘.x clause sits one level deeper');
+  const first = markdownDocument('## ๑. หลักการ\n\n## ๑๖. การรับประกัน\n\n๑.๑.๑ ย่อย').content!;
+  assert.equal(torNumberedBlock(first[0])!.widthCm, torNumberedBlock(first[1])!.widthCm, '๑. and ๑๖. share a column');
+  assert.equal(
+    torNumberedBlock(first[2])!.leftCm,
+    torNumberedBlock(markdownDocument('๑.๑ ข้อ').content![0])!.widthCm + torNumberedBlock(first[0])!.widthCm,
+  );
 });
 
 test('TOR Word has a repeated STeP letterhead, matched typography, editable hanging clauses and live page fields', async () => {

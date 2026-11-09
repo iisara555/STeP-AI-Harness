@@ -31,15 +31,86 @@ export function torFooterText(document: DraftNode, presentation: DocumentPresent
   );
 }
 
+// A clause label at the start of a line: ๑. / ๑) / ๑.๑ / ๑.๑.๑ (Thai or Arabic digits) or (๑).
+const CLAUSE = /^([0-9๐-๙]+(?:\.[0-9๐-๙]+)+\.?|[0-9๐-๙]+[.)]|\([0-9๐-๙]+\))[ \t]+/;
+/**
+ * Fixed label column per clause level, so every sibling's text starts at the same place and each level's label
+ * starts where its parent's text starts (๑. → ๑.๑ → ๑.๑.๑), as in STeP's TOR examples.
+ */
+// Wide enough for two-digit labels at each level (๑๖. / ๒.๑๐ / ๒.๑.๑๐) at 16 pt.
+export const TOR_CLAUSE_CM = [0.8, 1.1, 1.45, 1.6, 1.6] as const;
+// "(๑)" items take the level below the clause they follow; the pass that prepares the document records it here.
+const parenthesisLevel = new WeakMap<DraftNode, number>();
+const clauseLevel = (label: string, node: DraftNode) =>
+  label.startsWith('(') ? (parenthesisLevel.get(node) ?? 2) : label.replace(/[.)]$/, '').split('.').length;
+
+const startsClause = (nodes: DraftNode[]) =>
+  CLAUSE.test(
+    nodes
+      .map(n => n.text || '')
+      .join('')
+      .trimStart(),
+  );
+const trimStart = (nodes: DraftNode[]) => {
+  const out = [...nodes];
+  while (out[0]?.type === 'text' && !out[0].text?.trim()) out.shift();
+  if (out[0]?.type === 'text') out[0] = { ...out[0], text: out[0].text!.replace(/^\s+/, '') };
+  return out;
+};
+
+/**
+ * Presentation-only pass before a TOR is laid out: a clause written on the next line of the same paragraph (a line
+ * break, not a new paragraph) becomes its own paragraph, and a bullet list whose items already carry clause labels
+ * ("- (๑) …") loses the extra bullet. Text and marks are kept exactly; the saved draft is not changed.
+ */
+export function torClauseDocument(document: DraftNode): DraftNode {
+  const blocks: DraftNode[] = [];
+  for (const node of document.content || []) {
+    if (['paragraph', 'heading'].includes(node.type) && node.content?.some(c => c.type === 'hardBreak')) {
+      const lines: DraftNode[][] = [[]];
+      for (const child of node.content) child.type === 'hardBreak' ? lines.push([]) : lines.at(-1)!.push(child);
+      let current: DraftNode | undefined;
+      for (const [index, line] of lines.entries()) {
+        if (index === 0) current = { ...node, content: line };
+        else if (startsClause(line)) {
+          blocks.push(current!);
+          current = { type: 'paragraph', content: trimStart(line) };
+        } else current!.content!.push({ type: 'hardBreak' }, ...line);
+      }
+      blocks.push(current!);
+      continue;
+    }
+    const items = node.type === 'bulletList' ? node.content || [] : [];
+    if (items.length && items.every(item => item.content?.[0]?.type === 'paragraph' && startsClause(item.content[0].content || []))) {
+      for (const item of items) blocks.push(...(item.content || []));
+      continue;
+    }
+    blocks.push(node);
+  }
+  let level = 1;
+  for (const node of blocks) {
+    if (!['paragraph', 'heading'].includes(node.type)) continue;
+    const label = CLAUSE.exec(documentText(node))?.[1];
+    if (!label) continue;
+    if (label.startsWith('(')) parenthesisLevel.set(node, Math.min(level + 1, TOR_CLAUSE_CM.length));
+    else level = clauseLevel(label, node);
+  }
+  return { ...document, content: blocks };
+}
+
 /** Split only the presentation of a supplied numeric label, retaining every character and rich-text mark. */
 export function torNumberedBlock(node: DraftNode) {
   if (!['paragraph', 'heading'].includes(node.type)) return undefined;
-  const match = /^([0-9๐-๙]+(?:\.[0-9๐-๙]+)+\.?|[0-9๐-๙]+[.)])[ \t]+/.exec(documentText(node));
+  const match = CLAUSE.exec(documentText(node));
   if (!match || match[1].length > 32) return undefined;
   const label = match[1],
-    level = label.replace(/[.)]$/, '').split('.').length;
-  const leftCm = Math.min(level - 1, 4) * 0.6;
-  const widthCm = Math.max(0.7, label.length * 0.13 + 0.25);
+    level = Math.min(clauseLevel(label, node), TOR_CLAUSE_CM.length);
+  const leftCm = TOR_CLAUSE_CM.slice(0, level - 1).reduce((sum, width) => sum + width, 0);
+  // A label longer than its level's column (๑๒.๑๐.๑๐) widens only its own line rather than overrunning the text.
+  // Approximate printed width at 16 pt: digits ~0.26 cm, dots and brackets ~0.12-0.15 cm, plus the gap before the text.
+  const printed = [...label].reduce((sum, c) => sum + (/[0-9๐-๙]/.test(c) ? 0.26 : c === '.' ? 0.12 : 0.15), 0.15);
+  // "(๑)"–"(๑๙)" are short, so they keep a narrower column of their own instead of the deeper level's width.
+  const widthCm = Math.max(label.startsWith('(') ? 1 : TOR_CLAUSE_CM[level - 1], printed);
   let offset = 0;
   const prefix: DraftNode[] = [],
     body: DraftNode[] = [];
