@@ -4169,6 +4169,10 @@ export default function App() {
           <PacksDialog
             api={api}
             features={snapshot.policy?.features}
+            connection={(() => {
+              const c = snapshot.connections.find(c => c.id === connectionId && c.ready);
+              return c ? { id: c.id, name: connectionName(c) } : undefined;
+            })()}
             onClose={() => setPacksOpen(false)}
             onSelect={text => {
               setPendingSource(text);

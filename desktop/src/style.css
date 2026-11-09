@@ -5898,6 +5898,24 @@ nav button:disabled {
   gap: 12px;
   margin: 8px 0 4px;
 }
+/* "สร้างจากวิธีทำงานของฉัน": three questions, then an editable preview of the drafted Skill. */
+.skill-create {
+  display: grid;
+  gap: 10px;
+}
+.skill-create textarea {
+  width: 100%;
+  resize: vertical;
+}
+.skill-create .skill-create-preview {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.pack-imported p,
+.pack-imported ul {
+  margin: 0;
+}
 .dialog-form h3 {
   margin: 4px 0 0;
   font-size: 15px;

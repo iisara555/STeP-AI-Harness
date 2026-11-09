@@ -1,7 +1,7 @@
 // Skills hub: "เพิ่ม Skill ของฉัน" opens the Skill Packs import, the imported Skill shows with its uploader's credit,
 // and features.staffSkills: false hides both. Synthetic profile and a repository Skill; no provider calls.
 import { _electron as electron, expect } from '@playwright/test';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -25,20 +25,56 @@ try {
     const { settings } = await window.step.call('snapshot');
     await window.step.call('settings', { ...settings, userName: 'สมหญิง ตัวอย่าง', team: 'cc' });
   });
-  await app.evaluate(({ dialog }, folder) => {
-    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [folder] });
-    dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false });
-  }, skill);
+  // A single Skill file written elsewhere: lower-case name, a tool grant in its header, no name line.
+  const loose = join(home, 'checklist-for-events', 'skill.md');
+  await mkdir(join(home, 'checklist-for-events'));
+  await writeFile(
+    loose,
+    '---\ndescription: ใช้เมื่อพนักงานต้องเตรียมรายการตรวจก่อนวันจัดงานให้ครบ\nallowed-tools: Bash\nstandardVersion: 2\n---\n\n# รายการตรวจก่อนจัดงาน\n\n' +
+      [
+        ['Purpose', 'ร่างรายการตรวจก่อนวันจัดงาน'],
+        ['เมื่อควรใช้', 'เมื่อผู้ใช้ขอรายการตรวจก่อนจัดงาน'],
+        ['Inputs', 'วันจัดงาน สถานที่ จำนวนผู้เข้าร่วม'],
+        ['Source', 'ไม่มี source ภายนอกที่จำเป็น'],
+        ['Workflow', '1. ถามข้อมูลที่ขาด\n2. ร่างรายการตรวจ'],
+        ['Output', 'รายการตรวจหนึ่งชุด'],
+        ['Authority', 'AI ร่างได้ เจ้าของงานต้องยืนยันก่อนใช้'],
+        ['Handoff', 'ส่งร่างให้เจ้าของงานตรวจ'],
+        ['Guardrails', 'ห้ามยืนยันการจองแทนเจ้าของงาน'],
+      ]
+        .map(([heading, text]) => `## ${heading}\n${text}\n`)
+        .join('\n'),
+  );
+  const pick = path =>
+    app.evaluate(({ dialog }, path) => {
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+      dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false });
+    }, path);
 
   await page.locator('[data-tour="skills"]').click();
   const hub = page.locator('.skills-hub');
   await hub.getByRole('button', { name: 'เพิ่ม Skill ของฉัน', exact: true }).click();
-  const packs = page.getByRole('alertdialog', { name: 'Skill Packs' });
-  await packs.getByLabel('ตั้งชื่อชุด (ใช้เมื่อนำเข้าโฟลเดอร์ Skill เดี่ยว)').fill('my-tone');
-  await packs.getByRole('button', { name: 'เลือกโฟลเดอร์และนำเข้า', exact: true }).click();
-  await packs.getByText('นำเข้าโดย สมหญิง ตัวอย่าง', { exact: false }).waitFor();
-  await packs.getByRole('button', { name: 'ใช้เองบนเครื่องนี้', exact: true }).click();
-  await packs.getByRole('button', { name: 'เลิกใช้เอง', exact: true }).waitFor();
+  const packs = page.getByRole('alertdialog', { name: 'เพิ่ม Skill ของฉัน' });
+  // No pack name to type and nothing for admins on the way: one button, one confirmation, ready to use.
+  await expect(packs.getByLabel(/ชื่อชุด/)).toBeHidden();
+  await pick(loose);
+  await packs.getByRole('button', { name: 'เลือกไฟล์ Skill (.md)', exact: true }).click();
+  const imported = packs.locator('.pack-imported');
+  await expect(imported).toContainText('นำเข้า checklist-for-events แล้ว');
+  await expect(imported).toContainText('ตัดบรรทัด allowed-tools ออกจากหัวไฟล์');
+  const fileItem = packs.locator('section').filter({ hasText: 'checklist-for-events ·' });
+  await expect(fileItem.getByRole('button', { name: 'เลิกใช้เอง', exact: true })).toBeVisible();
+  await expect(fileItem.getByRole('button', { name: 'ใช้ Skill นี้', exact: true })).toBeVisible();
+
+  // A Skill folder still works, and needs no pack name either.
+  await pick(skill);
+  await packs.getByRole('button', { name: 'เลือกทั้งโฟลเดอร์', exact: true }).click();
+  await packs.getByText('นำเข้าโดย สมหญิง ตัวอย่าง', { exact: false }).first().waitFor();
+  await packs
+    .locator('section')
+    .filter({ hasText: 'brand-tone-of-voice ·' })
+    .getByRole('button', { name: 'เลิกใช้เอง', exact: true })
+    .waitFor();
   await packs.getByRole('button', { name: 'ปิด', exact: true }).click();
 
   const own = hub.locator('.skills-own .skill-card').filter({ hasText: 'brand-tone-of-voice' });

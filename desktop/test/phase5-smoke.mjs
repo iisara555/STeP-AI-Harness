@@ -161,22 +161,26 @@ try {
   await composer.fill('Prepare a public community draft');
   await page.keyboard.press('ControlOrMeta+j');
   await palette.getByRole('option', { name: 'ชุด Skill ที่ติดตั้ง (Skill Packs)', exact: true }).click();
-  const packs = page.getByRole('alertdialog', { name: 'Skill Packs' });
+  const packs = page.getByRole('alertdialog', { name: 'เพิ่ม Skill ของฉัน' });
   await expect(packs).toContainText('public-writing');
   // The fixture is a legacy Skill, so the automated Standard v2 report lists what it lacks.
-  await expect(packs.locator('section').filter({ hasText: 'public-writing' }).getByRole('status')).toContainText('ไม่ผ่านการตรวจ');
+  await expect(packs.locator('section').filter({ hasText: 'public-writing' }).getByRole('status')).toContainText('ต้องแก้');
   await expect(packs).toContainText('standardVersion: 2');
   // Staff Skills: a passing one runs on this computer without an admin digest, credited to its uploader.
   const staff = packs.locator('section').filter({ hasText: 'staff-room ·' });
-  await expect(staff).toContainText('ผ่านการตรวจมาตรฐาน Skill v2 และความปลอดภัย');
+  await expect(staff).toContainText('ผ่านการตรวจความปลอดภัย พร้อมใช้');
   await expect(staff).toContainText('นำเข้าโดย พนักงานสังเคราะห์');
   await expect(staff.getByRole('button', { name: 'เลิกใช้เอง', exact: true })).toBeVisible();
   // With an intake in policy, a Skill that passed the checks can be proposed for the organization.
   await expect(staff.getByRole('button', { name: 'เสนอให้องค์กรใช้', exact: true })).toBeEnabled();
-  await expect(staff.getByRole('button', { name: 'ใช้ skill: room-request', exact: true })).toBeEnabled();
+  await expect(staff.getByRole('button', { name: 'ใช้ Skill นี้', exact: true })).toBeEnabled();
   const copy = packs.locator('section').filter({ hasText: 'staff-room-copy' });
   await expect(copy.getByRole('button', { name: 'ใช้เองบนเครื่องนี้', exact: true })).toBeVisible();
-  await packs.getByRole('button', { name: 'ใช้ skill: public-draft', exact: true }).click();
+  await packs
+    .locator('section')
+    .filter({ hasText: 'public-writing ·' })
+    .getByRole('button', { name: 'ใช้ Skill นี้', exact: true })
+    .click();
   await expect(packs).not.toBeVisible();
   await composer.press('Enter');
   const consent = page.getByRole('alertdialog').filter({ hasText: 'ข้อมูลต้นทาง' });
