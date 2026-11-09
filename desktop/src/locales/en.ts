@@ -1022,6 +1022,12 @@ export const en: Record<string, string> = {
   'โมเดล MiniMax สำหรับคุยและเขียนงานยาว': 'MiniMax models for chat and long writing',
   'โมเดล GLM สำหรับเขียนโค้ดและงานเอกสาร': 'GLM models for coding and document work',
   'โมเดล Kimi สำหรับอ่านและวิเคราะห์บริบทยาว': 'Kimi models for reading and analyzing long context',
+  'สร้าง Skill จากวิธีทำงานของตัวเอง หรือเลือกไฟล์ Skill (.md) ไฟล์เดียว ใช้เองได้หลังกดยืนยันครั้งเดียว':
+    'Create a Skill from how you work, or add a single Skill file (.md), and use it after one confirmation.',
+  'ฟอร์มหนังสือเชิญเรียงตามหนังสือจริง เลือกผู้รับคนเดียวหรือหลายหน่วยงานได้ตรงคำว่าเรียน':
+    'The invitation form follows the printed letter, with one addressee or several organizations at the salutation.',
+  'TOR ที่ส่งออกจัดย่อหน้าเลขข้อ ๑. ๑.๑ ๑.๑.๑ ตามลำดับชั้น และแก้ช่องตัวเลขในทะเบียนหนังสือเชิญ':
+    'Exported TORs lay out numbered clauses (1. 1.1 1.1.1) by level, and invitation register number fields are fixed.',
   'แสดงโควตาคงเหลือแบบถังพลังงาน พร้อมชิปดูโควตาข้างตัวเลือกโมเดล และรองรับ MiniMax, Z.AI (GLM) และ Kimi':
     'Remaining-quota tank meters, an inline quota chip beside the model picker, and quota support for MiniMax, Z.AI (GLM) and Kimi.',
   'ทะเบียนหนังสือเชิญหลายหน่วยงาน แยกจำนวนหนังสือจากจำนวนที่นั่ง พร้อมส่งออกรายฉบับและตารางคุมยอดตอบรับ Excel':
