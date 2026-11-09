@@ -11,6 +11,7 @@ import { credentialErrorsEn } from '../credential-copy';
 import { documentLayoutEn } from './document-layout-en';
 import { feedbackEn } from './feedback-en';
 import { skillSuggestEn } from './skill-suggest-en';
+import { skillImportEn } from './skill-import-en';
 import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 import { receiptPacketEn } from './receipt-packet-en';
@@ -370,6 +371,7 @@ export const en: Record<string, string> = {
   ...documentLayoutEn,
   ...feedbackEn,
   ...skillSuggestEn,
+  ...skillImportEn,
   ...morningBriefEn,
   ...uxSmallEn,
   ...uxSetupEn,

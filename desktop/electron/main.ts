@@ -113,6 +113,7 @@ import { validateKeybindings } from '../src/commands';
 import { Voice } from './voice';
 import {
   installPack,
+  installSkillFile,
   packImportAllowed,
   listPacks,
   enablePack,
@@ -3041,17 +3042,20 @@ async function main() {
         });
       case 'packInstall': {
         if (!packImportAllowed(policyState.policy)) throw new Error('PACK_IMPORT_DISABLED');
+        // Staff usually have one Skill file; a folder (or a pack with pack.json) is the second choice.
+        const file = input.kind === 'file';
         const selected = await dialog.showOpenDialog(window!, {
-          title: tm('นำเข้า Skill Pack จากโฟลเดอร์'),
-          properties: ['openDirectory'],
+          title: tm(file ? 'เลือกไฟล์ Skill (.md)' : 'เลือกโฟลเดอร์ Skill'),
+          properties: [file ? 'openFile' : 'openDirectory'],
+          ...(file ? { filters: [{ name: 'Skill', extensions: ['md', 'markdown', 'txt'] }] } : {}),
         });
         if (selected.canceled || !selected.filePaths[0]) return null;
         // Credit the uploader from this computer's profile; it is kept beside the pack, never inside its files.
         const settings = store.settings();
-        return installPack(settings.workspace || data, selected.filePaths[0], {
-          name: inputText(input.name || '', 64),
-          credit: { name: settings.userName || '', team: settings.team || '' },
-        });
+        const credit = { name: settings.userName || '', team: settings.team || '' };
+        return file
+          ? installSkillFile(settings.workspace || data, selected.filePaths[0], { credit })
+          : installPack(settings.workspace || data, selected.filePaths[0], { name: inputText(input.name || '', 64), credit });
       }
       case 'packEnable': {
         const identity = phase4Identity(),

@@ -5,6 +5,10 @@ export type PackReview={status:'pass'|'warn'|'fail';findings:PackFinding[];skill
 export function reviewPack(manifest:any,files:Map<string,Buffer>):PackReview;
 export function packImportAllowed(policy:any):boolean;
 export function installPack(workspace:string,source:string,options?:{name?:string;credit?:{name?:string;team?:string;uploadedAt?:string;orgConsent?:boolean}}):any;
+export type SkillImportNote={code:'removed-authority';keys:string[]}|{code:'named';name:string}|{code:'described'}|{code:'renamed';name:string};
+export function normalizeSkillText(text:string,options?:{fallbackName?:string;stripAuthority?:boolean}):{id:string;text:string;notes:SkillImportNote[]};
+export function installSkillText(workspace:string,text:string,options?:{credit?:{name?:string;team?:string};fallbackName?:string;notes?:SkillImportNote[]}):any;
+export function installSkillFile(workspace:string,source:string,options?:{credit?:{name?:string;team?:string}}):any;
 export function listPacks(workspace:string,policy?:any):any[];
 export function enablePack(workspace:string,id:string,policy:any,options?:any):any;
 export function packAsset(workspace:string,id:string,assetId:string,kind:string,policy:any):{text:string;label:string;digest:string};

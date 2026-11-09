@@ -8,7 +8,7 @@ import {
   rmSync,
   existsSync,
 } from "node:fs";
-import { resolve, join, relative, dirname } from "node:path";
+import { resolve, join, relative, dirname, basename } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { evaluatePrivacyGate } from "../privacy/index.js";
 import { reviewPack, REVIEW_MESSAGES } from "./review.js";
@@ -71,20 +71,87 @@ function tree(root) {
       total += s.size;
       if (s.size > 200_000 || total > 2_000_000 || files.size >= 120)
         throw new Error("PACK_LIMIT");
-      const bytes = readFileSync(full),
-        text = new TextDecoder("utf-8", { fatal: true }).decode(bytes),
-        scan = evaluatePrivacyGate(text);
-      if (
-        scan.action !== "pass" ||
-        scan.containsPersonalData ||
-        scan.redactedText !== text
-      )
-        throw new Error("PACK_PRIVACY_REVIEW_REQUIRED");
+      const bytes = readFileSync(full);
+      privateCheck(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
       files.set(path, bytes);
     }
   };
   walk(root);
   return files;
+}
+function privateCheck(text) {
+  const scan = evaluatePrivacyGate(text);
+  if (
+    scan.action !== "pass" ||
+    scan.containsPersonalData ||
+    scan.redactedText !== text
+  )
+    throw new Error("PACK_PRIVACY_REVIEW_REQUIRED");
+}
+const AUTHORITY = /^(?:tools|permissions|authority|hooks|allowed-tools)\s*:/i;
+const slug = (value) =>
+  String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^[^a-z]+/, "")
+    .slice(0, 64)
+    .replace(/-+$/, "");
+/**
+ * Make one staff-written Skill file importable without asking staff to edit YAML. A Skill cannot grant tools or
+ * permissions, so such header lines are removed (never honoured) and reported. A missing or non-conforming name is
+ * derived from the file or folder name, and a missing description from the first line of text. `notes` says what
+ * changed so the app can tell the person.
+ */
+export function normalizeSkillText(text, { fallbackName = "", stripAuthority = true } = {}) {
+  if (typeof text !== "string") throw new Error("PACK_SKILL_INVALID");
+  const notes = [];
+  const source = text.replace(/^﻿/, "");
+  const match = source.match(/^---\r?\n(?:([\s\S]{0,8000}?)\r?\n)?---(?:\r?\n|$)/);
+  const body = match ? source.slice(match[0].length) : source;
+  const kept = [];
+  const removed = new Set();
+  let skipping = false;
+  for (const line of match?.[1] ? match[1].split(/\r?\n/) : []) {
+    if (AUTHORITY.test(line)) {
+      if (!stripAuthority) throw new Error("PACK_AUTHORITY_REJECTED");
+      removed.add(line.split(":")[0].trim().toLowerCase());
+      skipping = true;
+      continue;
+    }
+    // A removed key's value may continue on indented lines or as a YAML list.
+    if (skipping && (/^\s+\S/.test(line) || /^-\s/.test(line))) continue;
+    skipping = false;
+    kept.push(line);
+  }
+  if (removed.size) notes.push({ code: "removed-authority", keys: [...removed] });
+  const nameLine = kept.findIndex((l) => /^name\s*:/.test(l));
+  const given =
+    nameLine >= 0
+      ? kept[nameLine].replace(/^name\s*:\s*/, "").replace(/^["']|["']$/g, "").trim()
+      : "";
+  let id = ID.test(given) ? given : slug(given) || slug(fallbackName);
+  if (!ID.test(id)) id = "my-skill-" + createHash("sha256").update(source).digest("hex").slice(0, 6);
+  if (id !== given) notes.push({ code: "named", name: id });
+  if (nameLine >= 0) kept.splice(nameLine, 1);
+  const header = [`name: ${id}`];
+  if (!kept.some((l) => /^description\s*:\s*\S/.test(l))) {
+    const first = body
+      .split(/\r?\n/)
+      .map((l) => l.replace(/^#+\s*/, "").replace(/[*_`>]/g, "").trim())
+      .find((l) => l && !/^[-=]{3,}$/.test(l));
+    if (!first) throw new Error("PACK_SKILL_INVALID");
+    header.push(`description: ${JSON.stringify(first.slice(0, 200))}`);
+    notes.push({ code: "described" });
+    for (let i = kept.length - 1; i >= 0; i--) if (/^description\s*:/.test(kept[i])) kept.splice(i, 1);
+  }
+  header.push(...kept.filter((l) => l.trim()));
+  // A file that needed no fix keeps its exact bytes, so its digest (and any approval of it) is unchanged.
+  if (!notes.length && match && source === text) return { id, text, notes };
+  return {
+    id,
+    text: `---\n${header.join("\n")}\n---\n${match ? "" : "\n"}${body}`,
+    notes,
+  };
 }
 function frontmatter(text) {
   const match = text.match(/^---\r?\n([\s\S]{1,8000}?)\r?\n---(?:\r?\n|$)/);
@@ -380,29 +447,85 @@ export function packImportAllowed(policy) {
   );
 }
 
+const textPack = (name, skills, files) => {
+  const manifest = { schema_version: 1, name, version: "1.0.0", skills, hooks: [], agents: [] };
+  files.set("pack.json", Buffer.from(JSON.stringify(manifest, null, 2) + "\n"));
+  return manifest;
+};
+// A free pack name: the Skill's own name, or name-2, name-3... when an earlier, different import already uses it.
+function freeName(workspace, id, files) {
+  const root = base(workspace);
+  for (let n = 1; n <= 20; n++) {
+    const name = n === 1 ? id : `${id.slice(0, 60)}-${n}`;
+    if (!existsSync(join(root, name))) return name;
+    let same = false;
+    try {
+      same = read(workspace, name).files.get("SKILL.md")?.equals(files.get("SKILL.md")) === true;
+    } catch {}
+    // Importing the very same file again changes nothing.
+    if (same) throw new Error("PACK_ALREADY_INSTALLED");
+  }
+  throw new Error("PACK_ALREADY_INSTALLED");
+}
+/** Install one Skill text (a single Markdown file, or one drafted in the app) as a text-only pack of its own. */
+export function installSkillText(workspace, text, { credit, fallbackName = "", notes = [] } = {}) {
+  if (typeof text !== "string" || Buffer.byteLength(text) > 200_000) throw new Error("PACK_LIMIT");
+  const skill = normalizeSkillText(text, { fallbackName });
+  privateCheck(skill.text);
+  const files = new Map([["SKILL.md", Buffer.from(skill.text, "utf8")]]);
+  const name = freeName(workspace, skill.id, files);
+  const all = [...notes, ...skill.notes];
+  if (name !== skill.id) all.push({ code: "renamed", name });
+  const manifest = textPack(name, [{ id: skill.id, path: "SKILL.md" }], files);
+  return { ...place(workspace, manifest, files, credit), notes: all };
+}
+/** "เลือกไฟล์ Skill": one .md file, any case of SKILL.md, no folder or pack name needed. */
+export function installSkillFile(workspace, source, { credit } = {}) {
+  const path = resolve(source);
+  const s = regular(path);
+  if (!/\.(?:md|markdown|txt)$/i.test(path)) throw new Error("PACK_SKILL_FILE_TYPE");
+  if (s.size > 200_000) throw new Error("PACK_LIMIT");
+  const text = new TextDecoder("utf-8", { fatal: true }).decode(readFileSync(path));
+  const stem = basename(path).replace(/\.[^.]+$/, "");
+  // A file called SKILL.md is named after its folder, as Skill folders are.
+  const fallbackName = stem.toLowerCase() === "skill" ? basename(dirname(path)) : stem;
+  return installSkillText(workspace, text, { credit, fallbackName });
+}
+
 export function installPack(workspace, source, { name, credit } = {}) {
   const files = tree(resolve(source));
   let manifest;
+  const notes = [];
   if (files.has("pack.json"))
     manifest = JSON.parse(files.get("pack.json").toString("utf8"));
   else {
-    if (!ID.test(name)) throw new Error("PACK_NAME_REQUIRED");
-    const skills = [...files]
-      .filter(([p]) => p === "SKILL.md" || p.endsWith("/SKILL.md"))
-      .map(([path, b]) => ({ id: frontmatter(b.toString("utf8")), path }));
-    manifest = {
-      schema_version: 1,
-      name,
-      version: "1.0.0",
-      skills,
-      hooks: [],
-      agents: [],
-    };
-    files.set(
-      "pack.json",
-      Buffer.from(JSON.stringify(manifest, null, 2) + "\n"),
-    );
+    // A folder without pack.json: accept skill.md in any case and derive missing names. A tool grant in a folder's
+    // Skill is still refused outright; only a single file chosen by its author has such lines removed.
+    const skills = [];
+    for (const [path, bytes] of [...files]) {
+      if (basename(path).toLowerCase() !== "skill.md") continue;
+      const dir = dirname(path).replaceAll("\\", "/");
+      const target = dir === "." ? "SKILL.md" : `${dir}/SKILL.md`;
+      const skill = normalizeSkillText(bytes.toString("utf8"), {
+        fallbackName: dir === "." ? basename(resolve(source)) : basename(dir),
+        stripAuthority: false,
+      });
+      notes.push(...skill.notes);
+      files.delete(path);
+      files.set(target, Buffer.from(skill.text, "utf8"));
+      skills.push({ id: skill.id, path: target });
+    }
+    const packName = ID.test(name || "")
+      ? name
+      : skills.length === 1
+        ? skills[0].id
+        : slug(basename(resolve(source)));
+    if (!ID.test(packName)) throw new Error("PACK_NAME_REQUIRED");
+    manifest = textPack(packName, skills, files);
   }
+  return { ...place(workspace, manifest, files, credit), ...(notes.length ? { notes } : {}) };
+}
+function place(workspace, manifest, files, credit) {
   validatePack(manifest, files);
   const dest = join(base(workspace), manifest.name);
   if (existsSync(dest)) throw new Error("PACK_ALREADY_INSTALLED");
