@@ -1,6 +1,7 @@
 export type PackCredit={name:string;team:string;uploadedAt:string;orgConsent:boolean};
 export type PackFinding={level:'fail'|'warn';area:'standard'|'safety';code:string;file?:string;line?:number;message:string;template:string;args:string[]};
 export const REVIEW_MESSAGES:Record<string,string>;
+export const STANDARD_HEADINGS:string[];
 export type PackReview={status:'pass'|'warn'|'fail';findings:PackFinding[];skills:number;checkedAt:string};
 export function reviewPack(manifest:any,files:Map<string,Buffer>):PackReview;
 export function packImportAllowed(policy:any):boolean;

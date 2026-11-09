@@ -1,5 +1,28 @@
 // English text for "เพิ่ม Skill ของฉัน" (src/packs.tsx, the packInstall dialog in electron/main.ts and pack errors).
 export const skillImportEn: Record<string, string> = {
+  'สร้าง Skill จากวิธีทำงานของฉัน': 'Create a Skill from how I work',
+  สร้างจากวิธีทำงานของฉัน: 'Create from how I work',
+  'Skill คือคู่มือที่บอก AI ว่างานหนึ่งทำอย่างไร เล่าวิธีทำงานของคุณให้ AI ช่วยเขียนเป็น Skill หรือเลือกไฟล์ Skill (.md) ที่มีอยู่แล้ว ระบบตรวจความปลอดภัยให้ แล้วใช้เองบนเครื่องนี้ได้ทันที':
+    'A Skill is a guide that tells the AI how to do a piece of work. Describe how you work and let the AI write it as a Skill, or choose an existing Skill file (.md). It is checked for safety, then you can use it on this computer right away.',
+  '1. งานนี้คืออะไร และใช้เมื่อไร': '1. What is this work, and when is it used?',
+  'เช่น ร่างอีเมลขอจองห้องประชุม ใช้เมื่อมีคนขอให้จองห้องให้':
+    'e.g. Draft a meeting-room booking email, when someone asks you to book a room',
+  '2. ทำทีละขั้นอย่างไร': '2. How do you do it, step by step?',
+  'เช่น 1. ถามวัน เวลา และจำนวนคน 2. เช็กห้องว่าง 3. ร่างอีเมลให้หัวหน้าตรวจก่อนส่ง':
+    'e.g. 1. Ask for the date, time and headcount 2. Check which rooms are free 3. Draft the email for your manager to check before sending',
+  '3. ตัวอย่างผลงานที่ดี (ถ้ามี)': '3. A good example of the result (optional)',
+  'วางตัวอย่างอีเมลหรือเอกสารที่เคยทำได้ดี ลบชื่อ เบอร์โทร และข้อมูลส่วนตัวออกก่อน':
+    'Paste an email or document that turned out well. Remove names, phone numbers and personal details first',
+  'ข้อความนี้จะส่งให้ {0} ช่วยร่าง ระบบปิดบังข้อมูลส่วนบุคคลก่อนส่ง และยังไม่บันทึกจนกว่าคุณจะกดใช้':
+    'This text goes to {0} for drafting. Personal data is masked before sending, and nothing is saved until you choose to use it',
+  'เชื่อมต่อ AI ก่อน จึงให้ AI ช่วยร่าง Skill ได้': 'Connect an AI first to have it draft a Skill',
+  'AI กำลังร่าง…': 'The AI is drafting…',
+  'ให้ AI ร่าง Skill': 'Have the AI draft the Skill',
+  'ตัวอย่าง Skill ที่ AI ร่าง แก้ได้ก่อนใช้': 'The Skill the AI drafted. You can edit it before use',
+  กลับไปแก้คำตอบ: 'Back to my answers',
+  'ตอบข้อ 1 และข้อ 2 ก่อน แล้วจึงให้ AI ร่าง Skill': 'Answer questions 1 and 2 first, then have the AI draft the Skill',
+  'AI ยังร่าง Skill ในรูปแบบที่ใช้ได้ไม่สำเร็จ ลองกดร่างอีกครั้ง หรือเล่าขั้นตอนให้ชัดขึ้น':
+    'The AI could not draft a usable Skill. Try again, or describe the steps more clearly',
   'ผ่านการตรวจความปลอดภัย พร้อมใช้': 'Passed the safety checks. Ready to use',
   'พร้อมใช้ มีคำแนะนำ {0} ข้อ': 'Ready to use, with {0} suggestions',
   'ต้องแก้ {0} ข้อก่อนใช้': 'Fix {0} items before use',

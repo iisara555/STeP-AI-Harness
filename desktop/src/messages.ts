@@ -108,6 +108,8 @@ export const errorText: Record<string, string> = localized({
   PACK_SKILL_INVALID: 'ไม่พบเนื้อหา Skill ในไฟล์นี้ เขียนวิธีทำงานอย่างน้อยหนึ่งบรรทัดแล้วลองใหม่',
   PACK_SKILL_FILE_TYPE: 'เลือกไฟล์ข้อความ Skill (.md หรือ .txt) ไฟล์ Word หรือ PDF ยังนำเข้าเป็น Skill ไม่ได้',
   PACK_LIMIT: 'ไฟล์ Skill ใหญ่หรือมีไฟล์ย่อยมากเกินกำหนด ลองเลือกเฉพาะไฟล์ Skill',
+  SKILL_DRAFT_INPUT: 'ตอบข้อ 1 และข้อ 2 ก่อน แล้วจึงให้ AI ร่าง Skill',
+  SKILL_DRAFT_INVALID: 'AI ยังร่าง Skill ในรูปแบบที่ใช้ได้ไม่สำเร็จ ลองกดร่างอีกครั้ง หรือเล่าขั้นตอนให้ชัดขึ้น',
   PACK_PRIVACY_REVIEW_REQUIRED: 'พบข้อมูลที่ต้องตรวจเพิ่มเติมในชุดนี้ จึงยังนำเข้าไม่ได้',
   INVALID_KEYBINDINGS: 'รูปแบบคีย์ลัดไม่ถูกต้อง ใช้ Mod+Alt+Shift+k ตามลำดับ',
   DUPLICATE_KEYBINDING: 'คีย์ลัดซ้ำกับคำสั่งอื่น กรุณาเลือกคีย์ลัดใหม่',

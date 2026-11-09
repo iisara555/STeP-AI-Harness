@@ -44,14 +44,158 @@ function PackReview({ review }: { review: PackReviewResult }) {
     </details>
   );
 }
+type SkillDraft = { id: string; text: string; review: PackReviewResult };
+/**
+ * "สร้างจากวิธีทำงานของฉัน": three plain questions, a draft from the connected AI, then a preview the person can edit.
+ * Nothing is saved until "ใช้ Skill นี้"; the saved Skill goes through the same checks as an imported file.
+ */
+function CreateSkill({
+  api,
+  connection,
+  disabled,
+  onCreated,
+  onCancel,
+}: {
+  api: DesktopAPI;
+  connection?: { id: string; name: string };
+  disabled: boolean;
+  onCreated: (result: any) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [task, setTask] = useState(''),
+    [steps, setSteps] = useState(''),
+    [example, setExample] = useState(''),
+    [draft, setDraft] = useState<SkillDraft | null>(null),
+    [text, setText] = useState(''),
+    [working, setWorking] = useState(false),
+    [error, setError] = useState('');
+  const alive = useRef(true);
+  useEffect(
+    () => () => {
+      alive.current = false;
+    },
+    [],
+  );
+  const run = async (job: () => Promise<void>) => {
+    setWorking(true);
+    setError('');
+    try {
+      await job();
+    } catch (e) {
+      if (alive.current) setError(explainError(e));
+    } finally {
+      if (alive.current) setWorking(false);
+    }
+  };
+  const busy = disabled || working;
+  return (
+    <section className="skill-create" aria-label={t('สร้าง Skill จากวิธีทำงานของฉัน')}>
+      {!draft ? (
+        <>
+          <label className="field">
+            <span>{t('1. งานนี้คืออะไร และใช้เมื่อไร')}</span>
+            <textarea
+              rows={2}
+              maxLength={2000}
+              value={task}
+              disabled={busy}
+              placeholder={t('เช่น ร่างอีเมลขอจองห้องประชุม ใช้เมื่อมีคนขอให้จองห้องให้')}
+              onChange={e => setTask(e.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span>{t('2. ทำทีละขั้นอย่างไร')}</span>
+            <textarea
+              rows={5}
+              maxLength={6000}
+              value={steps}
+              disabled={busy}
+              placeholder={t('เช่น 1. ถามวัน เวลา และจำนวนคน 2. เช็กห้องว่าง 3. ร่างอีเมลให้หัวหน้าตรวจก่อนส่ง')}
+              onChange={e => setSteps(e.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span>{t('3. ตัวอย่างผลงานที่ดี (ถ้ามี)')}</span>
+            <textarea
+              rows={3}
+              maxLength={6000}
+              value={example}
+              disabled={busy}
+              placeholder={t('วางตัวอย่างอีเมลหรือเอกสารที่เคยทำได้ดี ลบชื่อ เบอร์โทร และข้อมูลส่วนตัวออกก่อน')}
+              onChange={e => setExample(e.target.value)}
+            />
+          </label>
+          <p className="small muted">
+            {connection
+              ? t('ข้อความนี้จะส่งให้ {0} ช่วยร่าง ระบบปิดบังข้อมูลส่วนบุคคลก่อนส่ง และยังไม่บันทึกจนกว่าคุณจะกดใช้', connection.name)
+              : t('เชื่อมต่อ AI ก่อน จึงให้ AI ช่วยร่าง Skill ได้')}
+          </p>
+          <div className="dialog-actions">
+            <button className="quiet" disabled={working} onClick={onCancel}>
+              {t('ยกเลิก')}
+            </button>
+            <button
+              disabled={busy || !connection || !task.trim() || !steps.trim()}
+              onClick={() =>
+                void run(async () => {
+                  const result = await api.call('skillDraft', { connectionId: connection!.id, task, steps, example });
+                  if (!alive.current) return;
+                  setDraft(result);
+                  setText(result.text);
+                })
+              }
+            >
+              {working ? t('AI กำลังร่าง…') : t('ให้ AI ร่าง Skill')}
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <PackReview review={draft.review} />
+          <label className="field">
+            <span>{t('ตัวอย่าง Skill ที่ AI ร่าง แก้ได้ก่อนใช้')}</span>
+            <textarea
+              className="skill-create-preview"
+              rows={14}
+              maxLength={200_000}
+              value={text}
+              disabled={busy}
+              onChange={e => setText(e.target.value)}
+            />
+          </label>
+          <div className="dialog-actions">
+            <button className="quiet" disabled={busy} onClick={() => setDraft(null)}>
+              {t('กลับไปแก้คำตอบ')}
+            </button>
+            <button
+              disabled={busy || !text.trim()}
+              onClick={() =>
+                void run(async () => {
+                  const result = await api.call('skillCreate', { text });
+                  await onCreated(result);
+                })
+              }
+            >
+              {t('ใช้ Skill นี้')}
+            </button>
+          </div>
+        </>
+      )}
+      {error && <p role="alert">{error}</p>}
+    </section>
+  );
+}
 export function PacksDialog({
   api,
   features,
+  connection,
   onClose,
   onSelect,
 }: {
   api: DesktopAPI;
   features?: Record<string, boolean>;
+  /** The AI chosen in the app, used to draft a Skill from a description of the work. */
+  connection?: { id: string; name: string };
   onClose: () => void;
   onSelect: (text: string) => void;
 }) {
@@ -93,6 +237,20 @@ export function PacksDialog({
   };
   // Import, then offer use straight away: a text-only Skill that passed the checks needs one confirmation, not a
   // second trip through the list. Cancelling that confirmation leaves the Skill imported and unused.
+  const afterInstall = async (result: any) => {
+    await load();
+    if (alive.current) setImported({ id: result.id, notes: result.notes || [] });
+    const usable = features?.staffSkills !== false && result.review?.status !== 'fail' && !result.hooks && !(result.agents || []).length;
+    if (!usable) return;
+    try {
+      await api.call('packEnable', { id: result.id, personal: true });
+      await load();
+    } catch (e) {
+      if (!String((e as Error)?.message || e).includes('CANCELLED')) throw e;
+    }
+  };
+  const [creating, setCreating] = useState(false);
+  const canCreate = importAllowed && features?.staffSkills !== false;
   const importSkill = async (kind: 'file' | 'folder') => {
     if (busy) return;
     setBusy(true);
@@ -100,18 +258,7 @@ export function PacksDialog({
     setImported(null);
     try {
       const result = await api.call('packInstall', { kind, name });
-      if (!result) return;
-      await load();
-      if (alive.current) setImported({ id: result.id, notes: result.notes || [] });
-      const usable = features?.staffSkills !== false && result.review?.status !== 'fail' && !result.hooks && !(result.agents || []).length;
-      if (usable) {
-        try {
-          await api.call('packEnable', { id: result.id, personal: true });
-          await load();
-        } catch (e) {
-          if (!String((e as Error)?.message || e).includes('CANCELLED')) throw e;
-        }
-      }
+      if (result) await afterInstall(result);
     } catch (e) {
       if (alive.current) setError(explainError(e));
     } finally {
@@ -132,18 +279,40 @@ export function PacksDialog({
     <ConfirmDialog info title={t('เพิ่ม Skill ของฉัน')} confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
       <p>
         {t(
-          'Skill คือคู่มือที่บอก AI ว่างานหนึ่งทำอย่างไร เลือกไฟล์ Skill (.md) จากเครื่อง ระบบตรวจความปลอดภัยให้ แล้วใช้เองบนเครื่องนี้ได้ทันที',
+          'Skill คือคู่มือที่บอก AI ว่างานหนึ่งทำอย่างไร เล่าวิธีทำงานของคุณให้ AI ช่วยเขียนเป็น Skill หรือเลือกไฟล์ Skill (.md) ที่มีอยู่แล้ว ระบบตรวจความปลอดภัยให้ แล้วใช้เองบนเครื่องนี้ได้ทันที',
         )}
       </p>
       <div className="pack-form">
-        <div className="dialog-actions pack-import">
-          <button disabled={busy || !importAllowed} onClick={() => void importSkill('file')}>
-            {t('เลือกไฟล์ Skill (.md)')}
-          </button>
-          <button className="quiet" disabled={busy || !importAllowed} onClick={() => void importSkill('folder')}>
-            {t('เลือกทั้งโฟลเดอร์')}
-          </button>
-        </div>
+        {creating ? (
+          <CreateSkill
+            api={api}
+            connection={connection}
+            disabled={busy}
+            onCancel={() => setCreating(false)}
+            onCreated={async result => {
+              setCreating(false);
+              try {
+                await afterInstall(result);
+              } catch (e) {
+                if (alive.current) setError(explainError(e));
+              }
+            }}
+          />
+        ) : (
+          <div className="dialog-actions pack-import">
+            {canCreate && (
+              <button disabled={busy} onClick={() => setCreating(true)}>
+                {t('สร้างจากวิธีทำงานของฉัน')}
+              </button>
+            )}
+            <button className={canCreate ? 'quiet' : ''} disabled={busy || !importAllowed} onClick={() => void importSkill('file')}>
+              {t('เลือกไฟล์ Skill (.md)')}
+            </button>
+            <button className="quiet" disabled={busy || !importAllowed} onClick={() => void importSkill('folder')}>
+              {t('เลือกทั้งโฟลเดอร์')}
+            </button>
+          </div>
+        )}
         {!importAllowed && <p className="small muted">{t('ผู้ดูแลปิดการนำเข้า Skill Pack บนเครื่องนี้')}</p>}
         {imported && (
           <div className="pack-imported" role="status">

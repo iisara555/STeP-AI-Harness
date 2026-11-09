@@ -11,7 +11,7 @@ import {
 import { resolve, join, relative, dirname, basename } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { evaluatePrivacyGate } from "../privacy/index.js";
-import { reviewPack, REVIEW_MESSAGES } from "./review.js";
+import { reviewPack, REVIEW_MESSAGES, STANDARD_HEADINGS } from "./review.js";
 
 const ID = /^[a-z][a-z0-9-]{0,63}$/;
 const EVENTS = [
@@ -659,7 +659,7 @@ export function enabledPackHooks(workspace, policy) {
     .filter((p) => p.enabled && p.hooksEnabled)
     .flatMap((p) => read(workspace, p.id).manifest.hooks || []);
 }
-export { reviewPack, REVIEW_MESSAGES };
+export { reviewPack, REVIEW_MESSAGES, STANDARD_HEADINGS };
 export function exportPack(
   workspace,
   id,
