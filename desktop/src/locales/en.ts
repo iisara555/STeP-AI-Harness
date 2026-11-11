@@ -1158,6 +1158,7 @@ export const en: Record<string, string> = {
   คุณ: 'You',
   สถานะงาน: 'Task status',
   ไฟล์ที่ส่งกับข้อความนี้: 'Files sent with this message',
+  'ภาพที่ส่งให้ AI: {0}': 'Image sent to the AI: {0}',
   แหล่งข้อมูลจากการค้นเว็บ: 'Sources from web search',
   'แหล่งข้อมูลจาก Web Search': 'Sources from Web Search',
   คัดลอก: 'Copy',

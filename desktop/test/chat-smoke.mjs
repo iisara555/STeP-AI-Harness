@@ -465,6 +465,14 @@ try {
   await expect(page.locator('.composer .send')).toBeEnabled();
   await composer.press('Enter');
   await page.locator('article.message.user').getByText('ช่วยดูไฟล์ที่แนบ', { exact: true }).waitFor();
+  // The sent picture stays visible on the request in the transcript, as a small local JPEG.
+  const sentImage = page
+    .locator('article.message.user')
+    .getByRole('img', { name: /^ภาพที่ส่งให้ AI: / })
+    .last();
+  await expect(sentImage).toBeVisible();
+  await expect(sentImage).toHaveAttribute('src', /^data:image\/jpeg;base64,/);
+  await page.locator('article.message.user').last().screenshot({ path: 'release/qa/chat-sent-image.png' });
   await page.getByText('Image received', { exact: true }).last().waitFor();
   await waitComplete(id);
   await pasteImage();

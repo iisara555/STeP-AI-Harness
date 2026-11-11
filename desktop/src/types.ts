@@ -203,8 +203,11 @@ export type Message = {
   text: string;
   at: string;
   webSources?: { title: string; url: string }[];
-  /** Files sent with this message, shown on it in the transcript. */
-  files?: { name: string }[];
+  /**
+   * Files sent with this message, shown on it in the transcript. `preview` is a small JPEG data URL of the picture the AI
+   * received; it stays on this computer and never goes into a prompt.
+   */
+  files?: { name: string; preview?: string }[];
   /** The person's rating of an answer; stays on this computer with the conversation. */
   feedback?: 'good' | 'fix';
   /** How long the answer took, from sending the request to the finished reply. */
