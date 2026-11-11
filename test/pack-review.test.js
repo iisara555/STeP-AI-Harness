@@ -5,6 +5,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   installPack,
+  installSkillFile,
+  installSkillText,
+  normalizeSkillText,
   listPacks,
   reviewPack,
   enablePack,
@@ -176,6 +179,88 @@ test("hidden text, HTML-comment instructions, code files and hooks fail; links o
   );
   assert.equal(linked.status, "warn");
   assert.match(linked.findings[0].message, /www\.example\.invalid/);
+});
+
+test("a Skill file is imported on its own: any file name, no pack name, header fixed and reported", async () => {
+  const root = await mkdtemp(join(tmpdir(), "step-pack-file-")),
+    work = join(root, "work"),
+    folder = join(root, "event-checklist");
+  await mkdir(work);
+  await mkdir(folder);
+  // Written elsewhere: lower-case file name, a tool grant, no name and no description line.
+  const borrowed = good
+    .replace("name: meeting-room-booking\n", "allowed-tools:\n  - Read\n  - Bash\n")
+    .replace(/description: .*\n/, "");
+  await writeFile(join(folder, "skill.md"), borrowed);
+  await writeFile(join(folder, "unrelated.txt"), "ไฟล์อื่นในโฟลเดอร์เดียวกัน");
+  try {
+    const result = installSkillFile(work, join(folder, "skill.md"), {
+      credit: { name: "พนักงานสังเคราะห์" },
+    });
+    assert.equal(result.id, "event-checklist", "named after the folder of a file called skill.md");
+    assert.deepEqual(
+      result.notes.map((n) => n.code),
+      ["removed-authority", "named", "described"],
+    );
+    assert.deepEqual(result.notes[0].keys, ["allowed-tools"]);
+    assert.equal(result.review.status, "warn", "a one-line description earns advice only");
+    const listed = listPacks(work, {}).find((p) => p.id === "event-checklist");
+    assert.equal(listed.personalAllowed, true);
+    const stored = await readFile(
+      join(work, ".step", "packs", "event-checklist", "assets", "SKILL.md"),
+      "utf8",
+    );
+    assert.match(stored, /^---\nname: event-checklist\ndescription: "จองห้องประชุม"\n/);
+    assert.doesNotMatch(stored, /allowed-tools|Bash/);
+    assert.equal(listed.skills.length, 1, "only the chosen file, not the rest of its folder");
+
+    // The same file again changes nothing; a different Skill with the same name gets its own name.
+    assert.throws(() => installSkillFile(work, join(folder, "skill.md")), /PACK_ALREADY_INSTALLED/);
+    const second = installSkillText(work, good.replace("name: meeting-room-booking", "name: event-checklist"));
+    assert.equal(second.id, "event-checklist-2");
+    assert.deepEqual(second.notes, [{ code: "renamed", name: "event-checklist-2" }]);
+
+    // Only text files, and personal data still stops an import.
+    await writeFile(join(folder, "notes.docx"), good);
+    assert.throws(() => installSkillFile(work, join(folder, "notes.docx")), /PACK_SKILL_FILE_TYPE/);
+    assert.throws(
+      () => installSkillText(work, good + "\nเลขบัตรประชาชน 1101700203451\n"),
+      /PACK_PRIVACY_REVIEW_REQUIRED/,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("Skill header fixes leave a conforming file byte for byte and never keep a tool grant", () => {
+  assert.equal(normalizeSkillText(good).text, good);
+  assert.deepEqual(normalizeSkillText(good).notes, []);
+  const thai = normalizeSkillText("# ขั้นตอนตรวจใบเสร็จ\n\nตรวจยอดและวันที่", { fallbackName: "ตรวจใบเสร็จ" });
+  assert.match(thai.id, /^my-skill-[a-f0-9]{6}$/, "a Thai-only name falls back to a stable generated one");
+  assert.match(thai.text, /^---\nname: my-skill-[a-f0-9]{6}\ndescription: "ขั้นตอนตรวจใบเสร็จ"\n---\n\n# ขั้นตอนตรวจใบเสร็จ/);
+  const grant = normalizeSkillText("---\nname: Receipt Check\ndescription: ตรวจใบเสร็จ\ntools: [Bash]\npermissions:\n  write: true\n---\nเนื้อหา");
+  assert.equal(grant.id, "receipt-check");
+  assert.doesNotMatch(grant.text, /tools|permissions|write: true/);
+  assert.throws(() => normalizeSkillText("---\nname: empty\n---\n   \n"), /PACK_SKILL_INVALID/);
+});
+
+test("a Skill folder without pack.json needs no pack name", async () => {
+  const root = await mkdtemp(join(tmpdir(), "step-pack-folder-")),
+    work = join(root, "work"),
+    source = join(root, "source");
+  await mkdir(work);
+  await mkdir(source);
+  await writeFile(join(source, "Skill.md"), good);
+  try {
+    const result = installPack(work, source, {});
+    assert.equal(result.id, "meeting-room-booking");
+    assert.deepEqual(result.skills, [{ id: "meeting-room-booking", path: "SKILL.md" }]);
+    // Only a single chosen file has tool grants removed; a folder carrying one is still refused.
+    await writeFile(join(source, "Skill.md"), good.replace("description:", "tools: shell\ndescription:"));
+    assert.throws(() => installPack(join(root, "work"), source, { name: "other-pack" }), /AUTHORITY_REJECTED/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test("install keeps the uploader's credit beside the pack, outside its files and digest", async () => {

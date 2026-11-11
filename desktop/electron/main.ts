@@ -65,8 +65,9 @@ import { isImageRequest } from '../src/image-routing';
 import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
 import { searchPublicWeb } from './public-search';
 import { Splash } from './splash';
-import { documentTool } from '../src/document-tools';
-import { documentConversationContext, requestedDocumentTool } from '../src/document-intent';
+import { documentTool, documentVariant } from '../src/document-tools';
+import { resolveInvitation } from '../src/invitation';
+import { documentConversationContext, requestedDocumentTool, requestedLetterVariant } from '../src/document-intent';
 import { isDocumentQuestion } from './document-tools';
 import { inspectDocumentTemplate } from './document-template';
 import { DocumentTemplates, readTemplateSnapshot } from './document-template-store';
@@ -112,6 +113,10 @@ import { validateKeybindings } from '../src/commands';
 import { Voice } from './voice';
 import {
   installPack,
+  installSkillFile,
+  installSkillText,
+  normalizeSkillText,
+  reviewPack,
   packImportAllowed,
   listPacks,
   enablePack,
@@ -149,6 +154,7 @@ import { Memories, safeMemory } from './memory';
 import { Learning } from './learning';
 import { MAINTENANCE_EVERY_MS, findMaintenance, mergeBoard, moveItem } from './maintenance';
 import { DRAFT_SYSTEM, draftInput, parseDrafts } from './learning-draft';
+import { SKILL_DRAFT_SYSTEM, parseSkillDraft, skillDraftInput } from './skill-draft';
 import { Greetings, GREETING_SYSTEM, GREETING_SCHEMA, greetingInput, type GreetingContext } from './greetings';
 import { learningMetrics } from '../src/learning-metrics';
 import { proposalMarkdown, type SkillInfo } from './skill-proposal';
@@ -1420,6 +1426,49 @@ async function main() {
       clearTimeout(timeout);
     }
   };
+  /**
+   * "สร้างจากวิธีทำงานของฉัน": the chosen connected AI drafts a Skill from the employee's description (masked input, no
+   * tools). Returns a preview with the automated review; nothing is saved until the person chooses to use it.
+   */
+  const draftSkill = async (connectionId: string, answers: { task?: unknown; steps?: unknown; example?: unknown }) => {
+    const connection = store.get<Connection>('connection', connectionId);
+    if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
+    if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
+    const review = harness.privacy(skillDraftInput(answers));
+    if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120_000);
+    try {
+      const current = await runtime(connection);
+      let counted = { input: 0, output: 0, total: 0 };
+      const reply = await current.adapter
+        .run(review.redactedText, connection, {
+          ...current.context,
+          system: SKILL_DRAFT_SYSTEM,
+          signal: controller.signal,
+          emit: () => {},
+          onUsage: count => {
+            counted = {
+              input: Math.max(counted.input, count.input || 0),
+              output: Math.max(counted.output, count.output || 0),
+              total: Math.max(counted.total, count.total || 0),
+            };
+          },
+        })
+        .finally(() => counted.total && ledger.record(connection, counted));
+      // The model's header gets the same fixes as an imported file: no tool grants, a valid name.
+      const skill = normalizeSkillText(parseSkillDraft(reply), { fallbackName: 'my-skill' });
+      const files = new Map([['SKILL.md', Buffer.from(skill.text, 'utf8')]]);
+      const manifest = { schema_version: 1, name: skill.id, version: '1.0.0', skills: [{ id: skill.id, path: 'SKILL.md' }] };
+      diagnose('skill-draft', { provider: connection.provider });
+      return { id: skill.id, text: skill.text, review: reviewPack(manifest, files) };
+    } catch (error) {
+      if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
   // The background review, after Hermes Agent: every REVIEW_TURNS user turns of a task, at most REVIEW_DAILY times a
   // day, one at a time. It only drafts proposals; it never runs while the task does, in Plan mode, or when not allowed.
   const REVIEW_TURNS = 10,
@@ -1981,7 +2030,7 @@ async function main() {
   };
   const snapshot = async () => ({
     appVersion: app.getVersion(),
-    usage: ledger.report(),
+    usage: { ...ledger.report(), accounts: store.connections().map(c => providerUsage.snapshot(c)) },
     features: {
       claudeSubscription: claudeSubscriptionOn(),
       providerPresets: policyState.policy.features.providerPresets,
@@ -3042,16 +3091,34 @@ async function main() {
         });
       case 'packInstall': {
         if (!packImportAllowed(policyState.policy)) throw new Error('PACK_IMPORT_DISABLED');
+        // Staff usually have one Skill file; a folder (or a pack with pack.json) is the second choice.
+        const file = input.kind === 'file';
         const selected = await dialog.showOpenDialog(window!, {
-          title: tm('นำเข้า Skill Pack จากโฟลเดอร์'),
-          properties: ['openDirectory'],
+          title: tm(file ? 'เลือกไฟล์ Skill (.md)' : 'เลือกโฟลเดอร์ Skill'),
+          properties: [file ? 'openFile' : 'openDirectory'],
+          ...(file ? { filters: [{ name: 'Skill', extensions: ['md', 'markdown', 'txt'] }] } : {}),
         });
         if (selected.canceled || !selected.filePaths[0]) return null;
         // Credit the uploader from this computer's profile; it is kept beside the pack, never inside its files.
         const settings = store.settings();
-        return installPack(settings.workspace || data, selected.filePaths[0], {
-          name: inputText(input.name || '', 64),
+        const credit = { name: settings.userName || '', team: settings.team || '' };
+        return file
+          ? installSkillFile(settings.workspace || data, selected.filePaths[0], { credit })
+          : installPack(settings.workspace || data, selected.filePaths[0], { name: inputText(input.name || '', 64), credit });
+      }
+      case 'skillDraft': {
+        // Drafting is for a Skill the person will use themselves, so it follows the same switch as using one.
+        if (policyState.policy.features.staffSkills === false) throw new Error('PACK_PERSONAL_DISABLED');
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
+        return draftSkill(inputText(input.connectionId, 120), { task: input.task, steps: input.steps, example: input.example });
+      }
+      case 'skillCreate': {
+        // Saves the previewed (and possibly edited) draft like an imported file: privacy gate, review, credit.
+        if (policyState.policy.features.staffSkills === false) throw new Error('PACK_PERSONAL_DISABLED');
+        const settings = store.settings();
+        return installSkillText(settings.workspace || data, inputText(input.text, 200_000), {
           credit: { name: settings.userName || '', team: settings.team || '' },
+          fallbackName: 'my-skill',
         });
       }
       case 'packEnable': {
@@ -4181,18 +4248,37 @@ async function main() {
           permissionMode() !== 'plan'
             ? documentTool(requestedId)
             : undefined;
+        const requestedVariant =
+          requestedId === 'letter'
+            ? requestedLetterVariant(
+                text,
+                sending.messages.filter(m => m.role === 'user').map(m => m.text),
+              )
+            : undefined;
         const hasDraft = Boolean(sending.draft.trim() || sending.proposals.length);
         const newDocument =
           /ฉบับใหม่|อีก(?:ฉบับ|เรื่อง|โครงการ)|เรื่องใหม่|(?:tor|โครงการ|เอกสาร|บันทึก|หนังสือ|รายงาน)\s*ใหม่|\bnew\s+(?:document|draft)\b/i.test(
             text,
           );
-        const forkDocument = Boolean(requested && hasDraft && (sending.documentTool !== requested.id || newDocument));
+        const forkDocument = Boolean(
+          requested &&
+          hasDraft &&
+          (sending.documentTool !== requested.id || newDocument || (requestedVariant && sending.documentVariant !== requestedVariant)),
+        );
         const autoDocument =
           requested && (!input.skill || ((!hasDraft || forkDocument) && input.skill === requested.skill)) ? requested : undefined;
         const workMode = imageRequest ? 'image' : autoDocument ? 'draft' : workflow ? 'chat' : mode;
         const draftingTool =
           input.documentTool === undefined ? (!hasDraft || forkDocument ? autoDocument : undefined) : documentTool(input.documentTool);
         if (input.documentTool !== undefined && (!draftingTool || workMode !== 'draft')) throw new Error('INVALID_DOCUMENT_TOOL');
+        const variant = documentVariant(
+          draftingTool?.id,
+          input.documentVariant ?? (draftingTool?.id === 'letter' ? requestedVariant : undefined),
+        );
+        if (input.invitation !== undefined && (draftingTool?.id !== 'letter' || variant !== 'invitation'))
+          throw new Error('INVALID_DOCUMENT_VARIANT');
+        const invitation =
+          draftingTool?.id === 'letter' && variant === 'invitation' ? resolveInvitation(input.invitation ?? {}) : undefined;
         const coordinated = input.coordinator === true;
         if (draftingTool && coordinated) throw new Error('INVALID_DOCUMENT_TOOL');
         if (coordinated && (!policyState.policy.features.coordinator || workMode !== 'draft' || input.skill || input.retry))
@@ -4297,6 +4383,8 @@ async function main() {
                 text,
                 skill,
                 draftingTool?.id || '',
+                variant || '',
+                JSON.stringify(invitation || null),
                 attachmentRole,
                 workMode,
                 workflow || '',
@@ -4392,7 +4480,7 @@ async function main() {
         }
         const queued = store.session(runId);
         const templateInfo =
-          nativeTemplate && templateDescription
+          nativeTemplate && templateDescription && variant !== 'invitation'
             ? documentTemplates.save(runId, nativeTemplate, draftingTool!.id, selected[0].view.name, templateDescription.font)
             : undefined;
         const coordinatorScan = coordinated ? harness.privacy(text, { allowedIdentifiers: queued.allowedIdentifiers || [] }) : undefined;
@@ -4424,7 +4512,7 @@ async function main() {
                 onAccepted: () => acceptRequest(),
                 previousStatus,
                 ...(workflow ? { workflow } : {}),
-                ...(draftingTool ? { documentTool: draftingTool.id } : {}),
+                ...(draftingTool ? { documentTool: draftingTool.id, documentVariant: variant, invitation } : {}),
                 ...(autoDocument ? { fromConversation: true } : {}),
                 ...(templateInfo ? { documentTemplate: templateInfo } : {}),
               })
@@ -4712,6 +4800,10 @@ async function main() {
         if (!exportFormats.includes(format) || !s.draft.trim()) throw new Error('INVALID_EXPORT');
         // The stored task selects the layout; renderer input cannot replace its Skill or template.
         const layout = ['docx', 'pdf'].includes(format) ? resolveDocumentLayout(s.documentTool, input.font, input.garuda) : undefined;
+        if (layout && s.presentation?.invitation) {
+          layout.font = 'TH SarabunPSK';
+          layout.garudaHeightCm = 3;
+        }
         if (s.documentTemplate && format === 'pdf') throw new Error('DOCUMENT_TEMPLATE_DOCX_ONLY');
         if (s.documentTemplate && format === 'docx' && (input.font || (input.garuda && input.garuda !== 'auto')))
           throw new Error('DOCUMENT_TEMPLATE_LAYOUT_LOCKED');
@@ -4723,38 +4815,58 @@ async function main() {
           const workspace = await exportWorkspace.resolve();
           if (!workspace) return { canceled: true };
           if (actions.evaluateActionGate(draftExportAction).status !== 'allowed') throw new Error('ACTION_BLOCKED');
-          const result = await harness.nextOutput({ workspaceDir: workspace, team: s.team, title: s.title, extension: format });
-          const exported = await exportDocument(
-            result.path,
-            format,
-            s.draft,
-            async (html, pageSettings) => {
-              const print = new BrowserWindow({
-                show: false,
-                webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, javascript: false },
+          const recipients =
+            ['docx', 'pdf'].includes(format) && s.presentation?.invitation?.recipients
+              ? s.presentation.invitation.recipients.filter(r => r.recipient.trim() || r.position.trim() || r.number.trim())
+              : [];
+          const renderPdf = async (html: string, pageSettings?: any) => {
+            const print = new BrowserWindow({
+              show: false,
+              webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, javascript: false },
+            });
+            try {
+              await print.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+              return await print.webContents.printToPDF({
+                printBackground: true,
+                pageSize: 'A4',
+                margins: PDF_MARGINS,
+                preferCSSPageSize: true,
+                ...pageSettings,
               });
-              try {
-                await print.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
-                return await print.webContents.printToPDF({
-                  printBackground: true,
-                  pageSize: 'A4',
-                  margins: PDF_MARGINS,
-                  preferCSSPageSize: true,
-                  ...pageSettings,
-                });
-              } finally {
-                print.destroy();
-              }
-            },
-            s.document,
-            {
+            } finally {
+              print.destroy();
+            }
+          };
+          const images = s.document ? documentAssets.resolve(s.id, s.document) : undefined;
+          const items = recipients.length > 1 ? recipients : [recipients[0]];
+          const results: any[] = [];
+          let exported: any;
+          for (const item of items) {
+            const title =
+              recipients.length > 1 && item ? [s.title, item.number, item.recipient || item.position].filter(Boolean).join('-') : s.title;
+            const target = await harness.nextOutput({ workspaceDir: workspace, team: s.team, title, extension: format });
+            exported = await exportDocument(target.path, format, s.draft, renderPdf, s.document, {
               ...(layout ? { font: layout.font, garuda: input.garuda, template } : {}),
               documentTool: s.documentTool,
-              presentation: s.presentation,
-              images: s.document ? documentAssets.resolve(s.id, s.document) : undefined,
-            },
-          );
-          exportPaths.add(result.path);
+              presentation:
+                item && s.presentation?.invitation
+                  ? { ...s.presentation, invitation: { ...s.presentation.invitation, recipients: [item] } }
+                  : s.presentation,
+              images,
+            });
+            exportPaths.add(target.path);
+            results.push(target);
+          }
+          const result = {
+            ...results[0],
+            ...(results.length > 1
+              ? {
+                  paths: results.map(r => r.path),
+                  count: results.length,
+                  filename: `${results[0].filename} (+${results.length - 1})`,
+                }
+              : {}),
+          };
           if (!layout) return result;
           const font = template ? s.documentTemplate!.font : layout.font;
           const fontStatus = await window.webContents

@@ -37,6 +37,8 @@ const allowed = new Set([
   'packAsset',
   'packExport',
   'packPromote',
+  'skillDraft',
+  'skillCreate',
   'feedbackSend',
   'voiceStatus',
   'voiceInstall',

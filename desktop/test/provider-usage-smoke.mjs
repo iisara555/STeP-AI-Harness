@@ -99,6 +99,9 @@ try {
   await expect(codex).toContainText('1W');
   await expect(codex).toContainText('35%');
   await expect(codex).toContainText('70%');
+  await expect(codex).toContainText('คงเหลือ 65%');
+  await expect(codex).toContainText('คงเหลือ 30%');
+  await expect(api).toContainText('ขาเข้า');
   await expect(codex).toContainText('12.5 credits');
   await expect(codex).toContainText('อัปเดต');
   await codex.getByRole('button', { name: 'รีเฟรชการใช้งาน' }).click();
@@ -110,6 +113,11 @@ try {
   const bounds = await dialog.evaluate(el => ({ width: el.scrollWidth, client: el.clientWidth }));
   assert.ok(bounds.width <= bounds.client + 2, 'usage rows do not overflow the dialog');
   await dialog.getByRole('button', { name: 'ปิด', exact: true }).click();
+  await page.locator('.ai-picker-button').click();
+  await page.getByLabel('เลือกบัญชี AI').selectOption('synthetic-codex');
+  await expect(page.locator('[data-picker-quota="synthetic-codex"]')).toContainText('65%');
+  await expect(page.locator('.quota-mini-pill')).toContainText('5H');
+  await expect(page.locator('.quota-mini-pill')).toContainText('65%');
   const calls = (await readFile(log, 'utf8')).trim().split('\n').map(JSON.parse);
   assert.equal(calls.filter(c => c.method === 'account/rateLimits/read').length, 1, 'one-minute cache avoids duplicate polling');
   assert.ok(

@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { DocumentPresentationControls, readExportSettingsOpen, saveExportSettingsOpen } from './document-presentation-controls';
 import { resolvePresentation } from './document-presentation';
+import type { InvitationPresentation } from './invitation';
+import { InvitationLinks, invalidInvitationLinks } from './invitation-links';
 import {
   DocumentTitle,
   DocumentCaption,
@@ -109,7 +111,7 @@ import { ChatMarkdown } from './chat-markdown';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
 import { publicSourceUrl } from './web';
 import { QuestionCard } from './tool-question';
-import { UsageDialog } from './usage';
+import { AccountQuotaMenuSummary, InlineQuotaChip, UsageDialog } from './usage';
 import { MemoryDialog } from './memory';
 import { LearningDialog } from './learning';
 import { FeedbackButtons, FeedbackDialog, ReportDialog, type FeedbackAsk, type ReportAsk } from './feedback';
@@ -350,6 +352,8 @@ export default function App() {
     retry?: boolean;
     coordinator?: boolean;
     documentTool?: DocumentToolId;
+    documentVariant?: string;
+    invitation?: InvitationPresentation;
     attachmentRole?: DocumentAttachmentRole;
     isolated?: boolean;
     aside?: boolean;
@@ -743,9 +747,17 @@ export default function App() {
   useEffect(() => {
     if (editor && !dirtyRef.current) {
       editor.commands.setContent(session?.document || toDoc(session?.draft || ''), { emitUpdate: false });
-      setPresentation(resolvePresentation(session?.presentation, session?.documentTool || false));
     }
   }, [editor, selected, session?.revision]);
+  useEffect(() => {
+    const saved = session?.presentation;
+    // The host sets the invitation layout before the first proposal, without changing the draft revision.
+    // Adopt a layout change without resetting unsaved editor text or QR edits within the same layout.
+    if (dirtyRef.current && Boolean(saved?.invitation) === Boolean(presentationRef.current.invitation)) return;
+    const next = resolvePresentation(saved, session?.documentTool || false);
+    presentationRef.current = next;
+    setPresentation(next);
+  }, [selected, session?.revision, session?.documentTool, session?.presentation]);
   useEffect(() => {
     editor?.setEditable(!draftAcceptPending, false);
   }, [editor, draftAcceptPending]);
@@ -889,7 +901,7 @@ export default function App() {
     if (form.source && !form.source.file.usable) throw new Error('ATTACHMENT_NOT_APPROVED');
     if (form.source && form.sourceRole !== 'template' && form.source.file.sourceUsable === false)
       throw new Error('ATTACHMENT_NOT_APPROVED');
-    const request = documentRequest(tool, form.values, form.variant, form.source ? form.sourceRole : 'source');
+    const request = documentRequest(tool, form.values, form.variant, form.source ? form.sourceRole : 'source', form.recipients);
     const id = form.source?.sessionId || (await createDocumentTask(tool))?.id;
     if (!id) return;
     await save();
@@ -918,6 +930,17 @@ export default function App() {
       false,
       tool,
       form.source ? form.sourceRole : 'source',
+      false,
+      false,
+      false,
+      form.variant,
+      tool === 'letter' && form.variant === 'invitation'
+        ? {
+            rsvpUrl: form.values.rsvpUrl || '',
+            venueUrl: form.values.venueUrl || '',
+            ...(form.recipients?.length ? { recipients: form.recipients } : {}),
+          }
+        : undefined,
     );
   }
   async function reviseDocument(id: string, changes: string) {
@@ -1132,6 +1155,8 @@ export default function App() {
     isolated: boolean = false,
     aside: boolean = false,
     autoContinue: boolean = false,
+    documentVariant?: string,
+    invitation?: InvitationPresentation,
   ) {
     const submittedQuery = query;
     const attempt = {},
@@ -1164,6 +1189,8 @@ export default function App() {
         retry,
         coordinator,
         documentTool,
+        documentVariant,
+        invitation,
         attachmentRole,
         autoContinue,
         ...(isolated ? { autoImage: false } : mode === 'chat' && workflowRef.current ? { workflow: workflowRef.current } : {}),
@@ -1199,6 +1226,8 @@ export default function App() {
         retry,
         coordinator,
         documentTool,
+        documentVariant,
+        invitation,
         attachmentRole,
         isolated,
         aside,
@@ -1300,6 +1329,18 @@ export default function App() {
         .join(' · ')
     : aiLabel;
   const [aiPicker, setAiPicker] = useState(false);
+  const [quotaRefreshing, setQuotaRefreshing] = useState(false);
+  const activeUsageAccount = connection ? snapshot?.usage?.accounts?.find(a => a.connectionId === connection.id) : undefined;
+  async function refreshActiveQuota() {
+    if (!api || !connection || quotaRefreshing) return;
+    setQuotaRefreshing(true);
+    try {
+      await api.call('providerUsage', { id: connection.id });
+      await refresh();
+    } finally {
+      setQuotaRefreshing(false);
+    }
+  }
   const aiPickerRef = useRef<HTMLDivElement>(null);
   // The AI picker closes on a click outside it or Escape, like a menu.
   useEffect(() => {
@@ -3165,6 +3206,7 @@ export default function App() {
                     <span className="spacer" />
                     {/* One pill for the AI account, model and reasoning level: the full choice opens above it, so the row
                         stays on one line and the account is not repeated in the status bar. */}
+                    <InlineQuotaChip account={activeUsageAccount} onClick={() => setUsageOpen(true)} />
                     <div className="ai-picker" ref={aiPickerRef}>
                       <button
                         type="button"
@@ -3261,6 +3303,15 @@ export default function App() {
                               </select>
                             </label>
                           ) : null}
+                          <AccountQuotaMenuSummary
+                            account={activeUsageAccount}
+                            busy={quotaRefreshing}
+                            onRefresh={() => void action(refreshActiveQuota)}
+                            onOpenUsage={() => {
+                              setAiPicker(false);
+                              setUsageOpen(true);
+                            }}
+                          />
                         </div>
                       )}
                     </div>
@@ -3629,9 +3680,22 @@ export default function App() {
                         <p key={path}>{path}</p>
                       ))}
                     </details>
-                    {exportSettings && ['docx', 'pdf'].includes(format) && (
+                    {exportSettings && (['docx', 'pdf'].includes(format) || Boolean(presentation.invitation)) && (
                       <div className="export-settings" id="export-settings">
-                        {format === 'docx' && (
+                        {presentation.invitation && (
+                          <InvitationLinks
+                            value={presentation.invitation}
+                            disabled={exporting || draftAcceptPending}
+                            onChange={value => {
+                              const next = { ...presentationRef.current, invitation: value };
+                              setPresentation(next);
+                              presentationRef.current = next;
+                              setDirty(true);
+                              dirtyRef.current = true;
+                            }}
+                          />
+                        )}
+                        {format === 'docx' && !presentation.invitation && (
                           <DocumentPresentationControls
                             value={presentation}
                             locked={Boolean(session?.documentTemplate)}
@@ -3644,7 +3708,7 @@ export default function App() {
                             }}
                           />
                         )}
-                        {['docx', 'pdf'].includes(format) && (
+                        {['docx', 'pdf'].includes(format) && !presentation.invitation && (
                           <label className="document-export-font">
                             {t(format === 'docx' ? 'ฟอนต์ DOCX' : 'ฟอนต์ PDF')}
                             <select
@@ -3669,6 +3733,7 @@ export default function App() {
                           </label>
                         )}
                         {!session.documentTemplate &&
+                          !presentation.invitation &&
                           ['docx', 'pdf'].includes(format) &&
                           ['memo', 'letter'].includes(session.documentTool || '') && (
                             <label className="document-export-font">
@@ -3709,7 +3774,7 @@ export default function App() {
                           </option>
                         ))}
                       </select>
-                      {['docx', 'pdf'].includes(format) && (
+                      {(['docx', 'pdf'].includes(format) || Boolean(presentation.invitation)) && (
                         <button
                           className="icon"
                           aria-label={t('ตั้งค่าส่งออก')}
@@ -3725,7 +3790,11 @@ export default function App() {
                         </button>
                       )}
                       <button
-                        disabled={exporting || (!session.draft && !dirty)}
+                        disabled={
+                          exporting ||
+                          (!session.draft && !dirty) ||
+                          Boolean(presentation.invitation && invalidInvitationLinks(presentation.invitation).length)
+                        }
                         onClick={() =>
                           void action(async () => {
                             if (exportPending.current) return;
@@ -3789,16 +3858,22 @@ export default function App() {
                             {exportInfo.fontEmbedding?.status === 'unavailable' && (
                               <p>{t('แม่แบบใช้ฟอนต์ที่ไม่มีในชุดแอป ตรวจฟอนต์บนเครื่องปลายทางก่อนใช้งาน')}</p>
                             )}
-                            {exportInfo.fontEmbedding?.status !== 'embedded' && exportInfo.fontStatus === 'missing' && (
-                              <p>{t('ตรวจไม่พบฟอนต์นี้บนเครื่อง ติดตั้งฟอนต์ให้ตรงแบบก่อนตรวจหน้าใน Word')}</p>
+                            {exportInfo.fontEmbedding?.status !== 'embedded' &&
+                              exportInfo.fontStatus === 'missing' &&
+                              !(presentation.invitation && format === 'pdf') && (
+                                <p>{t('ตรวจไม่พบฟอนต์นี้บนเครื่อง ติดตั้งฟอนต์ให้ตรงแบบก่อนตรวจหน้าใน Word')}</p>
+                              )}
+                            {exportInfo.fontStatus === 'unknown' && !(presentation.invitation && format === 'pdf') && (
+                              <p>{t('ตรวจฟอนต์บนเครื่องไม่ได้ โปรดตรวจฟอนต์และหน้าใน Word')}</p>
                             )}
-                            {exportInfo.fontStatus === 'unknown' && <p>{t('ตรวจฟอนต์บนเครื่องไม่ได้ โปรดตรวจฟอนต์และหน้าใน Word')}</p>}
                             {exportInfo.documentTool && (
                               <p>
                                 {t(
                                   exportInfo.templateName
                                     ? 'ใช้รูปแบบต้นฉบับ DOCX ตรวจทุกหน้าใน Word ก่อนเสนอ'
-                                    : 'จัดหน้าตามแม่แบบร่าง ต้องเทียบแบบหน่วยงานก่อนเสนอ',
+                                    : presentation.invitation
+                                      ? 'หนังสือเชิญใช้มาตรฐาน STeP ทั้งภาษาและการจัดหน้า'
+                                      : 'จัดหน้าตามแม่แบบร่าง ต้องเทียบแบบหน่วยงานก่อนเสนอ',
                                 )}
                               </p>
                             )}
@@ -3817,7 +3892,7 @@ export default function App() {
             </aside>
           </>
         )}
-        {usageOpen && api && <UsageDialog api={api} onClose={() => setUsageOpen(false)} />}
+        {usageOpen && api && <UsageDialog api={api} onClose={() => setUsageOpen(false)} onUpdated={() => void refresh()} />}
         {learningOpen && api && (
           <LearningDialog api={api} initialText={learningText} sessionId={session?.id} onClose={() => setLearningOpen(false)} />
         )}
@@ -3926,6 +4001,8 @@ export default function App() {
                   ask.isolated,
                   ask.aside,
                   ask.autoContinue,
+                  ask.documentVariant,
+                  ask.invitation,
                 ),
               );
             }}
@@ -4092,6 +4169,10 @@ export default function App() {
           <PacksDialog
             api={api}
             features={snapshot.policy?.features}
+            connection={(() => {
+              const c = snapshot.connections.find(c => c.id === connectionId && c.ready);
+              return c ? { id: c.id, name: connectionName(c) } : undefined;
+            })()}
             onClose={() => setPacksOpen(false)}
             onSelect={text => {
               setPendingSource(text);

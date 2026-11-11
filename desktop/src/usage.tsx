@@ -5,6 +5,7 @@ import { connectionBrand, connectionName, explainError, shownDate, shownMonth } 
 import { locale, t } from './i18n';
 import './usage.css';
 import { formatUsd, usageSourceName } from './usage-display';
+import { accountTokenSummary, budgetReading, creditReading, inlineQuotaReadings, limitReading, type QuotaReading } from './usage-readings';
 
 function statusText(account: ProviderUsageReport) {
   if (account.status === 'idle') return t('ยังไม่ได้อ่านการใช้งานจากผู้ให้บริการ');
@@ -13,43 +14,143 @@ function statusText(account: ProviderUsageReport) {
   if (account.status === 'unavailable') return t('ผู้ให้บริการยังไม่รายงานโควตาหรือเครดิตสำหรับบัญชีนี้');
   if (account.status === 'error') {
     if (account.reason === 'FEATURE_DISABLED') return t('ผู้ดูแลปิดการเชื่อมต่อนี้ในนโยบาย');
-    if (account.reason === 'USAGE_AUTH_REQUIRED') return t('ตรวจการลงชื่อเข้าใช้หรือสิทธิ์ API key ที่หน้าเชื่อมต่อ AI');
+    if (account.reason === 'USAGE_AUTH_REQUIRED') return t('ตรวจการลงชื่อเข้าใช้หรือสิทธิ์ API key ที่หน้าการเชื่อมต่อ AI');
     if (account.reason === 'USAGE_TIMEOUT') return t('อ่านการใช้งานไม่ทันเวลา ลองรีเฟรชอีกครั้ง');
     return t('อ่านการใช้งานไม่สำเร็จ ลองรีเฟรชหรือตรวจที่ผู้ให้บริการ');
   }
   return t('ข้อมูลจากผู้ให้บริการ');
 }
-function limitName(row: ProviderUsageReport['limits'][number]) {
-  const minutes = row.windowMinutes;
-  const period =
-    minutes === 300
-      ? t('5h (5 ชั่วโมง)')
-      : minutes === 10080
-        ? t('1W (7 วัน)')
-        : minutes
-          ? t('{0} นาที', minutes.toLocaleString(locale()))
-          : '';
-  const names: Record<string, string> = {
-    primary: t('โควตาหลัก'),
-    secondary: t('โควตารอง'),
-    five_hour: '',
-    seven_day: '',
-    seven_day_opus: 'Opus',
-    seven_day_sonnet: 'Sonnet',
-    seven_day_oauth_apps: t('แอป OAuth'),
-    model_week: '',
-    premium_interactions: t('Premium requests'),
-    chat: 'Chat',
-    completions: t('Completions'),
-  };
-  return [period, row.scope || names[row.name]].filter(Boolean).join(' · ') || t('โควตา');
-}
+
 /** Local clock time at which the ledger's day (counted in UTC) begins, such as 07:00 น. in Thailand. */
 const dayStart = (day: string) => {
   const start = new Date(day + 'T00:00:00Z');
   return Number.isFinite(start.getTime()) ? shownDate(start, true).split(' ').slice(1).join(' ') : '';
 };
 const displayNumber = (n: number) => n.toLocaleString(locale(), { maximumFractionDigits: 4 });
+
+/**
+ * Token Bar style tank meter: fills according to REMAINING percentage (`100 - usedPercent`),
+ * uses warm/cool gradient ramps, and prints a 0/25/50/75/100% quarter graduation scale below card meters.
+ */
+export function QuotaTankMeter({ reading, compact = false }: { reading: QuotaReading; compact?: boolean }) {
+  const pct = reading.remainingPercent;
+  const fill = pct === undefined ? 0 : Math.max(0, Math.min(100, pct));
+  const gradientScale = fill > 0 ? `${(100 / fill) * 100}% 100%` : '100% 100%';
+  if (compact) {
+    return (
+      <span className="quota-mini-meter" data-tone={reading.tone}>
+        <span className="quota-mini-label">{reading.shortLabel}</span>
+        {pct !== undefined && (
+          <span className="quota-mini-track" data-ramp={reading.ramp} aria-hidden="true">
+            <span className="quota-mini-fill" style={{ width: `${fill}%`, backgroundSize: gradientScale }} />
+          </span>
+        )}
+        <span className="quota-mini-value">{reading.compactValue}</span>
+      </span>
+    );
+  }
+  return (
+    <div className="usage-meter" data-tone={reading.tone} data-kind={reading.kind}>
+      <div className="usage-meter-heading">
+        <div className="usage-meter-title">
+          <span className="usage-window-badge" data-ramp={reading.ramp}>
+            {reading.shortLabel}
+          </span>
+          <strong>{reading.longLabel}</strong>
+        </div>
+        <span className="usage-meter-remaining" data-tone={reading.tone}>
+          {reading.valueText}
+        </span>
+      </div>
+      {pct !== undefined && (
+        <>
+          <div
+            className="usage-meter-track"
+            data-ramp={reading.ramp}
+            role="meter"
+            aria-label={reading.longLabel}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(pct)}
+            aria-valuetext={reading.valueText}
+          >
+            <span className="usage-meter-fill" style={{ width: `${fill}%`, backgroundSize: gradientScale }} />
+          </div>
+          <span className="usage-meter-scale" aria-hidden="true" />
+          <progress className="sr-only" max={100} value={pct} aria-label={reading.longLabel} />
+        </>
+      )}
+      {reading.longCaption && <p className="muted small usage-meter-caption">{reading.longCaption}</p>}
+    </div>
+  );
+}
+
+/**
+ * Compact Token-Bar style pill shown beside the AI selector in the composer bar when an account has live readings.
+ */
+export function InlineQuotaChip({ account, onClick }: { account?: ProviderUsageReport; onClick: () => void }) {
+  const readings = inlineQuotaReadings(account);
+  if (!account || !readings.length) return null;
+  const summary = readings.map(r => `${r.longLabel}: ${r.valueText}`).join(' · ');
+  return (
+    <button
+      type="button"
+      className="pill-select quota-mini-pill"
+      data-quota-chip={account.connectionId}
+      title={`${connectionName(account)} · ${summary}`}
+      aria-label={t('โควตาคงเหลือ {0}: {1}', connectionName(account), summary)}
+      onClick={onClick}
+    >
+      {readings.map(reading => (
+        <QuotaTankMeter key={reading.key} reading={reading} compact />
+      ))}
+    </button>
+  );
+}
+
+/**
+ * Quota summary strip inside the AI picker popover menu so staff can check or refresh quota without leaving the composer.
+ */
+export function AccountQuotaMenuSummary({
+  account,
+  busy,
+  onRefresh,
+  onOpenUsage,
+}: {
+  account?: ProviderUsageReport;
+  busy?: boolean;
+  onRefresh?: () => void;
+  onOpenUsage: () => void;
+}) {
+  if (!account) return null;
+  const readings = inlineQuotaReadings(account);
+  return (
+    <div className="ai-picker-quota" data-picker-quota={account.connectionId}>
+      <div className="ai-picker-quota-head">
+        <span className="small muted">{t('โควตาคงเหลือ')}</span>
+        <div className="ai-picker-quota-actions">
+          {account.canRefresh && onRefresh && (
+            <button type="button" className="quiet small" disabled={busy} onClick={onRefresh}>
+              {busy ? t('กำลังอ่านการใช้งาน…') : t('รีเฟรชโควตา')}
+            </button>
+          )}
+          <button type="button" className="quiet small" onClick={onOpenUsage}>
+            {t('ดูการใช้งาน AI')}
+          </button>
+        </div>
+      </div>
+      {readings.length > 0 ? (
+        <div className="ai-picker-quota-meters">
+          {readings.map(reading => (
+            <QuotaTankMeter key={reading.key} reading={reading} compact />
+          ))}
+        </div>
+      ) : (
+        <p className="muted small ai-picker-quota-note">{statusText(account)}</p>
+      )}
+    </div>
+  );
+}
 
 function UsageAccount({
   account,
@@ -64,15 +165,21 @@ function UsageAccount({
   onRefresh: () => void;
   onDashboard: () => void;
 }) {
-  const entries = report.entries.filter(e => e.connectionId === account.connectionId),
-    tokens = entries.reduce((n, e) => n + e.total, 0),
-    usd = entries.reduce((n, e) => n + e.usd, 0);
+  const tokenStats = accountTokenSummary(account.connectionId, report);
+  const limitReadings = account.limits.map((row, i) => limitReading(row, i));
+  const creditReadings = account.credits.map((credit, i) => ({
+    credit,
+    reading: creditReading(credit, account, i),
+  }));
   return (
     <section className="usage-account" data-usage-account={account.connectionId} aria-label={connectionName(account)}>
-      <h4>
-        {connectionName(account)}
-        {account.plan ? <span className="muted small"> · {account.plan}</span> : null}
-      </h4>
+      <div className="usage-account-head">
+        <h4>
+          {connectionName(account)}
+          {account.plan ? <span className="usage-plan-badge">{account.plan}</span> : null}
+        </h4>
+        {account.checkedAt && <span className="muted small">{t('อัปเดต: {0}', shownDate(account.checkedAt, true))}</span>}
+      </div>
       <p className="small" role={account.status === 'error' ? 'status' : undefined}>
         {statusText(account)}
       </p>
@@ -80,64 +187,14 @@ function UsageAccount({
       {account.source && usageSourceName(account.source) !== connectionBrand(account) && (
         <p className="muted small">{t('แหล่งข้อมูล: {0}', usageSourceName(account.source))}</p>
       )}
-      {account.checkedAt && <p className="muted small">{t('อัปเดต: {0}', shownDate(account.checkedAt, true))}</p>}
       {account.experimental && <p className="muted small">{t('ช่องอ่านการใช้งานนี้ยังอยู่ระหว่างทดลอง และอาจเปลี่ยนได้')}</p>}
       {account.reason === 'CREDIT_UNAVAILABLE' && <p className="small">{t('อ่านยอดใช้ของ API key ได้ แต่ยังอ่านเครดิตบัญชีไม่ได้')}</p>}
-      {account.limits.map((row, i) => (
-        <div className="usage-meter" key={i}>
-          <div className="usage-meter-heading">
-            <strong>{limitName(row)}</strong>
-            <span>
-              {row.unlimited === true
-                ? t('ผู้ให้บริการรายงานว่าไม่จำกัด')
-                : row.usedPercent === undefined
-                  ? t('ยังไม่รายงานเปอร์เซ็นต์')
-                  : t('ใช้แล้ว {0}%', displayNumber(row.usedPercent))}
-            </span>
-          </div>
-          {row.usedPercent !== undefined && <progress max={100} value={row.usedPercent} aria-label={limitName(row)} />}
-          {row.used !== undefined && (
-            <p className="muted small">
-              {t('ใช้แล้ว {0} ครั้ง', displayNumber(row.used))}
-              {row.total !== undefined ? ` / ${displayNumber(row.total)}` : ''}
-            </p>
-          )}
-          {row.resetsAt && <p className="muted small">{t('รีเซ็ต: {0}', shownDate(row.resetsAt, true))}</p>}
-        </div>
+      {limitReadings.map(reading => (
+        <QuotaTankMeter key={reading.key} reading={reading} />
       ))}
-      {account.credits.map((credit, i) => (
-        <div className="usage-credit" key={i}>
-          <strong>
-            {credit.name === 'key_limit'
-              ? t('วงเงิน API key')
-              : credit.name === 'extra_usage'
-                ? t('Extra usage ของรอบบิล')
-                : t('เครดิตบัญชี')}
-            {credit.scope ? ` · ${credit.scope}` : ''}
-          </strong>
-          <p>
-            {credit.name === 'key_limit' && credit.unlimited === true
-              ? t('ไม่ได้ตั้งวงเงิน API key')
-              : credit.unlimited === true
-                ? t('ผู้ให้บริการรายงานว่าไม่จำกัด')
-                : credit.remaining === undefined
-                  ? t('ยังไม่รายงานยอดคงเหลือ')
-                  : t(
-                      'คงเหลือ {0} {1}',
-                      credit.unit === 'USD' ? formatUsd(credit.remaining) : displayNumber(credit.remaining),
-                      credit.unit === 'minor-units' ? t('หน่วยย่อย (ไม่ระบุสกุลเงิน)') : credit.unit,
-                    )}
-          </p>
-          {credit.used !== undefined && (
-            <p className="muted small">
-              {t(
-                'ใช้แล้ว {0} {1}',
-                credit.unit === 'USD' ? formatUsd(credit.used) : displayNumber(credit.used),
-                credit.unit === 'minor-units' ? t('หน่วยย่อย (ไม่ระบุสกุลเงิน)') : credit.unit,
-              )}
-              {credit.total !== undefined ? ` / ${credit.unit === 'USD' ? formatUsd(credit.total) : displayNumber(credit.total)}` : ''}
-            </p>
-          )}
+      {creditReadings.map(({ credit, reading }, i) => (
+        <div className="usage-credit" key={reading.key || i}>
+          <QuotaTankMeter reading={reading} />
           {credit.available === false && <p className="small">{t('ผู้ให้บริการรายงานว่าเครดิตนี้ยังใช้ไม่ได้')}</p>}
           {credit.hasCredits === false && <p className="muted small">{t('ผู้ให้บริการรายงานว่าไม่มีเครดิตเพิ่มเติม')}</p>}
           {credit.name === 'key_limit' && <p className="muted small">{t('วงเงิน key แยกจากเครดิตบัญชี')}</p>}
@@ -161,7 +218,22 @@ function UsageAccount({
           })}
         </div>
       )}
-      <p className="muted small">{t('ในแอปเดือนนี้: {0} tokens · ประมาณ ${1}', displayNumber(tokens), formatUsd(usd))}</p>
+      <div className="usage-token-summary">
+        <p className="muted small">
+          {t('ในแอปเดือนนี้: {0} tokens · ประมาณ ${1}', displayNumber(tokenStats.total), formatUsd(tokenStats.usd))}
+        </p>
+        {tokenStats.total > 0 && tokenStats.hasBreakdown && (
+          <div className="usage-token-pills" aria-label={t('สัดส่วน Token ของบัญชีนี้')}>
+            <span>
+              {t('ขาเข้า')}: {displayNumber(tokenStats.input)}
+            </span>
+            <span>
+              {t('ขาออก')}: {displayNumber(tokenStats.output)}
+            </span>
+            {tokenStats.cached > 0 && <span>Cache: {displayNumber(tokenStats.cached)}</span>}
+          </div>
+        )}
+      </div>
       <div className="usage-account-actions">
         {account.canRefresh && (
           <button className="quiet" disabled={Boolean(busy)} onClick={onRefresh}>
@@ -177,7 +249,8 @@ function UsageAccount({
     </section>
   );
 }
-export function UsageDialog({ api, onClose }: { api: DesktopAPI; onClose: () => void }) {
+
+export function UsageDialog({ api, onClose, onUpdated }: { api: DesktopAPI; onClose: () => void; onUpdated?: () => void }) {
   const [report, setReport] = useState<UsageReport>(),
     [busy, setBusy] = useState(''),
     [error, setError] = useState('');
@@ -196,18 +269,49 @@ export function UsageDialog({ api, onClose }: { api: DesktopAPI; onClose: () => 
       setReport(previous =>
         previous ? { ...previous, accounts: previous.accounts?.map(a => (a.connectionId === next.connectionId ? next : a)) } : previous,
       );
+      onUpdated?.();
     } catch (e) {
       setError(explainError(e));
     } finally {
       setBusy('');
     }
   };
+  const refreshAll = async () => {
+    if (busy || !report?.accounts) return;
+    const targets = report.accounts.filter(a => a.canRefresh);
+    if (!targets.length) return;
+    setBusy('all');
+    setError('');
+    try {
+      for (const account of targets) {
+        const next: ProviderUsageReport = await api.call('providerUsage', { id: account.connectionId });
+        setReport(previous =>
+          previous ? { ...previous, accounts: previous.accounts?.map(a => (a.connectionId === next.connectionId ? next : a)) } : previous,
+        );
+      }
+      onUpdated?.();
+    } catch (e) {
+      setError(explainError(e));
+    } finally {
+      setBusy('');
+    }
+  };
+  const dailyBudgetMeter = report ? budgetReading('dailyTokens', report) : undefined;
+  const monthlyBudgetMeter = report ? budgetReading('monthlyCostUsd', report) : undefined;
+  const canRefreshAny = Boolean(report?.accounts?.some(a => a.canRefresh));
   return (
     <ConfirmDialog info title={t('การใช้งาน AI')} confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
       {error && <p role="alert">{error}</p>}
       {report ? (
         <>
-          <h3>{t('โควตาและเครดิตรายบัญชี')}</h3>
+          <div className="usage-section-head">
+            <h3>{t('โควตาและเครดิตรายบัญชี')}</h3>
+            {canRefreshAny && (
+              <button className="quiet" disabled={Boolean(busy)} onClick={() => void refreshAll()}>
+                {busy === 'all' ? t('กำลังอ่านการใช้งาน…') : t('รีเฟรชทั้งหมด')}
+              </button>
+            )}
+          </div>
           <p className="muted small">
             {t('ข้อมูล ณ เวลาที่ระบุ รีเฟรชได้ไม่เกินหนึ่งครั้งต่อนาทีต่อบัญชี ข้อมูลที่ผู้ให้บริการไม่รายงานยังถือว่าไม่ทราบ')}
           </p>
@@ -235,10 +339,12 @@ export function UsageDialog({ api, onClose }: { api: DesktopAPI; onClose: () => 
             )}
             {report.budgets.dailyTokens ? ` / ${report.budgets.dailyTokens.toLocaleString(locale())}` : ''}
           </p>
+          {dailyBudgetMeter && <QuotaTankMeter reading={dailyBudgetMeter} />}
           <p>
             {t('เดือน {0}: ค่าใช้จ่ายประมาณ ${1}', shownMonth(report.month), formatUsd(report.monthlyUsd))}
             {report.budgets.monthlyCostUsd ? ` / $${report.budgets.monthlyCostUsd}` : ''}
           </p>
+          {monthlyBudgetMeter && <QuotaTankMeter reading={monthlyBudgetMeter} />}
           <p className="muted small">
             {t(
               'คำนวณจาก token ของแชต ร่างเอกสาร และการค้นเว็บที่ผู้ให้บริการรายงาน กับราคาที่ผู้ดูแลตั้งไว้ เป็นยอดประมาณการ ไม่รวมรูปภาพ ค่าบัญชีสมาชิก หรือการใช้งานนอกแอป',
@@ -282,7 +388,16 @@ export function UsageDialog({ api, onClose }: { api: DesktopAPI; onClose: () => 
                           {account ? connectionName(account) : connectionName({ provider: e.provider })} ·{' '}
                           {e.model === 'provider-default' ? t('โมเดลเริ่มต้น') : e.model}
                         </td>
-                        <td>{e.total.toLocaleString(locale())}</td>
+                        <td>
+                          {e.total.toLocaleString(locale())}
+                          {e.input !== undefined || e.output !== undefined ? (
+                            <span className="muted small usage-table-io">
+                              {' '}
+                              ({t('ขาเข้า')} {(e.input || 0).toLocaleString(locale())} · {t('ขาออก')}{' '}
+                              {(e.output || 0).toLocaleString(locale())})
+                            </span>
+                          ) : null}
+                        </td>
                         <td>
                           {formatUsd(e.usd)}
                           {e.unpricedTokens > 0 ? t(' + รอราคา') : ''}

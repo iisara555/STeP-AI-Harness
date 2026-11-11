@@ -35,6 +35,58 @@ function fixture() {
   return { store, session, harness };
 }
 
+test('STeP invitation standard is loaded for form/chat, retains local links and separates consistency review', async () => {
+  for (const fromConversation of [false, true]) {
+    const { store, session, harness } = fixture();
+    const draft =
+      'ที่ TEST/0007\n\nหน่วยงานสังเคราะห์\n\nวันที่ [รอยืนยัน: วันที่ออกหนังสือ]\n\nเรื่อง [AI_PROPOSED] ขอเชิญร่วมกิจกรรม\n\nเรียน ผู้รับสังเคราะห์\\\n[รอยืนยัน: ตำแหน่งผู้รับ]\n\nด้วยหน่วยงานกำหนดจัดกิจกรรม ในวันที่ 20 มกราคม 2570\n\nกรุณาตอบรับภายในวันที่ 21 มกราคม 2570 ทาง [รอยืนยัน: ช่องทางตอบรับ]\n\nขอแสดงความนับถือ\n\n([รอยืนยัน: ผู้ลงนาม])\n\nผู้ประสานงาน [รอยืนยัน: ช่องทางติดต่อ]';
+    let combined = '';
+    const service = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: root, env: {} },
+        adapter: {
+          run: async (prompt, _connection, context) => {
+            combined = prompt + context.system;
+            return envelope(draft);
+          },
+        },
+      }),
+      () => {},
+    );
+    try {
+      await service.run(session.id, 'ช่วยร่างหนังสือเชิญ', '', true, undefined, 'draft', undefined, [], {
+        documentTool: 'letter',
+        documentVariant: 'invitation',
+        fromConversation,
+        invitation: { rsvpUrl: 'https://example.org/rsvp?code=0007', venueUrl: '' },
+      });
+      const done = store.session(session.id);
+      assert.equal(done.documentVariant, 'invitation');
+      assert.equal(done.presentation?.invitation?.rsvpUrl, 'https://example.org/rsvp?code=0007');
+      assert.match(combined, /STeP invitations use the single STeP invitation standard/);
+      assert.match(combined, /มาตรฐานหนังสือเชิญ STeP/);
+      assert.match(combined, /ตัวอย่างสังเคราะห์ — หนังสือเชิญ/);
+      assert.match(done.proposals[0].review!, /วันปิดตอบรับอยู่หลังวันจัดงาน/);
+      assert.match(
+        done.proposals[0].review!,
+        /ข้อมูลที่ยังต้องยืนยัน: วันที่ออกหนังสือ, ตำแหน่งผู้รับ, ช่องทางตอบรับ, ผู้ลงนาม, ช่องทางติดต่อ/,
+      );
+      assert.match(done.proposals[0].review!, /ถ้อยคำที่ AI เสนอ/);
+      assert.equal(
+        done.proposals[0].text,
+        'ที่ TEST/0007\n\nหน่วยงานสังเคราะห์\n\nเรื่อง ขอเชิญร่วมกิจกรรม\n\nเรียน ผู้รับสังเคราะห์\n\nด้วยหน่วยงานกำหนดจัดกิจกรรม ในวันที่ 20 มกราคม 2570\n\nกรุณาตอบรับภายในวันที่ 21 มกราคม 2570 ทาง ________\n\nขอแสดงความนับถือ',
+      );
+      store.accept(session.id, done.proposals[0].id);
+      assert.equal(store.session(session.id).presentation?.invitation?.rsvpUrl, 'https://example.org/rsvp?code=0007');
+      assert.doesNotMatch(store.session(session.id).draft, /รอยืนยัน|AI_PROPOSED|วันปิดตอบรับอยู่หลังวันจัดงาน/);
+    } finally {
+      store.close();
+    }
+  }
+});
+
 test('TOR compares the generated draft with the 16-section outline without changing its text', async () => {
   const template = await readFile(
     new URL('../../skills/common/thai-official-documents/templates/tor-16-sections-template.md', import.meta.url),

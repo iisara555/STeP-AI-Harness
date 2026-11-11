@@ -11,6 +11,7 @@ import { credentialErrorsEn } from '../credential-copy';
 import { documentLayoutEn } from './document-layout-en';
 import { feedbackEn } from './feedback-en';
 import { skillSuggestEn } from './skill-suggest-en';
+import { skillImportEn } from './skill-import-en';
 import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 import { receiptPacketEn } from './receipt-packet-en';
@@ -370,6 +371,7 @@ export const en: Record<string, string> = {
   ...documentLayoutEn,
   ...feedbackEn,
   ...skillSuggestEn,
+  ...skillImportEn,
   ...morningBriefEn,
   ...uxSmallEn,
   ...uxSetupEn,
@@ -1018,6 +1020,20 @@ export const en: Record<string, string> = {
   โมเดลคุยและให้เหตุผลราคาประหยัด: 'Low-cost chat and reasoning models',
   'โมเดล Qwen ของ Alibaba Cloud': 'Qwen models from Alibaba Cloud',
   'โมเดล MiniMax สำหรับคุยและเขียนงานยาว': 'MiniMax models for chat and long writing',
+  'โมเดล GLM สำหรับเขียนโค้ดและงานเอกสาร': 'GLM models for coding and document work',
+  'โมเดล Kimi สำหรับอ่านและวิเคราะห์บริบทยาว': 'Kimi models for reading and analyzing long context',
+  'สร้าง Skill จากวิธีทำงานของตัวเอง หรือเลือกไฟล์ Skill (.md) ไฟล์เดียว ใช้เองได้หลังกดยืนยันครั้งเดียว':
+    'Create a Skill from how you work, or add a single Skill file (.md), and use it after one confirmation.',
+  'ฟอร์มหนังสือเชิญเรียงตามหนังสือจริง เลือกผู้รับคนเดียวหรือหลายหน่วยงานได้ตรงคำว่าเรียน':
+    'The invitation form follows the printed letter, with one addressee or several organizations at the salutation.',
+  'TOR ที่ส่งออกจัดย่อหน้าเลขข้อ ๑. ๑.๑ ๑.๑.๑ ตามลำดับชั้น และแก้ช่องตัวเลขในทะเบียนหนังสือเชิญ':
+    'Exported TORs lay out numbered clauses (1. 1.1 1.1.1) by level, and invitation register number fields are fixed.',
+  'แสดงโควตาคงเหลือแบบถังพลังงาน พร้อมชิปดูโควตาข้างตัวเลือกโมเดล และรองรับ MiniMax, Z.AI (GLM) และ Kimi':
+    'Remaining-quota tank meters, an inline quota chip beside the model picker, and quota support for MiniMax, Z.AI (GLM) and Kimi.',
+  'ทะเบียนหนังสือเชิญหลายหน่วยงาน แยกจำนวนหนังสือจากจำนวนที่นั่ง พร้อมส่งออกรายฉบับและตารางคุมยอดตอบรับ Excel':
+    'Multi-organization invitation register separating letter count from seat count, with per-recipient exports and an Excel RSVP worksheet.',
+  'ยกระดับการร่างโครงการตามแนวทาง มช. ครบ 10 หัวข้อ พร้อมตรวจคำกริยาวัตถุประสงค์และยอดผู้เข้าร่วมกับงบประมาณ':
+    'CMU-guided 10-section project proposals with behavioral-objective verb checks and headcount-to-budget consistency review.',
   'โมเดลเปิด ตอบเร็วมาก': 'Open models with very fast replies',
   โมเดลจากยุโรป: 'Models from Europe',
   'โมเดล Grok ของ xAI': "xAI's Grok models",
@@ -1101,6 +1117,12 @@ export const en: Record<string, string> = {
   'ให้ AI ร่างงานหนัก': 'Let AI do the heavy drafting.',
   'ไอเดียของคุณ ไปได้ไกลกว่างานประจำ': 'Your ideas can go beyond the everyday.',
   วันนี้ให้ช่วยอะไรดี: 'What can I help with today?',
+  'ร่างหนังสือเชิญจากฟอร์มหรือแชตตามมาตรฐาน STeP พร้อมจัดหน้า Word และ PDF':
+    'Draft invitation letters from the form or chat using the STeP standard, with Word and PDF layout',
+  'สร้าง QR ตอบรับและแผนที่ในเครื่อง ลิงก์เก็บพร้อมเวอร์ชันร่างโดยไม่ส่งให้ AI':
+    'Generate RSVP and map QR codes locally, with links saved alongside draft versions without sending them to AI',
+  'ตรวจข้อมูลค้างและวันที่ตอบรับหรือวันจัดงานที่ไม่สอดคล้อง แยกจากตัวหนังสือให้ทบทวนก่อนใช้':
+    'Review pending facts and inconsistent RSVP or event dates separately from the letter before use',
   'หน้าเริ่มแชตทักชื่อ พร้อมช่องพิมพ์กลางหน้า และปุ่มเริ่มสรุปเอกสาร ร่างเอกสาร หรือคิดไอเดีย':
     'New chat greets you by name, with a centred composer and quick document and brainstorming starters',
   'คำทักทายปรับตามรูปแบบการทำงานและความจำที่ยืนยัน เก็บไว้สลับเมื่อเริ่มงานใหม่ โดยใช้บัญชี AI และสิทธิ์ข้อมูลเดิม':

@@ -1,35 +1,284 @@
+:root {
+  /* Token Bar dual-horizon remaining-tank ramps:
+     - warm: short 5-hour/session windows, credits, and daily spend
+     - cool: 7-day weekly windows and long-horizon budgets */
+  --usage-ramp-warm: linear-gradient(90deg, #ff6a2a 0%, #ff9f1c 50%, #f59e0b 100%);
+  --usage-ramp-cool: linear-gradient(90deg, #6366f1 0%, #3b82f6 52%, #06b6d4 100%);
+  --usage-track-bg: color-mix(in srgb, var(--text, #111827) 12%, transparent);
+  --usage-scale-tick: color-mix(in srgb, var(--text, #111827) 28%, transparent);
+}
+
+:root[data-theme='dark'] {
+  --usage-ramp-warm: linear-gradient(90deg, #ffe7a8 0%, #ffc53d 42%, #ff8f1f 75%, #f23e1e 100%);
+  --usage-ramp-cool: linear-gradient(90deg, #bdeaea 0%, #45b3c6 45%, #3a63cb 74%, #7c2fc6 100%);
+  --usage-track-bg: rgba(255, 255, 255, 0.16);
+  --usage-scale-tick: rgba(255, 255, 255, 0.35);
+}
+
+.usage-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.usage-section-head h3 {
+  margin: 0;
+}
+
 .usage-account {
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 10px;
+  padding: 12px 14px;
   margin: 10px 0 16px;
   overflow-wrap: anywhere;
+  background: color-mix(in srgb, var(--surface, transparent) 60%, transparent);
 }
+
+.usage-account-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
 .usage-account h4 {
-  margin: 0 0 8px;
+  margin: 0;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
+
+.usage-plan-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
 .usage-meter,
 .usage-credit,
-.usage-api-spend {
+.usage-api-spend,
+.usage-token-summary {
   border-top: 1px solid var(--line);
   padding-top: 8px;
   margin-top: 10px;
 }
+
+.usage-credit > .usage-meter {
+  border-top: 0;
+  padding-top: 0;
+  margin-top: 0;
+}
+
 .usage-meter-heading {
   display: flex;
   flex-wrap: wrap;
+  align-items: baseline;
   justify-content: space-between;
   gap: 6px;
 }
-.usage-meter progress {
-  width: 100%;
-  height: 8px;
-  accent-color: var(--accent);
-  margin-top: 6px;
+
+.usage-meter-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
+
+.usage-window-badge {
+  display: inline-grid;
+  place-items: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, #f59e0b 18%, transparent);
+  color: inherit;
+}
+
+.usage-window-badge[data-ramp='cool'] {
+  background: color-mix(in srgb, #3b82f6 18%, transparent);
+}
+
+.usage-meter-remaining {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.usage-meter-remaining[data-tone='warn'] {
+  color: #d97706;
+}
+
+.usage-meter-remaining[data-tone='danger'] {
+  color: var(--danger, #dc2626);
+}
+
+.usage-meter-track {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--usage-track-bg);
+  overflow: hidden;
+}
+
+.usage-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--usage-ramp-warm);
+  transition: width 240ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.usage-meter-track[data-ramp='cool'] .usage-meter-fill {
+  background: var(--usage-ramp-cool);
+}
+
+/* Quarter graduation scale ticks at 0%, 25%, 50%, 75%, 100% (adapted from Token Bar `.meter-scale`). */
+.usage-meter-scale {
+  display: block;
+  width: 100%;
+  height: 3px;
+  margin-top: 3px;
+  background-image: repeating-linear-gradient(to right, var(--usage-scale-tick) 0 1px, transparent 1px 25%);
+  box-shadow: inset -1px 0 0 var(--usage-scale-tick);
+}
+
+.usage-meter-caption {
+  margin: 5px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-token-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.usage-token-pills span {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+
+.usage-table-io {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+}
+
 .usage-account-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
+}
+
+/* ---------------- Inline Composer Chip & AI Picker Quota Strip ---------------- */
+
+.quota-mini-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 9px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.quota-mini-meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.quota-mini-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.78;
+}
+
+.quota-mini-track {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--usage-track-bg);
+  overflow: hidden;
+}
+
+.quota-mini-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--usage-ramp-warm);
+}
+
+.quota-mini-track[data-ramp='cool'] .quota-mini-fill {
+  background: var(--usage-ramp-cool);
+}
+
+.quota-mini-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.quota-mini-meter[data-tone='warn'] .quota-mini-value {
+  color: #d97706;
+}
+
+.quota-mini-meter[data-tone='danger'] .quota-mini-value {
+  color: var(--danger, #dc2626);
+}
+
+.ai-picker-quota {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-picker-quota-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.ai-picker-quota-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-picker-quota-meters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ai-picker-quota-note {
+  margin: 0;
 }

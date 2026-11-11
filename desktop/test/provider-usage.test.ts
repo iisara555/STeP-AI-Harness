@@ -7,6 +7,9 @@ import {
   normalizeCodexUsage,
   normalizeClaudeUsage,
   normalizeCopilotUsage,
+  normalizeMiniMaxUsage,
+  normalizeZaiUsage,
+  normalizeKimiUsage,
   readProviderUsage,
   ProviderUsage,
   usageDashboard,
@@ -188,6 +191,101 @@ test('DeepSeek keeps currency balances and account availability without leaking 
   );
   assert.equal(result.credits[0].available, false);
   assert.doesNotMatch(JSON.stringify(result), /private-token/);
+});
+
+test('MiniMax, Z.AI and Kimi normalize coding/token plan windows and balances safely', async () => {
+  const minimax = await readProviderUsage(
+    connection({ provider: 'compatible', mode: 'api', preset: 'minimax', baseUrl: 'https://api.minimax.io/v1' }),
+    context,
+    {
+      fetcher: async url => {
+        assert.equal(url, 'https://api.minimax.io/v1/token_plan/remains');
+        return Response.json({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: {
+            plan_name: 'Token Plan Pro',
+            model_remains: [
+              {
+                model_name: 'MiniMax-M1',
+                current_interval_total_count: 1000,
+                current_interval_usage_count: 250,
+                end_time: 1791288000000,
+              },
+            ],
+          },
+        });
+      },
+    },
+  );
+  assert.equal(minimax.source, 'minimax');
+  assert.equal(minimax.plan, 'Token Plan Pro');
+  assert.equal(minimax.limits[0].usedPercent, 25);
+  assert.equal(minimax.limits[0].used, 250);
+  assert.equal(minimax.limits[0].total, 1000);
+  assert.equal(minimax.limits[0].resetsAt, new Date(1791288000000).toISOString());
+
+  const zai = await readProviderUsage(
+    connection({ provider: 'compatible', mode: 'api', preset: 'zai', baseUrl: 'https://api.z.ai/api/paas/v4' }),
+    context,
+    {
+      fetcher: async url => {
+        assert.equal(url, 'https://api.z.ai/api/monitor/usage/quota/limit');
+        return Response.json({
+          code: 200,
+          data: {
+            level: 'GLM Coding Pro',
+            limits: [
+              { type: 'TOKENS_LIMIT', percentage: 42, currentValue: 4200, usage: 10000, nextResetTime: 1791288000000 },
+              { type: 'TIME_LIMIT', percentage: 15, currentValue: 3, usage: 20 },
+            ],
+          },
+        });
+      },
+    },
+  );
+  assert.equal(zai.source, 'zai');
+  assert.equal(zai.plan, 'GLM Coding Pro');
+  assert.equal(zai.limits.length, 2);
+  assert.equal(zai.limits[0].windowMinutes, 300);
+  assert.equal(zai.limits[0].usedPercent, 42);
+  assert.equal(zai.limits[1].usedPercent, 15);
+
+  const kimi = await readProviderUsage(
+    connection({ provider: 'compatible', mode: 'api', preset: 'kimi', baseUrl: 'https://api.moonshot.ai/v1' }),
+    context,
+    {
+      fetcher: async url => {
+        assert.equal(url, 'https://api.moonshot.ai/v1/users/me/balance');
+        return Response.json({
+          data: {
+            available_balance: 48.5,
+            cash_balance: 38.5,
+            voucher_balance: 10,
+          },
+        });
+      },
+    },
+  );
+  assert.equal(kimi.source, 'kimi');
+  assert.equal(kimi.credits[0].remaining, 48.5);
+  assert.equal(kimi.credits[0].unit, 'USD');
+
+  const kimiWindows = normalizeKimiUsage({
+    usages: [
+      {
+        scope: 'coding',
+        detail: { limit: 200, used: 50, reset_at: 1791288000 },
+        limits: [{ window: { duration: 300, time_unit: 'TIME_UNIT_MINUTE' }, detail: { limit: 100, remaining: 80 } }],
+      },
+    ],
+  });
+  assert.equal(kimiWindows.limits.length, 2);
+  assert.equal(kimiWindows.limits[0].usedPercent, 20);
+  assert.equal(kimiWindows.limits[0].windowMinutes, 300);
+  assert.equal(kimiWindows.limits[1].usedPercent, 25);
+  assert.equal(kimiWindows.limits[1].windowMinutes, 10080);
+  assert.throws(() => normalizeMiniMaxUsage({ base_resp: { status_code: 1004 } }), /USAGE_AUTH_REQUIRED/);
+  assert.throws(() => normalizeZaiUsage({ code: 401 }), /USAGE_AUTH_REQUIRED/);
 });
 
 test('a preset name alone never authorizes sending a key to a different origin or path', async () => {

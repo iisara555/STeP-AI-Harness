@@ -10,7 +10,7 @@
 
 ภาพใช้ข้อมูลตัวอย่าง หน้าจอและตัวเลือกอาจต่างตามรุ่นและการตั้งค่าขององค์กร
 
-Source version: Desktop **0.6.29**. A centred chat composer with a personal greeting, cached AI welcome headlines from working preferences and confirmed memories, and compact starters. Download published installers from the links above. Generated drafts still require source comparison and human review.
+Source version: Desktop **0.6.32**. Create a Skill from a description of the work or import a single Skill file, an invitation form ordered like the printed letter with fixed register inputs, and TOR clause numbering laid out by level.
 
 Desktop **0.6.15** กดปุ่มเข้าสู่ระบบเว็บอย่าง STeP MBS ให้เองหลังกรอกบัญชีจาก Vault ไม่ต้องสลับไปกดเอง
 
@@ -168,4 +168,4 @@ AI ได้รับโครงและชื่อช่องที่ร�
 
 อ่าน [ภาพรวม STeP AI](../README.md) หรือ [รายละเอียดสำหรับผู้ดูแลและนักพัฒนา](../docs/desktop-development.md) เมื่อต้องตั้งค่าระบบ ทดสอบ หรือสร้างตัวติดตั้ง
 
-รุ่นใน source: **STeP Desktop v0.6.29** ดูไฟล์ที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การมี release ไม่ได้แทนการอนุมัติใช้งานในหน่วยงาน
+รุ่นใน source: **STeP Desktop v0.6.32** ดูไฟล์ที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การมี release ไม่ได้แทนการอนุมัติใช้งานในหน่วยงาน

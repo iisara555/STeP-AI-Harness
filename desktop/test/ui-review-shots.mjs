@@ -120,7 +120,7 @@ try {
     ['12-learning', 'กล่องบทเรียน'],
     ['13-automations', 'เครื่องมือเพิ่มเติม'],
     ['14-keyboard', 'คีย์ลัดแป้นพิมพ์'],
-    ['15-packs', 'Skill Packs'],
+    ['15-packs', 'เพิ่ม Skill ของฉัน'],
     ['16-whats-new', 'มีอะไรใหม่ในรุ่นนี้'],
   ]) {
     await palette(label);

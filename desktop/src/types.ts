@@ -74,7 +74,7 @@ export type Usage = { input: number; output: number; total: number; runs: number
 /** Only provider-reported account meters. Unknown values stay absent, never zero. */
 export type ProviderUsageData = {
   status: 'ok' | 'unavailable';
-  source: 'codex' | 'claude' | 'copilot' | 'openrouter' | 'deepseek';
+  source: 'codex' | 'claude' | 'copilot' | 'openrouter' | 'deepseek' | 'minimax' | 'zai' | 'kimi';
   experimental?: boolean;
   plan?: string;
   reason?: string;
@@ -128,6 +128,9 @@ export type UsageReport = {
     model: string;
     connectionId?: string;
     mode?: Connection['mode'];
+    input?: number;
+    output?: number;
+    calls?: number;
     total: number;
     usd: number;
     unpricedTokens: number;
@@ -256,6 +259,7 @@ export type Session = {
   }[];
   /** The selected form's Skill/template contract, retained for revisions and retry. */
   documentTool?: DocumentToolId;
+  documentVariant?: string;
   /** Reference to a private, host-owned DOCX snapshot; bytes never go to the renderer or AI. */
   documentTemplate?: DocumentTemplateInfo;
   /** Checks for an accepted AI draft, kept outside editable/exported document content. */
