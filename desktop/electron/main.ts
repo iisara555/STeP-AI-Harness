@@ -354,7 +354,9 @@ async function main() {
   const credentialTitle = (title: string) => credentialTitles[title]?.[store.settings().language === 'en' ? 1 : 0] || title;
   // Set the theme before the first paint so a dark-theme user never sees a light flash.
   nativeTheme.themeSource = store.settings().theme;
-  if (process.platform === 'win32') app.setAppUserModelId(STARTUP_ITEM_NAME);
+  // Windows can use a notification shortcut's icon for every window sharing its identity. Development runs must
+  // never register Electron.exe under the installed NSIS app's identity.
+  if (process.platform === 'win32') app.setAppUserModelId(app.isPackaged ? STARTUP_ITEM_NAME : `${STARTUP_ITEM_NAME}.development`);
   const startup = new Startup(app, process.platform, app.isPackaged, process.execPath, Boolean(process.env.STEP_DESKTOP_TEST_HOME));
   // Development smoke tests drive the main window directly; STEP_DESKTOP_SPLASH=1 shows the loading window there too.
   const splash =
