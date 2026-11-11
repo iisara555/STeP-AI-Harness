@@ -1105,6 +1105,43 @@ export async function checkAntigravity(executable: string, context: Pick<Provide
   if (stamp) checked.set(executable, stamp);
 }
 
+/**
+ * agy's own read-only `/usage` answer (print mode, agy 1.1.11+): one structured JSON payload with no agent turn, no
+ * model request and no tokens. It runs in the same isolated home as a chat, so only the account agy is signed in to
+ * is read; STeP never touches the OAuth token, the keyring or a local language server.
+ */
+export async function antigravityQuota(connection: Connection, context: Pick<ProviderContext, 'cwd' | 'env'>): Promise<unknown> {
+  if (connection.provider !== 'antigravity' || connection.mode !== 'subscription') throw new Error('INVALID_CONNECTION');
+  const home = await antigravityHome(context);
+  let clean = true;
+  try {
+    await checkAntigravity(connection.executable, home);
+    // The governed no-tool agent is named too, so even an agy that stopped answering `/usage` locally could not act.
+    const { output } = await runAntigravity(
+      connection.executable,
+      ['--agent', AGENT, '--print', '/usage', '--output-format', 'json', '--print-timeout', '30s'],
+      home,
+      { timeoutMs: 30_000 },
+    );
+    if (output.length > 65_536) throw new Error('USAGE_RESPONSE_INVALID');
+    const lines = output.split(/\r?\n/).filter(line => line.trim().startsWith('{'));
+    for (const candidate of [output.trim(), ...lines.reverse()]) {
+      try {
+        const value = JSON.parse(candidate);
+        if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+      } catch {
+        /* Try the next candidate line. */
+      }
+    }
+    throw new Error('USAGE_RESPONSE_INVALID');
+  } catch (error) {
+    clean = !(error as any)?.shutdownIncomplete;
+    throw error;
+  } finally {
+    if (clean) await home.close();
+  }
+}
+
 export async function antigravityModels(connection: Connection, context: Pick<ProviderContext, 'cwd' | 'env'>): Promise<ModelOption[]> {
   const home = await antigravityHome(context);
   let clean = true;
