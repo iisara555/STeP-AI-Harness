@@ -83,6 +83,12 @@ Release validation reproduced the sidebar's outdated expectation after explicit 
 
 ## In progress
 
+- **Antigravity image runs no longer stop on search_web (2026-11-10, source only, unreleased)**: with a real aerial photo and
+  "นี่คือภาพอะไร", Gemini 3.8 Flash called agy 1.3.2's built-in `search_web` (and sometimes `run_command`) on both attempts,
+  so the host gate stopped the run with `TOOL_DENIED` (0 of 5 answered). agy has no rule or flag that switches
+  `search_web` off and runs it itself (seen ACTIVE→DONE), so the host gate stays. `IMAGE_TURN_NOTE` now leads the user
+  turn of image runs; the same real photos answered 4 of 4 through `AntigravityAdapter`. Note: a stopped native step has
+  already started in agy, so the first denied search query may still reach Google. Waits on the owner: review and merge.
 - **Sent pictures shown in the chat transcript (2026-11-10, source only, unreleased)**: the main process keeps a ≤320 px
   JPEG of the first picture each attachment sent (`sentImagePreview`, `RunOptions.filePreviews`) on the stored user
   message (`Message.files[].preview`); the chat shows it under the request instead of a file-name chip. Previews stay in
