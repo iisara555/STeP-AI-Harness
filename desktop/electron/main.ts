@@ -113,6 +113,10 @@ import { validateKeybindings } from '../src/commands';
 import { Voice } from './voice';
 import {
   installPack,
+  installSkillFile,
+  installSkillText,
+  normalizeSkillText,
+  reviewPack,
   packImportAllowed,
   listPacks,
   enablePack,
@@ -150,6 +154,7 @@ import { Memories, safeMemory } from './memory';
 import { Learning } from './learning';
 import { MAINTENANCE_EVERY_MS, findMaintenance, mergeBoard, moveItem } from './maintenance';
 import { DRAFT_SYSTEM, draftInput, parseDrafts } from './learning-draft';
+import { SKILL_DRAFT_SYSTEM, parseSkillDraft, skillDraftInput } from './skill-draft';
 import { Greetings, GREETING_SYSTEM, GREETING_SCHEMA, greetingInput, type GreetingContext } from './greetings';
 import { learningMetrics } from '../src/learning-metrics';
 import { proposalMarkdown, type SkillInfo } from './skill-proposal';
@@ -1412,6 +1417,49 @@ async function main() {
       }
       diagnose('learning-draft', { provider: connection.provider, source, drafted: String(drafted), skipped: String(skipped) });
       return { drafted, skipped };
+    } catch (error) {
+      if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+  /**
+   * "สร้างจากวิธีทำงานของฉัน": the chosen connected AI drafts a Skill from the employee's description (masked input, no
+   * tools). Returns a preview with the automated review; nothing is saved until the person chooses to use it.
+   */
+  const draftSkill = async (connectionId: string, answers: { task?: unknown; steps?: unknown; example?: unknown }) => {
+    const connection = store.get<Connection>('connection', connectionId);
+    if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
+    if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
+    const review = harness.privacy(skillDraftInput(answers));
+    if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120_000);
+    try {
+      const current = await runtime(connection);
+      let counted = { input: 0, output: 0, total: 0 };
+      const reply = await current.adapter
+        .run(review.redactedText, connection, {
+          ...current.context,
+          system: SKILL_DRAFT_SYSTEM,
+          signal: controller.signal,
+          emit: () => {},
+          onUsage: count => {
+            counted = {
+              input: Math.max(counted.input, count.input || 0),
+              output: Math.max(counted.output, count.output || 0),
+              total: Math.max(counted.total, count.total || 0),
+            };
+          },
+        })
+        .finally(() => counted.total && ledger.record(connection, counted));
+      // The model's header gets the same fixes as an imported file: no tool grants, a valid name.
+      const skill = normalizeSkillText(parseSkillDraft(reply), { fallbackName: 'my-skill' });
+      const files = new Map([['SKILL.md', Buffer.from(skill.text, 'utf8')]]);
+      const manifest = { schema_version: 1, name: skill.id, version: '1.0.0', skills: [{ id: skill.id, path: 'SKILL.md' }] };
+      diagnose('skill-draft', { provider: connection.provider });
+      return { id: skill.id, text: skill.text, review: reviewPack(manifest, files) };
     } catch (error) {
       if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
       throw error;
@@ -3041,16 +3089,34 @@ async function main() {
         });
       case 'packInstall': {
         if (!packImportAllowed(policyState.policy)) throw new Error('PACK_IMPORT_DISABLED');
+        // Staff usually have one Skill file; a folder (or a pack with pack.json) is the second choice.
+        const file = input.kind === 'file';
         const selected = await dialog.showOpenDialog(window!, {
-          title: tm('นำเข้า Skill Pack จากโฟลเดอร์'),
-          properties: ['openDirectory'],
+          title: tm(file ? 'เลือกไฟล์ Skill (.md)' : 'เลือกโฟลเดอร์ Skill'),
+          properties: [file ? 'openFile' : 'openDirectory'],
+          ...(file ? { filters: [{ name: 'Skill', extensions: ['md', 'markdown', 'txt'] }] } : {}),
         });
         if (selected.canceled || !selected.filePaths[0]) return null;
         // Credit the uploader from this computer's profile; it is kept beside the pack, never inside its files.
         const settings = store.settings();
-        return installPack(settings.workspace || data, selected.filePaths[0], {
-          name: inputText(input.name || '', 64),
+        const credit = { name: settings.userName || '', team: settings.team || '' };
+        return file
+          ? installSkillFile(settings.workspace || data, selected.filePaths[0], { credit })
+          : installPack(settings.workspace || data, selected.filePaths[0], { name: inputText(input.name || '', 64), credit });
+      }
+      case 'skillDraft': {
+        // Drafting is for a Skill the person will use themselves, so it follows the same switch as using one.
+        if (policyState.policy.features.staffSkills === false) throw new Error('PACK_PERSONAL_DISABLED');
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
+        return draftSkill(inputText(input.connectionId, 120), { task: input.task, steps: input.steps, example: input.example });
+      }
+      case 'skillCreate': {
+        // Saves the previewed (and possibly edited) draft like an imported file: privacy gate, review, credit.
+        if (policyState.policy.features.staffSkills === false) throw new Error('PACK_PERSONAL_DISABLED');
+        const settings = store.settings();
+        return installSkillText(settings.workspace || data, inputText(input.text, 200_000), {
           credit: { name: settings.userName || '', team: settings.team || '' },
+          fallbackName: 'my-skill',
         });
       }
       case 'packEnable': {

@@ -4,9 +4,11 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-08_
+_Last updated: 2026-11-09_
 
 ## Latest release
+
+- **Desktop v0.6.32 prepared (2026-11-09, owner authorized merge and release)**: combines #320 (invitation register count fields, seat cap, undo on remove), #321 (invitation form ordered like the printed letter, one addressee or several organizations), #322 (single Skill file import, simpler "เพิ่ม Skill ของฉัน"), #323 (create a Skill from how I work with an AI draft and preview) and #324 (TOR clause numbering laid out by level) while preserving all five PR heads. Harness remains 0.7.7. Merge after exact-head CI passes, then publish via `desktop-release.yml` on `main` with `publish=true`.
 
 - **Desktop v0.6.31 published (2026-11-08, Bangkok)**: [release](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.31) combines #312 (invitation draft save recovery before acceptance), #313 (invitation field examples and review-only missing facts), #314 (multi-organization invitation and RSVP register with per-recipient Word/PDF and Excel exports), #315 (CMU 10-section project proposal writing guide and headcount-to-budget consistency checks) and #316 (Token Bar remaining-quota tank meters, inline composer chip and MiniMax/Z.AI/Kimi quota readers) via PR #317 and PR #318 with pinned Electron download checksums and verified CDN mirrors. CI and installer run `42471714163` passed Windows x64, macOS Apple silicon and publication jobs. All assets and both update feeds (`latest.yml`, `latest-mac.yml`) report 0.6.31. Harness remains 0.7.7.
 
@@ -375,6 +377,8 @@ Historical implementation notes follow. Use the current audit above and the rele
 - **BE01 LINE intake recovery**: durable metadata before webhook acknowledgement; interrupted jobs are visible to the loopback operator and require reviewed input plus explicit provider approval. Queued/in-flight restart and failed-write regressions reproduced failures first and now pass with synthetic signatures/providers. Real organization credentials/channel rollout remain an IT acceptance step; policy defaults unchanged.
 
 ## Waiting on the owner
+
+- **Standard v2 for personal Skills (asked 2026-11-09)**: a hand-written Skill file now imports in one step, but the automated review still blocks personal use when `standardVersion: 2` or any of the nine required headings is missing (rule of 2026-10-16). Proposed: make missing standard headings advice only for personal use, keep safety findings blocking, keep the full standard for "เสนอให้องค์กรใช้". Skills drafted with "สร้างจากวิธีทำงานของฉัน" already include the headings.
 
 - **Antigravity `step_host` bridge on the real CLI**: checked 2026-10-31 on the owner's Windows PC with STeP's pinned agy 1.3.2 and `gemini-3.8-flash-medium` (`scripts/probe-antigravity-bridge.ts`). A native read outside the workspace is stopped (`TOOL_DENIED`, nothing leaked). The MCP call itself was never reached, so the permission fix is not yet proven on the real CLI: agy's `init` lists only the generic `call_mcp_tool`, and before calling it the model runs a native `view_file` on `<isolated home>/.gemini/antigravity-cli/mcp/step_host/step_host.json` (agy's on-demand MCP schema file); the host stops that step, and the text-only recovery attempt answers instead (one run used the fenced step-tool text protocol). No staff run is affected: the app never turns the bridge on (no caller passes `nativeBridge`; only the probe and tests do), so chats use the text protocol. The follow-up that makes the bridge reach the host is under In progress (owner chose it 2026-10-31); whether to turn it on in chats, and what to do about agy's `search_web` (no permission namespace covers it), wait on the owner.
 - **LINE Gateway deployment**: signed synthetic intake/restart/operator-retry checks are ready. This cloud has no LINE channel configuration or operator/allowlist bindings. IT must configure an authorized test server, TLS and private storage as documented in [Phase 5](desktop-phase5.md); live channel/employee approval and delivery remain external acceptance, not a completed production rollout.

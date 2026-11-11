@@ -115,6 +115,19 @@ try {
   await form.getByLabel('ลิงก์แผนที่สถานที่จัดงาน').fill('https://example.org/map#room');
   await expect(form.getByRole('img')).toHaveCount(2);
   if (qa) await page.screenshot({ path: join(qa, 'form.png'), fullPage: true });
+  // The form follows the printed letter: header, subject and addressee, body, closing (with the QR links).
+  await expect(form.locator('.invitation-section h3')).toHaveText([/หัวหนังสือ/, /เรื่องและผู้รับ/, /เนื้อความ/, /ท้ายหนังสือ/]);
+  await expect(form.locator('.invitation-section').nth(3).getByLabel('ลิงก์ตอบรับเข้าร่วมงาน')).toBeVisible();
+  // Several organizations carries the addressee into the first letter and back; RSVP tracking is not part of drafting.
+  await form.getByLabel('หลายหน่วยงาน (แยกเลขที่และผู้รับรายฉบับ)').check();
+  const draftRows = form.locator('.invitation-register .invitation-recipient-row');
+  await expect(draftRows).toHaveCount(1);
+  await expect(draftRows.nth(0).getByLabel('ตำแหน่ง / หน่วยงานผู้รับ')).toHaveValue('ตำแหน่งสังเคราะห์');
+  await expect(form.getByLabel('ตำแหน่ง / หน่วยงานผู้รับ')).toHaveCount(1);
+  await expect(form.getByLabel('สถานะตอบรับ')).toHaveCount(0);
+  await form.getByLabel('ผู้รับคนเดียว').check();
+  await expect(draftRows).toHaveCount(0);
+  await expect(form.getByLabel('ตำแหน่ง / หน่วยงานผู้รับ', { exact: true })).toHaveValue('ตำแหน่งสังเคราะห์');
   await form.getByRole('button', { name: 'ให้ AI ร่างเอกสาร' }).click();
   const consent = page.getByRole('button', { name: 'มีสิทธิ์ส่งข้อมูลนี้', exact: true });
   await expect(consent).toBeVisible();
@@ -208,6 +221,38 @@ try {
   await rows.nth(1).getByLabel('จำนวนที่นั่งที่เชิญ').fill('3');
   await rows.nth(1).getByLabel('สถานะตอบรับ').selectOption('delegate');
   await rows.nth(1).getByLabel('จำนวนผู้ยืนยันเข้าร่วม').fill('1');
+  await expect(register.locator('.invitation-summary')).toContainText(
+    'หนังสือ 2 ฉบับ · ที่นั่งเชิญรวม 5 ที่นั่ง · ตอบรับแล้ว 2 ฉบับ (ยืนยันเข้าร่วม 3 คน)',
+  );
+  // Retyping a count from an empty field keeps exactly what staff typed (it once became "1" + "25" = 125).
+  await register.getByRole('button', { name: 'เพิ่มผู้รับ / หน่วยงาน', exact: true }).click();
+  await expect(rows).toHaveCount(3);
+  const thirdSeats = rows.nth(2).getByLabel('จำนวนที่นั่งที่เชิญ');
+  await thirdSeats.click();
+  await thirdSeats.press('ControlOrMeta+A');
+  await thirdSeats.press('Backspace');
+  await expect(thirdSeats).toHaveValue('');
+  await thirdSeats.pressSequentially('25');
+  await expect(thirdSeats).toHaveValue('25');
+  await thirdSeats.press('ControlOrMeta+A');
+  await thirdSeats.press('Backspace');
+  await thirdSeats.blur();
+  await expect(thirdSeats).toHaveValue('25');
+  // Confirmed attendees cannot exceed the invited seats.
+  const firstConfirmed = rows.nth(0).getByLabel('จำนวนผู้ยืนยันเข้าร่วม');
+  await firstConfirmed.fill('9');
+  await firstConfirmed.blur();
+  await expect(firstConfirmed).toHaveValue('2');
+  // Removing a row offers undo and moves focus off the next row's remove button.
+  await rows.nth(2).getByRole('button', { name: 'ลบผู้รับลำดับที่ 3', exact: true }).click();
+  await expect(rows).toHaveCount(2);
+  const undo = register.getByRole('button', { name: 'เลิกทำ', exact: true });
+  await expect(undo).toBeFocused();
+  await undo.click();
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(2).getByLabel('จำนวนที่นั่งที่เชิญ')).toHaveValue('25');
+  await rows.nth(2).getByRole('button', { name: 'ลบผู้รับลำดับที่ 3', exact: true }).click();
+  await expect(rows).toHaveCount(2);
   await expect(register.locator('.invitation-summary')).toContainText(
     'หนังสือ 2 ฉบับ · ที่นั่งเชิญรวม 5 ที่นั่ง · ตอบรับแล้ว 2 ฉบับ (ยืนยันเข้าร่วม 3 คน)',
   );

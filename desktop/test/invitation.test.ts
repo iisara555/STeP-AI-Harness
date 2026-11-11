@@ -208,6 +208,10 @@ test('multi-organization register separates letter count from seat count and exp
   assert.deepEqual(JSON.parse(req.sourceText).invitationRegister, { letters: 3, invitedSeats: 6, localOnly: true });
   const notes = invitationReview(sample, resolved).join('\n');
   assert.match(notes, /หนังสือ 3 ฉบับ · ที่นั่งเชิญรวม 6 ที่นั่ง · ตอบรับแล้ว 2 ฉบับ \(ยืนยันเข้าร่วม 3 คน\) · รอตอบรับ 1 ฉบับ/);
+  assert.doesNotMatch(notes, /เกินจำนวนที่นั่ง/);
+  // A register saved before the form capped attendees still loads, and review names the letter to fix.
+  const overSeats = resolveInvitation({ rsvpUrl: '', venueUrl: '', recipients: [recipients[0], { ...recipients[1], confirmedSeats: 9 }] });
+  assert.match(invitationReview(sample, overSeats).join('\n'), /จำนวนผู้ยืนยันเข้าร่วมเกินจำนวนที่นั่งที่เชิญ ในหนังสือฉบับที่ 2/);
 
   for (const invalid of [
     [{ ...recipients[0], seats: 0 }],
