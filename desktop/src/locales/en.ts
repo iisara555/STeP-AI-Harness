@@ -12,6 +12,7 @@ import { documentLayoutEn } from './document-layout-en';
 import { feedbackEn } from './feedback-en';
 import { skillSuggestEn } from './skill-suggest-en';
 import { skillImportEn } from './skill-import-en';
+import { filePreviewEn } from './file-preview-en';
 import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 import { receiptPacketEn } from './receipt-packet-en';
@@ -372,6 +373,7 @@ export const en: Record<string, string> = {
   ...feedbackEn,
   ...skillSuggestEn,
   ...skillImportEn,
+  ...filePreviewEn,
   ...morningBriefEn,
   ...uxSmallEn,
   ...uxSetupEn,

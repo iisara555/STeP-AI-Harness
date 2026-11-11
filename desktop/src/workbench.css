@@ -312,6 +312,76 @@
   flex-direction: column;
   gap: 8px;
 }
+/* Read-only view of Word, Excel, PowerPoint files and pictures in the Files tab. */
+.file-preview {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.file-preview > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.file-preview > header strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-preview-body {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  max-height: 70vh;
+  overflow: auto;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.file-preview-body p {
+  margin: 0 0 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.file-preview-body h4 {
+  margin: 12px 0 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+}
+.file-preview-body h4:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.file-preview-body h5 {
+  margin: 8px 0 4px;
+  font-size: 14px;
+}
+.file-preview-table {
+  overflow-x: auto;
+  margin: 6px 0 10px;
+}
+.file-preview-table table {
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.file-preview-table td {
+  border: 1px solid var(--line);
+  padding: 3px 6px;
+  vertical-align: top;
+  white-space: pre-wrap;
+  min-width: 3em;
+}
+.file-preview-image {
+  max-width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
 .file-editor textarea {
   min-height: 280px;
 }

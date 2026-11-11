@@ -83,6 +83,8 @@ Release validation reproduced the sidebar's outdated expectation after explicit 
 
 ## In progress
 
+- **Open Office files in the Files tab (2026-11-11, source only, unreleased)**: owner asked to open .docx/.xlsx/.pptx and similar files inside Desktop instead of the "binary" error. `toolPreview` (`electron/office-preview.ts`) turns Word, Excel and PowerPoint files into read-only structured text (headings, paragraphs, tables, sheets, slides; never HTML; no DOCTYPE/entities; size, entry and character limits) and pictures into data URLs; `src/file-preview.tsx` shows it with "ใช้เนื้อหาใน Chat". `toolOpenFile` hands documents, pictures and media (allowlist in `src/file-kinds.ts`, never programs, scripts, shortcuts or HTML/SVG) to the computer's own app via `shell.openPath` after the workspace path check. PDF and old .doc/.xls/.ppt are not previewed yet; they offer the computer's app. Waits on the owner: review and merge.
+
 - **Antigravity image runs no longer stop on search_web (2026-11-10, source only, unreleased)**: with a real aerial photo and
   "นี่คือภาพอะไร", Gemini 3.8 Flash called agy 1.3.2's built-in `search_web` (and sometimes `run_command`) on both attempts,
   so the host gate stopped the run with `TOOL_DENIED` (0 of 5 answered). agy has no rule or flag that switches
