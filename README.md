@@ -10,7 +10,7 @@
 
 **STeP Desktop** คือหน้าจอทำงานหลักของ STeP AI สำหรับพนักงาน STeP / RSP North ใช้ภาษาไทยได้ ไม่ต้องจำชื่อ Skill หรือพิมพ์คำสั่งติดตั้งเอง ภาพในหน้านี้ใช้ข้อมูลตัวอย่าง หน้าจอจริงอาจต่างตามรุ่นและการตั้งค่าขององค์กร
 
-Source version: Desktop **0.6.32**. Create a Skill from a description of the work or import a single Skill file, an invitation form ordered like the printed letter with fixed register inputs, and TOR clause numbering laid out by level.
+Source version: Desktop **0.6.33**. Word, Excel and PowerPoint previews in the Files tab with an open-in-app button, picture thumbnails in the chat transcript, and Antigravity image reading without stray web searches.
 
 Desktop **0.6.15** กดปุ่มเข้าสู่ระบบเว็บอย่าง STeP MBS ให้เองหลังกรอกบัญชีจาก Vault ไม่ต้องสลับไปกดเอง
 
@@ -211,6 +211,6 @@ AI ช่วยเตรียมงานให้ตรวจต่อ ส่�
 
 ประวัติการเปลี่ยนแปลงของแต่ละรุ่นอยู่ใน [CHANGELOG](CHANGELOG.md)
 
-รุ่นใน source ปัจจุบัน: **STeP Desktop v0.6.32** / **Harness v0.7.7** ดูตัวติดตั้งที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การใช้งานในหน่วยงานให้ยึดรุ่นที่ผู้ดูแลอนุมัติ
+รุ่นใน source ปัจจุบัน: **STeP Desktop v0.6.33** / **Harness v0.7.7** ดูตัวติดตั้งที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การใช้งานในหน่วยงานให้ยึดรุ่นที่ผู้ดูแลอนุมัติ
 
 โค้ดเผยแพร่ภายใต้ [MIT License](LICENSE) ไฟล์บุคคลที่สามมีเงื่อนไขของตน เช่น [ภาพตราครุฑ](docs/third-party-notices/thai-garuda.md) Repository นี้เป็น public จึงไม่ใช่ที่เก็บเอกสารภายในหรือข้อมูลของผู้ใช้

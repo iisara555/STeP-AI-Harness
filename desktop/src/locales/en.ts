@@ -12,6 +12,7 @@ import { documentLayoutEn } from './document-layout-en';
 import { feedbackEn } from './feedback-en';
 import { skillSuggestEn } from './skill-suggest-en';
 import { skillImportEn } from './skill-import-en';
+import { filePreviewEn } from './file-preview-en';
 import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 import { receiptPacketEn } from './receipt-packet-en';
@@ -372,6 +373,7 @@ export const en: Record<string, string> = {
   ...feedbackEn,
   ...skillSuggestEn,
   ...skillImportEn,
+  ...filePreviewEn,
   ...morningBriefEn,
   ...uxSmallEn,
   ...uxSetupEn,
@@ -1022,6 +1024,11 @@ export const en: Record<string, string> = {
   'โมเดล MiniMax สำหรับคุยและเขียนงานยาว': 'MiniMax models for chat and long writing',
   'โมเดล GLM สำหรับเขียนโค้ดและงานเอกสาร': 'GLM models for coding and document work',
   'โมเดล Kimi สำหรับอ่านและวิเคราะห์บริบทยาว': 'Kimi models for reading and analyzing long context',
+  'เปิดดูไฟล์ Word, Excel, PowerPoint และรูปภาพในแท็บไฟล์งานได้เลย พร้อมปุ่มเปิดด้วยโปรแกรมในเครื่อง':
+    'View Word, Excel, PowerPoint files and pictures right in the Files tab, with a button to open them in their app.',
+  'ภาพที่ส่งให้ AI แสดงเป็นภาพย่อในแชต ย้อนดูได้ว่าถามเรื่องภาพไหน': 'Pictures you send to the AI now show as thumbnails in the chat.',
+  'Gemini ผ่าน Antigravity อ่านภาพถ่ายได้อีกครั้งโดยไม่ค้นเว็บเอง':
+    'Gemini through Antigravity reads photos again without searching the web on its own.',
   'สร้าง Skill จากวิธีทำงานของตัวเอง หรือเลือกไฟล์ Skill (.md) ไฟล์เดียว ใช้เองได้หลังกดยืนยันครั้งเดียว':
     'Create a Skill from how you work, or add a single Skill file (.md), and use it after one confirmation.',
   'ฟอร์มหนังสือเชิญเรียงตามหนังสือจริง เลือกผู้รับคนเดียวหรือหลายหน่วยงานได้ตรงคำว่าเรียน':

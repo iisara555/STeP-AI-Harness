@@ -5,6 +5,8 @@ import type { ToolTab, BackgroundTask, FileChange, ToolRequest } from './tools';
 import { explainError } from './messages';
 import { t } from './i18n';
 import { BrowserDockView } from './browser';
+import { FilePreview, type FilePreviewData } from './file-preview';
+import { fileExtension, previewable } from './file-kinds';
 type Props = {
   api: DesktopAPI;
   tab: ToolTab;
@@ -27,6 +29,8 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
     [busy, setBusy] = useState(false),
     [git, setGit] = useState<{ status: string; diff: string } | null>(null);
   const [previews, setPreviews] = useState<Record<string, string>>({});
+  // Files tab: a read-only view of a Word/Excel/PowerPoint file, a picture, or another non-text file.
+  const [viewing, setViewing] = useState<{ path: string; data: FilePreviewData } | null>(null);
   const [snapshots, setSnapshots] = useState<{ id: string; path: string; at: string }[]>([]);
   useEffect(() => setPreviews({}), [session?.id]);
   async function action(fn: () => Promise<void>) {
@@ -42,6 +46,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
   }
   async function list(folder = '') {
     setFile(null);
+    setViewing(null);
     const data = await api.call('toolFiles', { path: folder });
     setPath(data.path);
     setEntries(data.entries);
@@ -257,11 +262,21 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                     className="quiet"
                     onClick={() =>
                       void action(async () => {
-                        if (entry.directory) await list(entry.path);
-                        else {
+                        if (entry.directory) return list(entry.path);
+                        setFile(null);
+                        setViewing(null);
+                        if (previewable(fileExtension(entry.path))) {
+                          setViewing({ path: entry.path, data: await api.call('toolPreview', { path: entry.path }) });
+                          return;
+                        }
+                        try {
                           const data = await api.call('toolRead', { path: entry.path });
                           setFile(data);
                           setContent(data.text);
+                        } catch (e) {
+                          // Not text (a PDF, an old .doc): offer the computer's own app instead of an error.
+                          if (!String((e as Error)?.message || e).includes('FILE_BINARY')) throw e;
+                          setViewing({ path: entry.path, data: null });
                         }
                       })
                     }
@@ -274,12 +289,22 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
               <button
                 className="quiet"
                 onClick={() => {
+                  setViewing(null);
                   setFile({ path: '', text: '' });
                   setContent('');
                 }}
               >
                 {t('สร้างไฟล์ใหม่')}
               </button>
+              {viewing && (
+                <FilePreview
+                  path={viewing.path}
+                  data={viewing.data}
+                  busy={busy}
+                  onSource={onSource}
+                  onOpen={() => void action(() => api.call('toolOpenFile', { path: viewing.path }))}
+                />
+              )}
               {file && (
                 <section className="file-editor">
                   <input aria-label="File path" value={file.path} onChange={e => setFile({ ...file, path: e.target.value })} />

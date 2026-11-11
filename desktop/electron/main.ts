@@ -23,7 +23,7 @@ import {
   net,
   session as electronSession,
 } from 'electron';
-import { mkdir, mkdtemp, rmdir, writeFile, appendFile, rm, readFile, open, stat } from 'node:fs/promises';
+import { mkdir, mkdtemp, rmdir, writeFile, appendFile, rm, readFile, open, stat, lstat } from 'node:fs/promises';
 import { ExportWorkspace } from './export-workspace';
 import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -155,6 +155,7 @@ import { Learning } from './learning';
 import { MAINTENANCE_EVERY_MS, findMaintenance, mergeBoard, moveItem } from './maintenance';
 import { DRAFT_SYSTEM, draftInput, parseDrafts } from './learning-draft';
 import { SKILL_DRAFT_SYSTEM, parseSkillDraft, skillDraftInput } from './skill-draft';
+import { OPEN_EXTERNALLY, PREVIEW_LIMITS, filePreview, previewable } from './office-preview';
 import { Greetings, GREETING_SYSTEM, GREETING_SCHEMA, greetingInput, type GreetingContext } from './greetings';
 import { learningMetrics } from '../src/learning-metrics';
 import { proposalMarkdown, type SkillInfo } from './skill-proposal';
@@ -2697,6 +2698,28 @@ async function main() {
         return gate.run({ tool: 'read', readOnly: true, path: target }, { title: '', body: '', key: target }, () =>
           workbench.readChunk(target, Number(input.offset || 0), 200_000),
         );
+      }
+      case 'toolPreview': {
+        // Files tab: Word, Excel, PowerPoint and pictures shown read-only inside the app.
+        const target = inputText(input.path, 2000);
+        if (!previewable(extname(target).toLowerCase())) throw new Error('PREVIEW_UNSUPPORTED');
+        return gate.run({ tool: 'read', readOnly: true, path: target }, { title: '', body: '', key: target }, async () =>
+          filePreview(await workbench.bytes(target, PREVIEW_LIMITS.bytes), extname(target)),
+        );
+      }
+      case 'toolOpenFile': {
+        // "เปิดด้วยโปรแกรมในเครื่อง": hand a workspace document or picture to the computer's own app. Programs, scripts,
+        // shortcuts and links are never opened this way.
+        const target = inputText(input.path, 2000);
+        if (!OPEN_EXTERNALLY.has(extname(target).toLowerCase())) throw new Error('OPEN_FILE_TYPE');
+        return gate.run({ tool: 'read', readOnly: true, path: target }, { title: '', body: '', key: target }, async () => {
+          const path = await workbench.path(target);
+          const stat = await lstat(path);
+          if (stat.isSymbolicLink() || !stat.isFile()) throw new Error('INVALID_PATH');
+          const failed = await shell.openPath(path);
+          if (failed) throw new Error('OPEN_FILE_FAILED');
+          return true;
+        });
       }
       case 'toolStage': {
         const target = inputText(input.path, 2000);
