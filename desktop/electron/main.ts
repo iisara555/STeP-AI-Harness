@@ -209,6 +209,19 @@ const inputText = (value: unknown, limit = 30000) => {
   if (typeof value !== 'string' || value.length > limit) throw new Error('INVALID_INPUT');
   return value;
 };
+/** A small JPEG of the first picture an attachment sent to the AI, kept on the chat message so the person sees it there. */
+function sentImagePreview(images: VisionInput[] | undefined) {
+  if (!images?.length) return undefined;
+  const image = nativeImage.createFromBuffer(Buffer.from(images[0].data, 'base64'));
+  if (image.isEmpty()) return undefined;
+  const { width, height } = image.getSize(),
+    scale = Math.min(1, 320 / Math.max(width, height));
+  const small =
+    scale < 1
+      ? image.resize({ width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)), quality: 'good' })
+      : image;
+  return `data:image/jpeg;base64,${small.toJPEG(75).toString('base64')}`;
+}
 
 const TITLEBAR_HEIGHT = 40;
 async function makeWindow(splash?: Splash, prepared: Promise<unknown> = Promise.resolve()) {
@@ -4507,6 +4520,7 @@ async function main() {
                 retry: input.retry === true,
                 autoContinue: input.autoContinue === true,
                 images: selected.flatMap(a => a.images || []),
+                filePreviews: selected.map(a => sentImagePreview(a.images)),
                 onAccepted: () => acceptRequest(),
                 previousStatus,
                 ...(workflow ? { workflow } : {}),
