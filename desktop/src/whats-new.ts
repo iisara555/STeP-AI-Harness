@@ -6,6 +6,14 @@ export type ReleaseNote = { version: string; items: () => string[] };
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '0.6.33',
+    items: () => [
+      t('เปิดดูไฟล์ Word, Excel, PowerPoint และรูปภาพในแท็บไฟล์งานได้เลย พร้อมปุ่มเปิดด้วยโปรแกรมในเครื่อง'),
+      t('ภาพที่ส่งให้ AI แสดงเป็นภาพย่อในแชต ย้อนดูได้ว่าถามเรื่องภาพไหน'),
+      t('Gemini ผ่าน Antigravity อ่านภาพถ่ายได้อีกครั้งโดยไม่ค้นเว็บเอง'),
+    ],
+  },
+  {
     version: '0.6.32',
     items: () => [
       t('สร้าง Skill จากวิธีทำงานของตัวเอง หรือเลือกไฟล์ Skill (.md) ไฟล์เดียว ใช้เองได้หลังกดยืนยันครั้งเดียว'),

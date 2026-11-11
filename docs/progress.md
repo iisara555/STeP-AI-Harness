@@ -4,9 +4,13 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-09_
+_Last updated: 2026-11-11_
 
 ## Latest release
+
+- **Desktop v0.6.33 prepared (2026-11-11, owner authorized merge and release)**: combines #326 (Antigravity image runs without stray search_web), #327 (sent pictures as chat thumbnails) and #328 (Word/Excel/PowerPoint previews and open-in-app in the Files tab), preserving the #328 head. Harness remains 0.7.7. Merge after exact-head CI passes, then publish via `desktop-release.yml` on `main` with `publish=true`.
+
+- **Desktop v0.6.32 published (2026-11-09)**: [release](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.32) from merged #325 (#320–#324); installer run 42584223773 succeeded and published 8 assets.
 
 - **Desktop v0.6.32 prepared (2026-11-09, owner authorized merge and release)**: combines #320 (invitation register count fields, seat cap, undo on remove), #321 (invitation form ordered like the printed letter, one addressee or several organizations), #322 (single Skill file import, simpler "เพิ่ม Skill ของฉัน"), #323 (create a Skill from how I work with an AI draft and preview) and #324 (TOR clause numbering laid out by level) while preserving all five PR heads. Harness remains 0.7.7. Merge after exact-head CI passes, then publish via `desktop-release.yml` on `main` with `publish=true`.
 
@@ -83,20 +87,6 @@ Release validation reproduced the sidebar's outdated expectation after explicit 
 
 ## In progress
 
-- **Open Office files in the Files tab (2026-11-11, source only, unreleased)**: owner asked to open .docx/.xlsx/.pptx and similar files inside Desktop instead of the "binary" error. `toolPreview` (`electron/office-preview.ts`) turns Word, Excel and PowerPoint files into read-only structured text (headings, paragraphs, tables, sheets, slides; never HTML; no DOCTYPE/entities; size, entry and character limits) and pictures into data URLs; `src/file-preview.tsx` shows it with "ใช้เนื้อหาใน Chat". `toolOpenFile` hands documents, pictures and media (allowlist in `src/file-kinds.ts`, never programs, scripts, shortcuts or HTML/SVG) to the computer's own app via `shell.openPath` after the workspace path check. PDF and old .doc/.xls/.ppt are not previewed yet; they offer the computer's app. Waits on the owner: review and merge.
-
-- **Antigravity image runs no longer stop on search_web (2026-11-10, source only, unreleased)**: with a real aerial photo and
-  "นี่คือภาพอะไร", Gemini 3.8 Flash called agy 1.3.2's built-in `search_web` (and sometimes `run_command`) on both attempts,
-  so the host gate stopped the run with `TOOL_DENIED` (0 of 5 answered). agy has no rule or flag that switches
-  `search_web` off and runs it itself (seen ACTIVE→DONE), so the host gate stays. `IMAGE_TURN_NOTE` now leads the user
-  turn of image runs; the same real photos answered 4 of 4 through `AntigravityAdapter`. Note: a stopped native step has
-  already started in agy, so the first denied search query may still reach Google. Waits on the owner: review and merge.
-- **Sent pictures shown in the chat transcript (2026-11-10, source only, unreleased)**: the main process keeps a ≤320 px
-  JPEG of the first picture each attachment sent (`sentImagePreview`, `RunOptions.filePreviews`) on the stored user
-  message (`Message.files[].preview`); the chat shows it under the request instead of a file-name chip. Previews stay in
-  the local session only: conversation history, document intent and search keep file names. Checked with
-  `test/chat-acceptance.test.ts` and `test/chat-smoke.mjs` (pasted image → JPEG thumbnail on the sent request). Waits on
-  the owner: review and merge.
 - **Provider remaining-quota tank meters, inline composer chip, and MiniMax/Z.AI/Kimi quota readers (2026-11-08, source only, unreleased)**: adds `usage-readings.ts` and upgrades `UsageDialog` (`usage.tsx`, `usage.css`) with Remaining Quota (`คงเหลือ X%`, `100 - usedPercent`) tank meters, dual-horizon `warm`/`cool` color ramps, 25% graduation ticks, reset countdowns, per-account `ขาเข้า / ขาออก / Cache` token breakdown, a batch `รีเฟรชทั้งหมด` action, an inline `.quota-mini-pill` chip beside the composer's AI selector, and a compact quota summary inside `.ai-picker-menu`. Expands `provider-usage.ts` and `provider-presets.ts` with read-only quota/balance normalization for `minimax` (`MiniMax Token Plan`), `zai` (`Z.AI (GLM)`), and `kimi` (`Kimi (Moonshot AI)`). Preserves in-memory-only provider usage snapshots (never persisted to SQLite) and 60s per-account cooldown. Waits on the owner: review and merge.
 - **Project proposal drafting guide and consistency checks (2026-11-07)**: upgraded `skills/pm/project-plan/` (`SKILL.md`, `references/project-writing-guide.md`, `templates/project-proposal-template.md`, `examples/proposal-good-output.md`) and the Desktop `project` drafting profile (`desktop/src/document-tools.ts`, `desktop/src/project-proposal.ts`, `desktop/electron/document-tools.ts`, `desktop/electron/service.ts`) with CMU 3-paragraph rationale structure, 5 proposal subtypes (`proposal`, `policy`, `problem`, `innovation`, `logframe`), measurable behavioral verb guidance, PDCA + disbursement schedule tables, 3-category budget structure, 4D Output/Outcome indicators, 4-level approval blocks, and deterministic review checks for vague objective verbs, rationale paragraph count, and target-vs-budget headcount consistency.
 - **Multi-organization invitation register and per-recipient exports (2026-11-07, source only)**: add a local recipient and RSVP register for STeP invitations that separates letter count from seat count, records per-letter document numbers, addressees, positions, invited seats, RSVP status and confirmed attendees, exports individual Word/PDF letters per recipient, and exports the register worksheet to Excel (`.xlsx`). Recipient names and document numbers stay local when drafting. Publication awaits owner instruction.
@@ -405,6 +395,9 @@ Historical implementation notes follow. Use the current audit above and the rele
 - **Branch protection on `main`** enabled and read back in PR #130: PR required, strict `validate`, `desktop`, `windows-tests` and `desktop-macos-electron` checks; admin enforcement, no force-push/deletion.
 
 ## Known issues
+
+- Antigravity image runs (since #326): agy runs its built-in `search_web` itself, so when the host gate stops a run the first denied search query may already have reached Google. The image-turn note now steers Gemini away from it (4 of 4 real photos answered).
+- Files tab preview (since #328): PDF and old .doc/.xls/.ppt are not previewed in the app yet; they offer "เปิดด้วยโปรแกรมในเครื่อง".
 
 - `desktop/test/office-skill-benefit.test.mjs` fails in cloud containers (no Office runtime); not a code failure.
 - macOS Apple silicon `tool-loop-smoke` timed out once at release time and passed on re-run.
