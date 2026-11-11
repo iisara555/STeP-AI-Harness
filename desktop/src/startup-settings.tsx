@@ -31,7 +31,7 @@ export function StartupSettings({
   return (
     <section>
       <h2>{t('การเริ่มโปรแกรม')}</h2>
-      <label className="check">
+      <label className="check-row">
         <input
           type="checkbox"
           role="switch"

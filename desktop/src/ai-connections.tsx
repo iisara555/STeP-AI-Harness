@@ -144,15 +144,11 @@ export function AIConnections({
   );
   return (
     <div className="ai-connect-flow">
-      <p className="muted ai-connect-lead">{t('เลือก AI ที่มีบัญชี เชื่อมต่อ แล้วทดสอบใช้งาน')}</p>
       {/* The person's own accounts come first: their status and the one button that fixes them. */}
       {connections.length > 0 && (
         <div className="ai-connect-step ai-readiness" ref={readiness} tabIndex={-1} role="region" aria-labelledby="ai-accounts-heading">
           <StepHeading id="ai-accounts-heading">{t('บัญชี AI ของคุณ')}</StepHeading>
-          <p className="muted small">
-            {t('ทดสอบข้อความผ่าน {0} จาก {1} บัญชี', readyCount, connections.length)} ·{' '}
-            {t('ตอนเชื่อมต่อ ระบบทดสอบข้อความสั้น ๆ 1 ครั้งด้วยโควตาของบัญชีนั้น')}
-          </p>
+          <p className="muted small">{t('ทดสอบข้อความผ่าน {0} จาก {1} บัญชี', readyCount, connections.length)}</p>
           <ul className="connection-list">
             {connections.map(c => (
               <ConnectionCard
@@ -390,9 +386,7 @@ function ConnectionCard({
       </div>
       {c.ready && (
         <>
-          <p className="small muted">
-            {t('ผลทดสอบนี้ยืนยันการตอบข้อความเท่านั้น Google Workspace ต้องเชื่อมบัญชีและเลือกสิทธิ์ในบัญชีและบริการแยกต่างหาก')}
-          </p>
+          <p className="small muted">{t('Google Workspace เชื่อมแยกในแท็บบัญชีและบริการ')}</p>
           {/* Tools are their own block under the account's test result, so a tool that is off does not read as a failed account. */}
           <div className="connection-tools">
             <h4>{t('เครื่องมือที่ใช้กับบัญชีนี้')}</h4>

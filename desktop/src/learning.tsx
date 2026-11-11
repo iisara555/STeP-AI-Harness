@@ -144,12 +144,7 @@ export function LearningDialog({
   const update = (value: Partial<LessonContent>) => edit && setEdit({ ...edit, content: { ...edit.content, ...value } });
   return (
     <ConfirmDialog info title={t('กล่องบทเรียน')} confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
-      <p className="small muted">
-        {t('บทเรียนใช้เฉพาะพื้นที่งานและทีมปัจจุบันบนเครื่องนี้ หลังคุณยืนยันจึงเลือกใช้กับงานถัดไป และอาจส่งให้ AI พร้อมบริบทงาน')}
-      </p>
-      <p className="small muted">
-        {t('ตรวจรูปแบบและข้อมูลส่วนบุคคลก่อนบันทึก ยังไม่ได้ทดสอบว่าคำตอบดีขึ้น บทเรียนไม่เปลี่ยนสิทธิ์เครื่องมือหรือนโยบายองค์กร')}
-      </p>
+      <p className="small muted">{t('ใช้ในพื้นที่งานและทีมนี้หลังคุณยืนยัน · ไม่เปลี่ยนสิทธิ์หรือนโยบายองค์กร')}</p>
       {error && <p role="alert">{error}</p>}
       {!data && !error && <p role="status">{t('กำลังโหลด')}</p>}
       <button className="quiet" disabled={busy || !data} onClick={() => setEdit(fresh())}>

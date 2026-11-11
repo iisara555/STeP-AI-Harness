@@ -35,16 +35,10 @@ export const schedulesEn: Record<string, string> = {
     'The last run failed. Check its result and the AI connection before pressing "Run now" to try again',
   งานตั้งเวลา: 'Scheduled tasks',
   'ให้ผู้ช่วยทำงานซ้ำตามเวลา ผลเป็นร่างให้คุณตรวจ': 'Let the assistant repeat tasks on a schedule; each result is a draft for you to check',
-  'ให้ผู้ช่วยทำงานซ้ำตามเวลาที่คุณตั้ง เช่น ร่างสรุปงานทุกเย็นวันศุกร์ ผลแต่ละรอบเป็นร่างในรายการงาน พร้อมแจ้งเตือนให้คุณตรวจก่อนใช้':
-    'Let the assistant repeat a task at the times you set, such as drafting a work summary every Friday afternoon. Each run is a draft in your task list, with a notification to check it before use',
-  'ทำเมื่อแอปเปิดอยู่ ถ้าถึงเวลาตอนแอปปิด จะทำให้ทันทีที่เปิดแอปภายใน 12 ชั่วโมง ใช้บัญชี AI และพื้นที่งานที่เลือกไว้ตอนสร้าง':
-    'Runs while the app is open. If the app is closed at that time, it runs as soon as the app opens within 12 hours. Uses the AI account and workspace chosen when it was created',
   'ผู้ดูแลยังไม่เปิดงานตั้งเวลาบนเครื่องนี้ ถ้าต้องใช้ ติดต่อผู้ดูแลระบบ':
     'Your administrator has not turned on scheduled tasks on this computer. Contact them if you need it',
   'เชื่อมต่อบัญชี AI ก่อน แล้วจึงสร้างงานตั้งเวลาได้': 'Connect an AI account first, then you can create scheduled tasks',
   งานของฉัน: 'My tasks',
-  'ยังไม่มีงานตั้งเวลา เริ่มจากแม่แบบด้านล่างหรือกด "ตั้งเวลางานใหม่"':
-    'No scheduled tasks yet. Start from a template below or press "New scheduled task"',
   'รอบถัดไป {0}': 'Next run {0}',
   พักไว้: 'Paused',
   'ล่าสุด {0} · {1}': 'Last {0} · {1}',

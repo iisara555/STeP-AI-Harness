@@ -18,7 +18,7 @@ import { AIConnections } from './ai-connections';
 import { CredentialSettings } from './credential-settings';
 import { DeveloperDiagnostics } from './developer-diagnostics';
 import { StartupSettings } from './startup-settings';
-import { shortcut, explainError } from './messages';
+import { explainError } from './messages';
 import { SectionArt } from './illustration';
 import { Avatar, pickableAvatars } from './avatars';
 import { initial } from './messages';
@@ -574,7 +574,7 @@ export function SettingsPanel({
       {page === 'appearance' && (
         <section>
           <h2>{t('ภาษาของแอป')}</h2>
-          <p className="muted small">{t('เปลี่ยนเฉพาะเมนูและปุ่ม มีผลทันที ภาษาในแชตตั้งแยกได้ในทั่วไป')}</p>
+          <p className="muted small">{t('เฉพาะเมนูและปุ่ม · ภาษาในแชตตั้งในแท็บทั่วไป')}</p>
           <div className="theme-options" role="radiogroup" aria-label="Language">
             {(
               [
@@ -600,7 +600,6 @@ export function SettingsPanel({
             ))}
           </div>
           <h2>{t('ธีม')}</h2>
-          <p className="muted small">{t('เลือกให้ตามระบบปฏิบัติการ หรือกำหนดเอง')}</p>
           <div className="theme-options">
             {(
               [
@@ -615,7 +614,6 @@ export function SettingsPanel({
               </button>
             ))}
           </div>
-          <p className="small muted">{t('ทางลัด: กด {0} แล้วพิมพ์ “ธีม” เพื่อสลับได้จากทุกหน้า', shortcut)}</p>
         </section>
       )}
       {page === 'policy' && snapshot.policy && (

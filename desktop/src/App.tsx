@@ -1492,6 +1492,12 @@ export default function App() {
       : toolApprovals.some(a => a.sessionId === s.id)
         ? t('รอคุณอนุญาต')
         : statusText[s.status] || s.status;
+  // Team, then status only when it says something: "ready to start" is every new task's state, so it stays unsaid.
+  const taskMeta = (s: Session) => {
+    const team = s.project || s.team.toUpperCase() || t('ทุกทีม');
+    const status = taskStatus(s);
+    return s.status === 'idle' && status === statusText.idle ? team : `${team} · ${status}`;
+  };
   // The notification dot of each task in the list (src/task-alerts.ts); the open task needs none.
   const alertOf = (s: Session) => {
     const alert = taskAlert(s, questions, toolApprovals, seen ? seen[s.id] : s.updatedAt);
@@ -1746,10 +1752,7 @@ export default function App() {
         {fullSidebar && (
           <aside className="sidebar" aria-label={t('แถบงาน')}>
             <div className="brand">
-              <div>
-                {brandSymbol}
-                <span className="brand-tagline">MAKE INNOVATION SIMPLE</span>
-              </div>
+              <div>{brandSymbol}</div>
             </div>
             <button className="new-work" data-tour="new-work" onClick={() => void action(create)}>
               <Plus size={18} /> {t('เริ่มงานใหม่')}
@@ -1806,9 +1809,7 @@ export default function App() {
                       <div key={s.id} className={`session ${selected === s.id ? 'selected' : ''}`}>
                         <button className="session-open" title={t(s.title)} onClick={() => void action(() => selectSession(s.id))}>
                           <span>{t(s.title)}</span>
-                          <small>
-                            {s.project || s.team.toUpperCase() || t('ทุกทีม')} · {taskStatus(s)}
-                          </small>
+                          <small>{taskMeta(s)}</small>
                         </button>
                         {alertOf(s) && (
                           <span
@@ -2103,7 +2104,7 @@ export default function App() {
                           : view === 'schedules'
                             ? t('ให้ผู้ช่วยทำงานซ้ำตามเวลา ผลเป็นร่างให้คุณตรวจ')
                             : session
-                              ? `${session.project || session.team.toUpperCase() || t('ทุกทีม')} · ${taskStatus(session)}`
+                              ? taskMeta(session)
                               : ''}
               </small>
             </div>
@@ -3338,7 +3339,6 @@ export default function App() {
                     )}
                   </div>
                 </div>
-                <div className="composer-note">{t('ตรวจข้อมูลและร่างก่อนนำไปใช้ · ประวัติเก็บในเครื่อง')}</div>
                 {!session?.messages.length && (
                   <div className="welcome-extras">
                     <div className="welcome-quick-starts" aria-label={t('ลองเริ่มจาก')}>
@@ -3388,7 +3388,7 @@ export default function App() {
                     {!snapshot.settings.tourDone && (
                       <button className="welcome-tour quiet" onClick={commands.tour}>
                         <Compass size={15} />
-                        {t('ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน')}
+                        {t('ดูทัวร์แนะนำ')}
                       </button>
                     )}
                   </div>
@@ -3397,9 +3397,14 @@ export default function App() {
             </div>
           )}
           <footer className="statusbar" aria-label={t('สถานะ')}>
-            <span className={`status-dot ${connection?.ready ? (runFailed ? 'failed' : 'ok') : ''}`} aria-hidden="true" />
-            <span>
-              {/* The account and model are on the composer's AI pill; the status bar only says whether it can work. */}
+            <span
+              className={`status-dot ${connection?.ready ? (runFailed ? 'failed' : 'ok') : ''}`}
+              aria-hidden="true"
+              title={connection?.ready && !runFailed ? t('พร้อมทำงาน') : undefined}
+            />
+            {/* The account and model are on the composer's AI pill; the status bar only says whether it can work, and
+                says it in words only when something needs attention. All is well is the quiet dot alone. */}
+            <span className={connection?.ready && !runFailed ? 'sr-only' : undefined}>
               {connection
                 ? !connection.ready
                   ? t('ยังไม่พร้อม')
@@ -3529,17 +3534,6 @@ export default function App() {
                 }}
               />
               <div className="output-document" hidden={toolTab !== 'output'}>
-                <header className="artifact-header">
-                  <FileText size={18} />
-                  <strong>{t('ผลงาน')}</strong>
-                  <span className="spacer" />
-                  <button className="icon" title={t('ประวัติเวอร์ชัน')} onClick={() => setHistory(!history)}>
-                    <History size={17} />
-                  </button>
-                  <button className="icon" title={t('ซ่อนร่าง')} onClick={() => setRight(false)}>
-                    <PanelRightClose size={17} />
-                  </button>
-                </header>
                 {!session ? (
                   <div className="artifact-empty">
                     <SectionArt scene="workspace" className="empty-illustration" />
@@ -3552,24 +3546,33 @@ export default function App() {
                   </div>
                 ) : (
                   <>
-                    <div className="draft-title">
-                      <span title={t(session.title)}>{t(session.title)}</span>
-                      <small>
-                        {/* An empty draft has no version yet: say what goes here instead of "version 0, saved". */}
-                        {!session.revision && !session.draft.trim() ? (
-                          dirty ? (
-                            t('มีการแก้ไขที่ยังไม่บันทึก')
+                    {/* The tab above already says ผลงาน: the draft's own title leads, with its two actions beside it. */}
+                    <header className="draft-title">
+                      <div>
+                        <span title={t(session.title)}>{t(session.title)}</span>
+                        <small>
+                          {/* An empty draft has no version yet: say what goes here instead of "version 0, saved". */}
+                          {!session.revision && !session.draft.trim() ? (
+                            dirty ? (
+                              t('มีการแก้ไขที่ยังไม่บันทึก')
+                            ) : (
+                              t('ยังไม่มีร่าง · AI จะใส่ร่างที่นี่ หรือพิมพ์เองได้')
+                            )
                           ) : (
-                            t('ยังไม่มีร่าง · AI จะใส่ร่างที่นี่ หรือพิมพ์เองได้')
-                          )
-                        ) : (
-                          <>
-                            {t('เวอร์ชัน')} {session.revision}
-                            {dirty ? t(' · มีการแก้ไขที่ยังไม่บันทึก') : t(' · บันทึกแล้ว')}
-                          </>
-                        )}
-                      </small>
-                    </div>
+                            <>
+                              {t('เวอร์ชัน')} {session.revision}
+                              {dirty ? t(' · มีการแก้ไขที่ยังไม่บันทึก') : t(' · บันทึกแล้ว')}
+                            </>
+                          )}
+                        </small>
+                      </div>
+                      <button className="icon" title={t('ประวัติเวอร์ชัน')} aria-pressed={history} onClick={() => setHistory(!history)}>
+                        <History size={17} />
+                      </button>
+                      <button className="icon" title={t('ซ่อนร่าง')} onClick={() => setRight(false)}>
+                        <PanelRightClose size={17} />
+                      </button>
+                    </header>
                     {history && (
                       <div className="version-list">
                         {session.versions.some(v => v.text.trim()) ? (

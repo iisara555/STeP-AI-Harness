@@ -169,7 +169,6 @@ export function DocumentTools({
   return (
     <div className="document-tools">
       <h1 className="sr-only">{t('เครื่องมือร่างเอกสาร')}</h1>
-      <p className="muted">{t('เลือกชนิดเอกสาร → กรอกข้อมูลหรือแนบต้นเรื่อง → AI ร่าง → แก้ไขและส่งออก')}</p>
       <div className="document-tool-picker" aria-label={t('ชนิดเอกสาร')}>
         {DOCUMENT_TOOLS.map(p => (
           <button
@@ -197,9 +196,6 @@ export function DocumentTools({
         <header>
           {/* The selected card above already names the document; the heading stays for screen readers. */}
           <h2 className="sr-only">{t(profile.title)}</h2>
-          <p className="small muted">
-            {t('เว้นช่องเนื้อหาได้ AI จะช่วยขึ้นร่างจากต้นเรื่อง ส่วนข้อเท็จจริงและเงื่อนไขที่ต้องมีหลักฐานจะคงรอยืนยัน')}
-          </p>
           <p className="small muted">
             {selected === 'tor'
               ? t('เลือกประเภทงานให้ตรงต้นเรื่อง หากไม่มีแบบหน่วยงานจะใช้โครงร่าง TOR และแยกข้อมูลที่ต้องยืนยัน')
@@ -366,11 +362,7 @@ export function DocumentTools({
               )}
             </div>
           )}
-          <p className="small muted">
-            {t(
-              'แนบได้หนึ่งไฟล์ต่อร่าง หรือวางข้อมูลในช่องด้านล่าง ข้อมูลฟอร์มและต้นเรื่องจะส่งให้ AI ที่เลือกตามการตั้งค่าความเป็นส่วนตัวของเครื่องนี้',
-            )}
-          </p>
+          <p className="small muted">{t('แนบได้ 1 ไฟล์ หรือวางข้อมูลด้านล่าง · ส่งให้ AI ตามการตั้งค่าความเป็นส่วนตัว')}</p>
         </div>
         {invitation && <p className="small muted">{t('กรอกเท่าที่ทราบ ตัวอย่างในช่องมีไว้ดูวิธีกรอก')}</p>}
         {invitation ? (
@@ -380,7 +372,7 @@ export function DocumentTools({
         )}
         {/* Sticky: the only primary action stays in reach on a form that is several screens tall. */}
         <footer className="document-form-actions">
-          <p className="small muted">{t('AI ช่วยร่าง การตรวจข้อมูลจริง การอนุมัติ และการลงนามเป็นของเจ้าของเรื่องและผู้มีอำนาจ')}</p>
+          <p className="small muted">{t('การตรวจ อนุมัติ และลงนาม เป็นของเจ้าของเรื่อง')}</p>
           <div className="document-form-submit">
             {blockedReason && (
               <p id="document-draft-reason" className="small document-draft-reason" role="status">

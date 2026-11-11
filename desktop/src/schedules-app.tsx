@@ -134,20 +134,13 @@ export function ScheduledTasks({
     <div className="schedules">
       <h1 className="sr-only">{t('งานตั้งเวลา')}</h1>
       <section className="schedules-intro">
-        <p>
-          {t(
-            'ให้ผู้ช่วยทำงานซ้ำตามเวลาที่คุณตั้ง เช่น ร่างสรุปงานทุกเย็นวันศุกร์ ผลแต่ละรอบเป็นร่างในรายการงาน พร้อมแจ้งเตือนให้คุณตรวจก่อนใช้',
-          )}
-        </p>
-        <p className="small muted">
-          {t('ทำเมื่อแอปเปิดอยู่ ถ้าถึงเวลาตอนแอปปิด จะทำให้ทันทีที่เปิดแอปภายใน 12 ชั่วโมง ใช้บัญชี AI และพื้นที่งานที่เลือกไว้ตอนสร้าง')}
-        </p>
         {enabled && (
           <button disabled={!!busy || !ready.length} onClick={() => setDraft(blank(fallback))}>
             <Plus size={16} />
             {t('ตั้งเวลางานใหม่')}
           </button>
         )}
+        <p className="small muted">{t('ทำงานขณะแอปเปิด · รอบที่พลาดจะทำต่อเมื่อเปิดแอปภายใน 12 ชั่วโมง')}</p>
       </section>
       {draft && (
         <ScheduleEditor
@@ -180,9 +173,7 @@ export function ScheduledTasks({
       {enabled && (
         <>
           <h2>{t('งานของฉัน')}</h2>
-          {!data.jobs.length && (
-            <p className="schedules-empty">{t('ยังไม่มีงานตั้งเวลา เริ่มจากแม่แบบด้านล่างหรือกด "ตั้งเวลางานใหม่"')}</p>
-          )}
+          {!data.jobs.length && <p className="schedules-empty">{t('ยังไม่มีงานตั้งเวลา')}</p>}
           <ul className="schedule-list">
             {data.jobs.map(job => {
               const run = lastRun(job.id),

@@ -312,9 +312,7 @@ export function UsageDialog({ api, onClose, onUpdated }: { api: DesktopAPI; onCl
               </button>
             )}
           </div>
-          <p className="muted small">
-            {t('ข้อมูล ณ เวลาที่ระบุ รีเฟรชได้ไม่เกินหนึ่งครั้งต่อนาทีต่อบัญชี ข้อมูลที่ผู้ให้บริการไม่รายงานยังถือว่าไม่ทราบ')}
-          </p>
+          <p className="muted small">{t('รีเฟรชได้นาทีละครั้งต่อบัญชี')}</p>
           {(report.accounts || []).length ? (
             report.accounts!.map(account => (
               <UsageAccount
@@ -345,11 +343,7 @@ export function UsageDialog({ api, onClose, onUpdated }: { api: DesktopAPI; onCl
             {report.budgets.monthlyCostUsd ? ` / $${report.budgets.monthlyCostUsd}` : ''}
           </p>
           {monthlyBudgetMeter && <QuotaTankMeter reading={monthlyBudgetMeter} />}
-          <p className="muted small">
-            {t(
-              'คำนวณจาก token ของแชต ร่างเอกสาร และการค้นเว็บที่ผู้ให้บริการรายงาน กับราคาที่ผู้ดูแลตั้งไว้ เป็นยอดประมาณการ ไม่รวมรูปภาพ ค่าบัญชีสมาชิก หรือการใช้งานนอกแอป',
-            )}
-          </p>
+          <p className="muted small">{t('ประมาณการจาก token ที่ผู้ให้บริการรายงาน · ไม่รวมรูปภาพ ค่าสมาชิก และการใช้นอกแอป')}</p>
           {report.unpricedTokens > 0 && (
             <p>
               {report.unpricedTokens.toLocaleString(locale())} {t('token ยังไม่มีราคาที่ตั้งไว้ จึงยังไม่รวมในค่าใช้จ่าย')}

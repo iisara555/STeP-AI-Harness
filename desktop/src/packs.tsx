@@ -277,11 +277,7 @@ export function PacksDialog({
   };
   return (
     <ConfirmDialog info title={t('เพิ่ม Skill ของฉัน')} confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
-      <p>
-        {t(
-          'Skill คือคู่มือที่บอก AI ว่างานหนึ่งทำอย่างไร เล่าวิธีทำงานของคุณให้ AI ช่วยเขียนเป็น Skill หรือเลือกไฟล์ Skill (.md) ที่มีอยู่แล้ว ระบบตรวจความปลอดภัยให้ แล้วใช้เองบนเครื่องนี้ได้ทันที',
-        )}
-      </p>
+      <p className="small muted">{t('เล่าวิธีทำงานให้ AI เขียนเป็น Skill หรือเลือกไฟล์ .md ที่มีอยู่ · ตรวจความปลอดภัยก่อนใช้')}</p>
       <div className="pack-form">
         {creating ? (
           <CreateSkill

@@ -47,7 +47,7 @@ try {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   // A new person is offered the tour on the welcome screen.
-  await page.getByRole('button', { name: 'ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน' }).click();
+  await page.getByRole('button', { name: 'ดูทัวร์แนะนำ', exact: true }).click();
   const tour = page.locator('.tour[role="dialog"]');
   await expect(tour).toBeVisible();
   const total = Number((await tour.getAttribute('aria-label')).match(/จาก (\d+)/)[1]);
@@ -76,7 +76,7 @@ try {
   await page.keyboard.press('ArrowRight');
   await tour.getByRole('button', { name: 'เริ่มใช้งาน', exact: true }).click();
   await expect(tour).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'ดูทัวร์แนะนำ', exact: true })).toHaveCount(0);
   // The command palette replays it, and stopping at the checkpoint ends it.
   await page.keyboard.press('ControlOrMeta+k');
   await page
