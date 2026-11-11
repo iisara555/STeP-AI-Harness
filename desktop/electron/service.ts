@@ -312,6 +312,8 @@ export type RunOptions = {
   fromConversation?: boolean;
   retry?: boolean;
   images?: VisionInput[];
+  /** Thumbnails of the pictures sent, by position in `fileNames`; shown on the stored message only. */
+  filePreviews?: (string | undefined)[];
   draftOnly?: boolean;
   mergeOnly?: boolean;
   workflow?: Workflow;
@@ -762,7 +764,14 @@ export class WorkService {
         role: 'user',
         text,
         at: new Date().toISOString(),
-        ...(!retrying && fileNames.length ? { files: fileNames.map(name => ({ name })) } : {}),
+        ...(!retrying && fileNames.length
+          ? {
+              files: fileNames.map((name, i) => {
+                const preview = options.filePreviews?.[i];
+                return preview ? { name, preview } : { name };
+              }),
+            }
+          : {}),
       });
       this.store.save(session);
     }

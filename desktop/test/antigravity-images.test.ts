@@ -6,7 +6,7 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AntigravityAdapter, ANTIGRAVITY_DENY, antigravityHome, antigravityPermissions, imageStep } from '../electron/antigravity';
-import { IMAGE_PERMISSION, brainReadRules, imageSchemaFile, mediaStepsDir } from '../electron/antigravity-image-mcp';
+import { IMAGE_PERMISSION, IMAGE_TURN_NOTE, brainReadRules, imageSchemaFile, mediaStepsDir } from '../electron/antigravity-image-mcp';
 import { takesImages } from '../src/vision-transport';
 import type { Connection, VisionInput } from '../src/types';
 
@@ -19,7 +19,7 @@ const digest = (data: Buffer) => createHash('sha256').update(data).digest('hex')
  * result as a media file of that step in its brain folder (as the real CLI does), views it, and answers with the
  * sha256 of the pixels it received. It is NOT evidence that Gemini reads pictures; the signed-in probe is.
  */
-async function fixture(kind: 'view' | 'stray' | 'command' = 'view') {
+async function fixture(kind: 'view' | 'stray' | 'command' | 'search' = 'view') {
   const root = await mkdtemp(join(tmpdir(), 'step-agy-images-test-'));
   const executable = join(root, 'agy.mjs');
   const log = join(root, 'calls.jsonl');
@@ -45,7 +45,7 @@ send({event:'init',conversation_id:conv,init:{cwd:process.cwd(),agent:'step-draf
 const tool=(index,name,parameters,state='DONE')=>send({event:'step_update',step_update:{conversation_id:conv,step_index:index,state,step_type:'tool',tool_name:name,tool_info:{name,parameters}}});
 createInterface({input:process.stdin}).on('line',async line=>{
  const prompt=JSON.parse(line).message.content;
- fs.appendFileSync(log,JSON.stringify({prompt:prompt.length})+'\\n');
+ fs.appendFileSync(log,JSON.stringify({prompt})+'\\n');
  const server=mcp.mcpServers.step_image;
  const child=spawn(server.command,server.args,{env:{...process.env,...server.env}});
  const lines=createInterface({input:child.stdout})[Symbol.asyncIterator]();
@@ -59,6 +59,7 @@ createInterface({input:process.stdin}).on('line',async line=>{
  const hashes=content.map((c,i)=>{const bytes=Buffer.from(c.data,'base64');fs.writeFileSync(path.join(media,'media_'+i+'.png'),bytes);return c.mimeType+':'+crypto.createHash('sha256').update(bytes).digest('hex');});
  if(kind==='stray') tool(4,'view_file',{AbsolutePath:path.join(home,'attachments','image-1.png')});
  else if(kind==='command') tool(4,'run_command',{CommandLine:'type media_0.png'});
+ else if(kind==='search') tool(4,'search_web',{query:'campus aerial dome'},'ACTIVE');
  else tool(4,'view_file',{AbsolutePath:path.join(media,'media_0.png')});
  send({event:'result',result:{status:'SUCCESS',conversation_id:conv,num_turns:1,response:hashes.join(','),usage:{input_tokens:3,output_tokens:2,total_tokens:5}}});
 });
@@ -109,6 +110,10 @@ test('attached pictures reach agy as MCP image content and the model may open on
     assert.match(start.agent, /tools: \[finish, mcp:step_image:view_attached_images\]/);
     assert.match(start.agent, /mcpServers: \[step_image\]/);
     assert.match(start.agent, /The user attached 2 images/);
+    // The no-search rule also leads the user turn: in the system prompt alone Gemini still called search_web.
+    const { prompt } = (await f.calls()).find(call => call.prompt)!;
+    assert.ok(prompt.startsWith(IMAGE_TURN_NOTE(2)), prompt.slice(0, 200));
+    assert.match(prompt, /อธิบายภาพนี้$/);
     // The isolated home, with the copies of the pictures, is gone after the run.
     assert.equal(existsSync(start.home), false);
   } finally {
@@ -116,8 +121,8 @@ test('attached pictures reach agy as MCP image content and the model may open on
   }
 });
 
-test('a picture request stops when the model opens another file or runs a command', async () => {
-  for (const kind of ['stray', 'command'] as const) {
+test('a picture request stops when the model opens another file, runs a command or searches the web', async () => {
+  for (const kind of ['stray', 'command', 'search'] as const) {
     const f = await fixture(kind);
     try {
       await assert.rejects(new AntigravityAdapter().run('อธิบายภาพนี้', f.connection, { ...f.context, images: [image] }), {

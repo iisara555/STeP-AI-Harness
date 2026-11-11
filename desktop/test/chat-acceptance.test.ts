@@ -64,6 +64,20 @@ test('a follow-up is stored and acknowledged before a slow route check, without 
   }
 });
 
+test('the stored request keeps a thumbnail of each picture sent, by file position', async () => {
+  const f = fixture(async () => ({ routingContract: { mode: 'BLOCK', authority: { status: 'DENY' } } }));
+  const preview = 'data:image/jpeg;base64,/9j/AA==';
+  try {
+    await f.service.run(f.session.id, 'นี่คือภาพอะไร', '', true, undefined, 'chat', undefined, ['photo.png', 'notes.docx'], {
+      filePreviews: [preview, undefined],
+    });
+    const request = f.store.session(f.session.id).messages.find(message => message.text === 'นี่คือภาพอะไร');
+    assert.deepEqual(request?.files, [{ name: 'photo.png', preview }, { name: 'notes.docx' }]);
+  } finally {
+    f.store.close();
+  }
+});
+
 test('privacy refusal never acknowledges or stores an unapproved request', async () => {
   const f = fixture(async () => {
     throw new Error('route must not be called');

@@ -2304,12 +2304,19 @@ export default function App() {
                     )}
                     {!!message.files?.length && (
                       <div className="message-files" aria-label={t('ไฟล์ที่ส่งกับข้อความนี้')}>
-                        {message.files.map((file, i) => (
-                          <span key={i}>
-                            <Paperclip size={12} />
-                            {file.name}
-                          </span>
-                        ))}
+                        {message.files.map((file, i) =>
+                          file.preview?.startsWith('data:image/jpeg;base64,') ? (
+                            <figure key={i} className="message-image">
+                              <img src={file.preview} alt={t('ภาพที่ส่งให้ AI: {0}', file.name)} />
+                              <figcaption>{file.name}</figcaption>
+                            </figure>
+                          ) : (
+                            <span key={i}>
+                              <Paperclip size={12} />
+                              {file.name}
+                            </span>
+                          ),
+                        )}
                       </div>
                     )}
                     {!!message.docSources?.length && (

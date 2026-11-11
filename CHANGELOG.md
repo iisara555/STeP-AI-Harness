@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Gemini ผ่าน Antigravity อ่านภาพถ่ายสถานที่ได้อีกครั้ง: เดิมเมื่อถามว่า "นี่คือภาพอะไร" กับภาพถ่าย AI จะพยายามค้นเว็บเองเพื่อระบุสถานที่ ซึ่ง STeP ปิดไว้ งานจึงหยุดพร้อมรหัส TOOL_DENIED ตอนนี้ AI ได้รับคำสั่งให้ตอบจากสิ่งที่เห็นในภาพ และบอกว่าเดาว่าเป็นที่ไหนพร้อมระดับความมั่นใจ
+- ภาพที่ส่งให้ AI แสดงเป็นภาพย่อบนข้อความในแชตแล้ว (เดิมเห็นแค่ชื่อไฟล์) จึงย้อนดูได้ว่าถามเรื่องภาพไหน ภาพย่อเก็บไว้ในเครื่องพร้อมประวัติแชต และไม่ถูกส่งให้ AI ซ้ำในรอบถัดไป
 - Keep Windows development/test taskbar and notification identity separate from the installed app, so an Electron development shortcut cannot supply the installed STeP app's icon.
 
 ## Desktop v0.6.32 (2026-11-09)

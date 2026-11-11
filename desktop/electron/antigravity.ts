@@ -16,6 +16,7 @@ import {
   IMAGE_RULES,
   IMAGE_SERVER,
   IMAGE_TOOL,
+  IMAGE_TURN_NOTE,
   brainReadRules,
   checkImages,
   imageSchemaFile,
@@ -714,7 +715,8 @@ export class AntigravityAdapter implements ProviderAdapter {
   /** Sessions in which a governed bridge call reached the host: their effects live only in that agy conversation. */
   private bridged = new WeakSet<ProviderSession>();
   constructor(private timeoutMs = 600_000) {}
-  async run(prompt: string, connection: Connection, context: ProviderContext) {
+  async run(text: string, connection: Connection, context: ProviderContext) {
+    const prompt = context.images?.length ? `${IMAGE_TURN_NOTE(context.images.length)}\n\n${text}` : text;
     const deadline = Date.now() + this.timeoutMs;
     const timeout = AbortSignal.timeout(this.timeoutMs);
     const signal = AbortSignal.any([context.signal, timeout]);
