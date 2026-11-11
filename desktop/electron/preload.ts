@@ -166,6 +166,8 @@ const allowed = new Set([
   'imageExport',
   'toolFiles',
   'toolRead',
+  'toolPreview',
+  'toolOpenFile',
   'toolStage',
   'toolChanges',
   'toolApply',
