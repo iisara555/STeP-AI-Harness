@@ -63,6 +63,7 @@ const featureNames: Record<string, string> = localized({
   answerCheck: 'ตรวจคำตอบเรื่อง STeP กับเอกสาร',
   autoEffort: 'ปรับระดับการคิดตามขนาดงาน',
   maintenance: 'ตรวจข้อมูลที่จำ บทเรียน และ Skill ทุกวัน',
+  antigravityNativeBridge: 'ตัวเชื่อม Antigravity ในเครื่อง (ทดลอง)',
 });
 
 /** The policy switches in a few plain groups, so staff can scan them; switches not listed fall into the last group. */
@@ -336,7 +337,6 @@ export function SettingsPanel({
       </div>
       {page === 'credentials' && <CredentialSettings call={call} onError={onError} onBusy={credentialBusy} requestedOrigin={vaultOrigin} />}
       {page === 'developer' && developerAccess && <DeveloperDiagnostics call={call} onError={onError} />}
-      {page === 'general' && <StartupSettings call={call} onError={onError} />}
       {page === 'general' && (
         <section className="settings-profile">
           <h2>{t('โปรไฟล์และทีม')}</h2>
@@ -420,11 +420,8 @@ export function SettingsPanel({
               </select>
             </label>
           </div>
-          <p className="small muted">{t('ภาษาในแชตแยกจากภาษาของแอป และคุณระบุภาษาอื่นในแต่ละคำขอได้')}</p>
           <h3>{t('สไตล์การพูดของผู้ช่วย')}</h3>
-          <p className="muted small">
-            {t('เปลี่ยนเฉพาะวิธีพูดในแชท ข้อเท็จจริง แหล่งอ้างอิง สิทธิ์ และมาตรฐานเอกสารยังเหมือนเดิม และไม่ได้สวมบทเป็นบุคคลจริง')}
-          </p>
+          <p className="muted small">{t('เปลี่ยนเฉพาะวิธีพูด · ข้อเท็จจริงและมาตรฐานเอกสารคงเดิม')}</p>
           {/* One picker for every way of talking: the four First Run presets and the documented styles. A preset sets
               the conversation style in Personal preferences; a documented style is layered over it. */}
           <div className="style-grid speaking-styles" role="radiogroup" aria-label={t('สไตล์การพูดของผู้ช่วย')}>
@@ -466,7 +463,7 @@ export function SettingsPanel({
             })}
           </div>
           <div className="settings-style-example" aria-live="polite">
-            <strong>{t('ตัวอย่างจากโจทย์เดียวกัน: ช่วยเตือนให้ตรวจเอกสารก่อนส่ง')}</strong>
+            <strong>{t('ตัวอย่าง: เตือนให้ตรวจเอกสารก่อนส่ง')}</strong>
             <p>
               {t(
                 interactionStyle === 'witty'
@@ -482,7 +479,6 @@ export function SettingsPanel({
                           : 'ก่อนส่ง ลองเช็กเนื้อหา ผู้รับ และไฟล์แนบอีกครั้งให้ครบครับ',
               )}
             </p>
-            <small>{t('ตัวอย่างที่เตรียมไว้ ไม่มีการเรียก AI')}</small>
           </div>
           {interactionStyle === 'standard' && personality === 'custom' && (
             <label className="speaking-style-custom">
@@ -496,7 +492,6 @@ export function SettingsPanel({
             </label>
           )}
           <h3>{t('สำเนียงภาษา')}</h3>
-          <p className="muted small">{t('ใช้ร่วมกับสไตล์ด้านบนได้')}</p>
           <div className="style-grid speaking-styles" role="radiogroup" aria-label={t('สำเนียงภาษา')}>
             {(
               [
@@ -519,7 +514,6 @@ export function SettingsPanel({
           </div>
           <label>
             {t('รูปแบบคำตอบ')}
-            <small className="muted">{t('กำหนดโครงสร้างคำตอบจากรูปแบบที่ติดตั้งไว้ แยกจากน้ำเสียงด้านบน ไม่ใช่ตัวปรับความยาว')}</small>
             <select
               aria-label={t('รูปแบบคำตอบ')}
               value={outputStyle}
@@ -548,7 +542,6 @@ export function SettingsPanel({
               {t('เลือกโฟลเดอร์')}
             </button>
           </div>
-          <p className="small muted">{t('การเปลี่ยนโฟลเดอร์มีผลทันที ส่วนค่าที่คุณแก้ในหน้านี้ต้องกดบันทึกการเปลี่ยนแปลง')}</p>
           <details className="settings-admin">
             <summary>{t('ตัวเลือกเพิ่มเติม')}</summary>
             <p className="small muted">{t('การตั้งค่าเก็บเป็นไฟล์ USER.md เพื่อใช้ร่วมกับ STeP AI บน CLI')}</p>
@@ -571,6 +564,8 @@ export function SettingsPanel({
           </details>
         </section>
       )}
+      {/* Startup is a Windows switch set once: it follows the everyday settings and leaves other systems alone. */}
+      {page === 'general' && <StartupSettings call={call} onError={onError} />}
       {page === 'appearance' && (
         <section>
           <h2>{t('ภาษาของแอป')}</h2>

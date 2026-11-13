@@ -3359,4 +3359,9 @@ export const en: Record<string, string> = {
   รีเฟรชได้นาทีละครั้งต่อบัญชี: 'Refresh once a minute per account',
   'ประมาณการจาก token ที่ผู้ให้บริการรายงาน · ไม่รวมรูปภาพ ค่าสมาชิก และการใช้นอกแอป':
     'Estimated from tokens the provider reports · excludes images, subscriptions and use outside the app',
+  'ตัวเชื่อม Antigravity ในเครื่อง (ทดลอง)': 'Local Antigravity bridge (trial)',
+  'เปลี่ยนเฉพาะวิธีพูด · ข้อเท็จจริงและมาตรฐานเอกสารคงเดิม': 'Changes only how it talks · facts and document standards stay the same',
+  'ตัวอย่าง: เตือนให้ตรวจเอกสารก่อนส่ง': 'Example: a reminder to check a document before sending',
+  'พักหรือกลับมาใช้ทุกบัญชีในแอปนี้ · ไม่ออกจากระบบ AI และไม่เปลี่ยนสิทธิ์ที่ Google':
+    'Pause or resume every account in this app · does not sign out of AI or change Google permissions',
 };

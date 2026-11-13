@@ -7199,3 +7199,136 @@ small {
     0 1px 0 var(--shadow-faint),
     0 24px 60px var(--shadow-popover);
 }
+
+/* Settings, compact: the same content in less height. Sections breathe through rhythm (one spacing scale, quiet
+   rules between them), not through padding; headings step down so the controls lead. */
+.settings-content {
+  padding-top: 18px;
+}
+.settings-content .settings-tabs {
+  margin-top: 6px;
+}
+.settings-hero {
+  min-height: 0;
+}
+.settings-content .settings-search {
+  max-width: 22rem;
+  margin: 10px 0 2px;
+}
+.settings-search input {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+.settings-content section {
+  padding: 14px 0 18px;
+}
+.settings-content h2 {
+  font-size: 15px;
+  margin: 0 0 10px;
+}
+.settings-content h3 {
+  font-size: 13px;
+  margin: 16px 0 6px;
+}
+.settings-content label {
+  gap: 5px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.settings-content .small,
+.settings-content p.muted {
+  font-size: 13px;
+  margin: 4px 0 8px;
+}
+.settings-content .form-grid {
+  gap: 4px 14px;
+}
+.settings-content .speaking-styles {
+  margin: 4px 0 12px;
+  gap: 6px;
+}
+.settings-content .style-card {
+  padding: 7px 10px;
+  border-radius: 8px;
+}
+.settings-content .style-card strong {
+  font-size: 13px;
+}
+.settings-content .settings-style-example {
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.settings-content .settings-style-example p {
+  margin: 2px 0 0;
+}
+.settings-content .theme-options {
+  margin: 4px 0 16px;
+}
+.settings-profile-summary {
+  margin-bottom: 8px;
+}
+
+/* Google services: icon beside the name, one tight card per service. */
+.settings-content .google-service {
+  padding: 9px 34px 9px 10px;
+  gap: 10px;
+  border-radius: 10px;
+}
+.settings-content .google-service-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+}
+.settings-content .google-service-text {
+  gap: 1px;
+}
+.settings-content .google-service-text .muted {
+  font-size: 12px;
+}
+.settings-content .google-service-tick {
+  top: 10px;
+  right: 10px;
+}
+.settings-content .google-kind {
+  margin-top: 2px;
+  font-size: 10.5px;
+}
+/* Policy: a dense, scannable list; the badge says on or off at a glance. */
+.policy-features li {
+  padding: 4px 0;
+  font-size: 13px;
+}
+.policy-badge {
+  font-size: 11px;
+  padding: 0 8px;
+}
+.policy-group h3 {
+  margin: 16px 0 4px;
+}
+/* The service's own label was inheriting the stacked Settings label, which put the icon above the name. */
+.settings-content label.google-access-toggle {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  font-size: 13px;
+}
+.credential-settings .google-service-grid {
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 8px;
+}
+.credential-settings .google-service-group {
+  margin: 8px 0 14px;
+}
+.credential-settings .google-service-group legend {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.settings-content label.google-service {
+  flex-direction: row;
+  margin: 0;
+}
+.settings-content .google-kind {
+  border-radius: 6px;
+}

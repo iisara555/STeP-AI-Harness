@@ -28,6 +28,8 @@ export function StartupSettings({
       active = false;
     };
   }, []);
+  // Off Windows the switch can never be used, so the section stays out of the way instead of explaining why.
+  if (state && !state.supported && !failed) return null;
   return (
     <section>
       <h2>{t('การเริ่มโปรแกรม')}</h2>
