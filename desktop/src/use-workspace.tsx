@@ -2,7 +2,6 @@ import type {
   ApprovalRequest,
   Attachment,
   Connection,
-  OwnPack,
   PlanStep,
   Session,
   SkillEntry,
@@ -15,55 +14,58 @@ import type {
 import { CLAUDE_CODE, connectionName, effortLabel, errorText, explainError, statusText } from './messages';
 import type { DocumentAttachment, DocumentForm } from './document-tool-app';
 import { type DocumentAttachmentRole, type DocumentToolId, documentRequest, documentTool } from './document-tools';
-import {
-  DocumentCaption,
-  DocumentImageNode,
-  DocumentPageBreak,
-  DocumentQuote,
-  DocumentStarterKit,
-  DocumentTableCell,
-  DocumentTableHeader,
-  DocumentTitle,
-} from './document-elements';
 import type { FeedbackAsk, ReportAsk } from './feedback';
 import type { InvitationPresentation } from './invitation';
 import type { OpenedArtifact } from './artifacts-list';
-import { type PaletteItem, type Toast, formatElapsed, matchesSession } from './ui';
+import { type PaletteItem, matchesSession } from './ui';
 import { RELEASE_NOTES, type ReleaseNote, compareVersions, unseenNotes } from './whats-new';
 import { TASK_SEEN_KEY, initialSeen, needsYouCount, taskAlert } from './task-alerts';
-import { Table, TableRow } from '@tiptap/extension-table';
-import { type ToolRequest, type ToolTab, visibleStream } from './tools';
+import { type ToolRequest, type ToolTab } from './tools';
+import { setHeartbeatAt, setReasoning, setStream, tickLiveClock } from './live-run';
 import type { VaultPrompt } from './vault-prompt';
 import { commandForKey, commandPalette } from './commands';
 import { documentText, plainDocument as toDoc } from './draft';
 import { imageModels, isImageRequest } from './image-routing';
-import { readExportSettingsOpen } from './document-presentation-controls';
-import { readSidebarChoice, saveSidebarChoice } from './sidebar-rail';
+import { saveSidebarChoice } from './sidebar-rail';
 import { resolvePresentation } from './document-presentation';
+import { useExportOptions, useInfoDialogs, useToasts, useWindowLayout } from './workspace-parts';
 import { setLanguage, t, teamName } from './i18n';
 import { skillsForStaff } from './skill-display';
 import { updateWorkActions } from './work-assistant';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useEditor } from '@tiptap/react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { Editor } from '@tiptap/react';
+import { createDraftEditor } from './draft-editor';
 import { useUpdate } from './update';
 import type { ReactElement } from 'react';
 
 /** Everything the main window keeps: state, effects, derived values and the actions the screens call. */
+const NO_PALETTE_ITEMS: PaletteItem[] = [];
+const NO_SKILLS: SkillEntry[] = [];
 export function useWorkspace() {
   const api = window.step;
   const [update] = useUpdate(api);
   const [toolApprovals, setToolApprovals] = useState<ApprovalRequest[]>([]);
   const [vaultPrompts, setVaultPrompts] = useState<VaultPrompt[]>([]);
-  const [questions, setQuestions] = useState<ToolQuestion[]>([]),
-    [usageOpen, setUsageOpen] = useState(false),
-    [memoryOpen, setMemoryOpen] = useState(false);
-  const [learningOpen, setLearningOpen] = useState(false),
-    [learningText, setLearningText] = useState('');
-  const [packsOpen, setPacksOpen] = useState(false),
-    [ownPacks, setOwnPacks] = useState<OwnPack[] | null>(null),
-    [keyboardOpen, setKeyboardOpen] = useState(false),
-    [vimNormal, setVimNormal] = useState(false);
-  const [automationOpen, setAutomationOpen] = useState(false),
+  const [questions, setQuestions] = useState<ToolQuestion[]>([]);
+  const {
+    usageOpen,
+    setUsageOpen,
+    memoryOpen,
+    setMemoryOpen,
+    learningOpen,
+    setLearningOpen,
+    learningText,
+    setLearningText,
+    packsOpen,
+    setPacksOpen,
+    ownPacks,
+    setOwnPacks,
+    keyboardOpen,
+    setKeyboardOpen,
+    automationOpen,
+    setAutomationOpen,
+  } = useInfoDialogs();
+  const [vimNormal, setVimNormal] = useState(false),
     [coordinated, setCoordinated] = useState(false);
   const [searchMatches, setSearchMatches] = useState<{ query: string; ids: string[] }>();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null),
@@ -92,65 +94,37 @@ export function useWorkspace() {
     setSettingsState(visible);
   };
   const [filter, setFilter] = useState<'all' | 'artifacts'>('all');
-  const [stream, setStream] = useState(''),
-    [progress, setProgress] = useState(''),
+  const [progress, setProgress] = useState(''),
     [running, setRunning] = useState(false);
-  const [heartbeatAt, setHeartbeatAt] = useState(0),
-    [activityAt, setActivityAt] = useState(0);
+  const [activityAt, setActivityAt] = useState(0);
   const [error, setError] = useState(''),
     [files, setFiles] = useState<Attachment[]>([]),
     [inspecting, setInspecting] = useState<Attachment | null>(null),
     [viewingArtifact, setViewingArtifact] = useState<OpenedArtifact | null>(null);
-  // Three columns need room: on narrower windows the draft panel, then the task list, start hidden.
-  // `left` is the full task list; when it is off the sidebar folds to an icon rail, as in Claude and Codex. The
-  // employee's own choice is remembered on this computer; with no choice yet, narrow windows start folded.
-  const sidebarChoice = useRef<boolean | null>(readSidebarChoice());
-  const [left, setLeft] = useState(() => (sidebarChoice.current === null ? window.innerWidth >= 900 : sidebarChoice.current)),
-    [right, setRight] = useState(() => window.innerWidth >= 1100),
-    [history, setHistory] = useState(false);
-  // Below about 1200px, chat, task list and draft panel do not fit together: while the panel is open the task list
-  // folds to the icon rail on its own (the employee's choice stays as it was), unless they open it again by hand.
-  const [roomy, setRoomy] = useState(() => window.innerWidth >= 1200),
-    [leftPeek, setLeftPeek] = useState(false);
-  useEffect(() => {
-    let width = window.innerWidth;
-    const onResize = () => {
-      const now = window.innerWidth;
-      if (now < 1100 && width >= 1100) setRight(false);
-      if (sidebarChoice.current === null && now < 900 !== width < 900) setLeft(now >= 900);
-      setRoomy(now >= 1200);
-      width = now;
-    };
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-  const [width, setWidth] = useState(440),
-    [connectionId, setConnectionId] = useState(''),
+  const { sidebarChoice, left, setLeft, right, setRight, history, setHistory, roomy, setRoomy, leftPeek, setLeftPeek, width, setWidth } =
+    useWindowLayout();
+  const [connectionId, setConnectionId] = useState(''),
     [dirty, setDirty] = useState(false);
-  const [format, setFormat] = useState('docx'),
-    [exportPath, setExportPath] = useState('');
-  const [exportFont, setExportFont] = useState('auto');
-  const [presentation, setPresentation] = useState(() => resolvePresentation());
-  const presentationRef = useRef(presentation);
-  presentationRef.current = presentation;
-  const [exportGaruda, setExportGaruda] = useState('auto');
-  const [exporting, setExporting] = useState(false);
-  const exportPending = useRef(false);
-  const [exportSettings, setExportSettings] = useState(readExportSettingsOpen);
-  const [exportInfo, setExportInfo] = useState<{
-    documentTool?: string;
-    font: string;
-    fontStatus: string;
-    fontEmbedding?: { status: string; families: string[]; missingFamilies?: string[] };
-    fieldsNeedUpdate?: boolean;
-    garudaHeightCm?: number;
-    templateName?: string;
-  } | null>(null);
-  useEffect(() => {
-    setExportFont('auto');
-    setExportGaruda('auto');
-    setExportInfo(null);
-  }, [selected]);
+  const {
+    format,
+    setFormat,
+    exportPath,
+    setExportPath,
+    exportFont,
+    setExportFont,
+    presentation,
+    setPresentation,
+    presentationRef,
+    exportGaruda,
+    setExportGaruda,
+    exporting,
+    setExporting,
+    exportPending,
+    exportSettings,
+    setExportSettings,
+    exportInfo,
+    setExportInfo,
+  } = useExportOptions(selected);
   const [authCode, setAuthCode] = useState<{ id: string; code: string } | null>(null);
   const [plan, setPlan] = useState<(PlanStep & { state: string })[]>([]);
   const [workActions, setWorkActions] = useState<Record<string, WorkAction[]>>({});
@@ -184,16 +158,9 @@ export function useWorkspace() {
     [dismissedSkills, setDismissedSkills] = useState<string[]>([]),
     [slashIndex, setSlashIndex] = useState(0);
   const composerRef = useRef<HTMLTextAreaElement>(null);
-  const [toasts, setToasts] = useState<Toast[]>([]),
-    toastId = useRef(0),
-    runningIds = useRef(new Map<string, object>());
-  const dismiss = useCallback((id: number) => setToasts(list => list.filter(t => t.id !== id)), []);
-  const notify = useCallback((text: string, tone: Toast['tone'] = 'info', action?: Toast['action']) => {
-    if (text) setToasts(list => [...list.filter(t => t.text !== text), { id: ++toastId.current, text, tone, action }].slice(-4));
-  }, []);
-  const [reasoning, setReasoning] = useState(''),
-    [startedAt, setStartedAt] = useState(0),
-    [now, setNow] = useState(Date.now());
+  const { toasts, setToasts, toastId, dismiss, notify } = useToasts();
+  const runningIds = useRef(new Map<string, object>());
+  const [startedAt, setStartedAt] = useState(0);
   const [feedbackAsk, setFeedbackAsk] = useState<FeedbackAsk | null>(null);
   const [reportAsk, setReportAsk] = useState<ReportAsk | null>(null);
   const [chatMenu, setChatMenu] = useState(false);
@@ -348,46 +315,39 @@ export function useWorkspace() {
   useEffect(() => {
     if (view === 'receipt' && !settings) setReceiptOpened(true);
   }, [view, settings]);
-  const editor = useEditor({
-    extensions: [
-      DocumentStarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-        link: false,
-        underline: false,
-        strike: false,
-        code: false,
-        codeBlock: false,
-        blockquote: false,
-        horizontalRule: false,
-      }),
-      Table.configure({ resizable: false }),
-      TableRow,
-      DocumentTableHeader,
-      DocumentTableCell,
-      DocumentTitle,
-      DocumentCaption,
-      DocumentQuote,
-      DocumentPageBreak,
-      DocumentImageNode.configure({ load: assetId => api!.call('documentAsset', { id: sessionRef.current?.id, assetId }) }),
-    ],
-    content: toDoc(''),
-    editorProps: {
-      attributes: {
-        role: 'textbox',
-        'aria-multiline': 'true',
-        'aria-label': t('ร่างที่แก้ไขได้'),
-        class: 'draft-editor',
-        spellcheck: 'false',
-        lang: 'th',
+  // Created on first need (see draft-editor.ts) instead of at start-up.
+  const [editor, setEditor] = useState<Editor | null>(null);
+  const [editorWanted, setEditorWanted] = useState(false);
+  useEffect(() => {
+    if (showPanel) setEditorWanted(true);
+    else {
+      const idle = window.setTimeout(() => setEditorWanted(true), 1500);
+      return () => window.clearTimeout(idle);
+    }
+  }, [showPanel]);
+  useEffect(() => {
+    if (!editorWanted || !api) return;
+    let live = true,
+      created: Editor | null = null;
+    void createDraftEditor({
+      ariaLabel: t('ร่างที่แก้ไขได้'),
+      loadImage: assetId => api.call('documentAsset', { id: sessionRef.current?.id, assetId }),
+      onUpdate: () => {
+        // A saved snapshot can finish rendering after an immediate editor command.
+        // Protect that new edit before React commits the dirty state.
+        dirtyRef.current = true;
+        setDirty(true);
       },
-    },
-    onUpdate: () => {
-      // A saved snapshot can finish rendering after an immediate editor command.
-      // Protect that new edit before React commits the dirty state.
-      dirtyRef.current = true;
-      setDirty(true);
-    },
-  });
+    }).then(made => {
+      if (live) setEditor((created = made));
+      else made.destroy();
+    });
+    return () => {
+      live = false;
+      created?.destroy();
+      setEditor(null);
+    };
+  }, [editorWanted, api]);
   const refresh = useCallback(async () => {
     if (api) {
       const version = ++snapshotVersion.current;
@@ -409,10 +369,6 @@ export function useWorkspace() {
     window.addEventListener('step-workspace', update);
     return () => window.removeEventListener('step-workspace', update);
   }, [refresh]);
-  useEffect(() => {
-    // An empty task shows the welcome from its greeting; only a conversation follows its latest message.
-    if (session?.messages.length || stream || running) conversationEnd.current?.scrollIntoView({ block: 'end' });
-  }, [session?.messages.length, stream, running]);
   const initializeWorkspace = useCallback(async () => {
     setStartupPending(true);
     setError('');
@@ -562,7 +518,7 @@ export function useWorkspace() {
   );
   useEffect(() => {
     if (!running) return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
+    const timer = setInterval(() => tickLiveClock(), 1000);
     return () => clearInterval(timer);
   }, [running]);
   useEffect(() => {
@@ -1129,7 +1085,7 @@ export function useWorkspace() {
       setQuery(current => (current === submittedQuery ? '' : current));
       setPendingSource(current => (current === sourceText ? '' : current));
       setFiles(current => current.filter(file => !attachments.includes(file.id)));
-      setNow(Date.now());
+      tickLiveClock();
       const updated = await refresh();
       const state = updated?.sessions.find(s => s.id === runId)?.status;
       if (state && !['queued', 'running'].includes(state)) {
@@ -1263,26 +1219,26 @@ export function useWorkspace() {
   }
   // Staff see Thai Skill names, and developer Skills only in Dev mode (skill-display.ts).
   const developerMode = Boolean(snapshot?.features?.developmentMode && snapshot?.settings.developmentMode);
-  const staffSkills = skills && skillsForStaff(skills, developerMode);
-  const routedSkills = (staffSkills || []).filter(s => s.status === 'routed');
+  const staffSkills = useMemo(() => skills && skillsForStaff(skills, developerMode), [skills, developerMode]);
+  const routedSkills = useMemo(() => (staffSkills || []).filter(s => s.status === 'routed'), [staffSkills]);
   // "/" lists the person's team first and also matches Thai descriptions and trigger words.
   const slash = /^\/(\S*)$/.exec(query);
   const myTeam = snapshot?.settings.team || '';
   const myTeamInfo = snapshot?.teams.find(team => team.id === myTeam);
   const myTeamName = myTeamInfo ? teamName(myTeamInfo) : '';
-  const forTeam = (s: SkillEntry) => Boolean(myTeam) && (s.owner === myTeam || s.teams.includes(myTeam));
-  const slashMatches = slash
-    ? routedSkills
-        .filter(s => {
-          const q = slash[1].toLowerCase();
-          return !q || [s.name, s.title, s.description, ...s.triggers].some(v => v.toLowerCase().includes(q));
-        })
-        .sort(
-          (a, b) =>
-            Number(!a.name.startsWith(slash[1])) - Number(!b.name.startsWith(slash[1])) || Number(!forTeam(a)) - Number(!forTeam(b)),
-        )
-        .slice(0, 8)
-    : [];
+  const forTeam = useCallback((s: SkillEntry) => Boolean(myTeam) && (s.owner === myTeam || s.teams.includes(myTeam)), [myTeam]);
+  const slashQuery = slash?.[1];
+  const slashMatches = useMemo(() => {
+    if (slashQuery === undefined) return NO_SKILLS;
+    const q = slashQuery.toLowerCase();
+    return routedSkills
+      .filter(s => !q || [s.name, s.title, s.description, ...s.triggers].some(v => v.toLowerCase().includes(q)))
+      .sort(
+        (a, b) =>
+          Number(!a.name.startsWith(slashQuery)) - Number(!b.name.startsWith(slashQuery)) || Number(!forTeam(a)) - Number(!forTeam(b)),
+      )
+      .slice(0, 8);
+  }, [slashQuery, routedSkills, forTeam]);
   const useSkill = (name: string) => {
     if (guardSettingsExit(() => useSkill(name))) return;
     setForcedSkill(name);
@@ -1323,14 +1279,20 @@ export function useWorkspace() {
   }, [api, query, canSuggest, dismissedSkills]);
   const suggested = canSuggest ? routedSkills.find(s => s.name === suggestedSkill) : undefined;
   // Tasks that were opened but never used (older versions created them eagerly) stay out of the list.
-  const filtered =
-    snapshot?.sessions.filter(
-      s =>
-        (s.messages.length > 0 || Boolean(s.draft) || s.id === selected) &&
-        // Until the full-text search answers, match titles and loaded text here, so the list never flashes "no results".
-        (!search.trim() || (searchMatches?.query === search ? searchMatches.ids.includes(s.id) : matchesSession(s, search))) &&
-        (filter !== 'artifacts' || s.draft),
-    ) || [];
+  // Values and helpers the regions read keep their identity until their inputs change, so a region re-renders only
+  // when what it shows changed (workspace-view.tsx).
+  const sessions = snapshot?.sessions;
+  const filtered = useMemo(
+    () =>
+      sessions?.filter(
+        s =>
+          (s.messages.length > 0 || Boolean(s.draft) || s.id === selected) &&
+          // Until the full-text search answers, match titles and loaded text here, so the list never flashes "no results".
+          (!search.trim() || (searchMatches?.query === search ? searchMatches.ids.includes(s.id) : matchesSession(s, search))) &&
+          (filter !== 'artifacts' || s.draft),
+      ) || [],
+    [sessions, selected, search, searchMatches, filter],
+  );
   // Escape cancels; the blur that follows the input closing must not save the name it was holding.
   const renameCancelled = useRef(false);
   async function saveRename() {
@@ -1347,25 +1309,34 @@ export function useWorkspace() {
       await refresh();
     });
   }
-  const providerName = (c?: Connection) => (c ? connectionName(c) : '');
+  const providerName = useCallback((c?: Connection) => (c ? connectionName(c) : ''), []);
   // A run that waits on the employee's answer or permission says so, instead of "working".
-  const taskStatus = (s: { id: string; status: string }) =>
-    questions.some(q => q.sessionId === s.id)
-      ? t('รอคุณตอบ')
-      : toolApprovals.some(a => a.sessionId === s.id)
-        ? t('รอคุณอนุญาต')
-        : statusText[s.status] || s.status;
+  const taskStatus = useCallback(
+    (s: { id: string; status: string }) =>
+      questions.some(q => q.sessionId === s.id)
+        ? t('รอคุณตอบ')
+        : toolApprovals.some(a => a.sessionId === s.id)
+          ? t('รอคุณอนุญาต')
+          : statusText[s.status] || s.status,
+    [questions, toolApprovals],
+  );
   // Team, then status only when it says something: "ready to start" is every new task's state, so it stays unsaid.
-  const taskMeta = (s: Session) => {
-    const team = s.project || s.team.toUpperCase() || t('ทุกทีม');
-    const status = taskStatus(s);
-    return s.status === 'idle' && status === statusText.idle ? team : `${team} · ${status}`;
-  };
+  const taskMeta = useCallback(
+    (s: Session) => {
+      const team = s.project || s.team.toUpperCase() || t('ทุกทีม');
+      const status = taskStatus(s);
+      return s.status === 'idle' && status === statusText.idle ? team : `${team} · ${status}`;
+    },
+    [taskStatus],
+  );
   // The notification dot of each task in the list (src/task-alerts.ts); the open task needs none.
-  const alertOf = (s: Session) => {
-    const alert = taskAlert(s, questions, toolApprovals, seen ? seen[s.id] : s.updatedAt);
-    return selected === s.id && view === 'chat' && alert !== 'needs-you' && alert !== 'running' ? undefined : alert;
-  };
+  const alertOf = useCallback(
+    (s: Session) => {
+      const alert = taskAlert(s, questions, toolApprovals, seen ? seen[s.id] : s.updatedAt);
+      return selected === s.id && view === 'chat' && alert !== 'needs-you' && alert !== 'running' ? undefined : alert;
+    },
+    [questions, toolApprovals, seen, selected, view],
+  );
   const needsYou = snapshot ? needsYouCount(snapshot.sessions, questions, toolApprovals) : 0;
   const setTheme = (theme: string) =>
     action(async () => {
@@ -1440,17 +1411,14 @@ export function useWorkspace() {
     'theme-light': () => void setTheme('light'),
     'theme-dark': () => void setTheme('dark'),
   };
-  // A refresh can land after main saved the answer but before it reports the run finished; the saved message
-  // then already shows the streamed text, so the live copy is hidden instead of appearing twice.
   const lastMessage = session?.messages.at(-1);
-  const liveText = visibleStream(stream);
-  const streamSaved =
-    Boolean(liveText) &&
-    lastMessage?.role === 'assistant' &&
-    Boolean(lastMessage.text.trim()) &&
-    liveText.endsWith(lastMessage.text.trim());
   const commandRef = useRef(commands);
   commandRef.current = commands;
+  // One object for the life of the window whose entries run the latest command, for regions that call them.
+  const stableCommands = useRef<typeof commands | null>(null);
+  stableCommands.current ??= Object.fromEntries(
+    Object.keys(commands).map(id => [id, () => commandRef.current[id as keyof typeof commands]?.()]),
+  ) as typeof commands;
   // Read the bindings during the key press rather than re-registering the listener: a shortcut pressed right
   // after saving new bindings would otherwise land between the render and the effect and be dropped.
   const keybindingsRef = useRef(snapshot?.settings.keybindings);
@@ -1476,44 +1444,45 @@ export function useWorkspace() {
     return () => window.removeEventListener('keydown', listener);
   }, []);
   const recentSessions = snapshot ? [...snapshot.sessions].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) : [];
-  const paletteItems: PaletteItem[] = snapshot
-    ? commandPalette(
-        commands,
-        snapshot.settings.keybindings || {},
-        [
-          ...routedSkills.map(s => ({
-            id: 'skill-' + s.name,
-            group: 'Skill',
-            label: t('ใช้ Skill: ') + s.title,
-            hint: '/' + s.name,
-            run: () => useSkill(s.name),
-          })),
-          ...(connection?.models || []).map(m => ({
-            id: 'model-' + m.id,
-            group: t('โมเดล'),
-            label: t('ใช้ ') + m.label,
-            hint: m.id === currentModel ? t('ใช้อยู่') : providerName(connection),
-            run: () => action(() => chooseModel(m.id)),
-          })),
-          ...recentSessions.slice(5, 50).map(s => ({
+  // Built only while the palette is open; closed, it is one empty list that never changes.
+  const paletteItems: PaletteItem[] =
+    snapshot && palette
+      ? commandPalette(
+          commands,
+          snapshot.settings.keybindings || {},
+          [
+            ...routedSkills.map(s => ({
+              id: 'skill-' + s.name,
+              group: 'Skill',
+              label: t('ใช้ Skill: ') + s.title,
+              hint: '/' + s.name,
+              run: () => useSkill(s.name),
+            })),
+            ...(connection?.models || []).map(m => ({
+              id: 'model-' + m.id,
+              group: t('โมเดล'),
+              label: t('ใช้ ') + m.label,
+              hint: m.id === currentModel ? t('ใช้อยู่') : providerName(connection),
+              run: () => action(() => chooseModel(m.id)),
+            })),
+            ...recentSessions.slice(5, 50).map(s => ({
+              id: 'session-' + s.id,
+              group: t('งาน'),
+              label: s.title,
+              hint: s.project || statusText[s.status],
+              run: () => action(() => selectSession(s.id)),
+            })),
+          ],
+          // The palette says it finds tasks too, so the latest five come first, above the commands.
+          recentSessions.slice(0, 5).map(s => ({
             id: 'session-' + s.id,
-            group: t('งาน'),
+            group: t('งานล่าสุด'),
             label: s.title,
             hint: s.project || statusText[s.status],
             run: () => action(() => selectSession(s.id)),
           })),
-        ],
-        // The palette says it finds tasks too, so the latest five come first, above the commands.
-        recentSessions.slice(0, 5).map(s => ({
-          id: 'session-' + s.id,
-          group: t('งานล่าสุด'),
-          label: s.title,
-          hint: s.project || statusText[s.status],
-          run: () => action(() => selectSession(s.id)),
-        })),
-      )
-    : [];
-  const elapsed = running && startedAt ? formatElapsed(now - startedAt) : '';
+        )
+      : NO_PALETTE_ITEMS;
   // The newest answer keeps its copy and feedback buttons in view; older ones show them on hover, as in other AI apps.
   const lastAnswer = session ? session.messages.map(m => m.role).lastIndexOf('assistant') : -1;
   // Links in answers open in the browser panel beside the chat, never in this window.
@@ -1574,14 +1543,10 @@ export function useWorkspace() {
     setSettings,
     filter,
     setFilter,
-    stream,
-    setStream,
     progress,
     setProgress,
     running,
     setRunning,
-    heartbeatAt,
-    setHeartbeatAt,
     activityAt,
     setActivityAt,
     error,
@@ -1667,12 +1632,8 @@ export function useWorkspace() {
     runningIds,
     dismiss,
     notify,
-    reasoning,
-    setReasoning,
     startedAt,
     setStartedAt,
-    now,
-    setNow,
     feedbackAsk,
     setFeedbackAsk,
     reportAsk,
@@ -1827,15 +1788,12 @@ export function useWorkspace() {
     setTheme,
     showTour,
     showWizard,
-    commands,
+    commands: stableCommands.current,
     lastMessage,
-    liveText,
-    streamSaved,
     commandRef,
     keybindingsRef,
     recentSessions,
     paletteItems,
-    elapsed,
     lastAnswer,
     openLink,
   };
