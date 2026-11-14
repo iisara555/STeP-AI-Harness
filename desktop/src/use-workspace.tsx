@@ -15,23 +15,12 @@ import type {
 import { CLAUDE_CODE, connectionName, effortLabel, errorText, explainError, statusText } from './messages';
 import type { DocumentAttachment, DocumentForm } from './document-tool-app';
 import { type DocumentAttachmentRole, type DocumentToolId, documentRequest, documentTool } from './document-tools';
-import {
-  DocumentCaption,
-  DocumentImageNode,
-  DocumentPageBreak,
-  DocumentQuote,
-  DocumentStarterKit,
-  DocumentTableCell,
-  DocumentTableHeader,
-  DocumentTitle,
-} from './document-elements';
 import type { FeedbackAsk, ReportAsk } from './feedback';
 import type { InvitationPresentation } from './invitation';
 import type { OpenedArtifact } from './artifacts-list';
 import { type PaletteItem, type Toast, formatElapsed, matchesSession } from './ui';
 import { RELEASE_NOTES, type ReleaseNote, compareVersions, unseenNotes } from './whats-new';
 import { TASK_SEEN_KEY, initialSeen, needsYouCount, taskAlert } from './task-alerts';
-import { Table, TableRow } from '@tiptap/extension-table';
 import { type ToolRequest, type ToolTab, visibleStream } from './tools';
 import type { VaultPrompt } from './vault-prompt';
 import { commandForKey, commandPalette } from './commands';
@@ -44,7 +33,8 @@ import { setLanguage, t, teamName } from './i18n';
 import { skillsForStaff } from './skill-display';
 import { updateWorkActions } from './work-assistant';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useEditor } from '@tiptap/react';
+import type { Editor } from '@tiptap/react';
+import { createDraftEditor } from './draft-editor';
 import { useUpdate } from './update';
 import type { ReactElement } from 'react';
 
@@ -348,46 +338,39 @@ export function useWorkspace() {
   useEffect(() => {
     if (view === 'receipt' && !settings) setReceiptOpened(true);
   }, [view, settings]);
-  const editor = useEditor({
-    extensions: [
-      DocumentStarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-        link: false,
-        underline: false,
-        strike: false,
-        code: false,
-        codeBlock: false,
-        blockquote: false,
-        horizontalRule: false,
-      }),
-      Table.configure({ resizable: false }),
-      TableRow,
-      DocumentTableHeader,
-      DocumentTableCell,
-      DocumentTitle,
-      DocumentCaption,
-      DocumentQuote,
-      DocumentPageBreak,
-      DocumentImageNode.configure({ load: assetId => api!.call('documentAsset', { id: sessionRef.current?.id, assetId }) }),
-    ],
-    content: toDoc(''),
-    editorProps: {
-      attributes: {
-        role: 'textbox',
-        'aria-multiline': 'true',
-        'aria-label': t('ร่างที่แก้ไขได้'),
-        class: 'draft-editor',
-        spellcheck: 'false',
-        lang: 'th',
+  // Created on first need (see draft-editor.ts) instead of at start-up.
+  const [editor, setEditor] = useState<Editor | null>(null);
+  const [editorWanted, setEditorWanted] = useState(false);
+  useEffect(() => {
+    if (showPanel) setEditorWanted(true);
+    else {
+      const idle = window.setTimeout(() => setEditorWanted(true), 1500);
+      return () => window.clearTimeout(idle);
+    }
+  }, [showPanel]);
+  useEffect(() => {
+    if (!editorWanted || !api) return;
+    let live = true,
+      created: Editor | null = null;
+    void createDraftEditor({
+      ariaLabel: t('ร่างที่แก้ไขได้'),
+      loadImage: assetId => api.call('documentAsset', { id: sessionRef.current?.id, assetId }),
+      onUpdate: () => {
+        // A saved snapshot can finish rendering after an immediate editor command.
+        // Protect that new edit before React commits the dirty state.
+        dirtyRef.current = true;
+        setDirty(true);
       },
-    },
-    onUpdate: () => {
-      // A saved snapshot can finish rendering after an immediate editor command.
-      // Protect that new edit before React commits the dirty state.
-      dirtyRef.current = true;
-      setDirty(true);
-    },
-  });
+    }).then(made => {
+      if (live) setEditor((created = made));
+      else made.destroy();
+    });
+    return () => {
+      live = false;
+      created?.destroy();
+      setEditor(null);
+    };
+  }, [editorWanted, api]);
   const refresh = useCallback(async () => {
     if (api) {
       const version = ++snapshotVersion.current;

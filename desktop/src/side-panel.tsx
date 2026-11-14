@@ -1,8 +1,10 @@
 import { Check, Download, History, PanelRightClose, Save, Settings2, SlidersHorizontal, Sparkles } from './icons';
 import { DOCUMENT_FONTS, resolveDocumentLayout } from './document-layout';
 import { DocumentPresentationControls, saveExportSettingsOpen } from './document-presentation-controls';
-import { DocumentToolbar } from './document-toolbar';
-import { EditorContent } from '@tiptap/react';
+import { lazyScreen } from './lazy-screen';
+import type { ComponentProps } from 'react';
+import type { DocumentToolbar as Toolbar } from './document-toolbar';
+import type { Editor } from '@tiptap/react';
 import { InvitationLinks, invalidInvitationLinks } from './invitation-links';
 import { RichText } from './ui';
 import { SectionArt } from './illustration';
@@ -11,6 +13,13 @@ import { WorkbenchPanel } from './workbench';
 import { locale, t } from './i18n';
 import { EXPORT_FORMAT_LABELS } from './app-shared';
 import type { AppView } from './use-workspace';
+
+// The editor's view and toolbar come with the editor itself (draft-editor.ts), not with the first screen.
+const DocumentToolbar = lazyScreen<ComponentProps<typeof Toolbar>>(
+  () => import('./document-toolbar').then(m => ({ default: m.DocumentToolbar })),
+  true,
+);
+const EditorContent = lazyScreen<{ editor: Editor }>(() => import('@tiptap/react').then(m => ({ default: m.EditorContent })), true);
 
 /** The draft editor and the workbench tabs beside the chat. */
 export function SidePanel({ v }: { v: AppView }) {
@@ -304,7 +313,7 @@ export function SidePanel({ v }: { v: AppView }) {
                     )}
                   </div>
                   <div className={'editor-scroll' + (!session.draft.trim() && session.proposals.length ? ' waiting' : '')}>
-                    <EditorContent editor={editor} />
+                    {editor && <EditorContent editor={editor} />}
                   </div>
                   <details className="sources">
                     <summary>
