@@ -2,15 +2,15 @@
   display: none;
 }
 .wizard .ai-connect-step > p {
-  margin: 6px 0;
+  margin: var(--space-1-5) 0;
 }
 .wizard .ai-connect-flow > .ai-connect-step:first-child > p {
   display: none;
 }
 .wizard .provider-detail {
-  padding: 8px;
-  margin-top: 8px;
-  gap: 6px;
+  padding: var(--space-2);
+  margin-top: var(--space-2);
+  gap: var(--space-1-5);
 }
 /* First-run setup shows its four main services in one row, so the connect button stays above the fold. */
 .wizard .provider-tiles {
@@ -24,7 +24,7 @@
   backdrop-filter: blur(6px);
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: var(--space-6);
 }
 .wizard-card {
   width: min(760px, 100%);
@@ -32,27 +32,27 @@
   overflow: hidden;
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 24px 60px var(--shadow-popover);
-  padding: 26px 32px 22px;
+  padding: var(--space-6) var(--space-8) var(--space-5);
   display: flex;
   flex-direction: column;
 }
 .wizard-steps {
   list-style: none;
   display: flex;
-  gap: 6px;
+  gap: var(--space-1-5);
   flex-wrap: wrap;
   padding: 0;
-  margin: 0 0 18px;
-  font-size: 11.5px;
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 .wizard-steps li {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding-right: 10px;
+  gap: var(--space-1-5);
+  padding-right: var(--space-2-5);
 }
 .wizard-steps span {
   display: grid;
@@ -61,7 +61,7 @@
   height: 20px;
   border-radius: 50%;
   border: 1px solid var(--line-strong);
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 .wizard-steps li.current {
   color: var(--text);
@@ -80,10 +80,10 @@
 .wizard-body {
   overflow-y: auto;
   min-height: 0;
-  padding-bottom: 12px;
+  padding-bottom: var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-2-5);
   min-height: 340px;
 }
 .wizard-body.center {
@@ -92,9 +92,9 @@
   justify-content: center;
 }
 .wizard-body h1 {
-  font-size: 24px;
+  font-size: var(--text-xl);
   font-weight: 600;
-  margin: 4px 0;
+  margin: var(--space-1) 0;
 }
 .wizard-body h1 + p.muted {
   margin: 0;
@@ -102,8 +102,8 @@
 .wizard-body label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 12.5px;
+  gap: var(--space-1-5);
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 .wizard-body textarea {
@@ -111,8 +111,8 @@
 }
 .wizard-body code {
   background: var(--hover);
-  padding: 1px 5px;
-  border-radius: 4px;
+  padding: 1px var(--space-1);
+  border-radius: var(--radius-xs);
 }
 .wizard-art {
   width: 170px;
@@ -122,19 +122,19 @@
   width: 96px;
   height: 96px;
   align-self: flex-end;
-  margin-bottom: -60px;
+  margin-bottom: -56px;
 }
 .wizard-points {
   text-align: left;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   line-height: 1.9;
-  margin: 6px 0 0;
-  padding-left: 18px;
+  margin: var(--space-1-5) 0 0;
+  padding-left: var(--space-4);
 }
 .choice-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   align-items: center;
 }
@@ -153,22 +153,22 @@
   color: var(--on-accent);
 }
 .install-log {
-  margin: 8px 0 0;
-  font-size: 11px;
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
   max-height: 110px;
   overflow: auto;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 8px;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
   white-space: pre-wrap;
 }
 .wizard-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 18px;
-  padding-top: 14px;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3-5);
   border-top: 1px solid var(--line);
 }
 .tour {
@@ -178,7 +178,7 @@
 }
 .tour-spot {
   position: fixed;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 0 0 9999px rgba(20, 17, 18, 0.55);
   outline: 2px solid var(--accent);
   transition: all 0.2s ease;
@@ -193,16 +193,16 @@
   position: fixed;
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 18px 50px var(--shadow-dialog);
-  padding: 16px 18px 14px;
+  padding: var(--space-4) var(--space-4) var(--space-3-5);
 }
 .tour-card h2 {
-  font-size: 16px;
-  margin: 4px 0 6px;
+  font-size: var(--text-md);
+  margin: var(--space-1) 0 var(--space-1-5);
 }
 .tour-card p {
-  font-size: 13px;
+  font-size: var(--text-sm);
   margin: 0;
   color: var(--muted);
   line-height: 1.75;
@@ -210,21 +210,21 @@
 .tour-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 14px;
+  gap: var(--space-2);
+  margin-top: var(--space-3-5);
 }
 .tour-actions button {
-  font-size: 12.5px;
+  font-size: var(--text-sm);
 }
 .tour-chapters {
   display: flex;
-  gap: 6px;
-  margin-bottom: 8px;
-  font-size: 11.5px;
+  gap: var(--space-1-5);
+  margin-bottom: var(--space-2);
+  font-size: var(--text-xs);
 }
 .tour-chapters span {
-  padding: 2px 8px;
-  border-radius: 999px;
+  padding: var(--space-0-5) var(--space-2);
+  border-radius: var(--radius-pill);
   border: 1px solid var(--line);
   color: var(--muted);
 }
@@ -238,13 +238,13 @@
   color: var(--text);
 }
 .tour-card p.tour-tip {
-  margin-top: 10px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  margin-top: var(--space-2-5);
+  padding: var(--space-2) var(--space-2-5);
+  border-radius: var(--radius-md);
   background: var(--surface);
   border: 1px solid var(--line);
   color: var(--text);
-  font-size: 12.5px;
+  font-size: var(--text-sm);
 }
 .tour-card p.tour-checkpoint {
   border-color: var(--accent);
@@ -255,7 +255,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 .tour-dots i.done {
   background: var(--accent-ink);
@@ -264,40 +264,40 @@
 .pilot-note,
 .wizard-ack {
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  padding: var(--space-2-5) var(--space-3);
   text-align: left;
   line-height: 1.6;
 }
 .wizard-ack {
   max-width: 520px;
-  margin: 12px auto 0;
+  margin: var(--space-3) auto 0;
 }
 /* Usage terms on the last setup step and in the first-send dialog. */
 .terms {
   text-align: left;
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px 14px;
-  margin: 12px 0 4px;
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-3-5);
+  margin: var(--space-3) 0 var(--space-1);
   background: var(--surface);
 }
 .terms .terms-title {
-  margin: 0 0 6px;
-  font-size: 14px;
+  margin: 0 0 var(--space-1-5);
+  font-size: var(--text-base);
   font-weight: 700;
 }
 .terms li + li {
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 .terms-accept {
   display: flex;
-  padding-top: 8px;
+  padding-top: var(--space-2);
   border-top: 1px solid var(--line);
-  gap: 8px;
+  gap: var(--space-2);
   align-items: flex-start;
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 .terms .terms-accept {
@@ -306,7 +306,7 @@
 .terms-accept input {
   width: auto;
   flex: none;
-  margin: 2px 0 0;
+  margin: var(--space-0-5) 0 0;
 }
 /* Setup wizard: the terms acknowledgement sits in the fixed footer next to the buttons. */
 .wizard-actions .terms-accept {
@@ -328,7 +328,7 @@
 .tour-dots {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .tour-dots i {
   border-radius: 50%;
@@ -337,12 +337,12 @@
   height: 6px;
 }
 .tour-dots i.active {
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: var(--accent);
   width: 14px;
 }
 .tour-dots i.chapter-start {
-  margin-left: 6px;
+  margin-left: var(--space-1-5);
 }
 /* UX/UI review fixes, part 3: first-run setup and Settings. */
 /* Setup: the picker's heading is the step title, without a frame around it. */
@@ -353,7 +353,7 @@
   background: transparent;
 }
 .wizard .ai-connect-step > h1 {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
 }
 /* Organisation functions, administrator fields and the developer pilot stay in Settings, out of the first run. */
 .wizard .ai-organization-capabilities,
@@ -369,11 +369,11 @@
 .terms ul {
   max-height: 160px;
   overflow: auto;
-  margin: 0 0 10px;
-  padding-left: 18px;
-  font-size: 13px;
+  margin: 0 0 var(--space-2-5);
+  padding-left: var(--space-4);
+  font-size: var(--text-sm);
   line-height: 1.55;
-  padding-bottom: 20px;
+  padding-bottom: var(--space-5);
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
   mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
 }

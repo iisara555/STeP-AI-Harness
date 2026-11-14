@@ -18,6 +18,8 @@ Colour follows the STeP CI digital palette in `skills/common/step-brand/referenc
 
 `desktop/src/style.css` only imports, in order: `theme.css` (tokens), `workbench.css`, then one file per area in `desktop/src/styles/` (base, motion, shell, sidebar, chat, work, draft, skills, receipt, settings, onboarding, dialogs). Mini apps keep their own file next to the component. Put a rule in its area's file beside the rules it relates to; never append an override to the end of a file, and never redeclare a selector that already has a block in that file.
 
+Sizes come from the scales in `theme.css`: `--text-xs` to `--text-3xl` for type (12px is the floor for anything staff read; Thai needs the room), `--space-*` on a 4px grid with half steps for padding, margin and gap, and `--radius-xs` to `--radius-pill` for corners. Write a raw value only for hairlines (1px) and layout maths (`calc`, `clamp`, viewport units).
+
 ## Tone: calm and Notion-like
 
 Ink on paper: warm off-white surfaces, STeP Dark text, hairlines instead of boxes, quiet hover fills (`--hover`), and generous whitespace. Yellow stays reserved for primary actions and active markers.

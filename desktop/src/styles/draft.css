@@ -10,7 +10,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .artifact-pane {
   width: var(--artifact-width);
@@ -24,25 +24,25 @@
   margin: auto;
   text-align: center;
   color: var(--muted);
-  padding: 35px;
+  padding: var(--space-8);
 }
 .artifact-empty > svg {
   opacity: 0.5;
 }
 .artifact-empty h2 {
   color: var(--text);
-  font-size: 17px;
+  font-size: var(--text-md);
   font-weight: 500;
-  margin-top: 20px;
+  margin-top: var(--space-5);
 }
 .artifact-empty p {
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .draft-title {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 14px 12px 10px 20px;
+  gap: var(--space-1);
+  padding: var(--space-3-5) var(--space-3) var(--space-2-5) var(--space-5);
 }
 .draft-title > div {
   flex: 1;
@@ -60,16 +60,16 @@
   white-space: nowrap;
 }
 .draft-title small {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 .document-export-font {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 24px;
-  font-size: 12px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-6);
+  font-size: var(--text-xs);
 }
 .document-export-font select {
   min-width: 0;
@@ -77,18 +77,18 @@
   flex: 1;
 }
 .document-export-info {
-  padding: 0 24px 8px;
-  font-size: 12px;
+  padding: 0 var(--space-6) var(--space-2);
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 .document-export-info p {
-  margin: 4px 0;
+  margin: var(--space-1) 0;
 }
 .editor-scroll {
   flex: 1;
   min-height: 120px;
   overflow: auto;
-  padding: 0 24px;
+  padding: 0 var(--space-6);
 }
 /* The draft is the part that grows: every other block keeps its own height instead of being squeezed, the editor
    takes what is left, and on a short window the whole panel scrolls so nothing becomes unreachable. */
@@ -98,7 +98,7 @@
 .output-document > .editor-scroll {
   flex: 1 1 0;
   min-height: 160px;
-  padding-top: 8px;
+  padding-top: var(--space-2);
 }
 /* Before the first draft is accepted, the AI proposal is what there is to read, so it gets the room. */
 .output-document > .proposal.primary {
@@ -117,7 +117,7 @@
   outline: none;
   min-height: 220px;
   line-height: 1.9;
-  font-size: 14px;
+  font-size: var(--text-base);
   caret-color: var(--accent-ink);
   word-break: normal;
   overflow-wrap: break-word;
@@ -125,14 +125,14 @@
   hyphens: none;
 }
 .draft-editor p {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   min-height: 1.7em;
 }
 .artifact-footer {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
+  gap: var(--space-2);
+  padding: var(--space-2-5) var(--space-4);
   border-top: 1px solid var(--line);
 }
 .artifact-footer .icon[aria-expanded='true'] {
@@ -145,7 +145,7 @@
   border-top: 1px solid var(--line);
 }
 .export-settings .document-presentation {
-  margin: 10px 16px 4px;
+  margin: var(--space-2-5) var(--space-4) var(--space-1);
 }
 .export-status {
   max-height: 140px;
@@ -153,14 +153,14 @@
 }
 .artifact-footer select {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--text-xs);
   /* Wide enough for the whole format name ("Word (.docx)"); it gives way before the buttons do. */
   field-sizing: content;
   min-width: 0;
   max-width: 150px;
 }
 .artifact-footer button {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 @media (max-width: 1150px) {
   .artifact-pane {
@@ -181,24 +181,24 @@
 .format-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  padding: 8px 14px;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3-5);
   border-bottom: 1px solid var(--border);
 }
 .format-toolbar button {
-  font-size: 12px;
-  padding: 5px 8px;
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
 }
 .draft-tools .document-structure-controls,
 .draft-tools .format-toolbar {
   display: contents;
 }
 .draft-tools .format-toolbar button {
-  padding: 3px 8px;
+  padding: var(--space-0-5) var(--space-2);
 }
 .draft-tools .format-toolbar select {
-  font-size: 12px;
-  padding-block: 3px;
+  font-size: var(--text-xs);
+  padding-block: var(--space-0-5);
 }
 .draft-editor ul,
 .draft-editor ol {
@@ -207,13 +207,13 @@
 .draft-editor table {
   border-collapse: collapse;
   width: 100%;
-  margin: 4px 0 12px;
+  margin: var(--space-1) 0 var(--space-3);
   table-layout: fixed;
 }
 .draft-editor th,
 .draft-editor td {
   border: 1px solid var(--line-strong);
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   vertical-align: top;
   text-align: left;
   overflow-wrap: anywhere;
@@ -241,8 +241,8 @@
   position: sticky;
   bottom: 0;
   z-index: 3;
-  margin: 24px -16px 0;
-  padding: 12px 16px;
+  margin: var(--space-6) -16px 0;
+  padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--line);
   background: var(--surface);
   box-shadow: 0 -8px 16px -12px var(--shadow-card);
@@ -256,7 +256,7 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px 12px;
+  gap: var(--space-2) var(--space-3);
 }
 .document-draft-reason,
 .receipt-pick-reason {
@@ -271,8 +271,8 @@
   flex-wrap: wrap;
   align-items: center;
   border-bottom: 1px solid var(--border);
-  gap: 2px 6px;
-  padding: 5px 10px;
+  gap: var(--space-0-5) var(--space-1-5);
+  padding: var(--space-1) var(--space-2-5);
 }
 .draft-tools button,
 .draft-tools label {
@@ -283,7 +283,7 @@
   display: inline-flex;
   align-items: center;
   gap: 1px;
-  padding-left: 6px;
+  padding-left: var(--space-1-5);
   border-left: 1px solid var(--line);
 }
 .draft-tools .format-toolbar .draft-tool {
@@ -293,7 +293,7 @@
   height: 28px;
   padding: 0;
   border-color: transparent;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
 }
@@ -311,12 +311,12 @@
 }
 .draft-tools .format-toolbar .draft-tool-kind select {
   max-width: 132px;
-  padding-block: 4px;
+  padding-block: var(--space-1);
 }
 .draft-tools .document-image-controls {
   display: flex;
   flex-basis: 100%;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 2px 0 0;
+  gap: var(--space-1-5);
+  padding: var(--space-0-5) 0 0;
 }
