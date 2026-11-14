@@ -2,10 +2,12 @@ import { Timer } from './icons';
 import { formatTokens } from './ui';
 import { locale, t } from './i18n';
 import type { AppView } from './use-workspace';
+import { useElapsed } from './live-run';
 
 /** Whether the AI can work, how long the run has taken and how many tokens the task used. */
 export function StatusBar({ v }: { v: AppView }) {
-  const { connection, elapsed, runFailed, session } = v;
+  const { connection, runFailed, running, session, startedAt } = v;
+  const elapsed = useElapsed(running, startedAt);
   return (
     <>
       <footer className="statusbar" aria-label={t('สถานะ')}>

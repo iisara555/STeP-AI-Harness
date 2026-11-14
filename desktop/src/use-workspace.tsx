@@ -18,10 +18,11 @@ import { type DocumentAttachmentRole, type DocumentToolId, documentRequest, docu
 import type { FeedbackAsk, ReportAsk } from './feedback';
 import type { InvitationPresentation } from './invitation';
 import type { OpenedArtifact } from './artifacts-list';
-import { type PaletteItem, type Toast, formatElapsed, matchesSession } from './ui';
+import { type PaletteItem, type Toast, matchesSession } from './ui';
 import { RELEASE_NOTES, type ReleaseNote, compareVersions, unseenNotes } from './whats-new';
 import { TASK_SEEN_KEY, initialSeen, needsYouCount, taskAlert } from './task-alerts';
-import { type ToolRequest, type ToolTab, visibleStream } from './tools';
+import { type ToolRequest, type ToolTab } from './tools';
+import { setHeartbeatAt, setReasoning, setStream, tickLiveClock } from './live-run';
 import type { VaultPrompt } from './vault-prompt';
 import { commandForKey, commandPalette } from './commands';
 import { documentText, plainDocument as toDoc } from './draft';
@@ -82,11 +83,9 @@ export function useWorkspace() {
     setSettingsState(visible);
   };
   const [filter, setFilter] = useState<'all' | 'artifacts'>('all');
-  const [stream, setStream] = useState(''),
-    [progress, setProgress] = useState(''),
+  const [progress, setProgress] = useState(''),
     [running, setRunning] = useState(false);
-  const [heartbeatAt, setHeartbeatAt] = useState(0),
-    [activityAt, setActivityAt] = useState(0);
+  const [activityAt, setActivityAt] = useState(0);
   const [error, setError] = useState(''),
     [files, setFiles] = useState<Attachment[]>([]),
     [inspecting, setInspecting] = useState<Attachment | null>(null),
@@ -181,9 +180,7 @@ export function useWorkspace() {
   const notify = useCallback((text: string, tone: Toast['tone'] = 'info', action?: Toast['action']) => {
     if (text) setToasts(list => [...list.filter(t => t.text !== text), { id: ++toastId.current, text, tone, action }].slice(-4));
   }, []);
-  const [reasoning, setReasoning] = useState(''),
-    [startedAt, setStartedAt] = useState(0),
-    [now, setNow] = useState(Date.now());
+  const [startedAt, setStartedAt] = useState(0);
   const [feedbackAsk, setFeedbackAsk] = useState<FeedbackAsk | null>(null);
   const [reportAsk, setReportAsk] = useState<ReportAsk | null>(null);
   const [chatMenu, setChatMenu] = useState(false);
@@ -392,10 +389,6 @@ export function useWorkspace() {
     window.addEventListener('step-workspace', update);
     return () => window.removeEventListener('step-workspace', update);
   }, [refresh]);
-  useEffect(() => {
-    // An empty task shows the welcome from its greeting; only a conversation follows its latest message.
-    if (session?.messages.length || stream || running) conversationEnd.current?.scrollIntoView({ block: 'end' });
-  }, [session?.messages.length, stream, running]);
   const initializeWorkspace = useCallback(async () => {
     setStartupPending(true);
     setError('');
@@ -545,7 +538,7 @@ export function useWorkspace() {
   );
   useEffect(() => {
     if (!running) return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
+    const timer = setInterval(() => tickLiveClock(), 1000);
     return () => clearInterval(timer);
   }, [running]);
   useEffect(() => {
@@ -1112,7 +1105,7 @@ export function useWorkspace() {
       setQuery(current => (current === submittedQuery ? '' : current));
       setPendingSource(current => (current === sourceText ? '' : current));
       setFiles(current => current.filter(file => !attachments.includes(file.id)));
-      setNow(Date.now());
+      tickLiveClock();
       const updated = await refresh();
       const state = updated?.sessions.find(s => s.id === runId)?.status;
       if (state && !['queued', 'running'].includes(state)) {
@@ -1423,15 +1416,7 @@ export function useWorkspace() {
     'theme-light': () => void setTheme('light'),
     'theme-dark': () => void setTheme('dark'),
   };
-  // A refresh can land after main saved the answer but before it reports the run finished; the saved message
-  // then already shows the streamed text, so the live copy is hidden instead of appearing twice.
   const lastMessage = session?.messages.at(-1);
-  const liveText = visibleStream(stream);
-  const streamSaved =
-    Boolean(liveText) &&
-    lastMessage?.role === 'assistant' &&
-    Boolean(lastMessage.text.trim()) &&
-    liveText.endsWith(lastMessage.text.trim());
   const commandRef = useRef(commands);
   commandRef.current = commands;
   // Read the bindings during the key press rather than re-registering the listener: a shortcut pressed right
@@ -1496,7 +1481,6 @@ export function useWorkspace() {
         })),
       )
     : [];
-  const elapsed = running && startedAt ? formatElapsed(now - startedAt) : '';
   // The newest answer keeps its copy and feedback buttons in view; older ones show them on hover, as in other AI apps.
   const lastAnswer = session ? session.messages.map(m => m.role).lastIndexOf('assistant') : -1;
   // Links in answers open in the browser panel beside the chat, never in this window.
@@ -1557,14 +1541,10 @@ export function useWorkspace() {
     setSettings,
     filter,
     setFilter,
-    stream,
-    setStream,
     progress,
     setProgress,
     running,
     setRunning,
-    heartbeatAt,
-    setHeartbeatAt,
     activityAt,
     setActivityAt,
     error,
@@ -1650,12 +1630,8 @@ export function useWorkspace() {
     runningIds,
     dismiss,
     notify,
-    reasoning,
-    setReasoning,
     startedAt,
     setStartedAt,
-    now,
-    setNow,
     feedbackAsk,
     setFeedbackAsk,
     reportAsk,
@@ -1812,13 +1788,10 @@ export function useWorkspace() {
     showWizard,
     commands,
     lastMessage,
-    liveText,
-    streamSaved,
     commandRef,
     keybindingsRef,
     recentSessions,
     paletteItems,
-    elapsed,
     lastAnswer,
     openLink,
   };
