@@ -163,7 +163,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-1-5);
-  padding: var(--space-2-5) var(--space-3);
+  padding: var(--pad-card);
   border-bottom: 1px solid var(--line);
   font-size: var(--text-xs);
   color: var(--muted);
@@ -214,10 +214,10 @@
 }
 .tool-actions button {
   font-size: var(--text-xs);
-  padding: var(--space-1-5) var(--space-2);
+  padding: var(--pad-control);
 }
 .tool-error {
-  padding: var(--space-2-5) var(--space-3-5);
+  padding: var(--pad-card);
   background: var(--selected);
   color: var(--danger);
   display: flex;
@@ -256,7 +256,7 @@
   font-size: var(--text-xs);
   border-radius: var(--radius-xs);
   background: var(--surface);
-  padding: var(--space-0-5) var(--space-1-5);
+  padding: var(--pad-tag);
 }
 .task-state.running {
   color: var(--accent-ink);
@@ -291,7 +291,7 @@
 .file-list button {
   justify-content: flex-start;
   border: 0;
-  padding: var(--space-1-5) var(--space-2);
+  padding: var(--pad-control);
   font-size: var(--text-xs);
 }
 .file-list button:hover {
@@ -332,7 +332,7 @@
 .file-preview-body {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  padding: var(--space-2-5) var(--space-3);
+  padding: var(--pad-card);
   max-height: 70vh;
   overflow: auto;
   font-size: var(--text-sm);
@@ -475,7 +475,7 @@
   font-size: var(--text-xs);
   border: 0;
   color: var(--muted);
-  padding: var(--space-1) var(--space-1-5);
+  padding: var(--pad-control-sm);
 }
 .message-actions .icon {
   padding: var(--space-1);
@@ -560,7 +560,7 @@
 }
 .answer-check.warn {
   margin: var(--space-2-5) 0 0;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--pad-control);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-md);
   background: var(--accent-soft);
@@ -585,7 +585,7 @@
   font-variant-numeric: tabular-nums;
 }
 .web-route {
-  padding: var(--space-1-5) var(--space-2-5);
+  padding: var(--pad-control);
   color: var(--muted);
 }
 .web-sources {
@@ -695,13 +695,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1-5);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--pad-control-sm);
   flex-shrink: 0;
   border-bottom: 1px solid var(--line);
 }
 .browser-preview-size button {
   font-size: var(--text-xs);
-  padding: var(--space-0-5) var(--space-2);
+  padding: var(--pad-tag);
 }
 .browser-preview-size button[aria-pressed='true'] {
   background: var(--selected);
@@ -714,7 +714,7 @@
   height: 100%;
 }
 .browser-footer {
-  padding: var(--space-1-5) var(--space-2);
+  padding: var(--pad-control);
   border-top: 1px solid var(--line);
   flex-shrink: 0;
 }
@@ -729,7 +729,7 @@
 .browser-footer .browser-open input,
 .browser-footer .browser-open button {
   font-size: var(--text-xs);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--pad-control-sm);
 }
 /* Uneven overlapping pencil loops, continually retraced at different speeds. */
 .thinking-scribble {

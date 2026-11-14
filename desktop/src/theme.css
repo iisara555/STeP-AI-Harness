@@ -157,6 +157,11 @@
   --space-12: 48px;
   --space-14: 56px;
   --space-16: 64px;
+  /* Padding tiers: every tag, small control, control and card uses one of these four. */
+  --pad-tag: var(--space-0-5) var(--space-2);
+  --pad-control-sm: var(--space-1) var(--space-2-5);
+  --pad-control: var(--space-2) var(--space-3);
+  --pad-card: var(--space-3) var(--space-3-5);
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;

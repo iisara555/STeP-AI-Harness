@@ -20,7 +20,7 @@ button {
   gap: var(--space-1-5);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--pad-control);
   background: var(--accent);
   color: var(--on-accent);
   cursor: pointer;
@@ -42,7 +42,7 @@ textarea {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-2-5);
+  padding: var(--pad-control);
   min-width: 0;
 }
 /* The native option list does not inherit a transparent select's background: on Windows dark mode it opened white
@@ -240,7 +240,7 @@ button.danger {
 .beta {
   margin-left: auto;
   font-size: var(--text-xs);
-  padding: 1px var(--space-1-5);
+  padding: var(--pad-tag);
   border-radius: var(--radius-xs);
   background: var(--accent-soft);
   color: var(--accent-ink);

@@ -132,7 +132,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2-5) var(--space-4);
+  padding: var(--pad-card);
   border-top: 1px solid var(--line);
 }
 .artifact-footer .icon[aria-expanded='true'] {
@@ -182,19 +182,19 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
-  padding: var(--space-2) var(--space-3-5);
+  padding: var(--pad-control);
   border-bottom: 1px solid var(--border);
 }
 .format-toolbar button {
   font-size: var(--text-xs);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--pad-control-sm);
 }
 .draft-tools .document-structure-controls,
 .draft-tools .format-toolbar {
   display: contents;
 }
 .draft-tools .format-toolbar button {
-  padding: var(--space-0-5) var(--space-2);
+  padding: var(--pad-tag);
 }
 .draft-tools .format-toolbar select {
   font-size: var(--text-xs);
@@ -242,7 +242,7 @@
   bottom: 0;
   z-index: 3;
   margin: var(--space-6) calc(var(--space-4) * -1) 0;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--pad-card);
   border-top: 1px solid var(--line);
   background: var(--surface);
   box-shadow: 0 -8px 16px -12px var(--shadow-card);
@@ -272,7 +272,7 @@
   align-items: center;
   border-bottom: 1px solid var(--border);
   gap: var(--space-0-5) var(--space-1-5);
-  padding: var(--space-1) var(--space-2-5);
+  padding: var(--pad-control-sm);
 }
 .draft-tools button,
 .draft-tools label {

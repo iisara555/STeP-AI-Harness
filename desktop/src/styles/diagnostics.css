@@ -42,7 +42,7 @@
 .diagnostic-stat {
   display: grid;
   gap: var(--space-0-5);
-  padding: var(--space-3) var(--space-3-5);
+  padding: var(--pad-card);
   border-left-width: 4px;
 }
 .diagnostic-stat span,
@@ -130,7 +130,7 @@
   color: var(--diff-added);
 }
 .diagnostic-problem {
-  padding: var(--space-2-5) var(--space-3);
+  padding: var(--pad-card);
   border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--line));
   border-radius: var(--radius-md);
   color: var(--danger);
@@ -169,7 +169,7 @@
   padding-right: var(--space-0-5);
 }
 .diagnostic-entry {
-  padding: var(--space-2-5) var(--space-3);
+  padding: var(--pad-card);
   border: 1px solid var(--line);
   border-left-width: 3px;
   border-radius: var(--radius-md);
