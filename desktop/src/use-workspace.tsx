@@ -11,7 +11,7 @@ import type {
   WorkMode,
   Workflow,
 } from './types';
-import { CLAUDE_CODE, connectionName, effortLabel, errorText, explainError, statusText } from './messages';
+import { CLAUDE_CODE, connectionName, errorText, explainError, statusText } from './messages';
 import type { DocumentAttachment, DocumentForm } from './document-tool-app';
 import { type DocumentAttachmentRole, type DocumentToolId, documentRequest, documentTool } from './document-tools';
 import type { FeedbackAsk, ReportAsk } from './feedback';
@@ -25,9 +25,10 @@ import { setHeartbeatAt, setReasoning, setStream, tickLiveClock } from './live-r
 import type { VaultPrompt } from './vault-prompt';
 import { commandForKey, commandPalette } from './commands';
 import { documentText, plainDocument as toDoc } from './draft';
-import { imageModels, isImageRequest } from './image-routing';
 import { saveSidebarChoice } from './sidebar-rail';
 import { resolvePresentation } from './document-presentation';
+import { useAiChoice } from './ai-choice';
+import { composerCommand, typedSkill } from './composer-command';
 import { useExportOptions, useInfoDialogs, useToasts, useWindowLayout } from './workspace-parts';
 import { setLanguage, t, teamName } from './i18n';
 import { skillsForStaff } from './skill-display';
@@ -37,6 +38,29 @@ import type { Editor } from '@tiptap/react';
 import { createDraftEditor } from './draft-editor';
 import { useUpdate } from './update';
 import type { ReactElement } from 'react';
+
+/** How one request runs; anything left out uses the composer's current choice. */
+export type RunOptions = {
+  attachments?: string[];
+  /** The token from the consent dialog when the same request is sent again after the person agreed. */
+  consent?: string;
+  skill?: string;
+  allowIds?: string[];
+  sourceText?: string;
+  mode?: WorkMode;
+  imageModel?: string;
+  retry?: boolean;
+  coordinator?: boolean;
+  documentTool?: DocumentToolId;
+  attachmentRole?: DocumentAttachmentRole;
+  /** A run that must not pick up the composer's workflow or create images on its own. */
+  isolated?: boolean;
+  /** A side question answered beside the task without changing it. */
+  aside?: boolean;
+  autoContinue?: boolean;
+  documentVariant?: string;
+  invitation?: InvitationPresentation;
+};
 
 /** Everything the main window keeps: state, effects, derived values and the actions the screens call. */
 const NO_PALETTE_ITEMS: PaletteItem[] = [];
@@ -103,8 +127,7 @@ export function useWorkspace() {
     [viewingArtifact, setViewingArtifact] = useState<OpenedArtifact | null>(null);
   const { sidebarChoice, left, setLeft, right, setRight, history, setHistory, roomy, setRoomy, leftPeek, setLeftPeek, width, setWidth } =
     useWindowLayout();
-  const [connectionId, setConnectionId] = useState(''),
-    [dirty, setDirty] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const {
     format,
     setFormat,
@@ -206,17 +229,11 @@ export function useWorkspace() {
     draft: string;
     proposal: string;
   } | null>(null);
-  const [pendingModel, setPendingModel] = useState<string | undefined>(undefined),
-    [pendingEffort, setPendingEffort] = useState(''),
-    modelsRequested = useRef(new Set<string>());
   // A native workflow (plan, execute, requirements, diagnose) chosen in the composer; '' is plain chat.
   const [workflow, setWorkflow] = useState<Workflow | ''>('');
   const workflowRef = useRef<Workflow | ''>('');
   workflowRef.current = workflow;
-  const [workMode, setWorkMode] = useState<WorkMode>('chat'),
-    [imageModel, setImageModel] = useState('');
-  const [availableImages, setAvailableImages] = useState<string[]>([]),
-    [imageCatalogError, setImageCatalogError] = useState('');
+  const [workMode, setWorkMode] = useState<WorkMode>('chat');
   const [advancedTools, setAdvancedTools] = useState(false);
   const [toolTab, setToolTab] = useState<ToolTab>('output'),
     [toolRequest, setToolRequest] = useState<ToolRequest>();
@@ -356,6 +373,42 @@ export function useWorkspace() {
       return data as Snapshot;
     }
   }, [api]);
+  const {
+    connection,
+    connectionId,
+    setConnectionId,
+    pendingModel,
+    setPendingModel,
+    pendingEffort,
+    setPendingEffort,
+    modelsRequested,
+    imageModel,
+    setImageModel,
+    availableImages,
+    setAvailableImages,
+    imageCatalogError,
+    setImageCatalogError,
+    wantsImage,
+    currentModel,
+    defaultModel,
+    modelInfo,
+    activeModel,
+    currentEffort,
+    modelName,
+    effortName,
+    aiLabel,
+    aiSummary,
+    aiPicker,
+    setAiPicker,
+    quotaRefreshing,
+    setQuotaRefreshing,
+    activeUsageAccount,
+    refreshActiveQuota,
+    aiPickerRef,
+    chooseConnection,
+    readyConnection,
+    chooseModel,
+  } = useAiChoice({ api, snapshot, session, running, workMode, query, refresh });
   const [startupPending, setStartupPending] = useState(true);
   const announcedReady = useRef(false);
   useEffect(() => {
@@ -683,22 +736,7 @@ export function useWorkspace() {
     }
     await save();
     const s = await api!.call('create', { connectionId, project: t('ตรวจใบเสร็จ AFP') });
-    await start(
-      s.id,
-      text,
-      [],
-      undefined,
-      undefined,
-      allowIds,
-      sourceText,
-      'chat',
-      imageModel,
-      undefined,
-      false,
-      undefined,
-      undefined,
-      true,
-    );
+    await start(s.id, text, { allowIds, sourceText, mode: 'chat', imageModel, coordinator: false, isolated: true });
     setView('chat');
     setWorkMode('chat');
     setSelected(s.id);
@@ -716,6 +754,21 @@ export function useWorkspace() {
     const file = await api!.call('attach', { id: task.id, documentTool: tool });
     return file ? { sessionId: task.id, file } : null;
   }
+  // Drafting or revising a document shows that task with its draft open, on the AI chosen in the composer.
+  async function openDraftTask(id: string) {
+    await save();
+    await api!.call('sessionConnection', { id, connectionId });
+    setWorkMode('draft');
+    setView('chat');
+    setSettings(false);
+    setSelected(id);
+    setQuery('');
+    discardFiles();
+    setPendingSource('');
+    openPanel();
+    setToolTab('output');
+    await refresh();
+  }
   async function draftDocument(tool: DocumentToolId, form: DocumentForm) {
     if (form.source && !form.source.file.usable) throw new Error('ATTACHMENT_NOT_APPROVED');
     if (form.source && form.sourceRole !== 'template' && form.source.file.sourceUsable === false)
@@ -723,60 +776,29 @@ export function useWorkspace() {
     const request = documentRequest(tool, form.values, form.variant, form.source ? form.sourceRole : 'source', form.recipients);
     const id = form.source?.sessionId || (await createDocumentTask(tool))?.id;
     if (!id) return;
-    await save();
-    await api!.call('sessionConnection', { id, connectionId });
-    setWorkMode('draft');
-    setView('chat');
-    setSettings(false);
-    setSelected(id);
-    setQuery('');
-    discardFiles();
-    setPendingSource('');
-    openPanel();
-    setToolTab('output');
-    await refresh();
-    await start(
-      id,
-      request.text,
-      form.source ? [form.source.file.id] : [],
-      undefined,
-      undefined,
-      undefined,
-      request.sourceText,
-      'draft',
-      undefined,
-      undefined,
-      false,
-      tool,
-      form.source ? form.sourceRole : 'source',
-      false,
-      false,
-      false,
-      form.variant,
-      tool === 'letter' && form.variant === 'invitation'
-        ? {
-            rsvpUrl: form.values.rsvpUrl || '',
-            venueUrl: form.values.venueUrl || '',
-            ...(form.recipients?.length ? { recipients: form.recipients } : {}),
-          }
-        : undefined,
-    );
+    await openDraftTask(id);
+    await start(id, request.text, {
+      attachments: form.source ? [form.source.file.id] : [],
+      sourceText: request.sourceText,
+      mode: 'draft',
+      coordinator: false,
+      documentTool: tool,
+      attachmentRole: form.source ? form.sourceRole : 'source',
+      documentVariant: form.variant,
+      invitation:
+        tool === 'letter' && form.variant === 'invitation'
+          ? {
+              rsvpUrl: form.values.rsvpUrl || '',
+              venueUrl: form.values.venueUrl || '',
+              ...(form.recipients?.length ? { recipients: form.recipients } : {}),
+            }
+          : undefined,
+    });
   }
   async function reviseDocument(id: string, changes: string) {
     if (!snapshot?.sessions.find(s => s.id === id)?.documentTool) throw new Error('INVALID_DOCUMENT_TOOL');
-    await save();
-    await api!.call('sessionConnection', { id, connectionId });
-    setWorkMode('draft');
-    setView('chat');
-    setSettings(false);
-    setSelected(id);
-    setQuery('');
-    discardFiles();
-    setPendingSource('');
-    openPanel();
-    setToolTab('output');
-    await refresh();
-    await start(id, t('แก้ร่างเดิมตามคำขอนี้: {0}', changes), [], undefined, undefined, undefined, '', 'draft');
+    await openDraftTask(id);
+    await start(id, t('แก้ร่างเดิมตามคำขอนี้: {0}', changes), { sourceText: '', mode: 'draft' });
   }
   async function create() {
     if (guardSettingsExit(create)) return;
@@ -855,29 +877,19 @@ export function useWorkspace() {
     }
   }
   async function send() {
-    if (/^\/btw\s+/i.test(query.trim())) {
-      await askAside(query.trim().replace(/^\/btw\s+/i, ''));
+    const command = composerCommand(query);
+    if (command?.kind === 'aside') {
+      await askAside(command.text);
       return;
     }
-    if (query.trim() === '/vault' || query.trim() === '/google') {
+    if (command) {
       setQuery('');
-      openSettings('credentials');
-      return;
-    }
-    if (/^\/(learn|learning)(?:\s|$)/.test(query.trim())) {
-      setLearningText(query.trim().replace(/^\/(learn|learning)\s*/, ''));
-      setLearningOpen(true);
-      setQuery('');
-      return;
-    }
-    if (query.trim() === '/memory') {
-      setQuery('');
-      setMemoryOpen(true);
-      return;
-    }
-    if (query.trim() === '/usage') {
-      setQuery('');
-      setUsageOpen(true);
+      if (command.kind === 'credentials') openSettings('credentials');
+      else if (command.kind === 'learning') {
+        setLearningText(command.text);
+        setLearningOpen(true);
+      } else if (command.kind === 'memory') setMemoryOpen(true);
+      else setUsageOpen(true);
       return;
     }
     const request = query.trim() ? query : files.some(file => file.imagePreview) ? t('ช่วยดูไฟล์ที่แนบ') : '';
@@ -907,9 +919,8 @@ export function useWorkspace() {
     setSubmitting(true);
     try {
       if (!selected && connectionId === CLAUDE_CODE) {
-        const typed = /^\/([a-z0-9-]+)\s+([\s\S]+)$/.exec(request.trim()),
-          typedSkill = typed && (skills || []).some(s => s.name === typed[1]) ? typed[1] : '';
-        setHandoffAsk({ text: typedSkill ? typed![2] : request, skill: forcedSkill || typedSkill || undefined });
+        const typed = typedSkill(request, name => (skills || []).some(s => s.name === name));
+        setHandoffAsk({ text: typed.text, skill: forcedSkill || typed.skill || undefined });
         return;
       }
       await save();
@@ -919,17 +930,12 @@ export function useWorkspace() {
         if (!s) return;
         id = s.id;
       }
-      const typed = /^\/([a-z0-9-]+)\s+([\s\S]+)$/.exec(request.trim());
-      const typedSkill = typed && routedSkills.some(s => s.name === typed[1]) ? typed[1] : '';
-      await start(
-        id,
-        typedSkill ? typed![2] : request,
-        files.map(f => f.id),
-        undefined,
-        forcedSkill || typedSkill || undefined,
-        undefined,
-        pendingSource || undefined,
-      );
+      const typed = typedSkill(request, name => routedSkills.some(s => s.name === name));
+      await start(id, typed.text, {
+        attachments: files.map(f => f.id),
+        skill: forcedSkill || typed.skill || undefined,
+        sourceText: pendingSource || undefined,
+      });
     } finally {
       sendInFlight.current = false;
       setSubmitting(false);
@@ -938,45 +944,28 @@ export function useWorkspace() {
   async function askAside(text = query) {
     if (files.length || pendingSource) throw new Error('SIDE_QUESTION_SOURCE_NOT_ALLOWED');
     if (!session || !text.trim() || session.sideQuestions?.some(q => q.status === 'running')) return;
-    await start(
-      session.id,
-      text,
-      [],
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      'chat',
-      '',
-      false,
-      false,
-      undefined,
-      undefined,
-      true,
-      true,
-    );
+    await start(session.id, text, { mode: 'chat', imageModel: '', retry: false, coordinator: false, isolated: true, aside: true });
   }
   // The host answers with a consent request when this send needs one; the dialog replays the same payload with its token.
-  async function start(
-    id: string,
-    text: string,
-    attachments: string[],
-    consent?: string,
-    skill?: string,
-    allowIds?: string[],
-    sourceText?: string,
-    mode: WorkMode = workMode,
-    selectedImageModel: string = imageModel,
-    retry?: boolean,
-    coordinator: boolean = coordinated && mode === 'draft' && !skill && !retry,
-    documentTool?: DocumentToolId,
-    attachmentRole?: DocumentAttachmentRole,
-    isolated: boolean = false,
-    aside: boolean = false,
-    autoContinue: boolean = false,
-    documentVariant?: string,
-    invitation?: InvitationPresentation,
-  ) {
+  async function start(id: string, text: string, options: RunOptions = {}) {
+    const {
+      attachments = [],
+      consent,
+      skill,
+      allowIds,
+      sourceText,
+      mode = workMode,
+      imageModel: selectedImageModel = imageModel,
+      retry,
+      documentTool,
+      attachmentRole,
+      isolated = false,
+      aside = false,
+      autoContinue = false,
+      documentVariant,
+      invitation,
+    } = options;
+    const coordinator = options.coordinator ?? (coordinated && mode === 'draft' && !skill && !retry);
     const submittedQuery = query;
     const attempt = {},
       previousAttempt = runningIds.current.get(id);
@@ -1104,119 +1093,7 @@ export function useWorkspace() {
       }
     }
   }
-  const connection = snapshot?.connections.find(c => c.id === (session?.connectionId || connectionId));
-  const wantsImage = workMode === 'image' || (workMode === 'chat' && isImageRequest(query));
-  useEffect(() => {
-    let live = true;
-    setImageCatalogError('');
-    setAvailableImages([]);
-    setImageModel('');
-    if (api && wantsImage && connection?.ready && imageModels(connection).length)
-      void api
-        .call('imageModels', { id: connection.id })
-        .then(ids => {
-          if (live) setAvailableImages(ids);
-        })
-        .catch(e => {
-          if (live) setImageCatalogError(explainError(e));
-        });
-    return () => {
-      live = false;
-    };
-  }, [api, wantsImage, connection?.id, connection?.ready]);
-  const currentModel = session ? (session.model ?? connection?.model ?? '') : (pendingModel ?? connection?.model ?? '');
-  const defaultModel = connection?.models?.find(m => m.isDefault);
-  const modelInfo = (id: string) => connection?.models?.find(m => m.id === id) || (!id ? defaultModel : undefined);
-  const activeModel = modelInfo(currentModel),
-    currentEffort = session ? session.effort || '' : pendingEffort;
-  const modelName = activeModel?.label || currentModel,
-    effortName = currentEffort ? effortLabel[currentEffort] || currentEffort : '';
-  const aiLabel = connection
-    ? [modelName || connectionName(connection), effortName].filter(Boolean).join(' · ')
-    : !session && connectionId === CLAUDE_CODE
-      ? t('Claude · Pro/Max (เปิดใน Claude Code)')
-      : t('เลือก AI');
-  const aiSummary = connection
-    ? [
-        connectionName(connection),
-        modelName || t('ค่าเริ่มต้นของบริการ'),
-        effortName ||
-          (activeModel?.efforts?.length ? (snapshot?.policy?.features.autoEffort ? t('อัตโนมัติตามขนาดงาน') : t('ค่าเริ่มต้น')) : ''),
-        connection.ready ? '' : t('ยังไม่พร้อม'),
-      ]
-        .filter(Boolean)
-        .join(' · ')
-    : aiLabel;
-  const [aiPicker, setAiPicker] = useState(false);
-  const [quotaRefreshing, setQuotaRefreshing] = useState(false);
-  const activeUsageAccount = connection ? snapshot?.usage?.accounts?.find(a => a.connectionId === connection.id) : undefined;
-  async function refreshActiveQuota() {
-    if (!api || !connection || quotaRefreshing) return;
-    setQuotaRefreshing(true);
-    try {
-      await api.call('providerUsage', { id: connection.id });
-      await refresh();
-    } finally {
-      setQuotaRefreshing(false);
-    }
-  }
-  const aiPickerRef = useRef<HTMLDivElement>(null);
-  // The AI picker closes on a click outside it or Escape, like a menu.
-  useEffect(() => {
-    if (!aiPicker) return;
-    const close = (event: PointerEvent | KeyboardEvent) => {
-      if (event instanceof KeyboardEvent ? event.key === 'Escape' : !aiPickerRef.current?.contains(event.target as Node))
-        setAiPicker(false);
-    };
-    document.addEventListener('pointerdown', close);
-    document.addEventListener('keydown', close);
-    return () => {
-      document.removeEventListener('pointerdown', close);
-      document.removeEventListener('keydown', close);
-    };
-  }, [aiPicker]);
-  useEffect(() => {
-    if (running) setAiPicker(false);
-  }, [running]);
-  // Load the provider's model list once for ready connections that have never fetched it.
-  useEffect(() => {
-    if (!api || !connection?.ready || connection.modelsAt || modelsRequested.current.has(connection.id)) return;
-    modelsRequested.current.add(connection.id);
-    void api
-      .call('models', { id: connection.id })
-      .then(() => refresh())
-      .catch(() => {});
-  }, [api, connection?.id, connection?.ready, connection?.modelsAt, refresh]);
-  // A task can move to another AI between runs, for example when its connection was removed or stopped working.
-  async function chooseConnection(id: string) {
-    if (!session) {
-      setConnectionId(id);
-      return;
-    }
-    if (!id || id === CLAUDE_CODE) return;
-    await api!.call('sessionConnection', { id: session.id, connectionId: id });
-    await refresh();
-  }
-  const readyConnection = snapshot?.connections.find(c => c.ready);
   const lastRequest = [...(session?.messages || [])].reverse().find(m => m.role === 'user')?.text || '';
-  // When connections change (added, tested, removed), a new task uses a ready one without being asked.
-  useEffect(() => {
-    if (!snapshot || connectionId === CLAUDE_CODE) return;
-    const current = snapshot.connections.find(c => c.id === connectionId);
-    const next = current?.ready ? current : readyConnection || current || snapshot.connections[0];
-    if ((next?.id || '') !== connectionId) setConnectionId(next?.id || '');
-  }, [snapshot?.connections, connectionId]);
-  async function chooseModel(model: string, effort?: string) {
-    // Keep the chosen effort only if the new model supports it.
-    const next = effort ?? (modelInfo(model)?.efforts?.some(e => e.id === currentEffort) ? currentEffort : '');
-    if (!session) {
-      setPendingModel(model);
-      setPendingEffort(next);
-      return;
-    }
-    await api!.call('model', { id: session.id, model, effort: next });
-    await refresh();
-  }
   // Staff see Thai Skill names, and developer Skills only in Dev mode (skill-display.ts).
   const developerMode = Boolean(snapshot?.features?.developmentMode && snapshot?.settings.developmentMode);
   const staffSkills = useMemo(() => skills && skillsForStaff(skills, developerMode), [skills, developerMode]);

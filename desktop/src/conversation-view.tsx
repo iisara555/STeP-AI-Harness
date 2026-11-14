@@ -556,18 +556,7 @@ export function ConversationView({ v }: { v: AppView }) {
                       return;
                     }
                     void action(() =>
-                      start(
-                        session.id,
-                        lastRequest,
-                        [],
-                        undefined,
-                        session.skill,
-                        undefined,
-                        undefined,
-                        session.mode || workMode,
-                        imageModel,
-                        true,
-                      ),
+                      start(session.id, lastRequest, { skill: session.skill, mode: session.mode || workMode, imageModel, retry: true }),
                     );
                   }}
                 >
@@ -686,24 +675,13 @@ export function ConversationView({ v }: { v: AppView }) {
                       setWorkflow('execute');
                       workflowRef.current = 'execute';
                       setWorkMode('chat');
-                      await start(
-                        session.id,
-                        t('ลงมือทำตามแผน'),
-                        [],
-                        undefined,
-                        undefined,
-                        undefined,
-                        undefined,
-                        'chat',
-                        '',
-                        false,
-                        false,
-                        undefined,
-                        undefined,
-                        false,
-                        false,
-                        continuous,
-                      );
+                      await start(session.id, t('ลงมือทำตามแผน'), {
+                        mode: 'chat',
+                        imageModel: '',
+                        retry: false,
+                        coordinator: false,
+                        autoContinue: continuous,
+                      });
                     })
                   }
                   onComment={async (number, comment) => {
@@ -725,15 +703,7 @@ export function ConversationView({ v }: { v: AppView }) {
                       await start(
                         session.id,
                         revisionRequest(session.workPlan!, t('ปรับแผนตามความเห็นของฉันในแต่ละข้อ'), number => t('ข้อ {0}', number)),
-                        [],
-                        undefined,
-                        undefined,
-                        undefined,
-                        undefined,
-                        'chat',
-                        '',
-                        false,
-                        false,
+                        { mode: 'chat', imageModel: '', retry: false, coordinator: false },
                       );
                     })
                   }

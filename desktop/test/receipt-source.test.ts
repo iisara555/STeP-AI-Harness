@@ -48,9 +48,9 @@ test('receipt UI passes structured source through workspace send and consent rep
   const main = await readFile(new URL('../electron/main.ts', import.meta.url), 'utf8');
 
   assert.match(receipt, /receiptSourceText\(draft\(\)\)/);
-  assert.match(app, /start\(\s*s\.id,\s*text,\s*\[\],\s*undefined,\s*undefined,\s*allowIds,\s*sourceText,\s*'chat'/);
+  assert.match(app, /start\(\s*s\.id,\s*text,\s*\{\s*allowIds,\s*sourceText,\s*mode:\s*'chat'/);
   assert.match(app, /allowIdentifiers: allowIds,\s*sourceText/);
-  assert.match(app, /ask\.allowIds,\s*ask\.sourceText/);
+  assert.match(app, /allowIds:\s*ask\.allowIds,\s*sourceText:\s*ask\.sourceText/);
   assert.match(app, /handoff=\{receiptHandoff\}/);
   assert.match(main, /combinedSource/);
   assert.match(main, /service\.run\(\s*runId,\s*text,\s*combinedSource,\s*true/);

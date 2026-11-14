@@ -186,26 +186,24 @@ export function AppDialogs({ v }: { v: AppView }) {
             const ask = consentAsk;
             setConsentAsk(null);
             await action(() =>
-              start(
-                ask.sessionId,
-                ask.text,
-                ask.attachments,
-                ask.token,
-                ask.skill,
-                ask.allowIds,
-                ask.sourceText,
-                ask.mode,
-                ask.imageModel,
-                ask.retry,
-                ask.coordinator,
-                ask.documentTool,
-                ask.attachmentRole,
-                ask.isolated,
-                ask.aside,
-                ask.autoContinue,
-                ask.documentVariant,
-                ask.invitation,
-              ),
+              start(ask.sessionId, ask.text, {
+                attachments: ask.attachments,
+                consent: ask.token,
+                skill: ask.skill,
+                allowIds: ask.allowIds,
+                sourceText: ask.sourceText,
+                mode: ask.mode,
+                imageModel: ask.imageModel,
+                retry: ask.retry,
+                coordinator: ask.coordinator,
+                documentTool: ask.documentTool,
+                attachmentRole: ask.attachmentRole,
+                isolated: ask.isolated,
+                aside: ask.aside,
+                autoContinue: ask.autoContinue,
+                documentVariant: ask.documentVariant,
+                invitation: ask.invitation,
+              }),
             );
           }}
         >
