@@ -169,8 +169,6 @@ export const en: Record<string, string> = {
   'Gemini API key': 'Gemini API key',
 
   '{0} API key': '{0} API key',
-  'Skill รวมวิธีทำงานแต่ละแบบ เลือกรายการที่พร้อมใช้ หรือพิมพ์งานตามปกติได้':
-    'Skills (Skills) provide procedures for different tasks. Choose an available Skill or describe your task as usual.',
 
   'อ่านเนื้อหาหน้าเว็บนี้ไม่ได้ ลองส่งลิงก์อื่นหรือแนบไฟล์ต้นฉบับ':
     'This page could not be read. Try another link or attach the source file.',
@@ -587,12 +585,9 @@ export const en: Record<string, string> = {
   'OCR ในเครื่องพร้อมใช้': 'Local OCR is ready',
   'ตรวจ/แก้ข้อมูลที่อ่านได้': 'Review or correct the extracted values',
   'เพิ่มวัตถุประสงค์หรือแก้หมวด (ถ้าจำเป็น)': 'Add a purpose or change the category (if needed)',
-  'ดูต้นฉบับ แก้ข้อมูลที่อ่านผิด แล้วตรวจยืนยันก่อนส่งต่อ': 'Check the original, correct the reading, then confirm before sharing',
   'ยังไม่มีภาพตัวอย่าง โปรดเปิดต้นฉบับในเครื่องเทียบก่อนยืนยัน':
     'No image preview is available. Check the original on this device before confirming.',
   'เลือกรูปหรือ PDF ของใบเสร็จ เพื่อเริ่มตรวจข้อมูล': 'Choose a receipt image or PDF to start reviewing',
-  'OCR เป็นส่วนเสริมที่ดาวน์โหลดเมื่อคุณติดตั้ง อ่านไฟล์ในเครื่องโดยไม่ส่งไปบริการ OCR ภายนอก':
-    'OCR is an optional download. It reads files locally without sending them to an external OCR service.',
   'AI อ่านภาพได้เมื่อคุณยินยอม ส่งต่อในแชตจะส่งเฉพาะข้อความที่ตรวจแล้ว':
     'AI can read the image with your consent. Chat handoff sends only reviewed text.',
   'เลือกใบเสร็จด้านซ้าย แล้วระบบจะแสดงจุดที่ต้องตรวจ': 'Choose a receipt on the left to see what needs checking',
@@ -611,7 +606,6 @@ export const en: Record<string, string> = {
   'ตรวจว่ามีลายเซ็น ไม่ได้ยืนยันตัวผู้ลงชื่อ องค์ประกอบครบยังไม่เท่ากับอนุมัติเบิก':
     'Checks signature presence, not signer identity. Complete elements do not constitute reimbursement approval.',
 
-  'เลือก AI ที่มีบัญชี เชื่อมต่อ แล้วทดสอบใช้งาน': 'Choose your AI, connect, then test it',
   'Claude Pro/Max สำหรับทดสอบ': 'Claude Pro/Max for testing',
   'ต้องให้ IT อนุญาต': 'IT permission required',
   'เปิด Dev mode': 'Switch to Dev mode',
@@ -751,8 +745,6 @@ export const en: Record<string, string> = {
   'ค่าใช้จ่าย (USD)': 'Cost (USD)',
   'AI พยายามใช้เครื่องมือที่การเชื่อมต่อนี้ไม่อนุญาต จึงยังตอบไม่สำเร็จ ลองเปลี่ยนโมเดลหรือแนบแหล่งข้อมูลให้สรุป':
     'The AI attempted a tool this connection does not allow, so the reply could not finish. Try another model or attach a source to summarize.',
-  'ใช้บัญชี Google ที่มีสิทธิ์ เช่น สิทธินักศึกษา ระบบจะติดตั้งตัวเชื่อมและทดสอบให้':
-    'Use an eligible Google account, such as student access. We install the connector and test it for you.',
   'ใช้สิทธิ์และโควตาของบัญชี Google ที่ลงชื่อ ไม่ต้องใช้ API key':
     'Uses the signed-in Google account’s entitlement and quota; no API key is needed.',
 
@@ -937,10 +929,6 @@ export const en: Record<string, string> = {
   'ที่มา:': 'Source:',
   กล่องบทเรียน: 'Learning inbox',
   'บทเรียน: {0}': 'Lesson: {0}',
-  'บทเรียนใช้เฉพาะพื้นที่งานและทีมปัจจุบันบนเครื่องนี้ หลังคุณยืนยันจึงเลือกใช้กับงานถัดไป และอาจส่งให้ AI พร้อมบริบทงาน':
-    'Lessons apply only to the current workspace and team on this device. After approval, they may be selected for later tasks and sent to the AI with task context.',
-  'ตรวจรูปแบบและข้อมูลส่วนบุคคลก่อนบันทึก ยังไม่ได้ทดสอบว่าคำตอบดีขึ้น บทเรียนไม่เปลี่ยนสิทธิ์เครื่องมือหรือนโยบายองค์กร':
-    'Format and privacy checks run before saving. Better answer quality has not been evaluated. Lessons do not change tool permissions or organization policy.',
   เสนอบทเรียน: 'Propose a lesson',
   ชื่อบทเรียน: 'Lesson name',
   ประเภทบทเรียน: 'Lesson type',
@@ -1285,7 +1273,6 @@ export const en: Record<string, string> = {
   'ระดับการคิด:': 'Reasoning:',
   หยุดงาน: 'Stop task',
   'ส่งคำขอ (Enter) · ขึ้นบรรทัดใหม่ (Shift+Enter)': 'Send (Enter) · New line (Shift+Enter)',
-  'ตรวจข้อมูลและร่างก่อนนำไปใช้ · ประวัติเก็บในเครื่อง': 'Review facts and drafts before use · history stays on this computer',
   'เชื่อมต่อ AI เพื่อเริ่มทำงาน': 'Connect AI to get started',
   สถานะ: 'Status',
   พร้อมทำงาน: 'Ready',
@@ -1487,8 +1474,6 @@ export const en: Record<string, string> = {
   ทีม: 'Team',
   ใช้ได้ทุกทีม: 'All teams',
   ความจำและรูปแบบคำตอบ: 'Memory and answer style',
-  'บันทึกเฉพาะข้อมูลที่ไม่มีข้อมูลส่วนบุคคลหรือความลับ ความจำที่ยืนยันแล้วอาจถูกเลือกส่งให้ AI ในงานถัดไป คุณจะได้ตรวจบริบทก่อนส่ง':
-    "Only save information without personal or confidential details. Confirmed memories may be sent to the AI in later tasks, and you'll review the context before sending",
   รูปแบบคำตอบ: 'Answer style',
   ใช้รูปแบบมาตรฐาน: 'Use the standard style',
   เพิ่มความจำ: 'Add memory',
@@ -1520,8 +1505,6 @@ export const en: Record<string, string> = {
   บันทึกเมื่อ: 'Saved',
   แก้ไขล่าสุด: 'Last edited',
   'หลักฐาน:': 'Evidence:',
-  'ควรบันทึกข้อเท็จจริงที่ไม่ค่อยเปลี่ยน เช่น รูปแบบคำตอบที่ชอบ ข้อตกลงของงาน หรือสิ่งที่เคยแก้ให้ ไม่ต้องบันทึกความคืบหน้างาน เลขงาน หรือบันทึกระบบ ขั้นตอนการทำงานควรเป็นบทเรียนแบบ "วิธีทำงาน" หรือ Skill':
-    'Save facts that rarely change, such as the answer style you like, work conventions or things you corrected before. Skip task progress, job numbers and system logs. Working steps belong in a "procedure" lesson or a Skill',
   ' · หมดอายุแล้ว': ' · Expired',
   แก้ไข: 'Edit',
   ลบความจำ: 'Delete memory',
@@ -1946,7 +1929,6 @@ export const en: Record<string, string> = {
   'เปลี่ยนภาษาของเมนูและปุ่มทั้งหมด ผู้ช่วยยังตอบตามภาษาที่คุณพิมพ์':
     'Changes the language of all menus and buttons. The assistant still replies in the language you write in',
   ธีม: 'Theme',
-  'เลือกให้ตามระบบปฏิบัติการ หรือกำหนดเอง': 'Follow your operating system or choose one',
   ตามระบบ: 'System',
   สว่าง: 'Light',
   มืด: 'Dark',
@@ -2177,7 +2159,6 @@ export const en: Record<string, string> = {
     'That covers the basics. Start your first task now, or see the work tools in {0} more steps',
   ดูเครื่องมือต่อ: 'See the tools',
   เริ่มทัวร์: 'Start the tour',
-  'ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน': 'New here? Take the tour',
   'ทัวร์แนะนำ {0} จาก {1}: {2}': 'Tour {0} of {1}: {2}',
   ข้ามทัวร์: 'Skip tour',
   เริ่มใช้งาน: 'Get started',
@@ -2672,7 +2653,6 @@ export const en: Record<string, string> = {
   'จากบรรทัด “{0}”': 'From line “{0}”',
   'ใช้ “{0}”': 'Use “{0}”',
   '· ตรวจแล้ว {0}/{1} ช่อง': '· {0}/{1} fields checked',
-  'ทางลัด: กด {0} แล้วพิมพ์ “ธีม” เพื่อสลับได้จากทุกหน้า': 'Shortcut: press {0} and type “theme” to switch from any page',
   '{0} ({1}) จะถูกลบพร้อมข้อมูลลงชื่อหรือ API key ที่เก็บในเครื่องนี้ บัญชีของคุณที่ผู้ให้บริการไม่ได้รับผลกระทบ':
     "{0} ({1}) will be deleted along with the sign-in data or API key stored on this computer. Your account with the provider isn't affected",
   'แสดงช่วง {0}–{1} จาก {2} ตัวอักษร ไฟล์ยาวเปิดอ่านเป็นช่วงได้': 'Showing characters {0}–{1} of {2}; long files can be read in parts',
@@ -3081,7 +3061,6 @@ export const en: Record<string, string> = {
   รายการข้อตกลง: 'Terms list',
   'บัญชี AI ของคุณ': 'Your AI accounts',
   'พร้อมใช้งาน {0} จาก {1} บัญชี': '{0} of {1} accounts ready',
-  'ตอนเชื่อมต่อ ระบบทดสอบข้อความสั้น ๆ 1 ครั้งด้วยโควตาของบัญชีนั้น': "Connecting sends one short test message using that account's quota",
   'สำหรับนักพัฒนา · ต้องให้ IT อนุญาต': 'For developers · needs IT permission',
   ลงชื่อใหม่: 'Sign in again',
   'ผู้ดูแลปิดบริการนี้ ผลทดสอบเดิมใช้ไม่ได้จนกว่าจะเปิดอีกครั้ง · ลงชื่อออกหรือลบบัญชีได้':
@@ -3361,4 +3340,28 @@ export const en: Record<string, string> = {
   ...workAssistantEn,
   ...googleChangesEn,
   ...afpEvidenceEn,
+  'Google Workspace เชื่อมแยกในแท็บบัญชีและบริการ': 'Google Workspace connects separately under Accounts and services',
+  'แนบได้ 1 ไฟล์ หรือวางข้อมูลด้านล่าง · ส่งให้ AI ตามการตั้งค่าความเป็นส่วนตัว':
+    'Attach 1 file or paste below · sent to the AI under your privacy settings',
+  'การตรวจ อนุมัติ และลงนาม เป็นของเจ้าของเรื่อง': 'Checking, approval and signing stay with the document owner',
+  'ใช้ในพื้นที่งานและทีมนี้หลังคุณยืนยัน · ไม่เปลี่ยนสิทธิ์หรือนโยบายองค์กร':
+    'Used in this workspace and team once you confirm · never changes permissions or policy',
+  'ข้อเท็จจริงที่ไม่ค่อยเปลี่ยน ไม่มีข้อมูลส่วนบุคคลหรือความลับ · ตรวจได้ก่อนส่งให้ AI':
+    'Lasting facts, no personal data or secrets · you review before anything goes to the AI',
+  'เล่าวิธีทำงานให้ AI เขียนเป็น Skill หรือเลือกไฟล์ .md ที่มีอยู่ · ตรวจความปลอดภัยก่อนใช้':
+    'Describe how you work and let the AI write a Skill, or choose an existing .md file · safety-checked before use',
+  'OCR เป็นส่วนเสริมที่ดาวน์โหลดเมื่อคุณติดตั้ง · อ่านไฟล์ในเครื่อง ไม่ส่งออกภายนอก':
+    'OCR is an add-on downloaded when you install it · it reads files on this computer and sends nothing out',
+  'ทำงานขณะแอปเปิด · รอบที่พลาดจะทำต่อเมื่อเปิดแอปภายใน 12 ชั่วโมง':
+    'Runs while the app is open · a missed run catches up if the app opens within 12 hours',
+  ยังไม่มีงานตั้งเวลา: 'No scheduled tasks yet',
+  'เฉพาะเมนูและปุ่ม · ภาษาในแชตตั้งในแท็บทั่วไป': 'Menus and buttons only · chat language is under General',
+  รีเฟรชได้นาทีละครั้งต่อบัญชี: 'Refresh once a minute per account',
+  'ประมาณการจาก token ที่ผู้ให้บริการรายงาน · ไม่รวมรูปภาพ ค่าสมาชิก และการใช้นอกแอป':
+    'Estimated from tokens the provider reports · excludes images, subscriptions and use outside the app',
+  'ตัวเชื่อม Antigravity ในเครื่อง (ทดลอง)': 'Local Antigravity bridge (trial)',
+  'เปลี่ยนเฉพาะวิธีพูด · ข้อเท็จจริงและมาตรฐานเอกสารคงเดิม': 'Changes only how it talks · facts and document standards stay the same',
+  'ตัวอย่าง: เตือนให้ตรวจเอกสารก่อนส่ง': 'Example: a reminder to check a document before sending',
+  'พักหรือกลับมาใช้ทุกบัญชีในแอปนี้ · ไม่ออกจากระบบ AI และไม่เปลี่ยนสิทธิ์ที่ Google':
+    'Pause or resume every account in this app · does not sign out of AI or change Google permissions',
 };

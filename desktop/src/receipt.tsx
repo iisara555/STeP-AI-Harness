@@ -721,11 +721,12 @@ export function ReceiptApp({
   );
   const requiredFilled = review.requiredKeys.every((k: string) => String(values[k] || '').trim());
   const requiredChecked = allChecked && requiredFilled;
+  // Until OCR is ready, installing it is the page's one primary action; choosing a receipt waits beside it, quiet.
+  const needsOcr = Boolean(status && !ready && !status.geminiApi && !status.cloud);
   return (
     <div className="receipt-app">
       <header className="receipt-heading">
         <h1 className="sr-only">{t('ตรวจใบเสร็จ AFP')}</h1>
-        <p className="muted">{t('ดูต้นฉบับ แก้ข้อมูลที่อ่านผิด แล้วตรวจยืนยันก่อนส่งต่อ')}</p>
         <nav className="receipt-modes" aria-label={t('งานใบเสร็จและชุดเอกสาร')}>
           <button aria-pressed={receiptMode === 'review'} onClick={() => setReceiptMode('review')}>
             {t('ตรวจใบเสร็จ')}
@@ -828,7 +829,7 @@ export function ReceiptApp({
           )}
           {/* The step that has to come first comes first: until OCR is ready, installing it is the page's main button and
               choosing a receipt waits under it. */}
-          {status && !ready && !status.geminiApi && !status.cloud && (
+          {status && needsOcr && (
             <button
               className="receipt-ocr-install"
               disabled={Boolean(busy)}
@@ -862,7 +863,7 @@ export function ReceiptApp({
             </p>
           )}
           <button
-            className={canPick ? 'receipt-pick' : 'receipt-pick quiet'}
+            className={canPick && !needsOcr ? 'receipt-pick' : 'receipt-pick quiet'}
             disabled={!canPick || Boolean(busy)}
             aria-describedby={pickReason ? 'receipt-pick-reason' : undefined}
             onClick={() => void run('read', read)}
@@ -964,7 +965,7 @@ export function ReceiptApp({
             </button>
           </div>
           {status && !ready && !status.installed && !status.geminiApi && !status.cloud && (
-            <p className="small muted">{t('OCR เป็นส่วนเสริมที่ดาวน์โหลดเมื่อคุณติดตั้ง อ่านไฟล์ในเครื่องโดยไม่ส่งไปบริการ OCR ภายนอก')}</p>
+            <p className="small muted">{t('OCR เป็นส่วนเสริมที่ดาวน์โหลดเมื่อคุณติดตั้ง · อ่านไฟล์ในเครื่อง ไม่ส่งออกภายนอก')}</p>
           )}
           {status?.vision && <p className="small muted">{t('AI อ่านภาพได้เมื่อคุณยินยอม ส่งต่อในแชตจะส่งเฉพาะข้อความที่ตรวจแล้ว')}</p>}
           {!localOnly && status && !status.geminiApi && !status.cloud && !connections.some(isReceiptGeminiApi) && openAiSettings && (
@@ -990,10 +991,7 @@ export function ReceiptApp({
           <section className="receipt-review-section" aria-labelledby="receipt-fixes-title">
             <h2 id="receipt-fixes-title">{t('ต้องแก้หรือเติมข้อมูลก่อนใช้ประกอบการเบิก')}</h2>
             {!doc ? (
-              <>
-                <p className="muted">{t('เลือกใบเสร็จด้านซ้าย แล้วระบบจะแสดงจุดที่ต้องตรวจ')}</p>
-                <p className="small muted">{t('ผลตรวจช่วยเตรียมเอกสาร ไม่ใช่การอนุมัติเบิกจ่าย เก็บต้นฉบับและยืนยันเงื่อนไขกับ AFP')}</p>
-              </>
+              <p className="muted">{t('เลือกใบเสร็จด้านซ้าย แล้วระบบจะแสดงจุดที่ต้องตรวจ')}</p>
             ) : (
               <>
                 {assessment.status !== 'needs-correction' && (

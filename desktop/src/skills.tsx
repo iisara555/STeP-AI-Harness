@@ -87,19 +87,21 @@ export function SkillsHub({
             )}
           </div>
           <div className="skills-filters" role="tablist" aria-label={t('กรองตามสถานะ')}>
-            {filters.map(([id, label]) => (
-              <button
-                key={id}
-                role="tab"
-                aria-selected={filter === id}
-                className={filter === id ? 'active' : ''}
-                onClick={() => setFilter(id)}
-              >
-                {t(label)} <small>{count(id)}</small>
-              </button>
-            ))}
+            {/* An empty status has nothing to filter to, so its tab steps aside until a Skill lands there. */}
+            {filters
+              .filter(([id]) => id === 'all' || id === filter || count(id) > 0)
+              .map(([id, label]) => (
+                <button
+                  key={id}
+                  role="tab"
+                  aria-selected={filter === id}
+                  className={filter === id ? 'active' : ''}
+                  onClick={() => setFilter(id)}
+                >
+                  {t(label)} <small>{count(id)}</small>
+                </button>
+              ))}
           </div>
-          <p className="small muted">{t('Skill รวมวิธีทำงานแต่ละแบบ เลือกรายการที่พร้อมใช้ หรือพิมพ์งานตามปกติได้')}</p>
         </div>
         <SectionArt scene="skills" className="skills-illustration" />
       </div>

@@ -37,10 +37,8 @@ try {
     await page.screenshot({
       path: '/tmp/claude-0/-home-user-STeP-AI-Harness/5387f810-88dd-5491-a436-451cdb55f4d2/scratchpad/probe/' + where + '.png',
     });
-    await page
-      .getByText(/Probe ·/)
-      .first()
-      .click();
+    // Back to the task through its row in the task list (its team line reads "Probe").
+    await page.locator('aside.sidebar .session-open').filter({ hasText: 'Probe' }).first().click();
     await page.waitForTimeout(400);
   };
   // 1. Draft editor, unsaved text.

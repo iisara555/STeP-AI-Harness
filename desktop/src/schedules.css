@@ -9,16 +9,16 @@
   margin: 22px 0 10px;
 }
 .schedules-intro {
-  display: grid;
-  gap: 6px;
-  justify-items: start;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
 }
 .schedules-intro p {
   margin: 0;
   max-width: 68ch;
 }
 .schedules-intro > button {
-  margin-top: 8px;
   display: inline-flex;
   align-items: center;
   gap: 6px;

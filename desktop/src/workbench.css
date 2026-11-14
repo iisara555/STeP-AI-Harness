@@ -159,10 +159,6 @@
 .output-document[hidden] {
   display: none;
 }
-.output-document .artifact-header {
-  height: 53px;
-  flex-shrink: 0;
-}
 .tool-context {
   display: flex;
   align-items: center;
