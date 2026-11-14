@@ -1,19 +1,19 @@
 .document-tools {
   overflow: auto;
-  padding: 22px 28px;
+  padding: var(--space-5) var(--space-7);
 }
 .document-tool-picker {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 10px;
-  margin: 18px 0;
+  gap: var(--space-2-5);
+  margin: var(--space-4) 0;
 }
 .document-tool-picker button {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
-  padding: 16px;
+  gap: var(--space-2);
+  padding: var(--space-4);
   text-align: left;
   white-space: normal;
   height: 100%;
@@ -43,18 +43,18 @@
   margin: 0 auto;
 }
 .document-form h2 {
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 .document-form-options,
 .document-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: var(--space-4);
 }
 .document-form label {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: var(--space-1-5);
 }
 .document-form input,
 .document-form textarea,
@@ -69,13 +69,13 @@
 }
 .document-skill-info,
 .document-source {
-  margin: 18px 0;
+  margin: var(--space-4) 0;
 }
 .document-source-preview {
-  padding: 12px;
+  padding: var(--space-3);
   border: 1px solid var(--line);
-  border-radius: 8px;
-  margin-top: 12px;
+  border-radius: var(--radius-md);
+  margin-top: var(--space-3);
 }
 .document-source-preview > .icon {
   float: right;
@@ -87,32 +87,32 @@
   word-break: break-word;
 }
 .document-form footer {
-  margin: 24px 0;
+  margin: var(--space-6) 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 /* Invitation form: one section per part of the printed letter, top to bottom. */
 .invitation-sections {
   display: grid;
-  gap: 16px;
+  gap: var(--space-4);
 }
 .invitation-section {
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 14px 16px 16px;
+  border-radius: var(--radius-lg);
+  padding: var(--space-3-5) var(--space-4) var(--space-4);
 }
 .invitation-section > header {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 .invitation-section h3 {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 2px;
-  font-size: 1rem;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-0-5);
+  font-size: var(--text-md);
 }
 .invitation-section-number {
   display: inline-grid;
@@ -121,7 +121,7 @@
   height: 22px;
   border-radius: 50%;
   border: 1px solid var(--line);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
 }
 .invitation-section > header p {
   margin: 0;
@@ -130,7 +130,7 @@
   cursor: pointer;
 }
 .invitation-section-extra[open] > summary {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 /* The date sits under the sender block on the right, as on the letter. */
 .document-fields .invitation-date {
@@ -144,20 +144,20 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 20px;
+  gap: var(--space-2) var(--space-5);
   margin: 0;
   padding: 0;
   border: 0;
 }
 .invitation-recipient-mode legend {
   float: left;
-  margin-right: 4px;
+  margin-right: var(--space-1);
   padding: 0;
 }
 .document-form .invitation-recipient-mode label {
   flex-direction: row;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 .document-form .invitation-recipient-mode input {
   width: auto;
@@ -170,7 +170,7 @@
 }
 @media (max-width: 680px) {
   .document-tools {
-    padding: 16px;
+    padding: var(--space-4);
   }
   .document-form-options,
   .document-fields {
@@ -183,13 +183,13 @@
 
 .document-revision {
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 16px;
-  margin: 16px 0;
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin: var(--space-4) 0;
 }
 .document-revision label {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .document-revision textarea {
   width: 100%;

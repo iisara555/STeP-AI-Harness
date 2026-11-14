@@ -311,9 +311,7 @@ try {
         if (message.includes('SYNTHETIC-RENAMED')) {
           await open();
           await expect(page.locator('.document-tool-picker button[aria-pressed="true"]')).toContainText('ร่างโครงการ');
-          await expect(
-            form.getByText('เว้นช่องเนื้อหาได้ AI จะช่วยขึ้นร่างจากต้นเรื่อง ส่วนข้อเท็จจริงและเงื่อนไขที่ต้องมีหลักฐานจะคงรอยืนยัน'),
-          ).toBeVisible();
+          await expect(form.getByText('แนบไฟล์ Word จาก MIS เป็นแม่แบบได้', { exact: false })).toBeVisible();
           await form.getByLabel('ระบุเฉพาะส่วนที่ต้องการปรับ', { exact: true }).fill(message);
           await mkdir('release/qa/document-drafting', { recursive: true });
           await page.screenshot({ path: 'release/qa/document-drafting/revise-existing.png' });

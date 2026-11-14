@@ -26,9 +26,8 @@ try {
   await page.locator('.connection-banner').getByRole('button').click();
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(page.getByRole('heading', { name: 'เชื่อมต่อ AI', level: 1, exact: true })).toBeVisible();
-  const art = await page.locator('.settings-illustration').boundingBox();
-  // Keep the illustration visible but compact so it does not displace the primary settings.
-  assert.ok(art && art.width >= 64 && art.width <= 96 && art.height >= 64 && art.height <= 96, JSON.stringify(art));
+  // Settings opens straight on its controls: no header art (DESIGN.md, illustrations only in empty and waiting states).
+  await expect(page.locator('.settings-illustration')).toHaveCount(0);
   await expect(page.locator('.settings-tabs')).toBeInViewport({ ratio: 1 });
 
   await page.evaluate(async () => {

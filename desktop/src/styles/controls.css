@@ -1,0 +1,208 @@
+/* Shared controls: the composer AI pill, switches and checkboxes. */
+/* The AI pill holds account, model and reasoning level; its menu opens upward from the composer. */
+.ai-picker {
+  position: relative;
+  min-width: 0;
+}
+.ai-picker-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ai-picker-button .status-dot {
+  flex-shrink: 0;
+}
+.ai-picker-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 30;
+  display: grid;
+  gap: var(--space-2-5);
+  width: 280px;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.14);
+}
+.ai-picker-menu label {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.ai-picker-menu select {
+  width: 100%;
+  font-size: var(--text-sm);
+  color: var(--text);
+}
+.auth-code {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  font-size: var(--text-xs);
+  margin: var(--space-3-5) 0;
+}
+/* A switch or checkbox sits on the line of its own words, not above them. */
+.settings-content label.check-row {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2-5);
+  margin-bottom: var(--space-1-5);
+}
+.settings-content label.check-row input {
+  margin: 0;
+}
+.theme-options {
+  display: flex;
+  gap: var(--space-1-5);
+  margin: var(--space-1-5) 0 var(--space-6);
+}
+.theme-options button {
+  font-size: var(--text-xs);
+}
+.folder-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3-5);
+}
+.folder-row span {
+  font-size: var(--text-xs);
+  flex: 1;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+.folder-row button {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+}
+.connection-row {
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.connection-row p {
+  font-size: var(--text-xs);
+  margin: var(--space-0-5) 0;
+}
+.connection-row small {
+  font-weight: 400;
+  margin-left: var(--space-2);
+  color: var(--muted);
+}
+.connection-actions {
+  display: flex;
+  gap: var(--space-1-5);
+  flex-wrap: wrap;
+}
+.connection-actions button {
+  font-size: var(--text-xs);
+}
+.connection-form {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.ai-connect-step {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+.ai-connect-step h2,
+.ai-connect-step h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  margin: 0 0 var(--space-2);
+}
+.ai-step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: var(--text-sm);
+}
+.ai-connect-step summary {
+  cursor: pointer;
+  color: var(--accent-ink);
+  font-size: var(--text-sm);
+  padding: var(--space-2) 0;
+}
+.ai-connect-step summary:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 3px;
+}
+.ai-connect-empty {
+  margin: var(--space-3-5) 0 0;
+  padding: var(--space-3-5);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.ai-readiness .connection-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.connection-row .ai-connection-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin: var(--space-2) 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.ai-connection-status.ready {
+  color: var(--accent-ink);
+}
+.ai-account-management {
+  margin-top: var(--space-1);
+  border-top: 1px solid var(--line);
+}
+.ai-account-management[open] > div {
+  margin-top: var(--space-2);
+}
+.ai-account-management .connection-actions {
+  margin-top: var(--space-3-5);
+}
+.ai-primary-actions button {
+  font-size: var(--text-sm);
+}
+.ai-connect-step .provider-tiles {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+.ai-connect-flow .provider-tile-text {
+  display: none;
+}
+.ai-connect-flow .provider-tile {
+  min-height: 0;
+  padding: var(--space-2);
+}
+.provider-options summary {
+  cursor: pointer;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.provider-options[open] label {
+  margin-top: var(--space-2);
+}
+.connection-cost {
+  padding: var(--space-2-5);
+  border-left: 3px solid var(--accent-ink);
+  background: var(--paper);
+  font-size: var(--text-xs);
+}
+.connect-primary {
+  justify-self: start;
+  margin-top: var(--space-1-5);
+}

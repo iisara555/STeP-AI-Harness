@@ -45,8 +45,6 @@ export const settingsEn: Record<string, string> = {
     'Before sending, take another look at the content, recipients and attachments.',
   'การเปลี่ยนโฟลเดอร์มีผลทันที ส่วนค่าที่คุณแก้ในหน้านี้ต้องกดบันทึกการเปลี่ยนแปลง':
     'Folder changes take effect immediately. Save the other changes you make on this page.',
-  'เปลี่ยนเฉพาะเมนูและปุ่ม มีผลทันที ภาษาในแชตตั้งแยกได้ในทั่วไป':
-    'Changes menus and buttons immediately. Set chat language separately under General.',
   บันทึกการเปลี่ยนแปลง: 'Save changes',
   บันทึกการเปลี่ยนแปลงแล้ว: 'Changes saved',
   กลับไปทำงาน: 'Back to work',
@@ -64,8 +62,6 @@ export const settingsEn: Record<string, string> = {
   ใช้กับงานนี้: 'Use for this task',
   ใช้สำหรับงานใหม่: 'Use for new tasks',
   'ทดสอบสำเร็จล่าสุด: {0}': 'Last successful test: {0}',
-  'ผลทดสอบนี้ยืนยันการตอบข้อความเท่านั้น Google Workspace ต้องเชื่อมบัญชีและเลือกสิทธิ์ในบัญชีและบริการแยกต่างหาก':
-    'This test confirms text responses only. Connect Google Workspace and choose its permissions separately under Accounts and services.',
   อยู่ในโหมดทดลอง: 'Experimental mode enabled',
   โหมดปกติ: 'Normal mode',
   การใช้ข้อมูลบัญชีในแอป: 'Account data access in this app',

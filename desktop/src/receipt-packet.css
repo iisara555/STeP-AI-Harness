@@ -3,8 +3,8 @@
   flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  margin-top: 14px;
+  gap: var(--space-1-5);
+  margin-top: var(--space-3-5);
 }
 .receipt-modes button {
   flex: 0 1 auto;
@@ -17,57 +17,57 @@
   border-color: var(--accent-ink);
 }
 .packet-drafts {
-  padding-top: 24px;
+  padding-top: var(--space-6);
 }
 .packet-drafts > h2 {
-  margin: 0 0 16px;
-  font-size: 17px;
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-md);
 }
 .packet-form-modes {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 .packet-form-modes button {
   flex: 0 1 auto;
   width: auto;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .payment-voucher-form h3 {
-  font-size: 14px;
-  margin: 24px 0 8px;
+  font-size: var(--text-base);
+  margin: var(--space-6) 0 var(--space-2);
 }
 .payment-items-editor {
-  padding-inline-start: 22px;
+  padding-inline-start: var(--space-5);
 }
 .payment-items-editor > li {
-  padding: 12px 0;
+  padding: var(--space-3) 0;
   border-top: 1px solid var(--line);
 }
 .payment-money-fields {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
 }
 .payment-money-fields input {
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
 .payment-money-fields label {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .payment-signers {
-  padding-top: 14px;
+  padding-top: var(--space-3-5);
 }
 .payment-review-reasons {
-  font-size: 12px;
+  font-size: var(--text-xs);
   line-height: 1.8;
   color: var(--muted);
-  padding-inline-start: 20px;
+  padding-inline-start: var(--space-5);
 }
 .receipt-packets {
-  margin-top: 20px;
+  margin-top: var(--space-5);
 }
 .packet-toolbar,
 .packet-actions,
@@ -76,11 +76,11 @@
 .packet-export {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2-5);
   flex-wrap: wrap;
 }
 .packet-toolbar {
-  padding-bottom: 20px;
+  padding-bottom: var(--space-5);
   border-bottom: 1px solid var(--line);
 }
 .packet-picker {
@@ -91,9 +91,9 @@
 .receipt-packets label:not(.packet-check),
 .packet-picker {
   display: grid;
-  gap: 5px;
-  font-size: 13px;
-  margin-bottom: 12px;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-3);
 }
 .receipt-packets input:not([type='checkbox']),
 .receipt-packets select,
@@ -109,17 +109,17 @@
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 8px;
-  padding: 20px 0 4px;
+  gap: var(--space-2);
+  padding: var(--space-5) 0 var(--space-1);
 }
 .packet-steps button {
   display: inline-flex;
   flex: 0 1 auto;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
   width: auto;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .packet-steps button span {
   display: inline-grid;
@@ -128,7 +128,7 @@
   height: 22px;
   border: 1px solid currentColor;
   border-radius: 50%;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .packet-steps button[aria-current='step'] {
   background: var(--accent-soft);
@@ -149,18 +149,18 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 10px;
-  padding: 18px 0 24px;
+  gap: var(--space-2-5);
+  padding: var(--space-4) 0 var(--space-6);
 }
 .packet-step-actions > .primary:only-child {
   margin-inline-start: auto;
 }
 .packet-section {
-  padding: 24px 0;
+  padding: var(--space-6) 0;
 }
 .packet-section h2 {
-  margin: 0 0 14px;
-  font-size: 17px;
+  margin: 0 0 var(--space-3-5);
+  font-size: var(--text-md);
   line-height: 1.5;
 }
 .evidence-guidance {
@@ -169,31 +169,31 @@
 }
 .evidence-local {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .evidence-context {
-  margin: 14px 0 4px;
+  margin: var(--space-3-5) 0 var(--space-1);
   color: var(--accent-ink);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .evidence-selects {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--space-2-5);
 }
 .evidence-list {
-  margin: 18px 0 12px;
+  margin: var(--space-4) 0 var(--space-3);
   padding: 0;
   list-style: none;
   border-top: 1px solid var(--line);
 }
 .evidence-list li {
-  padding: 12px 0;
+  padding: var(--space-3) 0;
   border-bottom: 1px solid var(--line);
 }
 .evidence-list p {
-  margin: 5px 0 0;
-  font-size: 12px;
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
   line-height: 1.55;
 }
 .evidence-item-heading {
@@ -201,60 +201,60 @@
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 4px 12px;
-  font-size: 13px;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
 }
 .evidence-state {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .evidence-state-checked {
   color: var(--accent-ink);
 }
 .evidence-empty {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .evidence-extra,
 .evidence-ai {
-  margin-top: 18px;
+  margin-top: var(--space-4);
 }
 .evidence-extra summary,
 .evidence-options summary,
 .evidence-sources summary {
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 .evidence-options summary {
-  margin: 14px 0;
+  margin: var(--space-3-5) 0;
 }
 .evidence-sources ul {
-  padding-inline-start: 20px;
+  padding-inline-start: var(--space-5);
 }
 .evidence-sources li {
-  padding: 8px 0;
-  font-size: 13px;
+  padding: var(--space-2) 0;
+  font-size: var(--text-sm);
 }
 .evidence-sources p {
-  margin: 4px 0;
+  margin: var(--space-1) 0;
 }
 .evidence-extra-row {
-  padding: 12px 0;
+  padding: var(--space-3) 0;
   border-bottom: 1px solid var(--line);
 }
 .evidence-extra-row p {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
 }
 .evidence-ai-preview {
-  margin-top: 10px;
-  padding: 14px;
+  margin-top: var(--space-2-5);
+  padding: var(--space-3-5);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 .evidence-ai-preview p {
-  margin: 0 0 8px;
-  font-size: 13px;
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
 }
 .evidence-ai-preview pre {
   overflow: auto;
@@ -262,14 +262,14 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-xs);
   line-height: 1.6;
 }
 .evidence-file-hint {
-  margin: 8px 0 12px;
+  margin: var(--space-2) 0 var(--space-3);
 }
 .evidence-file-hint p {
-  margin: 0 0 3px;
+  margin: 0 0 var(--space-0-5);
 }
 @media (max-width: 520px) {
   .evidence-selects {
@@ -284,66 +284,66 @@
   margin-bottom: 0;
 }
 .packet-section-heading + p {
-  margin: 8px 0 18px;
+  margin: var(--space-2) 0 var(--space-4);
 }
 .packet-section-heading + .packet-actions {
-  margin-top: 14px;
+  margin-top: var(--space-3-5);
 }
 .packet-sources {
   list-style: decimal;
-  padding-inline-start: 22px;
-  margin-top: 18px;
+  padding-inline-start: var(--space-5);
+  margin-top: var(--space-4);
 }
 .packet-sources > li {
-  padding: 14px 0 18px 3px;
+  padding: var(--space-3-5) 0 var(--space-4) var(--space-0-5);
   border-top: 1px solid var(--line);
 }
 .packet-source-heading {
   justify-content: space-between;
   align-items: start;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 .packet-source-heading strong {
   overflow-wrap: anywhere;
   min-width: 0;
   flex: 1;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .packet-sources .packet-actions {
-  gap: 7px;
-  margin-bottom: 12px;
+  gap: var(--space-1-5);
+  margin-bottom: var(--space-3);
 }
 .packet-sources button {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .packet-check {
   display: flex;
   align-items: start;
-  gap: 8px;
-  font-size: 13px;
-  margin: 12px 0;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  margin: var(--space-3) 0;
   line-height: 1.7;
 }
 .packet-check input {
-  margin-top: 4px;
+  margin-top: var(--space-1);
   flex: 0 0 auto;
 }
 .packet-pages {
   max-height: 280px;
   overflow: auto;
-  margin-top: 12px;
-  padding-right: 6px;
+  margin-top: var(--space-3);
+  padding-right: var(--space-1-5);
 }
 .packet-page {
   display: grid;
   grid-template-columns: 82px minmax(100px, 1fr);
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 .packet-page label:not(.packet-check) {
   display: flex;
-  gap: 6px;
+  gap: var(--space-1-5);
   align-items: center;
   margin: 0;
 }
@@ -351,14 +351,14 @@
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  margin: 18px 0 8px;
+  margin: var(--space-4) 0 var(--space-2);
 }
 .packet-items th {
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 500;
   text-align: start;
   color: var(--muted);
-  padding-bottom: 6px;
+  padding-bottom: var(--space-1-5);
 }
 .packet-items th:nth-child(2) {
   width: 118px;
@@ -368,7 +368,7 @@
 }
 .packet-items td {
   vertical-align: top;
-  padding: 3px;
+  padding: var(--space-0-5);
 }
 .packet-items td:first-child {
   padding-left: 0;
@@ -379,24 +379,24 @@
 }
 .packet-total {
   display: grid;
-  gap: 4px;
-  margin: 18px 0;
-  padding: 14px 0;
+  gap: var(--space-1);
+  margin: var(--space-4) 0;
+  padding: var(--space-3-5) 0;
   border-block: 1px solid var(--line);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .packet-total strong {
-  font-size: 21px;
+  font-size: var(--text-lg);
   font-variant-numeric: tabular-nums;
 }
 .packet-export {
-  padding: 18px 0;
+  padding: var(--space-4) 0;
   border-top: 1px solid var(--line);
   justify-content: space-between;
   align-items: start;
 }
 .packet-export p {
-  margin: 6px 0 0;
+  margin: var(--space-1-5) 0 0;
   max-width: 70ch;
 }
 .packet-export > div {
@@ -404,22 +404,22 @@
 }
 .packet-empty {
   max-width: 60ch;
-  margin: 48px auto;
+  margin: var(--space-12) auto;
   text-align: center;
   line-height: 1.8;
 }
 .packet-empty h2 {
-  margin-top: 16px;
-  font-size: 20px;
+  margin-top: var(--space-4);
+  font-size: var(--text-lg);
 }
 .packet-source-empty {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--muted);
-  padding: 20px 0;
+  padding: var(--space-5) 0;
 }
 .packet-error {
   color: var(--danger);
-  padding: 12px 0;
+  padding: var(--space-3) 0;
 }
 .packet-error p {
   margin-top: 0;

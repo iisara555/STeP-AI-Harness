@@ -1,0 +1,454 @@
+.work-plan-hint {
+  margin: var(--space-2) 0 0;
+}
+.work-plan-actions .work-plan-run {
+  margin: 0;
+}
+.proposal {
+  margin: 0 var(--space-3-5) var(--space-2-5);
+  padding: var(--space-2-5) var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  max-height: 38vh;
+  overflow: auto;
+}
+.proposal p.small {
+  margin: var(--space-1) 0;
+}
+/* Title and decision stay in view while the proposal text scrolls inside the box. */
+.proposal-head {
+  position: sticky;
+  top: -10px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin: calc(var(--space-2-5) * -1) calc(var(--space-3) * -1) 0;
+  padding: var(--space-2-5) var(--space-3) var(--space-1-5);
+  background: var(--surface);
+  color: var(--accent-ink);
+}
+.proposal-head .proposal-actions {
+  margin: 0 0 0 auto;
+}
+.proposal-head .proposal-actions button {
+  padding: var(--space-1) var(--space-2-5);
+}
+.proposal strong {
+  font-size: var(--text-xs);
+}
+.proposal pre,
+.attachment-dialog pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  font-size: var(--text-sm);
+}
+.proposal summary {
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+.proposal-actions {
+  display: flex;
+  gap: var(--space-1-5);
+  margin-top: var(--space-3);
+}
+.proposal-actions button {
+  font-size: var(--text-xs);
+}
+.proposal-text {
+  font-size: var(--text-sm);
+  margin-top: var(--space-2);
+}
+.plan-card {
+  list-style: none;
+  margin: var(--space-3) 0 var(--space-1);
+  padding: var(--space-2-5) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  font-size: var(--text-xs);
+}
+.plan-card li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  color: var(--muted);
+}
+.plan-card li svg {
+  flex-shrink: 0;
+  margin-top: var(--space-0-5);
+}
+.plan-card li span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.plan-card li.running {
+  color: var(--text);
+}
+.plan-card li.running svg,
+.plan-card li.done svg {
+  color: var(--accent-ink);
+}
+.plan-card li.skipped {
+  color: var(--muted);
+  font-style: italic;
+}
+.approval-detail {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.approval-remember {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin-top: var(--space-4);
+}
+.approval-remember input {
+  width: auto;
+  flex: none;
+  margin-top: var(--space-1);
+}
+/* The approved plan of the native plan workflow (src/work-plan.tsx), ticked off while "execute" runs. */
+.work-plan {
+  margin: var(--space-3-5) 0;
+  padding: var(--space-3) var(--space-3-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  font-size: var(--text-sm);
+}
+.work-plan summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+.work-plan summary > svg {
+  color: var(--accent-ink);
+}
+.work-plan summary .muted {
+  margin-left: auto;
+  font-size: var(--text-xs);
+}
+.work-plan-goal {
+  margin: var(--space-2) 0 var(--space-1);
+  color: var(--muted);
+}
+.work-plan ol {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+.work-plan li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+.work-plan li > svg {
+  flex-shrink: 0;
+  margin-top: var(--space-0-5);
+  color: var(--muted);
+}
+.work-plan li.done > svg,
+.work-plan li.doing > svg {
+  color: var(--accent-ink);
+}
+.work-plan li.done span {
+  color: var(--muted);
+}
+.work-plan li.blocked > svg {
+  color: var(--danger);
+}
+.work-plan li small {
+  display: block;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  margin-top: var(--space-0-5);
+}
+/* Comments on plan tasks (src/work-plan.tsx): a small button on each task, the comment under its title. */
+.work-plan li > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.work-plan .work-plan-comment-button {
+  flex-shrink: 0;
+  padding: var(--space-0-5);
+  margin-top: -1px;
+}
+.work-plan li.done .work-plan-comment,
+.work-plan .work-plan-comment {
+  display: flex;
+  gap: var(--space-1);
+  align-items: flex-start;
+  color: var(--accent-ink);
+  font-size: var(--text-xs);
+}
+.work-plan-comment svg {
+  flex-shrink: 0;
+  margin-top: var(--space-0-5);
+}
+.work-plan-comment-box {
+  display: grid;
+  gap: var(--space-1-5);
+  margin-top: var(--space-1-5);
+}
+.work-plan-comment-box textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  font: inherit;
+  font-size: var(--text-sm);
+}
+.work-plan-comment-box div {
+  display: flex;
+  gap: var(--space-1-5);
+}
+.work-plan-comment-box button {
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2-5);
+}
+.work-plan-revise {
+  margin-bottom: var(--space-2);
+}
+.work-plan-revise p {
+  margin: var(--space-1-5) 0 0;
+}
+.work-plan-run {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
+}
+/* A finished task shrinks to one line so the tasks still to do come into view. */
+.work-plan li.done > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.work-plan li.done small:not(.work-plan-comment) {
+  display: inline;
+}
+.work-plan li.done small:not(.work-plan-comment)::before {
+  content: ' · ';
+}
+.tool-question {
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  padding: var(--space-3) var(--space-3-5);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+.tool-question header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  font-size: var(--text-xs);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.tool-question-text {
+  margin: var(--space-1-5) 0 var(--space-2-5);
+  font-size: var(--text-base);
+}
+.tool-question-options {
+  list-style: none;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.tool-question-options button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-2-5);
+  text-align: left;
+  padding: var(--space-2) var(--space-2-5);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  font-size: var(--text-sm);
+}
+.tool-question-options button:hover,
+.tool-question-options button:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.tool-question-options kbd {
+  flex-shrink: 0;
+  min-width: 20px;
+  text-align: center;
+  font-family: inherit;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 1px var(--space-1);
+}
+.tool-question-other {
+  display: flex;
+  gap: var(--space-1-5);
+}
+.tool-question-other input {
+  flex: 1;
+  min-width: 0;
+}
+/* UI audit 2026-10-17: A (chat, sidebar and draft panel) */
+/* H2: the consent dialog summarises what is sent; the raw data is folded away for administrators. */
+.approval-facts {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+  font-size: var(--text-sm);
+}
+.approval-facts div {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: var(--space-2);
+}
+.approval-facts dt {
+  color: var(--muted);
+}
+.approval-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.approval-preview {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+}
+.approval-preview blockquote {
+  margin: 0;
+  max-height: 140px;
+  overflow: auto;
+  padding: var(--space-2) var(--space-2-5);
+  border-left: 3px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: var(--text-sm);
+}
+.approval-technical summary {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.approval-technical pre {
+  max-height: 120px;
+  overflow: auto;
+  margin: var(--space-1-5) 0 0;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: var(--text-xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.approval-scope {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.approval-scope li + li {
+  margin-top: var(--space-0-5);
+}
+/* M13: the plan's steps inside the approval. */
+.approval-plan {
+  margin: var(--space-1) 0 var(--space-2);
+  padding: var(--space-2-5) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.approval-plan ol {
+  margin: var(--space-1-5) 0 0;
+  padding-left: var(--space-5);
+}
+.approval-plan li + li {
+  margin-top: var(--space-1);
+}
+.approval-plan p {
+  margin: var(--space-2) 0 0;
+}
+/* H3: the tool history gets its own line above the retry buttons. */
+.tool-observability {
+  display: block;
+  margin: 0 0 var(--space-3);
+}
+.tool-observability + .retry-row {
+  margin-top: 0;
+}
+.work-assistant-guide {
+  padding: var(--space-2-5) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  font-size: var(--text-sm);
+}
+.work-assistant-guide p {
+  margin: var(--space-1) 0 0;
+}
+.work-assistant-warning {
+  color: var(--danger);
+}
+.work-assistant-activity {
+  margin: var(--space-2) 0 var(--space-3);
+  color: var(--text);
+  font-size: var(--text-sm);
+}
+.work-assistant-activity summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.work-assistant-activity ol {
+  list-style: none;
+  margin: var(--space-2) 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-1-5);
+}
+.work-assistant-activity li {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-1) var(--space-2);
+}
+.work-assistant-activity li svg {
+  margin-top: var(--space-0-5);
+}
+.work-assistant-activity li small {
+  grid-column: 2 / -1;
+  color: var(--danger);
+}
+.work-assistant-state {
+  color: var(--muted);
+  white-space: nowrap;
+}
+/* M12: only the option under the pointer or keyboard is marked; one place to type while a question waits. */
+.tool-question-options button:hover {
+  border-color: var(--line-strong);
+  background: var(--hover);
+}
+.tool-question-options button:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.tool-question-cancel {
+  margin-top: var(--space-1-5);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  min-height: 28px;
+  padding: var(--space-1) var(--space-2-5);
+}

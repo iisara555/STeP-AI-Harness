@@ -98,6 +98,8 @@ try {
   const drive = page.locator('.google-drive');
   await setCard(drive.getByRole('checkbox', { name: 'Google Drive', exact: true }), true);
   await drive.getByRole('radio', { name: 'อ่าน สร้าง และจัดการไฟล์', exact: true }).check();
+  // Less-used services start folded; opening the row shows them.
+  await services.locator('.google-more-services > summary').click();
   for (const name of [/^อ่าน Gmail/, /^ร่างอีเมล/, /^จัดป้ายกำกับ/, /^Google Forms/, /^Google Apps Script/])
     await setCard(services.getByRole('checkbox', { name }), true);
   await expect(services.getByRole('checkbox', { name: /^ส่งอีเมล/ })).not.toBeChecked();
@@ -166,6 +168,9 @@ try {
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await page.getByRole('tab', { name: 'Accounts and services', exact: true }).click();
   await expect(page.locator('.google-admin')).toHaveCount(0);
+  // Folded again after a reload unless one of them is chosen.
+  if (!(await services.locator('.google-more-services').evaluate(d => d.open)))
+    await services.locator('.google-more-services > summary').click();
   for (const name of ['Google Forms', 'Google Apps Script', 'Google Chat', 'Google Meet'])
     await expect(services.getByRole('checkbox', { name: new RegExp('^' + name) })).toBeVisible();
   await expect(page.getByText(/Updating the app does not add account permissions/)).toBeVisible();

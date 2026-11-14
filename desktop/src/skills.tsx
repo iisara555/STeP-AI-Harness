@@ -87,19 +87,21 @@ export function SkillsHub({
             )}
           </div>
           <div className="skills-filters" role="tablist" aria-label={t('กรองตามสถานะ')}>
-            {filters.map(([id, label]) => (
-              <button
-                key={id}
-                role="tab"
-                aria-selected={filter === id}
-                className={filter === id ? 'active' : ''}
-                onClick={() => setFilter(id)}
-              >
-                {t(label)} <small>{count(id)}</small>
-              </button>
-            ))}
+            {/* An empty status has nothing to filter to, so its tab steps aside until a Skill lands there. */}
+            {filters
+              .filter(([id]) => id === 'all' || id === filter || count(id) > 0)
+              .map(([id, label]) => (
+                <button
+                  key={id}
+                  role="tab"
+                  aria-selected={filter === id}
+                  className={filter === id ? 'active' : ''}
+                  onClick={() => setFilter(id)}
+                >
+                  {t(label)} <small>{count(id)}</small>
+                </button>
+              ))}
           </div>
-          <p className="small muted">{t('Skill รวมวิธีทำงานแต่ละแบบ เลือกรายการที่พร้อมใช้ หรือพิมพ์งานตามปกติได้')}</p>
         </div>
         <SectionArt scene="skills" className="skills-illustration" />
       </div>
@@ -116,7 +118,6 @@ export function SkillsHub({
                 {p.skills.length > 1 && <p>{p.skills.map(s => s.id).join(', ')}</p>}
                 <div className="skill-tags">
                   <span className={`tag ${p.enabled ? 'routed' : p.invalid ? 'unregistered' : 'registered'}`}>{t(packState(p))}</span>
-                  <span className="tag">{t('Skill ที่พนักงานเพิ่ม')}</span>
                 </div>
                 {p.credit && <small className="skill-credit">{creditLine([{ ...p.credit, date: p.credit.uploadedAt }])}</small>}
                 {p.enabled && p.skills.length === 1 && onUsePack ? (
@@ -145,12 +146,11 @@ export function SkillsHub({
               <strong>{t(tool.title)}</strong>
             </header>
             <p>{t(tool.description)}</p>
-            <div className="skill-tags">
+            {/* One tag says what kind of card this is; release stage and owner are bookkeeping, kept in the tooltip. */}
+            <div className="skill-tags" title={[t(tool.stage), ownerLabel(tool.owner)].join(' · ')}>
               <span className="tag tool" title={t(tool.id === 'documents' ? 'ใช้ Skill และแม่แบบที่ตรงกับเอกสารนี้' : statusTag.tool.hint)}>
                 {t(tool.id === 'documents' ? 'แบบฟอร์มช่วยร่าง' : statusTag.tool.label)}
               </span>
-              <span className="tag">{t(tool.stage)}</span>
-              <span className="tag">{ownerLabel(tool.owner)}</span>
             </div>
             <button className="quiet" onClick={() => onOpenTool(tool.id)}>
               {t('เปิดเครื่องมือ')}
@@ -161,24 +161,24 @@ export function SkillsHub({
         {visible.map(s => {
           const tag = statusTag[s.status];
           return (
-            <article key={s.name} className="skill-card">
-              <header>
+            <article
+              key={s.name}
+              className="skill-card"
+              title={[s.owner && ownerLabel(s.owner), s.stage, s.category].filter(Boolean).join(' · ')}
+            >
+              {/* The name typed after "/" is for people who call Skills by name: it stays in the tooltip, not on the card. */}
+              <header title={'/' + s.name}>
                 <Blocks size={16} />
                 <strong>{s.title}</strong>
               </header>
               <p>{s.description}</p>
-              {/* The name typed after "/" is for people who call Skills by name: small and quiet under the description. */}
-              <code className="skill-command">/{s.name}</code>
-              {/* One tag says whose Skill it is; the status shows only when the Skill cannot be used yet (a usable one has
-                  its button). Release stage and category are internal bookkeeping; they stay in the tooltip. */}
-              <div className="skill-tags" title={[s.stage, s.category].filter(Boolean).join(' · ')}>
-                {mine(s) ? <span className="tag team">{t('ทีมคุณ')}</span> : s.owner && <span className="tag">{ownerLabel(s.owner)}</span>}
-                {s.status !== 'routed' && (
-                  <span className={`tag ${tag.tone}`} title={t(tag.hint)}>
-                    {t(tag.label)}
-                  </span>
-                )}
-              </div>
+              {/* One tag at most: the person's own team. A Skill that cannot be used yet says why in place of its button.
+                  Owner, release stage and category are bookkeeping; they stay in the tooltip. */}
+              {mine(s) && (
+                <div className="skill-tags">
+                  <span className="tag team">{t('ทีมคุณ')}</span>
+                </div>
+              )}
               {!!s.contributors?.length && <small className="skill-credit">{creditLine(s.contributors)}</small>}
               {s.status === 'routed' ? (
                 <button className="quiet" onClick={() => onUse(s.name)}>

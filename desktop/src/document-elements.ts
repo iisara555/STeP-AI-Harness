@@ -55,7 +55,8 @@ export const DocumentPageBreak = Node.create({
     t('ขึ้นหน้าใหม่'),
   ],
 });
-export const DocumentImageNode = Node.create<{ load: (assetId: string) => Promise<{ dataUrl: string }> }>({
+export type DocumentImageLoader = (assetId: string) => Promise<{ dataUrl: string }>;
+export const DocumentImageNode = Node.create<{ load: DocumentImageLoader }>({
   name: 'image',
   group: 'block',
   atom: true,

@@ -81,9 +81,12 @@ export function ConfirmDialog({
       document.removeEventListener('focusin', containFocus);
       root.removeEventListener('keydown', trap);
       for (const item of outside) item.element.inert = item.inert;
-      const target = previousFocus.current?.isConnected
-        ? previousFocus.current
-        : document.querySelector<HTMLElement>('.composer textarea, header.titlebar button');
+      // A dialog whose code loaded on demand can mount after the opener (the command palette) has gone, leaving focus
+      // on the page body; return to the composer then, as when the opener itself is gone.
+      const target =
+        previousFocus.current?.isConnected && previousFocus.current !== document.body
+          ? previousFocus.current
+          : document.querySelector<HTMLElement>('.composer textarea, header.titlebar button');
       target?.focus();
     };
   }, []);
@@ -125,30 +128,44 @@ export function ConfirmDialog({
         }
       }}
     >
-      <section role="alertdialog" aria-modal="true" aria-label={title} className="confirm-dialog" tabIndex={-1}>
-        <h2>{title}</h2>
+      <section
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={title}
+        className={info ? 'confirm-dialog info' : 'confirm-dialog'}
+        tabIndex={-1}
+      >
+        {/* An information dialog has nothing to confirm, so it closes from its corner instead of a footer button. */}
+        <header className="confirm-head">
+          <h2>{title}</h2>
+          {info && (
+            <button className="icon" autoFocus aria-label={confirmLabel} title={confirmLabel} onClick={() => void confirm()}>
+              <X size={17} />
+            </button>
+          )}
+        </header>
         <div className="confirm-body">{children}</div>
         {error && (
           <p className="confirm-error" role="alert">
             {error}
           </p>
         )}
-        <div className="confirm-actions">
-          {!info && (
+        {!info && (
+          <div className="confirm-actions">
             <button autoFocus={focusCancel} className="quiet" onClick={onCancel}>
               {cancelLabel}
             </button>
-          )}
-          <button
-            autoFocus={!focusCancel}
-            className={tone === 'danger' ? 'danger' : ''}
-            disabled={pending || confirmDisabled}
-            onClick={() => void confirm()}
-          >
-            {pending && <LoaderCircle size={15} className="spin" />}
-            {confirmLabel}
-          </button>
-        </div>
+            <button
+              autoFocus={!focusCancel}
+              className={tone === 'danger' ? 'danger' : ''}
+              disabled={pending || confirmDisabled}
+              onClick={() => void confirm()}
+            >
+              {pending && <LoaderCircle size={15} className="spin" />}
+              {confirmLabel}
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );
@@ -687,11 +704,6 @@ function ProviderDetail({
         <p className="small">{t('กดปุ่มด้านล่างแล้วลงชื่อในเบราว์เซอร์ ไม่ต้องใช้ API key')}</p>
       )}
       {value.provider === 'claude' && value.mode === 'subscription' && <ClaudeCodeNote call={call} subscription />}
-      {value.provider === 'antigravity' && (
-        <>
-          <p className="small">{t('ใช้บัญชี Google ที่มีสิทธิ์ เช่น สิทธินักศึกษา ระบบจะติดตั้งตัวเชื่อมและทดสอบให้')}</p>
-        </>
-      )}
       {preset?.signIn && (
         <p className="small">
           {t('กดลงชื่อแล้วอนุญาตในหน้า {0} ระบบจะได้คีย์ของแอปนี้มาเก็บเข้ารหัสเอง หรือวางคีย์ที่มีอยู่แล้วด้านล่าง', preset.label)}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import { Download, FileSearch, LoaderCircle, Play, RefreshCw, Save, ScanText, Send, ZoomIn, ZoomOut } from './icons';
 import {
   DOCUMENT_TYPES,
@@ -721,11 +721,12 @@ export function ReceiptApp({
   );
   const requiredFilled = review.requiredKeys.every((k: string) => String(values[k] || '').trim());
   const requiredChecked = allChecked && requiredFilled;
+  // Until OCR is ready, installing it is the page's one primary action; choosing a receipt waits beside it, quiet.
+  const needsOcr = Boolean(status && !ready && !status.geminiApi && !status.cloud);
   return (
     <div className="receipt-app">
       <header className="receipt-heading">
         <h1 className="sr-only">{t('ตรวจใบเสร็จ AFP')}</h1>
-        <p className="muted">{t('ดูต้นฉบับ แก้ข้อมูลที่อ่านผิด แล้วตรวจยืนยันก่อนส่งต่อ')}</p>
         <nav className="receipt-modes" aria-label={t('งานใบเสร็จและชุดเอกสาร')}>
           <button aria-pressed={receiptMode === 'review'} onClick={() => setReceiptMode('review')}>
             {t('ตรวจใบเสร็จ')}
@@ -754,7 +755,10 @@ export function ReceiptApp({
             : undefined
         }
       />
-      <div className="receipt-grid" style={receiptMode === 'packet' ? { display: 'none' } : undefined}>
+      <div
+        className={doc || actionError ? 'receipt-grid' : 'receipt-grid single'}
+        style={receiptMode === 'packet' ? { display: 'none' } : undefined}
+      >
         <section className="receipt-source" aria-label={t('ใบเสร็จต้นฉบับ')}>
           <header>
             <ScanText size={16} aria-hidden="true" />
@@ -828,7 +832,7 @@ export function ReceiptApp({
           )}
           {/* The step that has to come first comes first: until OCR is ready, installing it is the page's main button and
               choosing a receipt waits under it. */}
-          {status && !ready && !status.geminiApi && !status.cloud && (
+          {status && needsOcr && (
             <button
               className="receipt-ocr-install"
               disabled={Boolean(busy)}
@@ -862,7 +866,7 @@ export function ReceiptApp({
             </p>
           )}
           <button
-            className={canPick ? 'receipt-pick' : 'receipt-pick quiet'}
+            className={canPick && !needsOcr ? 'receipt-pick' : 'receipt-pick quiet'}
             disabled={!canPick || Boolean(busy)}
             aria-describedby={pickReason ? 'receipt-pick-reason' : undefined}
             onClick={() => void run('read', read)}
@@ -963,374 +967,391 @@ export function ReceiptApp({
               <RefreshCw size={15} />
             </button>
           </div>
-          {status && !ready && !status.installed && !status.geminiApi && !status.cloud && (
-            <p className="small muted">{t('OCR เป็นส่วนเสริมที่ดาวน์โหลดเมื่อคุณติดตั้ง อ่านไฟล์ในเครื่องโดยไม่ส่งไปบริการ OCR ภายนอก')}</p>
-          )}
-          {status?.vision && <p className="small muted">{t('AI อ่านภาพได้เมื่อคุณยินยอม ส่งต่อในแชตจะส่งเฉพาะข้อความที่ตรวจแล้ว')}</p>}
-          {!localOnly && status && !status.geminiApi && !status.cloud && !connections.some(isReceiptGeminiApi) && openAiSettings && (
-            <p className="small muted">
-              {t('เชื่อมต่อ Google AI แบบ API key เพื่อใช้ Gemini อ่านใบเสร็จ แยกจาก AI ที่ใช้แชต')}{' '}
-              <button className="text-link" onClick={openAiSettings}>
-                {t('ไปที่หน้าเชื่อมต่อ AI')}
-              </button>
-            </p>
-          )}
-          {status?.textOnly && !status.cloud && (
-            <p className="small muted">
-              {t('ตอนนี้ AI ไม่ได้อ่านภาพใบเสร็จ (นโยบายองค์กรหรือ AI ที่เลือกยังไม่รองรับ) AI ช่วยจัดข้อความจาก OCR เข้าฟอร์มเท่านั้น')}
-            </p>
-          )}
-        </section>
-        <section className="receipt-form" aria-label={t('ข้อมูลที่ต้องตรวจ')}>
-          {actionError && (
-            <p className="receipt-error" role="alert">
-              {actionError} {t('ข้อมูลที่ตรวจยังอยู่ในหน้านี้')}
-            </p>
-          )}
-          <section className="receipt-review-section" aria-labelledby="receipt-fixes-title">
-            <h2 id="receipt-fixes-title">{t('ต้องแก้หรือเติมข้อมูลก่อนใช้ประกอบการเบิก')}</h2>
-            {!doc ? (
-              <>
-                <p className="muted">{t('เลือกใบเสร็จด้านซ้าย แล้วระบบจะแสดงจุดที่ต้องตรวจ')}</p>
-                <p className="small muted">{t('ผลตรวจช่วยเตรียมเอกสาร ไม่ใช่การอนุมัติเบิกจ่าย เก็บต้นฉบับและยืนยันเงื่อนไขกับ AFP')}</p>
-              </>
-            ) : (
-              <>
-                {assessment.status !== 'needs-correction' && (
-                  <p className="receipt-assessment" role="status">
-                    {assessmentTitles[assessment.status]}
-                  </p>
-                )}
-                {corrections.length > 0 && (
-                  <ul className="receipt-corrections">
-                    {corrections.map(text => (
-                      <li key={text}>{text}</li>
-                    ))}
-                  </ul>
-                )}
-                {(guessCount > 0 || vision) && (
-                  <p className="small muted">{t('ค่าที่ระบบอ่านได้ยังต้องเทียบต้นฉบับ โดยเฉพาะช่องที่ไฮไลต์')}</p>
-                )}
-                <details className="receipt-values">
-                  <summary>{t('ตรวจ/แก้ข้อมูลที่อ่านได้')}</summary>
-                  <label className="receipt-value-row">
-                    {t('ประเภทเอกสาร')}
-                    <select
-                      aria-label={t('ประเภทเอกสาร')}
-                      value={docType}
-                      onChange={e => {
-                        setTypeOverride(e.target.value as DocumentType);
-                        setAllChecked(false);
-                      }}
-                    >
-                      {!docType && <option value="">{t('ยังไม่ทราบ')}</option>}
-                      {DOCUMENT_TYPES.map(type => (
-                        <option key={type} value={type}>
-                          {t(DOCUMENT_TYPE_LABELS[type])}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {visibleFieldKeys.map((k, index) => (
-                    <div
-                      className={
-                        'receipt-value-row receipt-field' +
-                        ((guessed[k] ||
-                          matchOf(k) === 'differ' ||
-                          fields[k]?.mappingMethod === 'thai-label-mark-loss' ||
-                          vision?.fields[k as ReceiptField]?.needsReview ||
-                          rules.some(r => r.field === k)) &&
-                        values[k]
-                          ? ' uncertain'
-                          : '')
-                      }
-                      key={k}
-                    >
-                      <label htmlFor={'rf-' + k}>
-                        {labels[k]}
-                        {review.requiredKeys.includes(k) && <span className="required"> *</span>}
-                      </label>
-                      <input
-                        id={'rf-' + k}
-                        value={values[k] || ''}
-                        onFocus={() => {
-                          setSignatureFocus(null);
-                          setFocusedField(k as ReceiptField);
-                          setZoom(false);
-                        }}
-                        onChange={e => edit(k, e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                            e.preventDefault();
-                            (
-                              document.getElementById(
-                                visibleFieldKeys[index + 1] ? 'rf-' + visibleFieldKeys[index + 1] : 'receipt-description',
-                              ) as HTMLElement | null
-                            )?.focus();
-                          }
-                        }}
-                      />
-                    </div>
-                  ))}
-                  <label className="receipt-value-row">
-                    {t('รายการค่าใช้จ่าย')}
-                    <input
-                      id="receipt-description"
-                      aria-label={t('รายการค่าใช้จ่าย')}
-                      value={expenseDescription}
-                      onChange={e => updateForm({ type: 'describe', value: e.target.value })}
-                    />
-                  </label>
-                  <label className="receipt-value-row">
-                    {t('ที่อยู่ผู้รับเงิน / ร้าน')}
-                    <input
-                      aria-label={t('ที่อยู่ผู้รับเงิน / ร้าน')}
-                      value={values.merchantAddress || ''}
-                      onChange={e => edit('merchantAddress', e.target.value)}
-                    />
-                  </label>
-                  <label className="receipt-value-row">
-                    {t('จำนวนเงินตัวอักษร')}
-                    <input
-                      aria-label={t('จำนวนเงินตัวอักษร')}
-                      value={amountInWords}
-                      onChange={e => edit('amountInWords', e.target.value)}
-                    />
-                  </label>
-                  {RECEIPT_SIGNATURE_ROLES.filter(role => role === 'receiver' || vision?.signatures?.[role]).map(role => (
-                    <label className="receipt-value-row" key={role}>
-                      {signatureLabels[role]}
-                      <select
-                        aria-label={signatureLabels[role]}
-                        value={signatureStatus(role)}
-                        onFocus={() => {
-                          setFocusedField(null);
-                          setSignatureFocus(role);
-                          setZoom(false);
-                        }}
-                        onChange={e => {
-                          setSignatureOverrides(previous => ({ ...previous, [role]: e.target.value as SignatureStatus }));
-                          setAllChecked(false);
-                        }}
-                      >
-                        <option value="present">{t('พบลายเซ็นในช่องนี้')}</option>
-                        <option value="absent">{t('ไม่พบลายเซ็นในช่องนี้')}</option>
-                        <option value="uncertain">{t('ยังไม่แน่ใจ')}</option>
-                      </select>
-                    </label>
-                  ))}
-                  {vision?.items?.length ? (
-                    <div className="receipt-items-scroll">
-                      <table className="receipt-items">
-                        <caption>{t('รายการที่อ่านได้ · โปรดเทียบต้นฉบับ')}</caption>
-                        <thead>
-                          <tr>
-                            {['รายการ', 'จำนวน', 'ราคาต่อหน่วย', 'ยอดรายการ'].map(label => (
-                              <th key={label}>{t(label)}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {vision.items.map((item, i) => (
-                            <tr key={i} className={item.needsReview || rules.some(r => r.itemIndex === i) ? 'receipt-item-warning' : ''}>
-                              <td>{item.description}</td>
-                              <td>{item.quantity}</td>
-                              <td>{item.unitPrice}</td>
-                              <td>{item.amount}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : null}
-                  {vision?.notes && <p className="small muted">{t('AI ฝากตรวจ: {0}', vision.notes)}</p>}
-                </details>
-              </>
-            )}
-          </section>
-          {/* What to do next and the receipt elements say nothing before a receipt is read, so they wait for one. */}
-          {doc && (
-            <section className="receipt-review-section" aria-labelledby="receipt-next-title">
-              <h2 id="receipt-next-title">{t('ทำอะไรต่อ')}</h2>
-              {doc && (
+          {/* One quiet paragraph for every note that applies, instead of a stack of small lines. */}
+          {(() => {
+            const notes: ReactNode[] = [];
+            if (status && !ready && !status.installed && !status.geminiApi && !status.cloud)
+              notes.push(t('OCR เป็นส่วนเสริมที่ดาวน์โหลดเมื่อคุณติดตั้ง · อ่านไฟล์ในเครื่อง ไม่ส่งออกภายนอก'));
+            if (status?.vision) notes.push(t('AI อ่านภาพได้เมื่อคุณยินยอม ส่งต่อในแชตจะส่งเฉพาะข้อความที่ตรวจแล้ว'));
+            if (status?.textOnly && !status.cloud)
+              notes.push(
+                t('ตอนนี้ AI ไม่ได้อ่านภาพใบเสร็จ (นโยบายองค์กรหรือ AI ที่เลือกยังไม่รองรับ) AI ช่วยจัดข้อความจาก OCR เข้าฟอร์มเท่านั้น'),
+              );
+            if (!localOnly && status && !status.geminiApi && !status.cloud && !connections.some(isReceiptGeminiApi) && openAiSettings)
+              notes.push(
                 <>
-                  <p className="small muted">
-                    {t(
-                      'หมวดที่แนะนำ: {0}',
-                      categoryOverride === null
-                        ? expenseCodeLabel(categorySuggestion.code) || t('ยังระบุหมวดจากรายการนี้ไม่ได้')
-                        : t(CATEGORY_LABELS[categoryOverride]),
-                    )}
-                  </p>
-                  {nextSteps.length > 0 && (
-                    <ul className="receipt-next-actions">
-                      {nextSteps.map(step => (
-                        <li key={step}>{t(step)}</li>
+                  {t('เชื่อมต่อ Google AI แบบ API key เพื่อใช้ Gemini อ่านใบเสร็จ แยกจาก AI ที่ใช้แชต')}{' '}
+                  <button className="text-link" onClick={openAiSettings}>
+                    {t('ไปที่หน้าเชื่อมต่อ AI')}
+                  </button>
+                </>,
+              );
+            return notes.length ? (
+              <p className="small muted receipt-notes">
+                {notes.map((note, i) => (
+                  <Fragment key={i}>
+                    {i > 0 && ' · '}
+                    {note}
+                  </Fragment>
+                ))}
+              </p>
+            ) : null;
+          })()}
+        </section>
+        {/* Until a receipt is chosen there is nothing to review: the page is one column, not an empty half. */}
+        {(doc || actionError) && (
+          <section className="receipt-form" aria-label={t('ข้อมูลที่ต้องตรวจ')}>
+            {actionError && (
+              <p className="receipt-error" role="alert">
+                {actionError} {t('ข้อมูลที่ตรวจยังอยู่ในหน้านี้')}
+              </p>
+            )}
+            <section className="receipt-review-section" aria-labelledby="receipt-fixes-title">
+              <h2 id="receipt-fixes-title">{t('ต้องแก้หรือเติมข้อมูลก่อนใช้ประกอบการเบิก')}</h2>
+              {!doc ? (
+                <p className="muted">{t('เลือกใบเสร็จด้านซ้าย แล้วระบบจะแสดงจุดที่ต้องตรวจ')}</p>
+              ) : (
+                <>
+                  {assessment.status !== 'needs-correction' && (
+                    <p className="receipt-assessment" role="status">
+                      {assessmentTitles[assessment.status]}
+                    </p>
+                  )}
+                  {corrections.length > 0 && (
+                    <ul className="receipt-corrections">
+                      {corrections.map(text => (
+                        <li key={text}>{text}</li>
                       ))}
                     </ul>
                   )}
-                  <details className="receipt-claim-options">
-                    <summary>{t('เพิ่มวัตถุประสงค์หรือแก้หมวด (ถ้าจำเป็น)')}</summary>
+                  {(guessCount > 0 || vision) && (
+                    <p className="small muted">{t('ค่าที่ระบบอ่านได้ยังต้องเทียบต้นฉบับ โดยเฉพาะช่องที่ไฮไลต์')}</p>
+                  )}
+                  <details className="receipt-values">
+                    <summary>{t('ตรวจ/แก้ข้อมูลที่อ่านได้')}</summary>
                     <label className="receipt-value-row">
-                      {t('หมวดที่จะเบิก')}
+                      {t('ประเภทเอกสาร')}
                       <select
-                        aria-label={t('หมวดที่จะเบิก')}
-                        value={categoryOverride ?? 'auto'}
+                        aria-label={t('ประเภทเอกสาร')}
+                        value={docType}
                         onChange={e => {
-                          setCategory(e.target.value === 'auto' ? null : (e.target.value as ClaimCategory));
+                          setTypeOverride(e.target.value as DocumentType);
                           setAllChecked(false);
                         }}
                       >
-                        <option value="auto">{t('ใช้หมวดที่ระบบแนะนำ')}</option>
-                        {(Object.keys(CATEGORY_LABELS) as ClaimCategory[]).map(c => (
-                          <option key={c} value={c}>
-                            {t(CATEGORY_LABELS[c])}
+                        {!docType && <option value="">{t('ยังไม่ทราบ')}</option>}
+                        {DOCUMENT_TYPES.map(type => (
+                          <option key={type} value={type}>
+                            {t(DOCUMENT_TYPE_LABELS[type])}
                           </option>
                         ))}
                       </select>
                     </label>
-                    <label className="receipt-note">
-                      {t('หมายเหตุการเบิก')}
-                      <textarea
-                        id="receipt-note"
-                        aria-label={t('หมายเหตุการเบิก')}
-                        value={note}
-                        placeholder={t('เช่น ใช้ในโครงการ… (กรอกเอง)')}
-                        onChange={e => {
-                          setNote(e.target.value);
-                          setAllChecked(false);
-                        }}
+                    {visibleFieldKeys.map((k, index) => (
+                      <div
+                        className={
+                          'receipt-value-row receipt-field' +
+                          ((guessed[k] ||
+                            matchOf(k) === 'differ' ||
+                            fields[k]?.mappingMethod === 'thai-label-mark-loss' ||
+                            vision?.fields[k as ReceiptField]?.needsReview ||
+                            rules.some(r => r.field === k)) &&
+                          values[k]
+                            ? ' uncertain'
+                            : '')
+                        }
+                        key={k}
+                      >
+                        <label htmlFor={'rf-' + k}>
+                          {labels[k]}
+                          {review.requiredKeys.includes(k) && <span className="required"> *</span>}
+                        </label>
+                        <input
+                          id={'rf-' + k}
+                          value={values[k] || ''}
+                          onFocus={() => {
+                            setSignatureFocus(null);
+                            setFocusedField(k as ReceiptField);
+                            setZoom(false);
+                          }}
+                          onChange={e => edit(k, e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                              e.preventDefault();
+                              (
+                                document.getElementById(
+                                  visibleFieldKeys[index + 1] ? 'rf-' + visibleFieldKeys[index + 1] : 'receipt-description',
+                                ) as HTMLElement | null
+                              )?.focus();
+                            }
+                          }}
+                        />
+                      </div>
+                    ))}
+                    <label className="receipt-value-row">
+                      {t('รายการค่าใช้จ่าย')}
+                      <input
+                        id="receipt-description"
+                        aria-label={t('รายการค่าใช้จ่าย')}
+                        value={expenseDescription}
+                        onChange={e => updateForm({ type: 'describe', value: e.target.value })}
                       />
                     </label>
+                    <label className="receipt-value-row">
+                      {t('ที่อยู่ผู้รับเงิน / ร้าน')}
+                      <input
+                        aria-label={t('ที่อยู่ผู้รับเงิน / ร้าน')}
+                        value={values.merchantAddress || ''}
+                        onChange={e => edit('merchantAddress', e.target.value)}
+                      />
+                    </label>
+                    <label className="receipt-value-row">
+                      {t('จำนวนเงินตัวอักษร')}
+                      <input
+                        aria-label={t('จำนวนเงินตัวอักษร')}
+                        value={amountInWords}
+                        onChange={e => edit('amountInWords', e.target.value)}
+                      />
+                    </label>
+                    {RECEIPT_SIGNATURE_ROLES.filter(role => role === 'receiver' || vision?.signatures?.[role]).map(role => (
+                      <label className="receipt-value-row" key={role}>
+                        {signatureLabels[role]}
+                        <select
+                          aria-label={signatureLabels[role]}
+                          value={signatureStatus(role)}
+                          onFocus={() => {
+                            setFocusedField(null);
+                            setSignatureFocus(role);
+                            setZoom(false);
+                          }}
+                          onChange={e => {
+                            setSignatureOverrides(previous => ({ ...previous, [role]: e.target.value as SignatureStatus }));
+                            setAllChecked(false);
+                          }}
+                        >
+                          <option value="present">{t('พบลายเซ็นในช่องนี้')}</option>
+                          <option value="absent">{t('ไม่พบลายเซ็นในช่องนี้')}</option>
+                          <option value="uncertain">{t('ยังไม่แน่ใจ')}</option>
+                        </select>
+                      </label>
+                    ))}
+                    {vision?.items?.length ? (
+                      <div className="receipt-items-scroll">
+                        <table className="receipt-items">
+                          <caption>{t('รายการที่อ่านได้ · โปรดเทียบต้นฉบับ')}</caption>
+                          <thead>
+                            <tr>
+                              {['รายการ', 'จำนวน', 'ราคาต่อหน่วย', 'ยอดรายการ'].map(label => (
+                                <th key={label}>{t(label)}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {vision.items.map((item, i) => (
+                              <tr key={i} className={item.needsReview || rules.some(r => r.itemIndex === i) ? 'receipt-item-warning' : ''}>
+                                <td>{item.description}</td>
+                                <td>{item.quantity}</td>
+                                <td>{item.unitPrice}</td>
+                                <td>{item.amount}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : null}
+                    {vision?.notes && <p className="small muted">{t('AI ฝากตรวจ: {0}', vision.notes)}</p>}
                   </details>
-                  <label className={'receipt-confirm' + (allChecked ? ' checked' : '')}>
-                    <input
-                      id="receipt-confirm"
-                      type="checkbox"
-                      disabled={!result.filledCount || Boolean(busy)}
-                      checked={allChecked}
-                      onChange={e => setAllChecked(e.target.checked)}
-                    />
-                    <span>
-                      <strong>{t('ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว')}</strong>
-                      <small>{t('รวมรายการ ที่อยู่ จำนวนเงินตัวอักษร และลายเซ็น การแก้ข้อมูลจะยกเลิกการยืนยัน')}</small>
-                    </span>
-                  </label>
                 </>
               )}
-              {!localOnly && (
-                <div className="receipt-handoff-target">
-                  <label>
-                    {t('AI สำหรับตรวจทาน')}
-                    <select
-                      aria-label={t('AI สำหรับตรวจทาน')}
-                      value={usableConnectionId || ''}
-                      disabled={Boolean(busy)}
-                      onChange={e => chooseConnection?.(e.target.value)}
-                    >
-                      <option value="">{t('เลือก AI ที่พร้อมใช้งาน')}</option>
-                      {connections
-                        .filter(c => c.ready)
-                        .map(c => (
-                          <option key={c.id} value={c.id}>
-                            {connectionName(c)}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                  {!usableConnectionId && <p className="small muted">{t('เชื่อมต่อและทดสอบ AI ก่อนส่งตรวจทาน ข้อมูลในหน้านี้ยังอยู่')}</p>}
-                  {openAiSettings && (
-                    <button type="button" className="text-link" onClick={openAiSettings}>
-                      {t('ไปที่หน้าเชื่อมต่อ AI')}
-                    </button>
-                  )}
-                </div>
-              )}
-              {doc && (
-                <>
-                  {!localOnly && !requiredChecked && (
+            </section>
+            {/* What to do next and the receipt elements say nothing before a receipt is read, so they wait for one. */}
+            {doc && (
+              <section className="receipt-review-section" aria-labelledby="receipt-next-title">
+                <h2 id="receipt-next-title">{t('ทำอะไรต่อ')}</h2>
+                {doc && (
+                  <>
                     <p className="small muted">
-                      {requiredFilled ? t('ติ๊ก “ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว” ก่อนส่งให้ AI') : t('กรอกช่องที่มี * ให้ครบก่อนส่งให้ AI')}
+                      {t(
+                        'หมวดที่แนะนำ: {0}',
+                        categoryOverride === null
+                          ? expenseCodeLabel(categorySuggestion.code) || t('ยังระบุหมวดจากรายการนี้ไม่ได้')
+                          : t(CATEGORY_LABELS[categoryOverride]),
+                      )}
                     </p>
-                  )}
-                  <div className="receipt-actions">
-                    {!localOnly && (
-                      <button
-                        disabled={!requiredChecked || !usableConnectionId || Boolean(busy)}
-                        onClick={() =>
-                          void run('handoff', () =>
-                            handoff(
-                              summary(),
-                              receiptSourceText(draft()),
-                              confirmed.taxId && /^0\d{12}$/.test(review.normalizeDigits(values.taxId || ''))
-                                ? [review.normalizeDigits(values.taxId)]
-                                : [],
-                            ),
-                          )
-                        }
+                    {nextSteps.length > 0 && (
+                      <ul className="receipt-next-actions">
+                        {nextSteps.map(step => (
+                          <li key={step}>{t(step)}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <details className="receipt-claim-options">
+                      <summary>{t('เพิ่มวัตถุประสงค์หรือแก้หมวด (ถ้าจำเป็น)')}</summary>
+                      <label className="receipt-value-row">
+                        {t('หมวดที่จะเบิก')}
+                        <select
+                          aria-label={t('หมวดที่จะเบิก')}
+                          value={categoryOverride ?? 'auto'}
+                          onChange={e => {
+                            setCategory(e.target.value === 'auto' ? null : (e.target.value as ClaimCategory));
+                            setAllChecked(false);
+                          }}
+                        >
+                          <option value="auto">{t('ใช้หมวดที่ระบบแนะนำ')}</option>
+                          {(Object.keys(CATEGORY_LABELS) as ClaimCategory[]).map(c => (
+                            <option key={c} value={c}>
+                              {t(CATEGORY_LABELS[c])}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="receipt-note">
+                        {t('หมายเหตุการเบิก')}
+                        <textarea
+                          id="receipt-note"
+                          aria-label={t('หมายเหตุการเบิก')}
+                          value={note}
+                          placeholder={t('เช่น ใช้ในโครงการ… (กรอกเอง)')}
+                          onChange={e => {
+                            setNote(e.target.value);
+                            setAllChecked(false);
+                          }}
+                        />
+                      </label>
+                    </details>
+                    <label className={'receipt-confirm' + (allChecked ? ' checked' : '')}>
+                      <input
+                        id="receipt-confirm"
+                        type="checkbox"
+                        disabled={!result.filledCount || Boolean(busy)}
+                        checked={allChecked}
+                        onChange={e => setAllChecked(e.target.checked)}
+                      />
+                      <span>
+                        <strong>{t('ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว')}</strong>
+                        <small>{t('รวมรายการ ที่อยู่ จำนวนเงินตัวอักษร และลายเซ็น การแก้ข้อมูลจะยกเลิกการยืนยัน')}</small>
+                      </span>
+                    </label>
+                  </>
+                )}
+                {!localOnly && (
+                  <div className="receipt-handoff-target">
+                    <label>
+                      {t('AI สำหรับตรวจทาน')}
+                      <select
+                        aria-label={t('AI สำหรับตรวจทาน')}
+                        value={usableConnectionId || ''}
+                        disabled={Boolean(busy)}
+                        onChange={e => chooseConnection?.(e.target.value)}
                       >
-                        {busy === 'handoff' ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}
-                        {t('ให้ AI ตรวจทานต่อ')}
+                        <option value="">{t('เลือก AI ที่พร้อมใช้งาน')}</option>
+                        {connections
+                          .filter(c => c.ready)
+                          .map(c => (
+                            <option key={c.id} value={c.id}>
+                              {connectionName(c)}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                    {!usableConnectionId && (
+                      <p className="small muted">{t('เชื่อมต่อและทดสอบ AI ก่อนส่งตรวจทาน ข้อมูลในหน้านี้ยังอยู่')}</p>
+                    )}
+                    {openAiSettings && (
+                      <button type="button" className="text-link" onClick={openAiSettings}>
+                        {t('ไปที่หน้าเชื่อมต่อ AI')}
                       </button>
                     )}
-                    <button
-                      className="text-link"
-                      disabled={Boolean(busy)}
-                      onClick={() =>
-                        void run('save', async () => {
-                          const saved = await call('ocrSave', { draft: draft() });
-                          if (saved)
-                            notify(t('บันทึกร่างการตรวจแล้ว'), 'success', {
-                              label: t('เปิดโฟลเดอร์'),
-                              run: () => call('reveal', { path: saved.path }),
-                            });
-                        })
-                      }
-                    >
-                      <Save size={14} />
-                      {t('บันทึกผลตรวจเก็บไว้')}
-                    </button>
                   </div>
-                  {!localOnly && <p className="small muted">{t('ส่งเฉพาะผลตรวจและข้อความ ภาพต้นฉบับไม่ถูกส่งในขั้นตอนนี้')}</p>}
-                </>
-              )}
-              <p className="small muted">{t('ผลตรวจช่วยเตรียมเอกสาร ไม่ใช่การอนุมัติเบิกจ่าย เก็บต้นฉบับและยืนยันเงื่อนไขกับ AFP')}</p>
-            </section>
-          )}
-          {doc && (
-            <section className="receipt-review-section receipt-elements" aria-label={t('องค์ประกอบพื้นฐานใบเสร็จ')}>
-              <h2>{t('ดูองค์ประกอบพื้นฐานใบเสร็จ')}</h2>
-              {!doc ? (
-                <p className="muted">{t('ยังไม่มีผลตรวจองค์ประกอบ')}</p>
-              ) : (
-                <>
-                  <p role="status">
-                    {completeness.status === 'incomplete'
-                      ? t('ใบเสร็จยังขาดองค์ประกอบ')
-                      : completeness.status === 'uncertain'
-                        ? t('องค์ประกอบใบเสร็จยังรอตรวจบางจุด')
-                        : rules.length
-                          ? t('มีองค์ประกอบแต่ข้อมูลยังขัดกัน')
-                          : allChecked
-                            ? t('ครบองค์ประกอบพื้นฐานที่ตรวจ')
-                            : t('พบองค์ประกอบพื้นฐานครบ · รอคุณยืนยัน')}
-                  </p>
-                  <ul>
-                    {completeness.components.map(component => (
-                      <li key={component.id}>
-                        <span>{t(component.label)}</span>
-                        <span className={'chip ' + (component.status === 'present' ? 'agree' : 'differ')}>
-                          {t(component.status === 'present' ? 'พบข้อมูล' : component.status === 'missing' ? 'ขาด' : 'รอตรวจ')}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  <small className="muted">{t('ตรวจว่ามีลายเซ็น ไม่ได้ยืนยันตัวผู้ลงชื่อ องค์ประกอบครบยังไม่เท่ากับอนุมัติเบิก')}</small>
-                </>
-              )}
-            </section>
-          )}
-        </section>
+                )}
+                {doc && (
+                  <>
+                    {!localOnly && !requiredChecked && (
+                      <p className="small muted">
+                        {requiredFilled
+                          ? t('ติ๊ก “ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว” ก่อนส่งให้ AI')
+                          : t('กรอกช่องที่มี * ให้ครบก่อนส่งให้ AI')}
+                      </p>
+                    )}
+                    <div className="receipt-actions">
+                      {!localOnly && (
+                        <button
+                          disabled={!requiredChecked || !usableConnectionId || Boolean(busy)}
+                          onClick={() =>
+                            void run('handoff', () =>
+                              handoff(
+                                summary(),
+                                receiptSourceText(draft()),
+                                confirmed.taxId && /^0\d{12}$/.test(review.normalizeDigits(values.taxId || ''))
+                                  ? [review.normalizeDigits(values.taxId)]
+                                  : [],
+                              ),
+                            )
+                          }
+                        >
+                          {busy === 'handoff' ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}
+                          {t('ให้ AI ตรวจทานต่อ')}
+                        </button>
+                      )}
+                      <button
+                        className="text-link"
+                        disabled={Boolean(busy)}
+                        onClick={() =>
+                          void run('save', async () => {
+                            const saved = await call('ocrSave', { draft: draft() });
+                            if (saved)
+                              notify(t('บันทึกร่างการตรวจแล้ว'), 'success', {
+                                label: t('เปิดโฟลเดอร์'),
+                                run: () => call('reveal', { path: saved.path }),
+                              });
+                          })
+                        }
+                      >
+                        <Save size={14} />
+                        {t('บันทึกผลตรวจเก็บไว้')}
+                      </button>
+                    </div>
+                    {!localOnly && <p className="small muted">{t('ส่งเฉพาะผลตรวจและข้อความ ภาพต้นฉบับไม่ถูกส่งในขั้นตอนนี้')}</p>}
+                  </>
+                )}
+                <p className="small muted">{t('ผลตรวจช่วยเตรียมเอกสาร ไม่ใช่การอนุมัติเบิกจ่าย เก็บต้นฉบับและยืนยันเงื่อนไขกับ AFP')}</p>
+              </section>
+            )}
+            {doc && (
+              <section className="receipt-review-section receipt-elements" aria-label={t('องค์ประกอบพื้นฐานใบเสร็จ')}>
+                <h2>{t('ดูองค์ประกอบพื้นฐานใบเสร็จ')}</h2>
+                {!doc ? (
+                  <p className="muted">{t('ยังไม่มีผลตรวจองค์ประกอบ')}</p>
+                ) : (
+                  <>
+                    <p role="status">
+                      {completeness.status === 'incomplete'
+                        ? t('ใบเสร็จยังขาดองค์ประกอบ')
+                        : completeness.status === 'uncertain'
+                          ? t('องค์ประกอบใบเสร็จยังรอตรวจบางจุด')
+                          : rules.length
+                            ? t('มีองค์ประกอบแต่ข้อมูลยังขัดกัน')
+                            : allChecked
+                              ? t('ครบองค์ประกอบพื้นฐานที่ตรวจ')
+                              : t('พบองค์ประกอบพื้นฐานครบ · รอคุณยืนยัน')}
+                    </p>
+                    <ul>
+                      {completeness.components.map(component => (
+                        <li key={component.id}>
+                          <span>{t(component.label)}</span>
+                          <span className={'chip ' + (component.status === 'present' ? 'agree' : 'differ')}>
+                            {t(component.status === 'present' ? 'พบข้อมูล' : component.status === 'missing' ? 'ขาด' : 'รอตรวจ')}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <small className="muted">{t('ตรวจว่ามีลายเซ็น ไม่ได้ยืนยันตัวผู้ลงชื่อ องค์ประกอบครบยังไม่เท่ากับอนุมัติเบิก')}</small>
+                  </>
+                )}
+              </section>
+            )}
+          </section>
+        )}
       </div>
     </div>
   );

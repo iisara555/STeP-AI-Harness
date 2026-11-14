@@ -1,0 +1,520 @@
+/* The Settings page: tabs, search, sticky save, policy and the compact layout. */
+/* UI audit 2026-10-17: group B (Settings and AI usage) */
+.settings-tabs button {
+  background: transparent;
+  color: var(--muted);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+@media (max-width: 1150px) {
+  .settings-tabs {
+    top: -26px;
+  }
+  .settings-save.sticky {
+    bottom: -26px;
+  }
+}
+/* Short windows: a compact header so content starts near the top. */
+@media (max-height: 760px) {
+  .settings-content {
+    padding-top: var(--space-4);
+  }
+  .settings-tabs {
+    top: -18px;
+    margin-top: var(--space-2);
+  }
+  .settings-hero .settings-art,
+  .settings-hero p {
+    display: none;
+  }
+  .settings-content h1 {
+    font-size: var(--text-lg);
+    margin: 0;
+  }
+}
+.policy-features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.policy-badge.on {
+  color: var(--diff-added);
+  background: color-mix(in srgb, var(--diff-added) 13%, transparent);
+}
+/* A folded section for administrators (policy keys, file paths); staff never need to open it. */
+.settings-admin {
+  margin-top: var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.settings-admin summary {
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.settings-admin[open] summary {
+  margin-bottom: var(--space-2);
+}
+.settings-admin code {
+  overflow-wrap: anywhere;
+}
+.policy-keys {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-0-5) var(--space-4);
+}
+.policy-keys li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--muted);
+}
+/* AI account management: normal-size buttons, and removing the account apart from signing out. */
+.connection-actions button,
+.ai-account-management .connection-actions button {
+  font-size: var(--text-sm);
+}
+.connection-runtime {
+  margin-top: var(--space-3);
+}
+.connection-row .connection-runtime p {
+  display: block;
+  margin: 0 0 var(--space-1-5);
+}
+.connection-account-actions {
+  margin-top: var(--space-3-5);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.connection-account-actions .connection-remove {
+  margin-left: auto;
+}
+.connection-remove {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.connection-remove:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+/* Website accounts: the add form has its own heading; the search says it is a search. */
+.credential-form h3 {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--text-md);
+}
+.settings-content label.credential-search {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 var(--space-2);
+  padding: 0 var(--space-2-5);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  color: var(--muted);
+}
+.credential-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  padding: var(--space-2) 0;
+}
+.credential-search:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+/* --border is not a theme token; give these boxes a visible edge in both themes. */
+.settings-content .pilot-note,
+.credential-form {
+  border: 1px solid var(--line-strong);
+}
+/* The sticky footer draws its own top rule; avoid a second rule right above it. */
+.settings-content > section:has(+ .settings-save.sticky) {
+  border-bottom: 0;
+}
+.settings-hero .settings-art {
+  width: 80px;
+  height: 80px;
+  margin: 0;
+}
+.settings-content h1 {
+  font-weight: 500;
+  margin: 0 0 var(--space-1-5);
+  font-size: var(--text-xl);
+}
+.settings-content label,
+.settings-content .small {
+  font-size: var(--text-base);
+  line-height: 1.6;
+}
+.settings-content .muted {
+  color: var(--muted);
+  opacity: 1;
+}
+/* One tab row that scrolls sideways instead of wrapping, and stays in view while a tab scrolls. */
+.settings-tabs {
+  display: flex;
+  gap: var(--space-1);
+  margin: var(--space-4) 0 var(--space-1);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  z-index: 4;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  background: var(--surface);
+  padding-top: var(--space-1-5);
+  top: -24px;
+  scroll-padding-top: var(--space-3);
+}
+.settings-search {
+  max-width: 36rem;
+  margin-top: var(--space-3-5);
+}
+.settings-search-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.settings-profile-summary > .avatar-badge {
+  width: 48px;
+  height: 48px;
+}
+.settings-content .avatar-picker {
+  max-height: 290px;
+  overflow-y: auto;
+  padding: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+.settings-style-example {
+  padding: var(--space-3-5) var(--space-4);
+  margin: var(--space-4) 0;
+  background: var(--hover);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.settings-style-example p {
+  margin: var(--space-2-5) 0;
+}
+/* The save action is always reachable, however long the tab. */
+.settings-save.sticky {
+  position: sticky;
+  z-index: 4;
+  padding: var(--space-3) 0 var(--space-3-5);
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  bottom: -28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.settings-save .choice-row {
+  margin: 0;
+  flex-wrap: wrap;
+}
+.settings-save p {
+  margin: 0;
+}
+.settings-save-error {
+  flex-basis: 100%;
+  color: var(--danger);
+}
+.connection-card.selected {
+  box-shadow: inset 3px 0 var(--accent-ink);
+  padding-left: var(--space-4);
+}
+.credential-settings .google-services {
+  display: block;
+}
+.credential-settings .google-service {
+  margin: 0;
+}
+.credential-global .credential-note {
+  margin-bottom: 0;
+}
+.google-selected-scope {
+  overflow-wrap: anywhere;
+}
+.password-managers .credential-row {
+  flex-wrap: wrap;
+  gap: var(--space-2-5);
+}
+@media (max-width: 760px) {
+  .settings-content {
+    padding: var(--space-4) var(--space-4) var(--space-6);
+  }
+  .settings-tabs {
+    top: -18px;
+  }
+  .settings-save.sticky {
+    bottom: -24px;
+  }
+  .credential-settings .google-service-grid {
+    grid-template-columns: 1fr;
+  }
+  .settings-content .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* How a service connects is a plain label under its name, not a second button on the card. */
+/* The name wraps on its own line space; the sign-in or API key label stays at the top right of every card. */
+.provider-tile-head {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: var(--space-0-5);
+}
+.provider-kind,
+.provider-kind.account {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-weight: 400;
+}
+/* Settings: tabs at the top, then a compact search; the section title is in the tab. */
+.settings-content > .settings-tabs {
+  margin-top: 0;
+}
+.settings-content > .settings-hero {
+  min-height: 0;
+  margin: var(--space-3-5) 0 var(--space-1);
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+.settings-content > .settings-hero > p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.settings-content > .settings-hero .settings-search {
+  flex: 1 1 280px;
+  max-width: 420px;
+  margin: 0;
+}
+.settings-content > .settings-hero .settings-search-results {
+  flex-basis: 100%;
+}
+/* Language and theme choices use the soft selected state, like other choices in the app. */
+.theme-options button.active {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-color: var(--accent-ink);
+}
+/* The policy summary is read-only text, so it should not look like a text box. */
+.settings-content .pilot-note {
+  border: 0;
+  border-left: 3px solid var(--accent-ink);
+  border-radius: 0;
+  background: transparent;
+  padding: var(--space-0-5) 0 var(--space-0-5) var(--space-3);
+}
+.policy-badge.off {
+  color: var(--text);
+  background: var(--selected);
+}
+.privacy-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.privacy-heading .policy-badge {
+  font-weight: 400;
+}
+/* The account's tools sit in their own block under its test result. */
+.connection-tools {
+  margin-top: var(--space-2-5);
+  padding-top: var(--space-2-5);
+  border-top: 1px solid var(--line);
+}
+.connection-tools h2,
+.settings-content .connection-tools h2 {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.connection-tools .ai-capability-list {
+  margin-top: var(--space-1);
+}
+/* Settings, compact: the same content in less height. Sections breathe through rhythm (one spacing scale, quiet
+   rules between them), not through padding; headings step down so the controls lead. */
+/* Settings: expose current choices before decoration and keep permission text readable. */
+.settings-content {
+  overflow: auto;
+  width: 100%;
+  margin: 0 auto;
+  flex: 1 1 auto;
+  scroll-padding-top: 72px;
+  scroll-padding-bottom: var(--settings-footer-height, 116px);
+  max-width: 1120px;
+  padding: var(--space-6) var(--space-8) var(--space-7);
+  padding-top: var(--space-4);
+}
+.settings-content .settings-tabs {
+  margin-top: var(--space-1-5);
+}
+.settings-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 0;
+}
+.settings-content .settings-search {
+  max-width: 22rem;
+  margin: var(--space-2-5) 0 var(--space-0-5);
+}
+.settings-search input {
+  padding: var(--space-1-5) var(--space-2-5);
+  font-size: var(--text-sm);
+}
+.settings-content section {
+  border-bottom: 1px solid var(--line);
+  scroll-margin-top: 70px;
+  padding: var(--space-3-5) 0 var(--space-4);
+}
+.settings-content h2 {
+  font-weight: 600;
+  font-size: var(--text-md);
+  margin: 0 0 var(--space-2-5);
+}
+.settings-content h3 {
+  font-size: var(--text-sm);
+  margin: var(--space-4) 0 var(--space-1-5);
+}
+.settings-content label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2-5);
+  font-size: var(--text-sm);
+}
+.settings-content .small,
+.settings-content p.muted {
+  font-size: var(--text-sm);
+  margin: var(--space-1) 0 var(--space-2);
+}
+.settings-content .form-grid {
+  gap: var(--space-1) var(--space-3-5);
+}
+.settings-content .speaking-styles {
+  margin: var(--space-1) 0 var(--space-3);
+  gap: var(--space-1-5);
+}
+.settings-content .style-card {
+  padding: var(--space-1-5) var(--space-2-5);
+  border-radius: var(--radius-md);
+}
+.settings-content .style-card strong {
+  font-size: var(--text-sm);
+}
+.settings-content .settings-style-example {
+  padding: var(--space-2-5) var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.settings-content .settings-style-example p {
+  margin: var(--space-0-5) 0 0;
+}
+.settings-content .theme-options {
+  margin: var(--space-1) 0 var(--space-4);
+}
+.settings-profile-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3-5);
+  margin-bottom: var(--space-2);
+}
+/* Google services: icon beside the name, one tight card per service. */
+.settings-content .google-service {
+  padding: var(--space-2) var(--space-8) var(--space-2) var(--space-2-5);
+  gap: var(--space-2-5);
+  border-radius: var(--radius-lg);
+}
+.settings-content .google-service-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+}
+.settings-content .google-service-text {
+  gap: 1px;
+}
+.settings-content .google-service-text .muted {
+  font-size: var(--text-xs);
+}
+.settings-content .google-service-tick {
+  top: 10px;
+  right: 10px;
+}
+/* Policy: a dense, scannable list; the badge says on or off at a glance. */
+.policy-features li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--line);
+  padding: var(--space-1) 0;
+  font-size: var(--text-sm);
+}
+.policy-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  padding: 0 var(--space-2);
+}
+/* Policy: grouped switches with on/off badges that differ in colour and icon. */
+.policy-group h3 {
+  margin: var(--space-4) 0 var(--space-1);
+}
+/* The service's own label was inheriting the stacked Settings label, which put the icon above the name. */
+.settings-content label.google-access-toggle {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--space-2-5);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.credential-settings .google-service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--space-2);
+}
+.credential-settings .google-service-group {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+  margin: var(--space-2) 0 var(--space-3-5);
+}
+.credential-settings .google-service-group legend {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin-bottom: var(--space-1-5);
+}
+.settings-content label.google-service {
+  flex-direction: row;
+  margin: 0;
+}
+.settings-content .google-kind {
+  margin-top: var(--space-0-5);
+  font-size: var(--text-xs);
+  border-radius: var(--radius-sm);
+}

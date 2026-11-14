@@ -186,8 +186,6 @@ export const documentToolsEn: Record<string, string> = {
   'ฟอนต์ส่งออกไม่รองรับ กรุณาเลือกจากรายการ': 'Unsupported export font. Select one from the list.',
   เครื่องมือร่างเอกสาร: 'Document drafting tools',
   'กรอกข้อมูลหรือต้นเรื่อง ให้ AI ร่างด้วย Skill แล้วแก้ไขและส่งออก': 'Provide facts or a source; draft with a Skill, then edit and export',
-  'เลือกชนิดเอกสาร → กรอกข้อมูลหรือแนบต้นเรื่อง → AI ร่าง → แก้ไขและส่งออก':
-    'Choose a document → enter facts or attach a source → AI draft → edit and export',
   ชนิดเอกสาร: 'Document type',
   'ข้อมูลที่ขาดจะคงช่อง [รอยืนยัน] ให้ตรวจและเติมในร่างก่อนนำไปใช้':
     'Missing facts stay as [Pending confirmation] placeholders for you to review and complete',
@@ -205,8 +203,6 @@ export const documentToolsEn: Record<string, string> = {
   ดูข้อความต้นเรื่องก่อนส่ง: 'Review source text before sending',
   ไม่มีข้อความที่อ่านได้: 'No readable text',
   'ไฟล์นี้ส่งให้ AI ไม่ได้ ให้นำออกหรือแนบไฟล์อื่นก่อนร่าง': 'This file cannot be sent to AI. Remove or replace it before drafting.',
-  'แนบได้หนึ่งไฟล์ต่อร่าง หรือวางข้อมูลในช่องด้านล่าง ข้อมูลฟอร์มและต้นเรื่องจะส่งให้ AI ที่เลือกตามการตั้งค่าความเป็นส่วนตัวของเครื่องนี้':
-    'Attach one source per draft or enter facts below. Form data and sources go to the selected AI under this device’s privacy settings.',
   เว้นได้หากยังไม่มีข้อมูล: 'Leave blank if unknown',
   'กรอกเท่าที่ทราบ ตัวอย่างในช่องมีไว้ดูวิธีกรอก': 'Fill in what you know. The examples show what to enter.',
   'เช่น หน่วยงานตัวอย่าง เลขที่ 99 ถนนตัวอย่าง': 'e.g. Example Office, 99 Example Road',
@@ -223,8 +219,6 @@ export const documentToolsEn: Record<string, string> = {
   'เช่น 15 มกราคม 2570': 'e.g. 15 January 2027',
   'เช่น คุณเมย์ ตัวอย่าง · events@example.org': 'e.g. May Example · events@example.org',
   'เช่น กำหนดการฉบับเจ้าของงานยืนยัน': 'e.g. Agenda confirmed by the event owner',
-  'AI ช่วยร่าง การตรวจข้อมูลจริง การอนุมัติ และการลงนามเป็นของเจ้าของเรื่องและผู้มีอำนาจ':
-    'AI assists drafting. Fact review, approval and signing belong to the owner and authorized people.',
   'ให้ AI ร่างเอกสาร': 'Draft with AI',
   'ร่าง TOR': 'Draft TOR',
   ร่างบันทึกข้อความ: 'Draft internal memo',

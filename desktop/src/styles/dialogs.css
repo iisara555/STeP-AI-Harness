@@ -1,0 +1,621 @@
+.update-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  margin-top: var(--space-3);
+  padding: var(--space-2-5) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  font-size: var(--text-xs);
+}
+.update-card.ready {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.update-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+.update-card-head small {
+  margin-left: auto;
+  color: var(--muted);
+}
+.update-card small.muted {
+  line-height: 1.5;
+}
+.update-card button {
+  font-size: var(--text-xs);
+  padding: var(--space-1-5) var(--space-2-5);
+}
+.update-card-bar {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--hover);
+  overflow: hidden;
+}
+.update-card-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+  padding: var(--space-6);
+}
+/* The notes scroll; the acknowledge button stays in view however many versions are listed. */
+.whats-new {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.whats-new-notes {
+  overflow: auto;
+  min-height: 0;
+}
+.whats-new .proposal-actions {
+  justify-content: flex-end;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.whats-new .proposal-actions button {
+  font-size: var(--text-sm);
+}
+.whats-new h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.whats-new h3 {
+  font-size: var(--text-base);
+  margin: var(--space-4) 0 var(--space-1-5);
+}
+.whats-new ul {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: grid;
+  gap: var(--space-1-5);
+  line-height: 1.55;
+}
+.confirm-dialog {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-6);
+  width: min(520px, 100%);
+  box-shadow: 0 18px 50px var(--shadow-popover);
+  border: 1px solid var(--line);
+  /* A long dialog (the Learning Inbox) scrolls its body inside a short window; title and buttons stay visible. */
+  max-height: calc(100vh - 50px);
+  display: flex;
+  flex-direction: column;
+}
+.confirm-body {
+  overflow-y: auto;
+  min-height: 0;
+}
+.confirm-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-2-5);
+}
+.confirm-dialog h2 {
+  flex: 1;
+  font-size: var(--text-md);
+  margin: 0;
+}
+/* The corner close sits on the title's first line and reaches out into the padding, so the title keeps its width. */
+.confirm-head .icon {
+  margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1) 0 0;
+}
+.confirm-dialog.info {
+  padding-bottom: var(--space-6);
+}
+.confirm-body p {
+  margin: 0 0 var(--space-2-5);
+  font-size: var(--text-sm);
+}
+/* Section headings inside a dialog: one step under the title and clearly above the 13px body, with room before. */
+.confirm-body h3 {
+  font-size: var(--text-base);
+  font-weight: 600;
+  margin: var(--space-5) 0 var(--space-2);
+}
+.confirm-body h3:first-child {
+  margin-top: 0;
+}
+.confirm-warning {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  color: var(--danger);
+}
+.confirm-error {
+  color: var(--danger);
+  font-size: var(--text-xs);
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+.palette-backdrop {
+  place-items: start center;
+  padding-top: 12vh;
+}
+.palette {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  width: min(600px, 100%);
+  box-shadow: 0 18px 50px var(--shadow-popover);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.palette-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+.palette-search input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  font-size: var(--text-base);
+  padding: var(--space-1) 0;
+}
+.palette-search input:focus {
+  outline: none;
+}
+.palette-list {
+  max-height: 50vh;
+  overflow: auto;
+  padding: var(--space-1-5);
+}
+.palette-group {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  padding: var(--space-2-5) var(--space-2-5) var(--space-1);
+}
+.palette-list button {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  background: transparent;
+  color: var(--text);
+  padding: var(--space-2) var(--space-2-5);
+  font-size: var(--text-sm);
+  text-align: left;
+}
+.palette-list button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.palette-list button small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  flex-shrink: 0;
+}
+.palette-empty {
+  padding: var(--space-3-5);
+}
+.toasts {
+  position: fixed;
+  right: 18px;
+  bottom: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  z-index: 60;
+  max-width: min(420px, calc(100vw - 36px));
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2-5) var(--space-2-5) var(--space-2-5) var(--space-3-5);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 30px var(--shadow-card);
+  font-size: var(--text-sm);
+  animation: toast-in 0.16s ease-out;
+}
+.toast > svg {
+  flex-shrink: 0;
+  color: var(--accent-ink);
+}
+.toast.error > svg {
+  color: var(--danger);
+}
+.toast span {
+  flex: 1;
+}
+.toast .text-link {
+  padding: var(--space-0-5) var(--space-1-5);
+  white-space: nowrap;
+}
+.palette-list button.active {
+  background: var(--selected);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.memory-editor {
+  display: grid;
+  gap: var(--space-3);
+}
+.memory-similar {
+  border-left: 3px solid var(--accent-ink);
+  padding: var(--space-1) 0 var(--space-1) var(--space-3);
+}
+.memory-similar ul {
+  margin: var(--space-1) 0 var(--space-2);
+  padding-left: var(--space-4);
+}
+.memory-item {
+  border-top: 1px solid var(--border);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+}
+/* Maintenance board in the Memory dialog: three columns, stacked when narrow. */
+.maintenance {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.maintenance-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+}
+.maintenance-column h4 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-sm);
+}
+.maintenance-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.maintenance-item p {
+  margin: var(--space-1) 0;
+}
+.feedback-actions {
+  display: inline-flex;
+  gap: var(--space-0-5);
+}
+.feedback-actions button.active {
+  color: var(--accent-ink);
+  border-color: var(--accent-ink);
+}
+.feedback-field {
+  display: grid;
+  gap: var(--space-1-5);
+}
+.feedback-field textarea {
+  width: 100%;
+  resize: vertical;
+}
+.feedback-scope {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-2-5);
+}
+.feedback-scope label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+.feedback-scope input {
+  width: auto;
+}
+.feedback-scope + .feedback-field {
+  margin-top: var(--space-3);
+}
+.feedback-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin-top: var(--space-2);
+}
+.feedback-check input {
+  width: auto;
+}
+.feedback-report {
+  margin-top: var(--space-2);
+}
+.learning-item pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  padding: var(--space-2-5);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.learning-item blockquote {
+  margin: var(--space-2) 0;
+  padding-inline-start: var(--space-3);
+  border-inline-start: 3px solid var(--border);
+}
+.learning-draft {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin: var(--space-2) 0;
+}
+.learning-draft input {
+  flex: 1 1 220px;
+}
+.learning-draft p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.learning-review {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin: var(--space-2) 0;
+}
+.learning-health ul {
+  margin: var(--space-1-5) 0;
+  padding-left: 1.2em;
+}
+.learning-metrics ul {
+  margin: var(--space-1-5) 0;
+  padding-left: 1.2em;
+}
+.learning-metrics-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-2) 0;
+}
+.learning-metrics-table th,
+.learning-metrics-table td {
+  padding: var(--space-1) var(--space-1-5);
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.learning-metrics-table td {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.learning-metrics-table tbody th {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.pack-review {
+  margin: var(--space-1-5) 0;
+  font-size: var(--text-sm);
+}
+.pack-review summary {
+  cursor: pointer;
+}
+.pack-review.pass summary {
+  color: var(--diff-added);
+}
+.pack-review.fail summary,
+.pack-review li.error {
+  color: var(--danger);
+}
+.pack-review ul {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+}
+/* UI audit 2026-10-17: group C (dialogs) */
+/* Keyboard shortcuts: one command per row, name left, key right. */
+.keybinding-table {
+  display: grid;
+  margin: var(--space-1) 0 var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.keybinding-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(130px, 170px);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1-5) 0;
+  border-bottom: 1px solid var(--line);
+}
+.keybinding-row label {
+  font-size: var(--text-sm);
+  line-break: strict;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.keybinding-row input {
+  width: 100%;
+  padding: var(--space-1-5) var(--space-2-5);
+}
+.keybinding-table > p {
+  margin: var(--space-2) 0;
+}
+.keybinding-add {
+  justify-self: start;
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+}
+.keybinding-vim,
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-height: 32px;
+  padding: var(--space-1) 0;
+  font-size: var(--text-sm);
+}
+.keybinding-vim input,
+.check-row input {
+  margin-top: var(--space-1);
+  flex-shrink: 0;
+}
+/* Stacked forms in dialogs: label above field, actions on their own row. */
+.dialog-form,
+.pack-form {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 var(--space-1);
+}
+.pack-imported p,
+.pack-imported ul {
+  margin: 0;
+}
+.dialog-form h3 {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-md);
+}
+.dialog-form > section > p,
+.dialog-form > p,
+.pack-form > p {
+  margin: 0;
+}
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+/* Folded sections in dialogs: a full-row target of at least 32px with a chevron, so they read as controls. */
+.dialog-fold > summary,
+.admin-fold > summary,
+.whats-new-older > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  min-height: 32px;
+  padding: var(--space-1) var(--space-1-5) var(--space-1) 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  list-style: none;
+}
+.dialog-fold > summary::-webkit-details-marker,
+.admin-fold > summary::-webkit-details-marker,
+.whats-new-older > summary::-webkit-details-marker {
+  display: none;
+}
+.dialog-fold > summary::before,
+.admin-fold > summary::before,
+.whats-new-older > summary::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  margin: 0 var(--space-1) 0 var(--space-0-5);
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+  flex-shrink: 0;
+}
+.dialog-fold[open] > summary::before,
+.admin-fold[open] > summary::before,
+.whats-new-older[open] > summary::before {
+  transform: rotate(45deg);
+}
+.dialog-fold > summary:hover,
+.admin-fold > summary:hover,
+.whats-new-older > summary:hover {
+  background: var(--hover);
+}
+.admin-fold > summary {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.admin-fold > p {
+  margin: var(--space-1) 0 0;
+}
+.dialog-fold {
+  margin: var(--space-0-5) 0;
+}
+.dialog-fold[open] {
+  padding-bottom: var(--space-2);
+}
+/* Skill Packs */
+.pack-options {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-0-5);
+}
+.pack-options legend {
+  padding: 0;
+  margin-bottom: var(--space-0-5);
+}
+.pack-empty {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.pack-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.pack-item > :not(button) {
+  flex-basis: 100%;
+}
+.pack-item > p {
+  margin: 0;
+}
+/* Memory: the maintenance board toggle is a disclosure with a chevron. */
+.maintenance-toggle {
+  justify-content: flex-start;
+  text-align: left;
+  width: 100%;
+}
+.maintenance-chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.maintenance-toggle[aria-expanded='true'] .maintenance-chevron {
+  transform: rotate(90deg);
+}
+/* What's new: older versions folded under one row. */
+.whats-new-older {
+  margin-top: var(--space-4);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line);
+}
+.whats-new-older > summary {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+/* A toast raised while a dialog is open sits under the dialog's scrim instead of glaring above it. */
+body:has(.dialog-backdrop) .toasts {
+  z-index: 49;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .dialog-backdrop {
+    animation: backdrop-in 0.18s var(--ease-out);
+  }
+  .confirm-dialog,
+  .palette {
+    animation: surface-in 0.22s var(--ease-out);
+  }
+}
+/* Dialog surfaces are one step lighter than the page, with a hairline and a deeper, softer shadow. */
+.confirm-dialog,
+.palette {
+  background: var(--paper);
+  box-shadow:
+    0 1px 0 var(--shadow-faint),
+    0 24px 60px var(--shadow-popover);
+}

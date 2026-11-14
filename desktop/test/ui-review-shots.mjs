@@ -120,7 +120,7 @@ try {
     ['12-learning', 'กล่องบทเรียน'],
     ['13-automations', 'เครื่องมือเพิ่มเติม'],
     ['14-keyboard', 'คีย์ลัดแป้นพิมพ์'],
-    ['15-packs', 'เพิ่ม Skill ของฉัน'],
+    ['15-packs', 'ชุด Skill ที่ติดตั้ง'],
     ['16-whats-new', 'มีอะไรใหม่ในรุ่นนี้'],
   ]) {
     await palette(label);
@@ -132,7 +132,7 @@ try {
   await shot('17-tour');
   await escape();
   await palette('การตั้งค่า');
-  for (const [i, tab] of ['ทั่วไป', 'เชื่อมต่อ AI', 'การแสดงผลและภาษา', 'ความเป็นส่วนตัว', 'นโยบายองค์กร'].entries()) {
+  for (const [i, tab] of ['ทั่วไป', 'เชื่อมต่อ AI', 'บัญชีและบริการ', 'การแสดงผลและภาษา', 'ความเป็นส่วนตัว', 'นโยบายองค์กร'].entries()) {
     await page.getByRole('tab', { name: tab }).click();
     await shot(`18-settings-${i + 1}`);
   }
