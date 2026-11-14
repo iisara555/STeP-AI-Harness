@@ -493,13 +493,6 @@ nav button:disabled {
 nav button:disabled {
   border-color: transparent;
 }
-/* Minimum readable size for the sidebar tagline and the team line under the name. One line always: in a narrow
-   sidebar the letters close up instead of the tagline breaking in two. */
-.brand-tagline {
-  font-size: var(--text-xs) !important;
-  letter-spacing: 0.1em;
-  white-space: nowrap;
-}
 @media (max-width: 1000px) {
   .brand-tagline {
     letter-spacing: 0.03em;

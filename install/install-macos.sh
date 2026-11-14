@@ -25,8 +25,8 @@ clear || true
 echo -e "${CYAN}=================================================================${NC}"
 echo -e "${CYAN}   ____ _____     ____       _    ___                            ${NC}"
 echo -e "${CYAN}  / ___|_   _|___|  _ \     / \  |_ _|   ${YELLOW}STeP AI Setup (v${PILOT_VERSION})      ${NC}"
-echo -e "${CYAN}  \___ \ | | / _ \ |_) |   / _ \  | |    ${GRAY}Enterprise AI Architecture      ${NC}"
-echo -e "${CYAN}   ___) || ||  __/  __/   / ___ \ | |    ${GRAY}22 Teams • 5 Clusters           ${NC}"
+echo -e "${CYAN}  \___ \ | | / _ \ |_) |   / _ \  | |    ${GRAY}ผู้ช่วย AI ขององค์กร           ${NC}"
+echo -e "${CYAN}   ___) || ||  __/  __/   / ___ \ | |    ${GRAY}22 ทีม · 5 กลุ่มงาน            ${NC}"
 echo -e "${CYAN}  |____/ |_| \___|_|     /_/   \_\___|                           ${NC}"
 echo -e "${CYAN}=================================================================${NC}"
 echo -e "${WHITE}   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North) ${NC}"
@@ -85,6 +85,6 @@ echo ""
 
 echo ""
 echo -e "${GREEN}✓ ตรวจระบบเสร็จแล้ว — ใช้คำแนะนำเริ่มงานที่แสดงจาก STeP AI ด้านบน${NC}"
-echo -e "${GRAY}อัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.command${NC}"
+echo -e "${GRAY}อัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Tools/Update-STeP-AI.command${NC}"
 echo ""
 read -p "กด Enter เพื่อเสร็จสิ้น..." dummy

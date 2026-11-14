@@ -131,7 +131,7 @@ export async function runFeedback(args) {
   console.log(`     AI จะช่วยจัดรายละเอียดเป็นร่างคำขอ แล้วคุณตรวจและส่งตาม SUPPORT.md\n`);
 
   console.log(colors.bold('🖱️  วิธีที่ 2: ดับเบิลคลิกไฟล์ Feedback-STeP-AI'));
-  console.log(`   เปิดไฟล์ ${colors.green('Feedback-STeP-AI.bat')} (Windows) หรือ ${colors.green('Feedback-STeP-AI.command')} (Mac)`);
+  console.log(`   เปิดไฟล์ ${colors.green('Tools\\Feedback-STeP-AI.bat')} (Windows) หรือ ${colors.green('Tools/Feedback-STeP-AI.command')} (Mac)`);
   console.log(`   แล้วเลือกกดเพียง 2 ตัวเลือก:`);
   console.log(`     ${colors.cyan('[1]')} AI ตอบไม่ถูก / อยากแจ้งปัญหา   ${colors.dim('(เปิดไฟล์ FEEDBACK.md ใน Notepad ทันที)')}`);
   console.log(`     ${colors.cyan('[2]')} อยากให้ AI ช่วยงานเพิ่ม        ${colors.dim('(เปิดไฟล์ REQUEST_NEW_TASK.md ใน Notepad ทันที)')}`);

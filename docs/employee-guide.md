@@ -169,7 +169,7 @@ First Run จะอ่านเฉพาะไฟล์เริ่มต้น�
 
 ข้อมูล Restricted หรือ Sensitive ต้องใช้ช่องทางที่องค์กรอนุมัติ หากไม่แน่ใจให้จัดเป็น Restricted ก่อน
 
-ก่อนแนบเอกสาร เปิด `Check-Privacy-STeP-AI.bat` หรือ `Check-Privacy-STeP-AI.command` แล้วเลือกไฟล์บนเครื่อง อ่าน [คู่มือตรวจก่อนแนบ](privacy-preflight.md) สำหรับข้อจำกัด PDF/DOCX และการตรวจด้วยคน ตัวตรวจไม่ดักไฟล์ที่แนบตรงให้ AI ไม่มี OCR และไม่อนุญาตส่งออกจากผล auto-mask
+ก่อนแนบเอกสาร เปิด `Tools/Check-Privacy-STeP-AI.bat` หรือ `Tools/Check-Privacy-STeP-AI.command` แล้วเลือกไฟล์บนเครื่อง อ่าน [คู่มือตรวจก่อนแนบ](privacy-preflight.md) สำหรับข้อจำกัด PDF/DOCX และการตรวจด้วยคน ตัวตรวจไม่ดักไฟล์ที่แนบตรงให้ AI ไม่มี OCR และไม่อนุญาตส่งออกจากผล auto-mask
 
 อ่านกติกาเต็มได้ที่ [Data Classification & Privacy Gate](../rules/data-classification.md)
 
@@ -183,8 +183,8 @@ output/<TEAM>/<YYYY>/<MM>/<TYPE>/YYYYMMDD_TEAM_TYPE_TITLE_vNN.ext
 
 อัปเดตด้วย:
 
-- Windows: `Update-STeP-AI.bat`
-- macOS: `Update-STeP-AI.command`
+- Windows: `Tools/Update-STeP-AI.bat`
+- macOS: `Tools/Update-STeP-AI.command`
 
 Updater จะสำรองรุ่นเดิมและรักษา `USER.md`, `MEMORY.md`, `output/` และไฟล์ที่ผู้ใช้แก้เองตามที่ระบบติดตามไว้ หากอัปเดตไม่ผ่าน ให้ทำตาม [STeP AI Support](../SUPPORT.md)
 
@@ -196,7 +196,7 @@ Updater จะสำรองรุ่นเดิมและรักษา `U
 
 > เมื่อกี้ตอบไม่ถูก ช่วยแจ้งทีม STeP AI ให้หน่อย
 
-หรือดับเบิลคลิก `Feedback-STeP-AI.bat` / `Feedback-STeP-AI.command` เลือกแจ้งปัญหา กรอก `FEEDBACK.md` แล้วส่งตาม [STeP AI Support](../SUPPORT.md) ผ่านช่องทางภายในของทีม
+หรือดับเบิลคลิก `Tools/Feedback-STeP-AI.bat` / `Tools/Feedback-STeP-AI.command` เลือกแจ้งปัญหา กรอก `FEEDBACK.md` แล้วส่งตาม [STeP AI Support](../SUPPORT.md) ผ่านช่องทางภายในของทีม
 
 ### อยากให้ AI ช่วยงานใหม่
 

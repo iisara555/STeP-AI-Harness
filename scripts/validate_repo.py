@@ -769,8 +769,8 @@ def validate_package_config(errors: list[str]) -> None:
     # A source-tree check alone misses broken references in npm installations.
     required_package_files = {
         "SUPPORT.md", "START-HERE.md", "START-PROMPT.txt",
-        "Feedback-STeP-AI.bat", "Feedback-STeP-AI.command",
-        "Check-Privacy-STeP-AI.bat", "Check-Privacy-STeP-AI.command",
+        "Tools/Feedback-STeP-AI.bat", "Tools/Feedback-STeP-AI.command",
+        "Tools/Check-Privacy-STeP-AI.bat", "Tools/Check-Privacy-STeP-AI.command",
         "install/privacy-windows.ps1", "install/privacy-macos.sh", "docs/privacy-preflight.md",
         "src/modules/privacy/document.js", "src/modules/privacy/document-worker.js",
         "src/vendor/privacy/manifest.json", "src/vendor/privacy/pdf.mjs", "src/vendor/privacy/pdf.worker.mjs",

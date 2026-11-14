@@ -241,7 +241,7 @@
   position: sticky;
   bottom: 0;
   z-index: 3;
-  margin: var(--space-6) -16px 0;
+  margin: var(--space-6) calc(var(--space-4) * -1) 0;
   padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--line);
   background: var(--surface);

@@ -152,17 +152,17 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     const batInstall = join(PACKAGE_ROOT, 'Install-STeP-AI.bat');
     const psInstall = join(PACKAGE_ROOT, 'install', 'install-windows.ps1');
     const psRuntime = join(PACKAGE_ROOT, 'install', 'windows-runtime.ps1');
-    const batUpdate = join(PACKAGE_ROOT, 'Update-STeP-AI.bat');
+    const batUpdate = join(PACKAGE_ROOT, 'Tools', 'Update-STeP-AI.bat');
     const psUpdate = join(PACKAGE_ROOT, 'install', 'update-windows.ps1');
-    const batFeedback = join(PACKAGE_ROOT, 'Feedback-STeP-AI.bat');
+    const batFeedback = join(PACKAGE_ROOT, 'Tools', 'Feedback-STeP-AI.bat');
     const psFeedback = join(PACKAGE_ROOT, 'install', 'feedback-windows.ps1');
 
     assert.ok(await pathExists(batInstall), 'Install-STeP-AI.bat must exist at repo root');
     assert.ok(await pathExists(psInstall), 'install/install-windows.ps1 must exist');
     assert.ok(await pathExists(psRuntime), 'install/windows-runtime.ps1 must exist');
-    assert.ok(await pathExists(batUpdate), 'Update-STeP-AI.bat must exist at repo root');
+    assert.ok(await pathExists(batUpdate), 'Tools/Update-STeP-AI.bat must exist');
     assert.ok(await pathExists(psUpdate), 'install/update-windows.ps1 must exist');
-    assert.ok(await pathExists(batFeedback), 'Feedback-STeP-AI.bat must exist at repo root');
+    assert.ok(await pathExists(batFeedback), 'Tools/Feedback-STeP-AI.bat must exist');
     assert.ok(await pathExists(psFeedback), 'install/feedback-windows.ps1 must exist');
 
     const batInstallContent = await readFile(batInstall, 'utf-8');
@@ -190,7 +190,9 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(!psInstallContent.includes('Start-Process "https://opencode.ai"'));
 
     const batUpdateContent = await readFile(batUpdate, 'utf-8');
-    assert.ok(batUpdateContent.includes('update-windows.ps1'));
+    // Launchers in Tools/ reach the release folder one level up.
+    assert.ok(batUpdateContent.includes('"%~dp0..\\install\\update-windows.ps1"'));
+    assert.ok(batUpdateContent.includes('"%~dp0..\\Setup-STeP-Skills.bat"'));
 
     const psUpdateContent = await readFile(psUpdate, 'utf-8');
     assert.ok(psUpdateContent.includes('releases/latest'));
@@ -200,7 +202,9 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(psUpdateContent.includes('output/'));
 
     const batFeedbackContent = await readFile(batFeedback, 'utf-8');
-    assert.ok(batFeedbackContent.includes('feedback-windows.ps1'));
+    assert.ok(batFeedbackContent.includes('"%~dp0..\\install\\feedback-windows.ps1"'));
+    const batPrivacyContent = await readFile(join(PACKAGE_ROOT, 'Tools', 'Check-Privacy-STeP-AI.bat'), 'utf-8');
+    assert.ok(batPrivacyContent.includes('"%~dp0..\\install\\privacy-windows.ps1"'));
 
     // Verify CRLF line endings to prevent Windows cmd.exe parser desync
     assert.ok(batInstallContent.includes('\r\n'), 'Install-STeP-AI.bat must use CRLF line endings');
@@ -300,20 +304,27 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
   await t.test('Case 8: Verification of macOS Finder command and shell scripts', async () => {
     const cmdInstall = join(PACKAGE_ROOT, 'Install-STeP-AI.command');
     const shInstall = join(PACKAGE_ROOT, 'install', 'install-macos.sh');
-    const cmdUpdate = join(PACKAGE_ROOT, 'Update-STeP-AI.command');
+    const cmdUpdate = join(PACKAGE_ROOT, 'Tools', 'Update-STeP-AI.command');
     const shUpdate = join(PACKAGE_ROOT, 'install', 'update-macos.sh');
-    const cmdFeedback = join(PACKAGE_ROOT, 'Feedback-STeP-AI.command');
+    const cmdFeedback = join(PACKAGE_ROOT, 'Tools', 'Feedback-STeP-AI.command');
     const shFeedback = join(PACKAGE_ROOT, 'install', 'feedback-macos.sh');
 
     assert.ok(await pathExists(cmdInstall), 'Install-STeP-AI.command must exist at repo root');
     assert.ok(await pathExists(shInstall), 'install/install-macos.sh must exist');
-    assert.ok(await pathExists(cmdUpdate), 'Update-STeP-AI.command must exist at repo root');
+    assert.ok(await pathExists(cmdUpdate), 'Tools/Update-STeP-AI.command must exist');
     assert.ok(await pathExists(shUpdate), 'install/update-macos.sh must exist');
-    assert.ok(await pathExists(cmdFeedback), 'Feedback-STeP-AI.command must exist at repo root');
+    assert.ok(await pathExists(cmdFeedback), 'Tools/Feedback-STeP-AI.command must exist');
     assert.ok(await pathExists(shFeedback), 'install/feedback-macos.sh must exist');
 
     const cmdInstallContent = await readFile(cmdInstall, 'utf-8');
     assert.ok(cmdInstallContent.includes('install-macos.sh'));
+    // The installer clears quarantine on the moved launchers too, and they resolve the release folder one level up.
+    assert.ok(cmdInstallContent.includes('"$SCRIPT_DIR"/Tools/*.command'));
+    for (const name of ['Update-STeP-AI.command', 'Feedback-STeP-AI.command', 'Check-Privacy-STeP-AI.command']) {
+      const content = await readFile(join(PACKAGE_ROOT, 'Tools', name), 'utf-8');
+      assert.ok(content.includes('ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"'), name);
+      assert.ok(!content.includes('SCRIPT_DIR'), name);
+    }
 
     const runtimeHelper = join(PACKAGE_ROOT, 'install', 'macos-runtime.sh');
     const macHelp = join(PACKAGE_ROOT, 'MAC-START-HERE.txt');
@@ -396,7 +407,7 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
       const py = [
         'import sys, zipfile',
         'z=zipfile.ZipFile(sys.argv[1])',
-        'names=["Install-STeP-AI.command","Update-STeP-AI.command","Feedback-STeP-AI.command","install/install-macos.sh","install/macos-runtime.sh"]',
+        'names=["Install-STeP-AI.command","Tools/Update-STeP-AI.command","Tools/Feedback-STeP-AI.command","install/install-macos.sh","install/macos-runtime.sh"]',
         'print(" ".join(oct((z.getinfo(n).external_attr >> 16) & 0o777) for n in names))'
       ].join('; ');
       const { stdout } = await execFileAsync(PYTHON.command, [...PYTHON.prefixArgs, '-c', py, zipPath]);

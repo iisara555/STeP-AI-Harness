@@ -31,7 +31,7 @@ $WshShell = New-Object -ComObject WScript.Shell
 $shortcuts = @(
     @{
         Name = "STeP AI - Feedback & Tasks.lnk";
-        Target = "$RepoDir\\Feedback-STeP-AI.bat";
+        Target = "$RepoDir\\Tools\\Feedback-STeP-AI.bat";
         Desc = "STeP AI - ศูนย์รับฟังข้อเสนอแนะและของานเพิ่มสำหรับพนักงาน"
     },
     @{
@@ -41,7 +41,7 @@ $shortcuts = @(
     },
     @{
         Name = "STeP AI - Update.lnk";
-        Target = "$RepoDir\\Update-STeP-AI.bat";
+        Target = "$RepoDir\\Tools\\Update-STeP-AI.bat";
         Desc = "STeP AI - อัปเดตทักษะและมาตรฐานล่าสุด"
     }
 )
@@ -76,7 +76,7 @@ if ($CreateDesktopShortcut) {
     if ($desktopPath -and (Test-Path $desktopPath)) {
         $desktopLnk = Join-Path $desktopPath "STeP AI Harness.lnk"
         $ds = $WshShell.CreateShortcut($desktopLnk)
-        $ds.TargetPath = "$RepoDir\\Feedback-STeP-AI.bat"
+        $ds.TargetPath = "$RepoDir\\Tools\\Feedback-STeP-AI.bat"
         $ds.WorkingDirectory = $RepoDir
         $ds.IconLocation = "$IcoPath,0"
         $ds.Description = "อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP AI)"

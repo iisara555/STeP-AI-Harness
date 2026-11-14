@@ -1,0 +1,518 @@
+/* AI connections: choosing a service, keys, accounts, credentials and the first-run wizard. */
+/* Choosing an AI service: one tile per service with how it connects, then the chosen one's key and cost. */
+.provider-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  /* Every card is as tall as the tallest one, so a long name or a wrapped label does not make a row stand out. */
+  grid-auto-rows: 1fr;
+  gap: var(--space-2);
+}
+.provider-tile:hover {
+  border-color: var(--accent-ink);
+}
+.provider-tile.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: var(--accent-soft);
+}
+.provider-tile > span {
+  width: 100%;
+}
+.provider-tile-head > strong {
+  min-width: 0;
+}
+.provider-tile-head > .provider-kind {
+  flex: none;
+}
+/* "Recommended" sits on the card's top edge, so it does not add a line and make that card taller. */
+.provider-tile {
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+  justify-content: stretch;
+  justify-items: stretch;
+  text-align: left;
+  padding: var(--space-2-5) var(--space-3);
+  min-height: 70px;
+  background: var(--paper);
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  font-weight: 400;
+  position: relative;
+}
+.provider-tile > .provider-recommended {
+  position: absolute;
+  top: -8px;
+  left: 10px;
+  width: auto;
+  padding: 0 var(--space-1-5);
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 16px;
+}
+.provider-tile-text {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  line-height: 1.4;
+}
+.provider-kind {
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  padding: 1px var(--space-1-5);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+}
+.provider-kind.account {
+  border-color: var(--accent-ink);
+  color: var(--accent-ink);
+}
+.provider-detail {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-3-5);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+}
+.provider-detail p {
+  margin: 0;
+}
+.provider-detail .text-link {
+  justify-self: start;
+}
+.settings-save {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-6);
+}
+@media (max-width: 1150px) {
+  .settings-content {
+    padding: var(--space-6);
+  }
+}
+.settings-tabs button.active {
+  color: var(--text);
+  border-bottom: 3px solid var(--accent);
+}
+.privacy-info h3 {
+  font-size: var(--text-sm);
+  margin: var(--space-4) 0 var(--space-1);
+}
+.privacy-info p {
+  font-size: var(--text-sm);
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.settings-art {
+  width: 150px;
+  height: 150px;
+  flex-shrink: 0;
+  margin: calc(var(--space-5) * -1) calc(var(--space-2-5) * -1) calc(var(--space-5) * -1) 0;
+}
+@media (max-width: 1150px) {
+  .settings-art {
+    display: none;
+  }
+}
+.style-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+.speaking-styles {
+  grid-template-columns: repeat(3, 1fr);
+  margin: var(--space-1-5) 0 var(--space-5);
+}
+.speaking-style-custom {
+  display: block;
+  margin: calc(var(--space-2) * -1) 0 var(--space-5);
+}
+.style-card {
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  padding: var(--space-2-5) var(--space-3);
+  gap: var(--space-0-5);
+}
+.style-card small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.style-card.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: var(--accent-soft);
+}
+.style-preview {
+  display: flex;
+  gap: var(--space-2-5);
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.style-preview .avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  flex-shrink: 0;
+}
+.style-preview small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.style-preview p {
+  margin: var(--space-0-5) 0 0;
+  font-size: var(--text-sm);
+}
+@media (max-width: 920px) {
+  .style-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+/* Layers: wizard 30 < tour 40 < dialogs that need an answer (sign-in code, consent, confirm) 50 < toasts 60. */
+.connect-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  font-size: var(--text-xs);
+  color: var(--accent-ink);
+  margin: var(--space-0-5) 0;
+}
+.connect-progress .text-link {
+  padding: 0 var(--space-1-5);
+}
+/* Claude Pro/Max route: explanation and Claude Code status in connection forms. */
+.claude-code-note {
+  display: grid;
+  gap: var(--space-2);
+}
+.claude-code-note button {
+  justify-self: start;
+}
+/* Shown above the composer when the task's AI connection cannot answer. */
+.connection-warning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  padding: var(--space-1-5) var(--space-2-5);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  font-size: var(--text-sm);
+}
+.connection-warning span {
+  flex: 1;
+}
+.connection-warning button {
+  padding: var(--space-0-5) var(--space-2-5);
+}
+.policy-problems {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+}
+.policy-problems code {
+  overflow-wrap: anywhere;
+}
+.policy-features p {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-2);
+}
+/* Language choice on the first wizard step: small, visible before anything else. */
+.language-switch {
+  display: inline-flex;
+  gap: var(--space-0-5);
+  padding: var(--space-0-5);
+  margin-bottom: var(--space-1);
+  border-radius: var(--radius-md);
+  background: var(--hover, var(--selected));
+}
+.language-switch button {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  background: transparent;
+  color: var(--muted);
+}
+.language-switch button.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px var(--shadow-soft);
+}
+/* Gemini API key on the main connection page: key, where to get one, and who pays. */
+.gemini-key {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-2-5) 0 var(--space-1);
+}
+.gemini-key button {
+  justify-self: start;
+}
+.auth-code-steps {
+  margin: 0 0 var(--space-3);
+  padding-left: var(--space-5);
+  line-height: 1.6;
+}
+.connection-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-2-5) var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  flex-wrap: wrap;
+}
+/* Developer-only switch: at the bottom, small, still discoverable. */
+.development-mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-3-5);
+}
+.development-mode button {
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  min-height: 0;
+  padding: var(--space-1) var(--space-2-5);
+}
+/* The account list sits on the page itself; each account is its own card. */
+.ai-connect-step.ai-readiness {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+.connection-list {
+  list-style: none;
+  margin: var(--space-2-5) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2-5);
+}
+.connection-card {
+  padding: var(--space-3-5) var(--space-4);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  gap: var(--space-1-5);
+}
+.ai-readiness .connection-card:last-child {
+  padding-bottom: var(--space-3-5);
+  border-bottom: 1px solid var(--line);
+}
+.connection-card.ready {
+  border-left-color: var(--diff-added);
+}
+.connection-card.attention,
+.connection-card.busy {
+  border-left-color: var(--accent);
+}
+.connection-card.error {
+  border-left-color: var(--danger);
+}
+.connection-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1-5) var(--space-3);
+}
+.connection-name {
+  font-size: var(--text-md);
+}
+.connection-row .connection-state {
+  margin: 0;
+  padding: var(--space-0-5) var(--space-2-5);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  background: var(--selected);
+  color: var(--muted);
+}
+.connection-state.ready {
+  color: var(--diff-added);
+  background: color-mix(in srgb, var(--diff-added) 12%, transparent);
+}
+.connection-state.attention,
+.connection-state.busy {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+.connection-state.error {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+.connection-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+}
+.connection-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-4);
+  border-top: 1px solid var(--line);
+  margin-top: var(--space-1);
+}
+.connection-more > details {
+  flex: 1 1 220px;
+  min-width: 0;
+  margin-top: 0;
+}
+.connection-more > details[open] {
+  flex-basis: 100%;
+}
+.connection-more .ai-account-management {
+  border-top: 0;
+  margin-top: 0;
+}
+.connection-more summary {
+  padding: var(--space-2) 0 0;
+  margin: 0;
+}
+.ai-provider-disclosure[data-first='true'] > summary {
+  display: none;
+}
+.ai-add-account summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+  font-weight: 600;
+}
+.ai-add-account {
+  border-style: dashed;
+}
+.ai-capabilities {
+  margin-top: var(--space-2);
+  min-width: 0;
+}
+.ai-capabilities summary {
+  cursor: pointer;
+  font-size: var(--text-sm);
+}
+.ai-capability-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-2) 0 0;
+}
+.ai-capability-list li {
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--line);
+}
+.ai-capability-list li > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5) var(--space-3);
+  align-items: baseline;
+}
+.ai-capability-list strong {
+  font-size: var(--text-sm);
+}
+.ai-capability-list p {
+  overflow-wrap: anywhere;
+  margin: var(--space-1) 0 0;
+}
+.ai-capability-state {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.ai-capability-state.available {
+  color: var(--accent-ink);
+}
+.ai-organization-capabilities {
+  padding: var(--space-3) 0;
+}
+/* Credential Settings reuses the workspace's restrained panels and accessible native controls. */
+.credential-settings {
+  max-width: 960px;
+}
+.credential-section {
+  padding: var(--space-6) 0;
+  border-bottom: 1px solid var(--border);
+}
+.credential-section h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+}
+.credential-heading,
+.credential-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+}
+.credential-actions,
+.google-launches {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.credential-note {
+  padding: var(--space-3-5) var(--space-4);
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+}
+.credential-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  margin: var(--space-4) 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.credential-form label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+.credential-form input:not([type='checkbox']) {
+  width: 100%;
+}
+.credential-form .credential-check {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+}
+.credential-form p,
+.credential-form .credential-actions {
+  grid-column: 1 / -1;
+}
+.credential-row {
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--border);
+}
+.credential-row p {
+  margin: var(--space-1) 0 0;
+  overflow-wrap: anywhere;
+}
+.credential-search {
+  width: 100%;
+  margin-top: var(--space-4);
+}

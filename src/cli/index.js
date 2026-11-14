@@ -57,7 +57,8 @@ function parseArgs(rawArgs) {
   return args;
 }
 
-function showHelp(version) {
+/** Staff see their seven commands; `--all` (or `help --all`) adds the admin section. */
+function showHelp(version, all = false) {
   console.log(`
 ${colors.cyan(colors.bold('@step-cmu/ai-harness'))} ${colors.dim(`v${version}`)}
 ระบบแจกจ่าย Approved Skills และ Rules สำหรับ 22 ทีม STeP / RSP North
@@ -65,52 +66,55 @@ ${colors.cyan(colors.bold('@step-cmu/ai-harness'))} ${colors.dim(`v${version}`)}
 ${colors.bold('การใช้งาน:')}
   step-ai <คำสั่ง> [ตัวเลือก]
 
-${colors.bold('คำสั่งหลักสำหรับพนักงาน:')}
-  ${colors.cyan('ask')}        ถามคำถามงานภาษาไทยธรรมดา เพื่อให้ AI วิเคราะห์ Skill, SOP และระเบียบที่เกี่ยวข้อง
-  ${colors.cyan('config')}     ดูหรือเปลี่ยนทีมหลักและเครื่องมือ AI ประจำตัว (${colors.dim('~/.step-ai/config.json')})
-  ${colors.cyan('update')}     ซิงก์ Skills และ Router จากเวอร์ชัน STeP AI ที่ติดตั้งอยู่
-  ${colors.cyan('feedback')}   แนะนำวิธีส่งข้อเสนอแนะ รายงานผลลัพธ์ หรือเสนอ Skill ใหม่
-  ${colors.cyan('output')}     สร้าง path และชื่อไฟล์มาตรฐานสำหรับเก็บ output โดยไม่เขียนทับไฟล์เดิม
-  ${colors.cyan('privacy')}    ตรวจข้อความ/PDF/DOCX บนเครื่องก่อนแนบไฟล์ ให้คนตรวจผลก่อนส่ง
-  ${colors.cyan('benchmark')}  รัน Pilot benchmark 30 งานสำหรับ Router / Context / Authority
-  ${colors.cyan('run')}        Generate a governed draft (--base-url URL --model ID --api-key-env NAME --approve-provider --approve-destination --output-format text|json|stream-json)
-  ${colors.cyan('autopilot')}  Inspect approved GitHub issues/PRs (--repo owner/repo --dry-run); guarded code proposals and human review
-  ${colors.cyan('init')}       ติดตั้ง Approved Skills เข้า Workspace ตาม Team หรือ Role
+${colors.bold('สำหรับพนักงาน:')}
+  ${colors.cyan('ask')}        ถามงานเป็นภาษาไทย ระบบหา Skill, SOP และระเบียบที่เกี่ยวข้องให้
+  ${colors.cyan('privacy')}    ตรวจข้อความ/PDF/DOCX ในเครื่องก่อนแนบให้ AI
+  ${colors.cyan('output')}     ตั้งชื่อและที่เก็บไฟล์งานตามมาตรฐาน ไม่เขียนทับไฟล์เดิม
+  ${colors.cyan('config')}     ดูหรือเปลี่ยนทีมหลักและโปรแกรม AI ที่ใช้
+  ${colors.cyan('update')}     อัปเดต Skills และ Router จากรุ่นที่ติดตั้งอยู่
+  ${colors.cyan('doctor')}     ตรวจว่าเครื่องพร้อมใช้งาน (ใส่ --employee เพื่อดูแบบอ่านง่าย)
+  ${colors.cyan('feedback')}   แจ้งปัญหา ส่งข้อเสนอแนะ หรือเสนอ Skill ใหม่
+
+${colors.bold('ตัวอย่าง:')}
+  step-ai ask "ช่วยตรวจ TOR ฉบับนี้หน่อย"
+  step-ai privacy --file sample.txt --redact
+  step-ai output --team cc --type presentation --title "STeP Booth CMU" --ext pptx
+  step-ai config --team qs
+  step-ai doctor --employee
+
+${colors.bold('ตัวเลือก:')}
+  -m, --team <id>       รหัสทีมใน 22 ทีม (เช่น qs, afp, mi, piti, linc, cc)
+      --employee        แสดงผลแบบอ่านง่าย ไม่แสดงรายละเอียดทางเทคนิค
+  -h, --help            แสดงคู่มือนี้
+  -v, --version         แสดงรุ่นของแพ็กเกจ
+${all ? '' : `\nคำสั่งสำหรับผู้ดูแลระบบ: ${colors.cyan('step-ai help --all')}\n`}`);
+  if (!all) return;
+  console.log(`${colors.bold('สำหรับผู้ดูแลระบบ:')}
+  ${colors.cyan('init')}       ติดตั้ง Approved Skills เข้า Workspace ตามทีมหรือ Role
   ${colors.cyan('teams')}      แสดงรายชื่อ 22 ทีมของ STeP
   ${colors.cyan('skills')}     ศูนย์รวม Skill พร้อมสถานะ Manifest/Routing (--status routed|registered|unregistered, --json)
-  ${colors.cyan('doctor')}     ตรวจความพร้อมของระบบและเครื่องมือ AI ที่ติดตั้งในเครื่อง
-  ${colors.cyan('status')}     ตรวจรุ่นที่ติดตั้งและไฟล์ที่มีการแก้ไขในเครื่อง
+  ${colors.cyan('status')}     ตรวจรุ่นที่ติดตั้งและไฟล์ที่แก้ไขในเครื่อง
   ${colors.cyan('sync')}       ซิงก์ไฟล์ Skills และ Rules
-  ${colors.cyan('rollback')}   ย้อนกลับรุ่นก่อนหน้าจาก Backup Snapshot
+  ${colors.cyan('rollback')}   ย้อนกลับรุ่นก่อนหน้าจาก Backup Snapshot (--snapshot <id>, --list)
+  ${colors.cyan('benchmark')}  รัน Pilot benchmark 30 งานสำหรับ Router / Context / Authority (--json)
+  ${colors.cyan('run')}        ร่างงานผ่านผู้ให้บริการที่อนุมัติ (--base-url URL --model ID --api-key-env NAME --approve-provider --approve-destination --output-format text|json|stream-json)
+  ${colors.cyan('autopilot')}  ตรวจ issue/PR ที่อนุมัติบน GitHub แล้วเสนอโค้ดให้คนตรวจ (--repo owner/repo --dry-run)
 
-${colors.bold('ตัวเลือกทั่วไป:')}
-  -m, --team <id>       ระบุรหัสทีมใน 22 ทีม (เช่น qs, afp, mi, piti, linc, cc)
-  -r, --role <id>       ระบุ Role (all, staff, pm, developer, creative, ai-admin) [default: all]
-  -t, --tool <name>     ระบุเครื่องมือ (claude, cursor, codex, all) [default: codex]
-  -d, --dest <path>     ระบุโฟลเดอร์ปลายทาง [default: .]
-      --employee        แสดงผลลัพธ์ในโหมดพนักงานทั่วไป (เข้าใจง่าย ไม่แสดง technical warning)
-      --json            สำหรับ ask: คืน compact routing contract + context budget เป็น JSON
+${colors.bold('ตัวเลือกสำหรับผู้ดูแลระบบ:')}
+  -r, --role <id>       Role (all, staff, pm, developer, creative, ai-admin) [ค่าเริ่มต้น: all]
+  -t, --tool <name>     โปรแกรม AI (claude, cursor, codex, all) [ค่าเริ่มต้น: codex]
+  -d, --dest <path>     โฟลเดอร์ปลายทาง [ค่าเริ่มต้น: .]
+      --json            สำหรับ ask: คืน routing contract + context budget เป็น JSON
       --answer <text>   สำหรับ ask: เพิ่มคำตอบเพื่อระบุขอบเขตร่วมกับคำถามเดิม
-      --dry-run         แสดงตัวอย่างไฟล์ที่จะดำเนินการโดยไม่เขียนลงเครื่อง
-  -s, --snapshot <id>   ระบุ Snapshot ID สำหรับ rollback
-  -l, --list            แสดงรายการ snapshot ที่มีอยู่
-  -h, --help            แสดงคู่มือช่วยเหลือนี้
-  -v, --version         แสดงเวอร์ชันของแพ็กเกจ
+      --dry-run         แสดงตัวอย่างไฟล์ที่จะเปลี่ยนโดยไม่เขียนลงเครื่อง
+  -s, --snapshot <id>   Snapshot ID สำหรับ rollback
+  -l, --list            แสดงรายการ snapshot
 
-${colors.bold('ตัวอย่างการใช้งาน:')}
-  step-ai ask "ช่วยตรวจ TOR ฉบับนี้หน่อย"
-  step-ai ask "ช่วยตรวจ TOR ฉบับนี้หน่อย" --json
-  step-ai ask "ทำสไลด์ Pitching ให้ผู้ประกอบการ"
-  step-ai config
-  step-ai config --team qs
-  step-ai update
-  step-ai output --team cc --type presentation --title "STeP Booth CMU" --ext pptx
-  step-ai privacy --file sample.txt --redact
-  step-ai benchmark
-  step-ai benchmark --json
+${colors.bold('ตัวอย่างสำหรับผู้ดูแลระบบ:')}
   step-ai init --team qs --tool codex
   step-ai init --role all --tool claude
-  step-ai doctor --employee
+  step-ai ask "ช่วยตรวจ TOR ฉบับนี้หน่อย" --json
+  step-ai benchmark --json
 `);
 }
 
@@ -126,7 +130,7 @@ export async function main(argv = process.argv.slice(2)) {
   }
 
   if (args.help || args.h || !command || command === 'help') {
-    showHelp(pkgJson.version);
+    showHelp(pkgJson.version, Boolean(args.all));
     return;
   }
 
@@ -189,7 +193,7 @@ export async function main(argv = process.argv.slice(2)) {
       break;
     default:
       console.error(`${colors.red('✖')} คำสั่งไม่ถูกต้อง: '${command}'`);
-      console.log(`พิมพ์ ${colors.cyan('step-ai --help')} เพื่อดูคำสั่งทั้งหมด\n`);
+      console.log(`พิมพ์ ${colors.cyan('step-ai help --all')} เพื่อดูคำสั่งทั้งหมด\n`);
       process.exit(1);
   }
 }

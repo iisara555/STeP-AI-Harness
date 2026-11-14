@@ -60,8 +60,8 @@ Apple ถอดวิธีนี้ออกตั้งแต่ macOS 15 (Seq
 
 ใช้:
 
-- `Feedback-STeP-AI.bat` บน Windows
-- `Feedback-STeP-AI.command` บน macOS
+- `Tools/Feedback-STeP-AI.bat` บน Windows
+- `Tools/Feedback-STeP-AI.command` บน macOS
 
 หรือรัน:
 
