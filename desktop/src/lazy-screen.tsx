@@ -17,8 +17,9 @@ class ScreenBoundary extends Component<{ children: ReactNode; retry: () => void 
   }
 }
 
-/** Retry a failed screen import without reloading the app or discarding work in other mounted screens. */
-export function lazyScreen<P extends object>(load: () => Promise<{ default: FunctionComponent<P> }>) {
+/** Retry a failed screen import without reloading the app or discarding work in other mounted screens.
+ * Dialogs pass `quiet` so nothing flashes while their code arrives (a few milliseconds from disk). */
+export function lazyScreen<P extends object>(load: () => Promise<{ default: FunctionComponent<P> }>, quiet = false) {
   return function DeferredScreen(props: P) {
     const [attempt, setAttempt] = useState(0);
     const Screen = useMemo(() => lazy(load), [attempt]);
@@ -26,9 +27,11 @@ export function lazyScreen<P extends object>(load: () => Promise<{ default: Func
       <ScreenBoundary key={attempt} retry={() => setAttempt(value => value + 1)}>
         <Suspense
           fallback={
-            <p className="screen-loading" role="status">
-              {t('กำลังเปิดเครื่องมือ…')}
-            </p>
+            quiet ? null : (
+              <p className="screen-loading" role="status">
+                {t('กำลังเปิดเครื่องมือ…')}
+              </p>
+            )
           }
         >
           <Screen {...props} />

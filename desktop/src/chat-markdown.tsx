@@ -2,25 +2,20 @@
 // task lists, tables, quotes, inline code, links, strikethrough) and code blocks with syntax colours and a copy button.
 // Raw HTML in an answer is dropped, never rendered; links open in the app's own browser panel rather than navigating
 // this window; remote images are not loaded (a link is shown instead) so an answer cannot make the app fetch anything.
-import { memo, useState, type ReactNode } from 'react';
+import { memo, useEffect, useState, type ReactNode } from 'react';
 import Markdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import hljs from 'highlight.js/lib/core';
-import bash from 'highlight.js/lib/languages/bash';
-import css from 'highlight.js/lib/languages/css';
-import javascript from 'highlight.js/lib/languages/javascript';
-import json from 'highlight.js/lib/languages/json';
-import markdown from 'highlight.js/lib/languages/markdown';
-import python from 'highlight.js/lib/languages/python';
-import sql from 'highlight.js/lib/languages/sql';
-import typescript from 'highlight.js/lib/languages/typescript';
-import xml from 'highlight.js/lib/languages/xml';
-import yaml from 'highlight.js/lib/languages/yaml';
 import { Check, Copy } from './icons';
 import { t } from './i18n';
 
-for (const [name, language] of Object.entries({ bash, css, javascript, json, markdown, python, sql, typescript, xml, yaml }))
-  hljs.registerLanguage(name, language);
+type Highlight = (code: string, language: string) => string;
+let highlighter: Highlight | null = null;
+let highlighterLoading: Promise<Highlight> | null = null;
+/** highlight.js loads the first time an answer shows a code block; until then the code shows uncoloured. */
+export function loadHighlighter(): Promise<Highlight> {
+  highlighterLoading ||= import('./code-highlight').then(m => (highlighter = m.highlight));
+  return highlighterLoading;
+}
 const ALIASES: Record<string, string> = {
   js: 'javascript',
   jsx: 'javascript',
@@ -52,9 +47,12 @@ const textOf = (node: ReactNode): string =>
 
 function CodeBlock({ code, language }: { code: string; language: string }) {
   const [copied, setCopied] = useState(false);
+  const [highlightCode, setHighlightCode] = useState(() => highlighter);
   const name = ALIASES[language] || language;
-  // highlight.js escapes the code itself; its output only adds <span class="hljs-..."> around tokens.
-  const html = name && hljs.getLanguage(name) ? hljs.highlight(code, { language: name, ignoreIllegals: true }).value : '';
+  useEffect(() => {
+    if (!highlightCode && name) void loadHighlighter().then(loaded => setHighlightCode(() => loaded));
+  }, [highlightCode, name]);
+  const html = highlightCode && name ? highlightCode(code, name) : '';
   return (
     <figure className="chat-code">
       <header>

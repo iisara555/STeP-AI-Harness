@@ -20,6 +20,10 @@ Colour follows the STeP CI digital palette in `skills/common/step-brand/referenc
 
 Sizes come from the scales in `theme.css`: `--text-xs` to `--text-3xl` for type (12px is the floor for anything staff read; Thai needs the room), `--space-*` on a 4px grid with half steps for padding, margin and gap, and `--radius-xs` to `--radius-pill` for corners. Write a raw value only for hairlines (1px) and layout maths (`calc`, `clamp`, viewport units).
 
+## Screen code
+
+`desktop/src/App.tsx` only lays out the window. State and actions live in `use-workspace.tsx` (`useWorkspace()`), and each region is its own component that takes the workspace as `v`: `app-sidebar.tsx`, `app-topbar.tsx`, `conversation-view.tsx`, `side-panel.tsx`, `status-bar.tsx`, `app-tool-screens.tsx` and `app-dialogs.tsx`. Add a control to the region it appears in. Code that only runs after a click loads on demand: tool screens, Settings and dialogs through `lazyScreen()`, English text through `loadEnglish()` and code colours through `loadHighlighter()`.
+
 ## Tone: calm and Notion-like
 
 Ink on paper: warm off-white surfaces, STeP Dark text, hairlines instead of boxes, quiet hover fills (`--hover`), and generous whitespace. Yellow stays reserved for primary actions and active markers.
