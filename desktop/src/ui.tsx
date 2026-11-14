@@ -81,9 +81,12 @@ export function ConfirmDialog({
       document.removeEventListener('focusin', containFocus);
       root.removeEventListener('keydown', trap);
       for (const item of outside) item.element.inert = item.inert;
-      const target = previousFocus.current?.isConnected
-        ? previousFocus.current
-        : document.querySelector<HTMLElement>('.composer textarea, header.titlebar button');
+      // A dialog whose code loaded on demand can mount after the opener (the command palette) has gone, leaving focus
+      // on the page body; return to the composer then, as when the opener itself is gone.
+      const target =
+        previousFocus.current?.isConnected && previousFocus.current !== document.body
+          ? previousFocus.current
+          : document.querySelector<HTMLElement>('.composer textarea, header.titlebar button');
       target?.focus();
     };
   }, []);
