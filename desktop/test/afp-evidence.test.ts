@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -9,7 +9,10 @@ import { ReceiptPackets } from '../electron/receipt-packets';
 import { receiptPacketCoverHtml } from '../electron/receipt-voucher';
 import { blankEvidenceGuidance, evidenceAiPrompt, evidenceChecklist, inferActivity, suggestEvidenceKind } from '../src/afp-evidence';
 import { createReceiptPacket, editReceiptPacket, packetAssessment } from '../src/receipt-packet';
-import { setLanguage, t } from '../src/i18n';
+import { setLanguage, t, loadEnglish } from '../src/i18n';
+
+// The English dictionary loads on demand in the app; load it once before tests switch language.
+before(() => loadEnglish());
 
 const now = '2026-10-28T00:00:00Z';
 const id = '11111111-1111-4111-8111-111111111111';

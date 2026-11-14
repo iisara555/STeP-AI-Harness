@@ -1,9 +1,13 @@
-import { test } from 'node:test';
+import { before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { formatElapsed, formatTokens, groupSessions, matchesSession, RichText } from '../src/ui';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { loadHighlighter } from '../src/chat-markdown';
 import type { Session } from '../src/types';
+
+// Syntax colours load on demand in the app; load them once so code blocks render coloured here.
+before(() => loadHighlighter());
 
 const session = (id: string, updatedAt: string, extra: Partial<Session> = {}) =>
   ({

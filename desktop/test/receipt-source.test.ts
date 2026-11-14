@@ -37,7 +37,14 @@ test('large OCR handoff fits host source limits without losing confirmed values 
 
 test('receipt UI passes structured source through workspace send and consent replay', async () => {
   const receipt = await readFile(new URL('../src/receipt.tsx', import.meta.url), 'utf8');
-  const app = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  // App.tsx is split into a workspace hook and screen regions; read them together.
+  const app = (
+    await Promise.all(
+      ['App.tsx', 'use-workspace.tsx', 'app-tool-screens.tsx', 'app-dialogs.tsx'].map(name =>
+        readFile(new URL(`../src/${name}`, import.meta.url), 'utf8'),
+      ),
+    )
+  ).join('\n');
   const main = await readFile(new URL('../electron/main.ts', import.meta.url), 'utf8');
 
   assert.match(receipt, /receiptSourceText\(draft\(\)\)/);

@@ -1,10 +1,13 @@
-import { test } from 'node:test';
+import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import ts from 'typescript';
 import { en } from '../src/locales/en';
-import { localized, setLanguage, t, teamName } from '../src/i18n';
+import { localized, setLanguage, t, teamName, loadEnglish } from '../src/i18n';
 import { startersFor, starterTag, starterText } from '../src/starters';
+
+// The English dictionary loads on demand in the app; load it once before tests switch language.
+before(() => loadEnglish());
 
 const TH = /[฀-๿]/;
 

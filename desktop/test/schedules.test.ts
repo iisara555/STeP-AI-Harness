@@ -1,8 +1,11 @@
-import { test } from 'node:test';
+import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { describeSchedule, fromCron, previewSchedule, scheduledRunAdvice, SCHEDULE_TEMPLATES, toCron } from '../src/schedules';
 import { nextCron } from '../electron/cron';
-import { setLanguage, t } from '../src/i18n';
+import { setLanguage, t, loadEnglish } from '../src/i18n';
+
+// The English dictionary loads on demand in the app; load it once before tests switch language.
+before(() => loadEnglish());
 
 const withZone = (zone: string, run: () => void) => {
   const before = process.env.TZ;
