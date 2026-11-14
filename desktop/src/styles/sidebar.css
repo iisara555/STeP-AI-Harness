@@ -533,3 +533,29 @@ nav button:hover,
   margin-left: -4px;
   border-radius: var(--radius-sm);
 }
+/* Narrow window: the tools become a three-column grid of icon over one-word name, so the task list keeps its room.
+   The filter tabs drop their icons so both words fit. */
+@media (max-width: 1000px) {
+  .sidebar .tools-nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-0-5);
+  }
+  .sidebar .tools-nav button {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-0-5);
+    padding: var(--space-1-5) 0;
+    text-align: center;
+  }
+  .sidebar .tools-nav .count {
+    display: none;
+  }
+  .sidebar .tools-group {
+    margin-bottom: var(--space-1);
+  }
+  .session-filter svg {
+    display: none;
+  }
+}

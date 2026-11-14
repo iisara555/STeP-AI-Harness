@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import { Download, FileSearch, LoaderCircle, Play, RefreshCw, Save, ScanText, Send, ZoomIn, ZoomOut } from './icons';
 import {
   DOCUMENT_TYPES,
@@ -967,23 +967,36 @@ export function ReceiptApp({
               <RefreshCw size={15} />
             </button>
           </div>
-          {status && !ready && !status.installed && !status.geminiApi && !status.cloud && (
-            <p className="small muted">{t('OCR เป็นส่วนเสริมที่ดาวน์โหลดเมื่อคุณติดตั้ง · อ่านไฟล์ในเครื่อง ไม่ส่งออกภายนอก')}</p>
-          )}
-          {status?.vision && <p className="small muted">{t('AI อ่านภาพได้เมื่อคุณยินยอม ส่งต่อในแชตจะส่งเฉพาะข้อความที่ตรวจแล้ว')}</p>}
-          {!localOnly && status && !status.geminiApi && !status.cloud && !connections.some(isReceiptGeminiApi) && openAiSettings && (
-            <p className="small muted">
-              {t('เชื่อมต่อ Google AI แบบ API key เพื่อใช้ Gemini อ่านใบเสร็จ แยกจาก AI ที่ใช้แชต')}{' '}
-              <button className="text-link" onClick={openAiSettings}>
-                {t('ไปที่หน้าเชื่อมต่อ AI')}
-              </button>
-            </p>
-          )}
-          {status?.textOnly && !status.cloud && (
-            <p className="small muted">
-              {t('ตอนนี้ AI ไม่ได้อ่านภาพใบเสร็จ (นโยบายองค์กรหรือ AI ที่เลือกยังไม่รองรับ) AI ช่วยจัดข้อความจาก OCR เข้าฟอร์มเท่านั้น')}
-            </p>
-          )}
+          {/* One quiet paragraph for every note that applies, instead of a stack of small lines. */}
+          {(() => {
+            const notes: ReactNode[] = [];
+            if (status && !ready && !status.installed && !status.geminiApi && !status.cloud)
+              notes.push(t('OCR เป็นส่วนเสริมที่ดาวน์โหลดเมื่อคุณติดตั้ง · อ่านไฟล์ในเครื่อง ไม่ส่งออกภายนอก'));
+            if (status?.vision) notes.push(t('AI อ่านภาพได้เมื่อคุณยินยอม ส่งต่อในแชตจะส่งเฉพาะข้อความที่ตรวจแล้ว'));
+            if (status?.textOnly && !status.cloud)
+              notes.push(
+                t('ตอนนี้ AI ไม่ได้อ่านภาพใบเสร็จ (นโยบายองค์กรหรือ AI ที่เลือกยังไม่รองรับ) AI ช่วยจัดข้อความจาก OCR เข้าฟอร์มเท่านั้น'),
+              );
+            if (!localOnly && status && !status.geminiApi && !status.cloud && !connections.some(isReceiptGeminiApi) && openAiSettings)
+              notes.push(
+                <>
+                  {t('เชื่อมต่อ Google AI แบบ API key เพื่อใช้ Gemini อ่านใบเสร็จ แยกจาก AI ที่ใช้แชต')}{' '}
+                  <button className="text-link" onClick={openAiSettings}>
+                    {t('ไปที่หน้าเชื่อมต่อ AI')}
+                  </button>
+                </>,
+              );
+            return notes.length ? (
+              <p className="small muted receipt-notes">
+                {notes.map((note, i) => (
+                  <Fragment key={i}>
+                    {i > 0 && ' · '}
+                    {note}
+                  </Fragment>
+                ))}
+              </p>
+            ) : null;
+          })()}
         </section>
         {/* Until a receipt is chosen there is nothing to review: the page is one column, not an empty half. */}
         {(doc || actionError) && (

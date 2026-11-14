@@ -162,8 +162,9 @@
   color: var(--danger);
 }
 .tag.tool {
-  background: var(--text);
-  color: var(--surface);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--text);
 }
 /* "สร้างจากวิธีทำงานของฉัน": three questions, then an editable preview of the drafted Skill. */
 .skill-create {
@@ -179,21 +180,11 @@
   font-size: var(--text-xs);
   line-height: 1.5;
 }
-/* Dark theme: tool chips are outlined instead of a light fill; the ready status keeps a visible edge. */
-:root[data-theme='dark'] .tag.tool {
-  background: transparent;
-  border: 1px solid var(--line-strong);
-  color: var(--text);
-}
+/* Dark theme: the ready status keeps a visible edge. */
 :root[data-theme='dark'] .tag.routed {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 @media (prefers-color-scheme: dark) {
-  :root[data-theme='system'] .tag.tool {
-    background: transparent;
-    border: 1px solid var(--line-strong);
-    color: var(--text);
-  }
   :root[data-theme='system'] .tag.routed {
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
   }

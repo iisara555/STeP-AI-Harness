@@ -100,10 +100,10 @@ export function SidePanel({ v }: { v: AppView }) {
             style={showPanel ? undefined : { display: 'none' }}
           >
             <nav className="workbench-tabs" aria-label={t('เครื่องมือข้างร่าง')}>
-              {/* The tabs scroll sideways in one row when the panel is narrow; the settings icon keeps its place. */}
+              {/* Three tabs most work needs; web, background jobs and commands sit behind the icon (or show while open). */}
               <div className="workbench-tab-list">
-                {(['output', 'browser', 'terminal', 'tasks', 'files', 'changes'] as ToolTab[])
-                  .filter(tab => advancedTools || tab !== 'terminal')
+                {(['output', 'files', 'changes', 'browser', 'tasks', 'terminal'] as ToolTab[])
+                  .filter(tab => advancedTools || toolTab === tab || ['output', 'files', 'changes'].includes(tab))
                   .map(tab => (
                     <button
                       key={tab}
@@ -130,15 +130,11 @@ export function SidePanel({ v }: { v: AppView }) {
               <button
                 className="workbench-advanced"
                 aria-expanded={advancedTools}
-                aria-label={t('เครื่องมือขั้นสูง')}
-                title={
-                  advancedTools
-                    ? t('ซ่อนแท็บคำสั่งขั้นสูง')
-                    : t('เครื่องมือขั้นสูง: แสดงแท็บคำสั่งขั้นสูงสำหรับผู้ใช้ที่คุ้นเคยกับ Terminal')
-                }
+                aria-label={t('แท็บเพิ่มเติม')}
+                title={advancedTools ? t('ซ่อนเว็บ งานเบื้องหลัง และคำสั่งขั้นสูง') : t('แสดงเว็บ งานเบื้องหลัง และคำสั่งขั้นสูง')}
                 onClick={() => {
                   setAdvancedTools(!advancedTools);
-                  if (toolTab === 'terminal') setToolTab('output');
+                  if (advancedTools && ['browser', 'tasks', 'terminal'].includes(toolTab)) setToolTab('output');
                 }}
               >
                 <Settings2 size={15} />
