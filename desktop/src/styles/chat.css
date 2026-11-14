@@ -94,7 +94,7 @@
   min-width: 0;
   max-width: 190px;
   font-size: var(--text-sm);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--pad-control-sm);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: transparent;
@@ -181,7 +181,7 @@
   background: transparent;
   color: var(--muted);
   font-size: var(--text-xs);
-  padding: var(--space-1) var(--space-1-5);
+  padding: var(--pad-control-sm);
 }
 .attachments .attachment-preview {
   display: flex;
@@ -221,7 +221,7 @@
   gap: var(--space-1);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  padding: var(--space-0-5) var(--space-1-5);
+  padding: var(--pad-tag);
   font-size: var(--text-xs);
   color: var(--muted);
 }
@@ -544,7 +544,7 @@
 }
 .retry-row button {
   font-size: var(--text-xs);
-  padding: var(--space-1-5) var(--space-3);
+  padding: var(--pad-control);
 }
 /* A stop the person asked for is information, not an error. */
 .message.status.neutral .message-body {
@@ -557,7 +557,7 @@
   justify-content: flex-start;
   background: transparent;
   color: var(--text);
-  padding: var(--space-1-5) var(--space-2);
+  padding: var(--pad-control);
   font-size: var(--text-sm);
   flex-direction: column;
   align-items: flex-start;
@@ -596,7 +596,7 @@
 /* Secondary task actions stay light so the conversation, not the toolbar, leads the page. */
 .context-bar > button {
   font-size: var(--text-sm);
-  padding: var(--space-1) var(--space-2-5);
+  padding: var(--pad-control-sm);
   border-color: transparent;
   color: var(--muted);
 }
@@ -619,7 +619,7 @@
   font-size: var(--text-xs);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--pad-control);
 }
 /* Keep the first prompt and greeting together; conversation turns retain the bottom composer. */
 .chat-content.is-empty {
@@ -648,7 +648,7 @@
 }
 .welcome-quick-starts button {
   border-radius: var(--radius-xl);
-  padding: var(--space-2) var(--space-3-5);
+  padding: var(--pad-control);
   color: var(--muted);
   font-size: var(--text-sm);
   font-weight: 400;
@@ -753,7 +753,7 @@
 /* สรุปเช้านี้: a card on the chat home, above the starters. */
 .morning-brief {
   margin: 0 0 var(--space-4);
-  padding: var(--space-3-5) var(--space-4);
+  padding: var(--pad-card);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -815,7 +815,7 @@
 }
 .morning-brief .badge {
   font-size: var(--text-xs);
-  padding: 1px var(--space-2);
+  padding: var(--pad-tag);
   border-radius: var(--radius-pill);
   background: var(--accent-soft);
   color: var(--accent-ink);

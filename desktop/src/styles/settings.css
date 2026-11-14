@@ -4,7 +4,7 @@
   background: transparent;
   color: var(--muted);
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--pad-control);
   font-size: var(--text-sm);
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
@@ -49,7 +49,7 @@
 /* A folded section for administrators (policy keys, file paths); staff never need to open it. */
 .settings-admin {
   margin-top: var(--space-4);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--pad-control);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
 }
@@ -201,7 +201,7 @@
   margin-bottom: var(--space-4);
 }
 .settings-style-example {
-  padding: var(--space-3-5) var(--space-4);
+  padding: var(--pad-card);
   margin: var(--space-4) 0;
   background: var(--hover);
   border: 1px solid var(--line);
@@ -381,7 +381,7 @@
   margin: var(--space-2-5) 0 var(--space-0-5);
 }
 .settings-search input {
-  padding: var(--space-1-5) var(--space-2-5);
+  padding: var(--pad-control);
   font-size: var(--text-sm);
 }
 .settings-content section {
@@ -418,14 +418,14 @@
   gap: var(--space-1-5);
 }
 .settings-content .style-card {
-  padding: var(--space-1-5) var(--space-2-5);
+  padding: var(--pad-control);
   border-radius: var(--radius-md);
 }
 .settings-content .style-card strong {
   font-size: var(--text-sm);
 }
 .settings-content .settings-style-example {
-  padding: var(--space-2-5) var(--space-3);
+  padding: var(--pad-card);
   margin-bottom: var(--space-3);
 }
 .settings-content .settings-style-example p {

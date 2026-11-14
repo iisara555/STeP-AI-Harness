@@ -223,7 +223,7 @@
   font-size: var(--text-xs);
 }
 .tour-chapters span {
-  padding: var(--space-0-5) var(--space-2);
+  padding: var(--pad-tag);
   border-radius: var(--radius-pill);
   border: 1px solid var(--line);
   color: var(--muted);
@@ -239,7 +239,7 @@
 }
 .tour-card p.tour-tip {
   margin-top: var(--space-2-5);
-  padding: var(--space-2) var(--space-2-5);
+  padding: var(--pad-control);
   border-radius: var(--radius-md);
   background: var(--surface);
   border: 1px solid var(--line);
@@ -265,7 +265,7 @@
 .wizard-ack {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: var(--space-2-5) var(--space-3);
+  padding: var(--pad-card);
   text-align: left;
   line-height: 1.6;
 }
@@ -281,7 +281,7 @@
   text-align: left;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  padding: var(--space-3) var(--space-3-5);
+  padding: var(--pad-card);
   margin: var(--space-3) 0 var(--space-1);
   background: var(--surface);
 }

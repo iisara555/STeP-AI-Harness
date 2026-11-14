@@ -32,7 +32,7 @@
   justify-content: stretch;
   justify-items: stretch;
   text-align: left;
-  padding: var(--space-2-5) var(--space-3);
+  padding: var(--pad-card);
   min-height: 70px;
   background: var(--paper);
   color: var(--text);
@@ -62,7 +62,7 @@
 .provider-kind {
   font-size: var(--text-xs);
   white-space: nowrap;
-  padding: 1px var(--space-1-5);
+  padding: var(--pad-tag);
   border-radius: var(--radius-pill);
   border: 1px solid var(--line-strong);
   color: var(--muted);
@@ -75,7 +75,7 @@
   display: grid;
   gap: var(--space-2);
   margin-top: var(--space-3);
-  padding: var(--space-3) var(--space-3-5);
+  padding: var(--pad-card);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-md);
 }
@@ -140,7 +140,7 @@
   background: transparent;
   color: var(--text);
   border: 1px solid var(--line);
-  padding: var(--space-2-5) var(--space-3);
+  padding: var(--pad-card);
   gap: var(--space-0-5);
 }
 .style-card small {
@@ -209,7 +209,7 @@
   align-items: center;
   gap: var(--space-2);
   margin: 0 0 var(--space-2);
-  padding: var(--space-1-5) var(--space-2-5);
+  padding: var(--pad-control);
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   font-size: var(--text-sm);
@@ -218,7 +218,7 @@
   flex: 1;
 }
 .connection-warning button {
-  padding: var(--space-0-5) var(--space-2-5);
+  padding: var(--pad-tag);
 }
 .policy-problems {
   margin: var(--space-1) 0 0;
@@ -244,7 +244,7 @@
   background: var(--hover, var(--selected));
 }
 .language-switch button {
-  padding: var(--space-1) var(--space-3);
+  padding: var(--pad-control-sm);
   font-size: var(--text-sm);
   background: transparent;
   color: var(--muted);
@@ -274,7 +274,7 @@
   justify-content: space-between;
   gap: var(--space-3);
   margin-bottom: var(--space-3);
-  padding: var(--space-2-5) var(--space-3);
+  padding: var(--pad-card);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-md);
   background: var(--paper);
@@ -293,7 +293,7 @@
   white-space: nowrap;
   font-size: var(--text-xs);
   min-height: 0;
-  padding: var(--space-1) var(--space-2-5);
+  padding: var(--pad-control-sm);
 }
 /* The account list sits on the page itself; each account is its own card. */
 .ai-connect-step.ai-readiness {
@@ -309,7 +309,7 @@
   gap: var(--space-2-5);
 }
 .connection-card {
-  padding: var(--space-3-5) var(--space-4);
+  padding: var(--pad-card);
   border: 1px solid var(--line);
   border-left: 4px solid var(--line-strong);
   border-radius: var(--radius-lg);
@@ -342,7 +342,7 @@
 }
 .connection-row .connection-state {
   margin: 0;
-  padding: var(--space-0-5) var(--space-2-5);
+  padding: var(--pad-tag);
   border-radius: var(--radius-pill);
   font-size: var(--text-xs);
   background: var(--selected);
@@ -472,7 +472,7 @@
   gap: var(--space-2);
 }
 .credential-note {
-  padding: var(--space-3-5) var(--space-4);
+  padding: var(--pad-card);
   border-left: 3px solid var(--accent);
   background: var(--surface);
   font-size: var(--text-sm);
