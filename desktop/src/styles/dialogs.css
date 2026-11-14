@@ -114,7 +114,7 @@
 }
 /* The corner close sits on the title's first line and reaches out into the padding, so the title keeps its width. */
 .confirm-head .icon {
-  margin: -4px -8px 0 0;
+  margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1) 0 0;
 }
 .confirm-dialog.info {
   padding-bottom: var(--space-6);

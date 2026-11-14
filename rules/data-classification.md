@@ -66,7 +66,7 @@ Sensitive / High Risk ───────→ Human Confirmation หรือ B
 
 ## คำสั่งตรวจแบบ Local
 
-เปิด `Check-Privacy-STeP-AI.bat` / `Check-Privacy-STeP-AI.command` ก่อนแนบไฟล์ หรือใช้ CLI:
+เปิด `Tools/Check-Privacy-STeP-AI.bat` / `Tools/Check-Privacy-STeP-AI.command` ก่อนแนบไฟล์ หรือใช้ CLI:
 
 ```bash
 step-ai privacy --file sample.txt

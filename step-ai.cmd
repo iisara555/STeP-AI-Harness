@@ -10,7 +10,7 @@ if exist "%STEP_NODE%" goto run
 set "STEP_NODE="
 for /f "delims=" %%N in ('where node 2^>nul') do if not defined STEP_NODE set "STEP_NODE=%%N"
 if defined STEP_NODE goto run
-echo STeP AI: Node.js runtime not found. Open Install-STeP-AI.bat or Update-STeP-AI.bat once, then retry. 1>&2
+echo STeP AI: Node.js runtime not found. Open Install-STeP-AI.bat or Tools\Update-STeP-AI.bat once, then retry. 1>&2
 exit /b 9009
 :run
 "%STEP_NODE%" "%STEP_ROOT%bin\step-ai.js" %*

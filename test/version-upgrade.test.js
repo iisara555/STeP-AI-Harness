@@ -124,6 +124,44 @@ test('Version Upgrade Core', async (t) => {
     }
   });
 
+  await t.test('moves the update, feedback and privacy launchers into Tools and rolls the move back', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'step-version-tools-'));
+    const source = join(root, 'source');
+    const dest = join(root, 'dest');
+    const launchers = ['Update-STeP-AI', 'Feedback-STeP-AI', 'Check-Privacy-STeP-AI'].flatMap((name) => [`${name}.bat`, `${name}.command`]);
+
+    try {
+      await mkdir(join(source, 'Tools'), { recursive: true });
+      await mkdir(dest, { recursive: true });
+      await writeFile(join(source, 'package.json'), JSON.stringify({ version: '0.4.0' }), 'utf-8');
+      await writeFile(join(source, 'Install-STeP-AI.bat'), 'new install', 'utf-8');
+      for (const name of launchers) await writeFile(join(source, 'Tools', name), `new ${name}`, 'utf-8');
+
+      await writeFile(join(dest, 'package.json'), JSON.stringify({ version: '0.3.0' }), 'utf-8');
+      await writeFile(join(dest, 'Install-STeP-AI.bat'), 'old install', 'utf-8');
+      for (const name of launchers) await writeFile(join(dest, name), `old ${name}`, 'utf-8');
+      // A first install tracks Skills and instructions, not the launchers beside the installer.
+      await writeManifest(dest, { package: '@step-cmu/ai-harness', version: '0.3.0', role: 'all', tool: 'codex', files: {} });
+
+      const result = await applyDistributionUpgrade({ sourceDir: source, destDir: dest, targetVersion: '0.4.0' });
+      assert.equal(result.removed, launchers.length);
+      for (const name of launchers) {
+        assert.equal(await pathExists(join(dest, name)), false, `${name} left beside the installer`);
+        assert.equal(await readFile(join(dest, 'Tools', name), 'utf-8'), `new ${name}`);
+      }
+      assert.equal(await readFile(join(dest, 'Install-STeP-AI.bat'), 'utf-8'), 'new install');
+
+      await runRollback({ dest, snapshot: result.snapshotId });
+      for (const name of launchers) {
+        assert.equal(await readFile(join(dest, name), 'utf-8'), `old ${name}`);
+        assert.equal(await pathExists(join(dest, 'Tools', name)), false);
+      }
+      assert.equal(await readFile(join(dest, 'Install-STeP-AI.bat'), 'utf-8'), 'old install');
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   await t.test('rejects same or older release package', async () => {
     const root = await mkdtemp(join(tmpdir(), 'step-version-reject-'));
     const source = join(root, 'source');

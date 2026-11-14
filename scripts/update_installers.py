@@ -22,9 +22,9 @@ function Show-Header {
     Write-Host "  / ___|_   _|___|  _ \\     / \\  |_ _|   " -ForegroundColor Cyan -NoNewline
     Write-Host "STeP AI Setup (Pilot v0.2)      " -ForegroundColor Yellow
     Write-Host "  \\___ \\ | | / _ \\ |_) |   / _ \\  | |    " -ForegroundColor Cyan -NoNewline
-    Write-Host "Enterprise AI Architecture      " -ForegroundColor Gray
+    Write-Host "ผู้ช่วย AI ขององค์กร           " -ForegroundColor Gray
     Write-Host "   ___) || ||  __/  __/   / ___ \\ | |    " -ForegroundColor Cyan -NoNewline
-    Write-Host "22 Teams • 5 Clusters           " -ForegroundColor Gray
+    Write-Host "22 ทีม · 5 กลุ่มงาน            " -ForegroundColor Gray
     Write-Host "  |____/ |_| \\___|_|     /_/   \\_\\___|                           " -ForegroundColor Cyan
     Write-Host "=================================================================" -ForegroundColor Cyan
     Write-Host "   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North) " -ForegroundColor White
@@ -300,7 +300,7 @@ Write-Host "     - 'ช่วยตรวจ TOR จัดซื้อระบ�
 Write-Host "     (สามารถลากไฟล์งาน Word, PDF หรือ Excel เข้ามาวางในโฟลเดอร์นี้เพื่อให้ AI ช่วยตรวจได้)" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  หากต้องการเปลี่ยนทีมในอนาคต: รัน 'step-ai config'" -ForegroundColor DarkGray
-Write-Host "  หากต้องการอัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.bat" -ForegroundColor DarkGray
+Write-Host "  หากต้องการอัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Tools\\Update-STeP-AI.bat" -ForegroundColor DarkGray
 Write-Host "=================================================================" -ForegroundColor Green
 Write-Host ""
 
@@ -324,9 +324,9 @@ Write-Host "   ____ _____     ____       _    ___                            " -
 Write-Host "  / ___|_   _|___|  _ \\     / \\  |_ _|   " -ForegroundColor Cyan -NoNewline
 Write-Host "STeP AI Update & Sync (Pilot v0.2)" -ForegroundColor Yellow
 Write-Host "  \\___ \\ | | / _ \\ |_) |   / _ \\  | |    " -ForegroundColor Cyan -NoNewline
-Write-Host "Enterprise AI Architecture      " -ForegroundColor Gray
+Write-Host "ผู้ช่วย AI ขององค์กร           " -ForegroundColor Gray
 Write-Host "   ___) || ||  __/  __/   / ___ \\ | |    " -ForegroundColor Cyan -NoNewline
-Write-Host "22 Teams • 5 Clusters           " -ForegroundColor Gray
+Write-Host "22 ทีม · 5 กลุ่มงาน            " -ForegroundColor Gray
 Write-Host "  |____/ |_| \\___|_|     /_/   \\_\\___|                           " -ForegroundColor Cyan
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host "   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North) " -ForegroundColor White
@@ -372,8 +372,8 @@ clear || true
 echo -e "${CYAN}=================================================================${NC}"
 echo -e "${CYAN}   ____ _____     ____       _    ___                            ${NC}"
 echo -e "${CYAN}  / ___|_   _|___|  _ \\     / \\  |_ _|   ${YELLOW}STeP AI Setup (Pilot v0.2)      ${NC}"
-echo -e "${CYAN}  \\___ \\ | | / _ \\ |_) |   / _ \\  | |    ${GRAY}Enterprise AI Architecture      ${NC}"
-echo -e "${CYAN}   ___) || ||  __/  __/   / ___ \\ | |    ${GRAY}22 Teams • 5 Clusters           ${NC}"
+echo -e "${CYAN}  \\___ \\ | | / _ \\ |_) |   / _ \\  | |    ${GRAY}ผู้ช่วย AI ขององค์กร           ${NC}"
+echo -e "${CYAN}   ___) || ||  __/  __/   / ___ \\ | |    ${GRAY}22 ทีม · 5 กลุ่มงาน            ${NC}"
 echo -e "${CYAN}  |____/ |_| \\___|_|     /_/   \\_\\___|                           ${NC}"
 echo -e "${CYAN}=================================================================${NC}"
 echo -e "${WHITE}   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North) ${NC}"
@@ -662,7 +662,7 @@ echo -e "     - ${GRAY}'ช่วยตรวจ TOR จัดซื้อระ
 echo -e "     ${GRAY}(สามารถลากไฟล์งาน Word, PDF หรือ Excel เข้ามาวางในโฟลเดอร์นี้เพื่อให้ AI ช่วยตรวจได้)${NC}"
 echo ""
 echo -e "${GRAY}  หากต้องการเปลี่ยนทีมในอนาคต: รัน 'step-ai config'${NC}"
-echo -e "${GRAY}  หากต้องการอัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.command${NC}"
+echo -e "${GRAY}  หากต้องการอัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Tools/Update-STeP-AI.command${NC}"
 echo ""
 read -p "กด Enter เพื่อเสร็จสิ้น..." dummy
 """
@@ -688,8 +688,8 @@ clear || true
 echo -e "${CYAN}=================================================================${NC}"
 echo -e "${CYAN}   ____ _____     ____       _    ___                            ${NC}"
 echo -e "${CYAN}  / ___|_   _|___|  _ \\     / \\  |_ _|   ${YELLOW}STeP AI Update & Sync (Pilot v0.2)${NC}"
-echo -e "${CYAN}  \\___ \\ | | / _ \\ |_) |   / _ \\  | |    ${GRAY}Enterprise AI Architecture      ${NC}"
-echo -e "${CYAN}   ___) || ||  __/  __/   / ___ \\ | |    ${GRAY}22 Teams • 5 Clusters           ${NC}"
+echo -e "${CYAN}  \\___ \\ | | / _ \\ |_) |   / _ \\  | |    ${GRAY}ผู้ช่วย AI ขององค์กร           ${NC}"
+echo -e "${CYAN}   ___) || ||  __/  __/   / ___ \\ | |    ${GRAY}22 ทีม · 5 กลุ่มงาน            ${NC}"
 echo -e "${CYAN}  |____/ |_| \\___|_|     /_/   \\_\\___|                           ${NC}"
 echo -e "${CYAN}=================================================================${NC}"
 echo -e "${WHITE}   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North) ${NC}"

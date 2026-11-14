@@ -251,12 +251,13 @@ test('archive checks inspect tracked nested attributes and ignore disposable wor
 });
 
 test('Legacy Install/Update launchers hand over to Setup-STeP-Skills in a GitHub download, and stay as they are in the Pilot bundle', async () => {
-  const { mkdtempSync, writeFileSync, copyFileSync, rmSync, chmodSync } = await import('node:fs');
+  const { mkdtempSync, mkdirSync, writeFileSync, copyFileSync, rmSync, chmodSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
-  for (const name of ['Install-STeP-AI', 'Update-STeP-AI']) {
-    const bat = readFileSync(join(ROOT, `${name}.bat`), 'utf8');
-    assert.match(bat, /if exist "%~dp0Setup-STeP-Skills\.bat" \(\r\n[\s\S]*call "%~dp0Setup-STeP-Skills\.bat"\r\n\s*exit \/b/);
-  }
+  const install = readFileSync(join(ROOT, 'Install-STeP-AI.bat'), 'utf8');
+  assert.match(install, /if exist "%~dp0Setup-STeP-Skills\.bat" \(\r\n[\s\S]*call "%~dp0Setup-STeP-Skills\.bat"\r\n\s*exit \/b/);
+  // Update lives in Tools/, one level below the setup it hands over to.
+  const update = readFileSync(join(ROOT, 'Tools', 'Update-STeP-AI.bat'), 'utf8');
+  assert.match(update, /if exist "%~dp0\.\.\\Setup-STeP-Skills\.bat" \(\r\n[\s\S]*call "%~dp0\.\.\\Setup-STeP-Skills\.bat"\r\n\s*exit \/b/);
   // The Pilot bundle is built without the new setup, so its launchers keep the folder workflow.
   const bundle = readFileSync(join(ROOT, 'scripts', 'build_pilot_bundle.py'), 'utf8');
   assert.doesNotMatch(bundle, /Setup-STeP-Skills/);
@@ -267,8 +268,14 @@ test('Legacy Install/Update launchers hand over to Setup-STeP-Skills in a GitHub
     writeFileSync(join(dir, 'Setup-STeP-Skills.command'), '#!/bin/bash\necho NEW-SETUP-RAN\n');
     chmodSync(join(dir, 'Setup-STeP-Skills.command'), 0o755);
     const out = execFileSync('bash', [join(dir, 'Install-STeP-AI.command')], { encoding: 'utf8' });
-    assert.match(out, /เลิกใช้แล้ว/);
+    // One front door: the hand-over reads as the install going ahead, not as a retired method.
+    assert.match(out, /กำลังติดตั้ง STeP Skills/);
+    assert.doesNotMatch(out, /เลิกใช้แล้ว/);
     assert.match(out, /NEW-SETUP-RAN/);
+    mkdirSync(join(dir, 'Tools'));
+    copyFileSync(join(ROOT, 'Tools', 'Update-STeP-AI.command'), join(dir, 'Tools', 'Update-STeP-AI.command'));
+    const updateOut = execFileSync('bash', [join(dir, 'Tools', 'Update-STeP-AI.command')], { encoding: 'utf8' });
+    assert.match(updateOut, /NEW-SETUP-RAN/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

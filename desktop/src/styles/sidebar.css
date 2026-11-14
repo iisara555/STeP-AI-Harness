@@ -26,9 +26,16 @@ nav button {
   color: var(--muted);
   padding: var(--space-2) var(--space-2-5);
 }
-.nav-active {
-  background: var(--selected) !important;
-  color: var(--text) !important;
+/* The selected tool keeps its state on hover, in the full sidebar, the rail and the profile's settings icon. */
+.nav-active,
+.nav-active:hover,
+.rail-button.nav-active,
+.rail-button.nav-active:hover,
+.profile .settings-button.nav-active,
+.profile .settings-button.nav-active:hover,
+.icon.nav-active:hover:not(:disabled) {
+  background: var(--selected);
+  color: var(--text);
 }
 .recent-label {
   font-size: var(--text-xs);
@@ -530,7 +537,7 @@ nav button:hover,
   min-height: 24px;
   align-items: center;
   padding: var(--space-0-5) var(--space-1);
-  margin-left: -4px;
+  margin-left: calc(var(--space-1) * -1);
   border-radius: var(--radius-sm);
 }
 /* Narrow window: the tools become a three-column grid of icon over one-word name, so the task list keeps its room.

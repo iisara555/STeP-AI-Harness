@@ -10,6 +10,10 @@
 @import './styles/draft.css';
 @import './styles/skills.css';
 @import './styles/receipt.css';
+@import './styles/diagnostics.css';
+@import './styles/controls.css';
+@import './styles/connections.css';
+@import './styles/google.css';
 @import './styles/settings.css';
 @import './styles/onboarding.css';
 @import './styles/dialogs.css';
