@@ -57,7 +57,8 @@ function parseArgs(rawArgs) {
   return args;
 }
 
-function showHelp(version) {
+/** Staff see their seven commands; `--all` (or `help --all`) adds the admin section. */
+function showHelp(version, all = false) {
   console.log(`
 ${colors.cyan(colors.bold('@step-cmu/ai-harness'))} ${colors.dim(`v${version}`)}
 ระบบแจกจ่าย Approved Skills และ Rules สำหรับ 22 ทีม STeP / RSP North
@@ -86,8 +87,9 @@ ${colors.bold('ตัวเลือก:')}
       --employee        แสดงผลแบบอ่านง่าย ไม่แสดงรายละเอียดทางเทคนิค
   -h, --help            แสดงคู่มือนี้
   -v, --version         แสดงรุ่นของแพ็กเกจ
-
-${colors.bold('สำหรับผู้ดูแลระบบ:')}
+${all ? '' : `\nคำสั่งสำหรับผู้ดูแลระบบ: ${colors.cyan('step-ai help --all')}\n`}`);
+  if (!all) return;
+  console.log(`${colors.bold('สำหรับผู้ดูแลระบบ:')}
   ${colors.cyan('init')}       ติดตั้ง Approved Skills เข้า Workspace ตามทีมหรือ Role
   ${colors.cyan('teams')}      แสดงรายชื่อ 22 ทีมของ STeP
   ${colors.cyan('skills')}     ศูนย์รวม Skill พร้อมสถานะ Manifest/Routing (--status routed|registered|unregistered, --json)
@@ -128,7 +130,7 @@ export async function main(argv = process.argv.slice(2)) {
   }
 
   if (args.help || args.h || !command || command === 'help') {
-    showHelp(pkgJson.version);
+    showHelp(pkgJson.version, Boolean(args.all));
     return;
   }
 
@@ -191,7 +193,7 @@ export async function main(argv = process.argv.slice(2)) {
       break;
     default:
       console.error(`${colors.red('✖')} คำสั่งไม่ถูกต้อง: '${command}'`);
-      console.log(`พิมพ์ ${colors.cyan('step-ai --help')} เพื่อดูคำสั่งทั้งหมด\n`);
+      console.log(`พิมพ์ ${colors.cyan('step-ai help --all')} เพื่อดูคำสั่งทั้งหมด\n`);
       process.exit(1);
   }
 }
