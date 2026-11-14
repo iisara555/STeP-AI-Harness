@@ -63,6 +63,11 @@ jobs:
       - run: npm run format:check
       - run: npm test
       - run: npm run build
+      # Electron downloads its binary on first use. Fetch it in its own step so a slow mirror cannot use up the first
+      # smoke's 45-second launch timeout (playwright resolves the binary inside launch).
+      - name: Download the Electron binary
+        if: runner.os == 'Windows'
+        run: node -e "require('electron')"
       # Every PR already runs these on macOS (validate.yml desktop-macos-electron); only Windows runs them here.
       - name: Verify chat and tools with a synthetic provider
         if: runner.os == 'Windows'
