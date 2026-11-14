@@ -123,6 +123,15 @@
   margin: 0 0 var(--space-2-5);
   font-size: var(--text-sm);
 }
+/* Section headings inside a dialog: one step under the title and clearly above the 13px body, with room before. */
+.confirm-body h3 {
+  font-size: var(--text-base);
+  font-weight: 600;
+  margin: var(--space-5) 0 var(--space-2);
+}
+.confirm-body h3:first-child {
+  margin-top: 0;
+}
 .confirm-warning {
   display: flex;
   gap: var(--space-2);
@@ -432,6 +441,14 @@
 .keybinding-row input {
   width: 100%;
   padding: var(--space-1-5) var(--space-2-5);
+}
+.keybinding-table > p {
+  margin: var(--space-2) 0;
+}
+.keybinding-add {
+  justify-self: start;
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
 }
 .keybinding-vim,
 .check-row {

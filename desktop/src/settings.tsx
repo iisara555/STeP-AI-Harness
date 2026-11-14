@@ -19,7 +19,6 @@ import { CredentialSettings } from './credential-settings';
 import { DeveloperDiagnostics } from './developer-diagnostics';
 import { StartupSettings } from './startup-settings';
 import { explainError } from './messages';
-import { SectionArt } from './illustration';
 import { Avatar, pickableAvatars } from './avatars';
 import { initial } from './messages';
 import type { Snapshot } from './types';
@@ -301,7 +300,7 @@ export function SettingsPanel({
           </button>
         ))}
       </div>
-      <div className={page === 'ai' ? 'settings-hero settings-hero-ai' : 'settings-hero'}>
+      <div className="settings-hero">
         <h1 className="sr-only">{page === 'ai' ? t('เชื่อมต่อ AI') : pages.find(entry => entry[0] === page)?.[1]}</h1>
         {page === 'developer' && <p className="muted">{t('เครื่องมือดูแลระบบสำหรับนักพัฒนาและผู้ดูแล')}</p>}
         <label className="settings-search">
@@ -333,7 +332,6 @@ export function SettingsPanel({
             )}
           </div>
         )}
-        {page === 'ai' && <SectionArt scene="connections" className="settings-illustration" />}
       </div>
       {page === 'credentials' && <CredentialSettings call={call} onError={onError} onBusy={credentialBusy} requestedOrigin={vaultOrigin} />}
       {page === 'developer' && developerAccess && <DeveloperDiagnostics call={call} onError={onError} />}

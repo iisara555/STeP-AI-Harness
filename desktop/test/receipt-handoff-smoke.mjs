@@ -79,7 +79,8 @@ try {
     { home, id: connection.id },
   );
   await page.reload();
-  await page.getByRole('button', { name: 'ตรวจใบเสร็จ AFP', exact: true }).click();
+  // The sidebar entry carries its "ทดลอง" badge in its name while the window is wide enough to show it.
+  await page.getByRole('button', { name: /^ตรวจใบเสร็จ AFP/ }).click();
   await expect(page.getByRole('heading', { name: 'ตรวจใบเสร็จ AFP' })).toBeVisible();
   await page.getByRole('button', { name: 'เลือกใบเสร็จ' }).click();
   await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
@@ -149,7 +150,7 @@ try {
     assert.equal(source.ocr.provenance, 'EXTRACTED_UNVERIFIED');
   }
   assert.equal(sent[2].consent, 'synthetic-consent');
-  await page.getByRole('button', { name: 'ตรวจใบเสร็จ AFP', exact: true }).click();
+  await page.getByRole('button', { name: /^ตรวจใบเสร็จ AFP/ }).click();
   await page.getByRole('button', { name: 'ชุดเอกสารเบิกจ่าย', exact: true }).click();
   await page.getByRole('button', { name: 'สร้างชุดใหม่', exact: true }).click();
   await page.getByLabel('ชื่อเรื่องเบิก', { exact: true }).fill('อบรม SECRET_PERSON 1234567890123');

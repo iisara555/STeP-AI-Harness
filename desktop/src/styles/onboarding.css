@@ -275,6 +275,9 @@
 }
 /* Usage terms on the last setup step and in the first-send dialog. */
 .terms {
+  align-self: stretch;
+  width: 100%;
+  box-sizing: border-box;
   text-align: left;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
@@ -365,15 +368,19 @@
 .wizard-actions .wizard-skip {
   color: var(--muted);
 }
-/* The terms list fades at its lower edge, so it reads as scrollable rather than cut off. */
+/* Terms: the gist as three lines, the full list opens in place. */
 .terms ul {
-  max-height: 160px;
-  overflow: auto;
   margin: 0 0 var(--space-2-5);
   padding-left: var(--space-4);
   font-size: var(--text-sm);
   line-height: 1.55;
-  padding-bottom: var(--space-5);
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+}
+.terms-full > summary {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--accent-ink);
+  cursor: pointer;
+}
+.terms-full > ul {
+  color: var(--muted);
 }

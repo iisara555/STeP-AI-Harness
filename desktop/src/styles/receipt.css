@@ -68,6 +68,9 @@
   margin-top: var(--space-4);
   align-items: start;
 }
+.receipt-grid.single {
+  grid-template-columns: minmax(0, 560px);
+}
 .receipt-source header {
   display: flex;
   align-items: center;

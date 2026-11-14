@@ -393,3 +393,41 @@ small {
 .icon:hover:not(:disabled) {
   color: var(--text);
 }
+/* Windows high-contrast themes (forced colors) drop background fills, so every selected or chosen state also gets an
+   outline in the system highlight colour, focus stays visible, and small status marks keep an edge. */
+@media (forced-colors: active) {
+  .nav-active,
+  .session.selected,
+  .session-filter button.active,
+  .settings-tabs button.active,
+  .skills-filters button.active,
+  .provider-tile.active,
+  .style-card.active,
+  .language-switch button.active,
+  .theme-options button.active,
+  .google-service.selected,
+  .day-chip.on,
+  .receipt-modes button[aria-pressed='true'],
+  .settings-button[aria-pressed='true'] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+  :focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+  .status-dot,
+  .tab-dot,
+  .tag,
+  .beta,
+  .count {
+    border: 1px solid CanvasText;
+  }
+
+  .composer,
+  dialog,
+  [role='dialog'],
+  [role='alertdialog'] {
+    border: 1px solid CanvasText;
+  }
+}

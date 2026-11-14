@@ -389,7 +389,7 @@ function ConnectionCard({
           <p className="small muted">{t('Google Workspace เชื่อมแยกในแท็บบัญชีและบริการ')}</p>
           {/* Tools are their own block under the account's test result, so a tool that is off does not read as a failed account. */}
           <div className="connection-tools">
-            <h4>{t('เครื่องมือที่ใช้กับบัญชีนี้')}</h4>
+            <h2>{t('เครื่องมือที่ใช้กับบัญชีนี้')}</h2>
             <CapabilityList items={connectionCapabilities(c, snapshot.policy).filter(item => ['web', 'vision'].includes(item.id))} />
           </div>
         </>

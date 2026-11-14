@@ -28,7 +28,7 @@ Sizes come from the scales in `theme.css`: `--text-xs` to `--text-3xl` for type 
 
 Ink on paper: warm off-white surfaces, STeP Dark text, hairlines instead of boxes, quiet hover fills (`--hover`), and generous whitespace. Yellow stays reserved for primary actions and active markers.
 
-Hand-drawn black-and-white illustrations appear only in empty and waiting states (welcome, empty draft pane, settings header, start-up). They live in `desktop/src/assets/illustrations/` as transparent ink PNGs made by `desktop/scripts/prepare-illustrations.cjs`, so they sit on any surface and dark mode only inverts the ink. The four current illustrations were supplied by the user on 2026-09-29, who stated they are licensed for this use; keep the source and licence record with CC before wider distribution.
+Hand-drawn black-and-white illustrations appear only in empty and waiting states (welcome, empty draft pane, start-up); screens with work to do, such as Settings, open straight on their controls. They live in `desktop/src/assets/illustrations/` as transparent ink PNGs made by `desktop/scripts/prepare-illustrations.cjs`, so they sit on any surface and dark mode only inverts the ink. The four current illustrations were supplied by the user on 2026-09-29, who stated they are licensed for this use; keep the source and licence record with CC before wider distribution.
 
 ## Mini apps
 

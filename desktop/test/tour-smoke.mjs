@@ -46,7 +46,8 @@ try {
   let { app, page } = await launch();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  // A new person is offered the tour on the welcome screen.
+  // A new person is offered the tour with the first-day helpers under the composer.
+  await page.locator('.welcome-tools > summary').click();
   await page.getByRole('button', { name: 'ดูทัวร์แนะนำ', exact: true }).click();
   const tour = page.locator('.tour[role="dialog"]');
   await expect(tour).toBeVisible();
