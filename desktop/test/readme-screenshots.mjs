@@ -64,6 +64,7 @@ try {
   await page.locator('.welcome h1').waitFor();
   // With no draft yet the panel stays closed until it is opened from the header.
   await page.getByRole('button', { name: 'เปิดร่าง', exact: true }).click();
+  await page.getByRole('navigation', { name: 'เครื่องมือข้างร่าง' }).getByRole('button', { name: 'แท็บเพิ่มเติม', exact: true }).click();
   await page.getByRole('navigation', { name: 'เครื่องมือข้างร่าง' }).getByRole('button', { name: 'เว็บ', exact: true }).click();
   await page.getByRole('textbox', { name: 'Browser URL' }).waitFor();
   await capture('09-browser.png');

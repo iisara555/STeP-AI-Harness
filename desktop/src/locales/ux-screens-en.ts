@@ -9,4 +9,7 @@ export const uxScreensEn: Record<string, string> = {
   ห้ามส่งรหัสผ่านหรือข้อมูลส่วนบุคคลที่ไม่จำเป็นต่องาน: 'Never send passwords or personal data the work does not need',
   'AI ช่วยร่างและสรุป คุณตรวจและรับผิดชอบงานที่ส่งออกไป': 'AI drafts and summarises; you check and own what you send out',
   อ่านข้อตกลงทั้งหมด: 'Read the full terms',
+  แท็บเพิ่มเติม: 'More tabs',
+  'ซ่อนเว็บ งานเบื้องหลัง และคำสั่งขั้นสูง': 'Hide web, background jobs and commands',
+  'แสดงเว็บ งานเบื้องหลัง และคำสั่งขั้นสูง': 'Show web, background jobs and commands',
 };

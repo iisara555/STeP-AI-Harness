@@ -105,6 +105,8 @@ try {
   await page.getByRole('button', { name: 'กลับไปทำงาน', exact: true }).click();
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.getByRole('button', { name: 'เปิดร่าง', exact: true }).click();
+  // Web, background jobs and commands sit behind the More tabs icon.
+  await page.getByRole('button', { name: 'แท็บเพิ่มเติม', exact: true }).click();
   await page.getByRole('button', { name: 'เว็บ', exact: true }).click();
   await page.getByRole('button', { name: 'ให้ผู้ช่วยทำงานบนเว็บ', exact: true }).click();
   await expect(page.locator('.composer textarea')).toHaveValue(/ให้ผู้ช่วยทำงานบนเว็บ/);

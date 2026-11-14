@@ -313,6 +313,7 @@ try {
     .click();
   await page.waitForTimeout(100);
   assert.equal(await readFile(join(workspace, 'new.txt'), 'utf8'), 'Reviewed file content');
+  await page.getByRole('button', { name: 'แท็บเพิ่มเติม', exact: true }).click();
   await page.getByRole('button', { name: 'เว็บ', exact: true }).click();
   await page.getByRole('textbox', { name: 'Browser URL' }).fill('http://127.0.0.1:' + server.address().port);
   await page.getByRole('button', { name: 'เปิดเว็บ', exact: true }).click();
