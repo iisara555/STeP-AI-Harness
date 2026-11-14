@@ -2,7 +2,6 @@ import type {
   ApprovalRequest,
   Attachment,
   Connection,
-  OwnPack,
   PlanStep,
   Session,
   SkillEntry,
@@ -18,7 +17,7 @@ import { type DocumentAttachmentRole, type DocumentToolId, documentRequest, docu
 import type { FeedbackAsk, ReportAsk } from './feedback';
 import type { InvitationPresentation } from './invitation';
 import type { OpenedArtifact } from './artifacts-list';
-import { type PaletteItem, type Toast, matchesSession } from './ui';
+import { type PaletteItem, matchesSession } from './ui';
 import { RELEASE_NOTES, type ReleaseNote, compareVersions, unseenNotes } from './whats-new';
 import { TASK_SEEN_KEY, initialSeen, needsYouCount, taskAlert } from './task-alerts';
 import { type ToolRequest, type ToolTab } from './tools';
@@ -27,9 +26,9 @@ import type { VaultPrompt } from './vault-prompt';
 import { commandForKey, commandPalette } from './commands';
 import { documentText, plainDocument as toDoc } from './draft';
 import { imageModels, isImageRequest } from './image-routing';
-import { readExportSettingsOpen } from './document-presentation-controls';
-import { readSidebarChoice, saveSidebarChoice } from './sidebar-rail';
+import { saveSidebarChoice } from './sidebar-rail';
 import { resolvePresentation } from './document-presentation';
+import { useExportOptions, useInfoDialogs, useToasts, useWindowLayout } from './workspace-parts';
 import { setLanguage, t, teamName } from './i18n';
 import { skillsForStaff } from './skill-display';
 import { updateWorkActions } from './work-assistant';
@@ -47,16 +46,26 @@ export function useWorkspace() {
   const [update] = useUpdate(api);
   const [toolApprovals, setToolApprovals] = useState<ApprovalRequest[]>([]);
   const [vaultPrompts, setVaultPrompts] = useState<VaultPrompt[]>([]);
-  const [questions, setQuestions] = useState<ToolQuestion[]>([]),
-    [usageOpen, setUsageOpen] = useState(false),
-    [memoryOpen, setMemoryOpen] = useState(false);
-  const [learningOpen, setLearningOpen] = useState(false),
-    [learningText, setLearningText] = useState('');
-  const [packsOpen, setPacksOpen] = useState(false),
-    [ownPacks, setOwnPacks] = useState<OwnPack[] | null>(null),
-    [keyboardOpen, setKeyboardOpen] = useState(false),
-    [vimNormal, setVimNormal] = useState(false);
-  const [automationOpen, setAutomationOpen] = useState(false),
+  const [questions, setQuestions] = useState<ToolQuestion[]>([]);
+  const {
+    usageOpen,
+    setUsageOpen,
+    memoryOpen,
+    setMemoryOpen,
+    learningOpen,
+    setLearningOpen,
+    learningText,
+    setLearningText,
+    packsOpen,
+    setPacksOpen,
+    ownPacks,
+    setOwnPacks,
+    keyboardOpen,
+    setKeyboardOpen,
+    automationOpen,
+    setAutomationOpen,
+  } = useInfoDialogs();
+  const [vimNormal, setVimNormal] = useState(false),
     [coordinated, setCoordinated] = useState(false);
   const [searchMatches, setSearchMatches] = useState<{ query: string; ids: string[] }>();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null),
@@ -92,56 +101,30 @@ export function useWorkspace() {
     [files, setFiles] = useState<Attachment[]>([]),
     [inspecting, setInspecting] = useState<Attachment | null>(null),
     [viewingArtifact, setViewingArtifact] = useState<OpenedArtifact | null>(null);
-  // Three columns need room: on narrower windows the draft panel, then the task list, start hidden.
-  // `left` is the full task list; when it is off the sidebar folds to an icon rail, as in Claude and Codex. The
-  // employee's own choice is remembered on this computer; with no choice yet, narrow windows start folded.
-  const sidebarChoice = useRef<boolean | null>(readSidebarChoice());
-  const [left, setLeft] = useState(() => (sidebarChoice.current === null ? window.innerWidth >= 900 : sidebarChoice.current)),
-    [right, setRight] = useState(() => window.innerWidth >= 1100),
-    [history, setHistory] = useState(false);
-  // Below about 1200px, chat, task list and draft panel do not fit together: while the panel is open the task list
-  // folds to the icon rail on its own (the employee's choice stays as it was), unless they open it again by hand.
-  const [roomy, setRoomy] = useState(() => window.innerWidth >= 1200),
-    [leftPeek, setLeftPeek] = useState(false);
-  useEffect(() => {
-    let width = window.innerWidth;
-    const onResize = () => {
-      const now = window.innerWidth;
-      if (now < 1100 && width >= 1100) setRight(false);
-      if (sidebarChoice.current === null && now < 900 !== width < 900) setLeft(now >= 900);
-      setRoomy(now >= 1200);
-      width = now;
-    };
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-  const [width, setWidth] = useState(440),
-    [connectionId, setConnectionId] = useState(''),
+  const { sidebarChoice, left, setLeft, right, setRight, history, setHistory, roomy, setRoomy, leftPeek, setLeftPeek, width, setWidth } =
+    useWindowLayout();
+  const [connectionId, setConnectionId] = useState(''),
     [dirty, setDirty] = useState(false);
-  const [format, setFormat] = useState('docx'),
-    [exportPath, setExportPath] = useState('');
-  const [exportFont, setExportFont] = useState('auto');
-  const [presentation, setPresentation] = useState(() => resolvePresentation());
-  const presentationRef = useRef(presentation);
-  presentationRef.current = presentation;
-  const [exportGaruda, setExportGaruda] = useState('auto');
-  const [exporting, setExporting] = useState(false);
-  const exportPending = useRef(false);
-  const [exportSettings, setExportSettings] = useState(readExportSettingsOpen);
-  const [exportInfo, setExportInfo] = useState<{
-    documentTool?: string;
-    font: string;
-    fontStatus: string;
-    fontEmbedding?: { status: string; families: string[]; missingFamilies?: string[] };
-    fieldsNeedUpdate?: boolean;
-    garudaHeightCm?: number;
-    templateName?: string;
-  } | null>(null);
-  useEffect(() => {
-    setExportFont('auto');
-    setExportGaruda('auto');
-    setExportInfo(null);
-  }, [selected]);
+  const {
+    format,
+    setFormat,
+    exportPath,
+    setExportPath,
+    exportFont,
+    setExportFont,
+    presentation,
+    setPresentation,
+    presentationRef,
+    exportGaruda,
+    setExportGaruda,
+    exporting,
+    setExporting,
+    exportPending,
+    exportSettings,
+    setExportSettings,
+    exportInfo,
+    setExportInfo,
+  } = useExportOptions(selected);
   const [authCode, setAuthCode] = useState<{ id: string; code: string } | null>(null);
   const [plan, setPlan] = useState<(PlanStep & { state: string })[]>([]);
   const [workActions, setWorkActions] = useState<Record<string, WorkAction[]>>({});
@@ -175,13 +158,8 @@ export function useWorkspace() {
     [dismissedSkills, setDismissedSkills] = useState<string[]>([]),
     [slashIndex, setSlashIndex] = useState(0);
   const composerRef = useRef<HTMLTextAreaElement>(null);
-  const [toasts, setToasts] = useState<Toast[]>([]),
-    toastId = useRef(0),
-    runningIds = useRef(new Map<string, object>());
-  const dismiss = useCallback((id: number) => setToasts(list => list.filter(t => t.id !== id)), []);
-  const notify = useCallback((text: string, tone: Toast['tone'] = 'info', action?: Toast['action']) => {
-    if (text) setToasts(list => [...list.filter(t => t.text !== text), { id: ++toastId.current, text, tone, action }].slice(-4));
-  }, []);
+  const { toasts, setToasts, toastId, dismiss, notify } = useToasts();
+  const runningIds = useRef(new Map<string, object>());
   const [startedAt, setStartedAt] = useState(0);
   const [feedbackAsk, setFeedbackAsk] = useState<FeedbackAsk | null>(null);
   const [reportAsk, setReportAsk] = useState<ReportAsk | null>(null);
