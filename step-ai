@@ -11,5 +11,5 @@ for candidate in "$ROOT/.step-ai/runtime/node/bin/node" "$(command -v node 2>/de
     exec "$candidate" "$CLI" "$@"
 done
 
-echo "STeP AI: Node.js runtime not found. Open Install-STeP-AI.command or Update-STeP-AI.command once, then retry." >&2
+echo "STeP AI: Node.js runtime not found. Open Install-STeP-AI.command or Tools/Update-STeP-AI.command once, then retry." >&2
 exit 127
