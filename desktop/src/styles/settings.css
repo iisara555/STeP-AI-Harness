@@ -1,0 +1,1864 @@
+/* Developer diagnostics: bounded, readable operational details without exposing task content. */
+.developer-diagnostics {
+  display: grid;
+  gap: 16px;
+}
+.diagnostic-intro,
+.diagnostic-log-heading,
+.diagnostic-connection {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.diagnostic-intro h2,
+.diagnostic-panel h2 {
+  margin: 0 0 5px;
+  font-size: 17px;
+}
+.diagnostic-intro p,
+.diagnostic-panel p {
+  margin-top: 0;
+}
+.diagnostic-actions,
+.diagnostic-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.diagnostic-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.diagnostic-stat,
+.diagnostic-panel {
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--paper);
+}
+.diagnostic-stat {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border-left-width: 4px;
+}
+.diagnostic-stat span,
+.diagnostic-stat small {
+  color: var(--muted);
+}
+.diagnostic-stat strong {
+  font-size: 24px;
+  line-height: 1.2;
+}
+.diagnostic-stat.error,
+.diagnostic-entry.error {
+  border-left-color: var(--danger);
+}
+.diagnostic-stat.error strong,
+.diagnostic-level.error,
+.diagnostic-entry.error .diagnostic-detail {
+  color: var(--danger);
+}
+.diagnostic-stat.warning,
+.diagnostic-entry.warning {
+  border-left-color: var(--accent-ink);
+}
+.diagnostic-stat.warning strong,
+.diagnostic-level.warning {
+  color: var(--accent-ink);
+}
+.diagnostic-stat.info,
+.diagnostic-entry.info {
+  border-left-color: var(--diff-added);
+}
+.diagnostic-stat.info strong,
+.diagnostic-level.info {
+  color: var(--diff-added);
+}
+.diagnostic-stat.connection {
+  border-left-color: var(--accent-ink);
+}
+.diagnostic-panel {
+  padding: 16px;
+}
+.diagnostic-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 20px;
+  margin: 0;
+}
+.diagnostic-grid > div {
+  min-width: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.diagnostic-grid dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+.diagnostic-grid dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+.diagnostic-wide {
+  grid-column: 1 / -1;
+}
+.diagnostic-panel code {
+  overflow-wrap: anywhere;
+}
+.diagnostic-feature-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.diagnostic-feature-list code,
+.diagnostic-meta code {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--selected);
+}
+.diagnostic-ok,
+.diagnostic-problem {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+.diagnostic-ok {
+  color: var(--diff-added);
+}
+.diagnostic-problem {
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--line));
+  border-radius: 8px;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 7%, transparent);
+}
+.diagnostic-problem ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+.diagnostic-list {
+  display: grid;
+  gap: 10px;
+}
+.diagnostic-connection {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-strong);
+  border-radius: 8px;
+}
+.diagnostic-connection h3 {
+  margin: 0 0 2px;
+  font-size: 15px;
+}
+.diagnostic-connection p {
+  margin: 0;
+}
+.diagnostic-connection > div:last-child {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.diagnostic-log {
+  display: grid;
+  gap: 8px;
+  max-height: 520px;
+  overflow: auto;
+  padding-right: 3px;
+}
+.diagnostic-entry {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: 8px;
+  background: var(--surface);
+}
+.diagnostic-entry-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+.diagnostic-entry-head time {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+.diagnostic-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+.diagnostic-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.diagnostic-detail {
+  margin: 6px 0 0 !important;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  .diagnostic-intro,
+  .diagnostic-log-heading,
+  .diagnostic-connection {
+    flex-direction: column;
+  }
+  .diagnostic-actions,
+  .diagnostic-filters {
+    width: 100%;
+  }
+  .diagnostic-actions button,
+  .diagnostic-filters button {
+    flex: 1;
+  }
+  .diagnostic-summary,
+  .diagnostic-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .diagnostic-connection > div:last-child {
+    justify-content: flex-start;
+  }
+  .diagnostic-entry-head time {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+.profile {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+}
+.credential-form.vault-prompt-form {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 4px;
+  border: 0;
+}
+.credential-form .credential-check,
+.settings-content label.credential-source {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+}
+.credential-check input,
+.credential-source input {
+  flex: 0 0 auto;
+  margin-top: 5px;
+}
+.google-service-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 16px 0;
+}
+.google-service-actions p {
+  flex: 1 1 300px;
+  margin: 0;
+}
+/* The AI pill holds account, model and reasoning level; its menu opens upward from the composer. */
+.ai-picker {
+  position: relative;
+  min-width: 0;
+}
+.ai-picker-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ai-picker-button .status-dot {
+  flex-shrink: 0;
+}
+.ai-picker-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 30;
+  display: grid;
+  gap: 10px;
+  width: 280px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.14);
+}
+.ai-picker-menu label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.ai-picker-menu select {
+  width: 100%;
+  font-size: 13px;
+  color: var(--text);
+}
+.auth-code {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12px;
+  margin: 14px 0;
+}
+/* A switch or checkbox sits on the line of its own words, not above them. */
+.settings-content label.check-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.settings-content label.check-row input {
+  margin: 0;
+}
+.theme-options {
+  display: flex;
+  gap: 7px;
+  margin: 6px 0 25px;
+}
+.theme-options button {
+  font-size: 12px;
+}
+.folder-row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.folder-row span {
+  font-size: 12px;
+  flex: 1;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+.folder-row button {
+  flex-shrink: 0;
+  font-size: 12px;
+}
+.connection-row {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.connection-row p {
+  font-size: 12px;
+  margin: 3px 0;
+}
+.connection-row small {
+  font-weight: 400;
+  margin-left: 8px;
+  color: var(--muted);
+}
+.connection-actions {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.connection-actions button {
+  font-size: 11px;
+}
+.connection-form {
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.ai-connect-step {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--paper);
+}
+.ai-connect-step h2,
+.ai-connect-step h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+}
+.ai-step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 13px;
+}
+.ai-connect-step summary {
+  cursor: pointer;
+  color: var(--accent-ink);
+  font-size: 13px;
+  padding: 8px 0;
+}
+.ai-connect-step summary:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 3px;
+}
+.ai-connect-empty {
+  margin: 14px 0 0;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 13px;
+}
+.ai-readiness .connection-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.connection-row .ai-connection-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.ai-connection-status.ready {
+  color: var(--accent-ink);
+}
+.ai-account-management {
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.ai-account-management[open] > div {
+  margin-top: 8px;
+}
+.ai-account-management .connection-actions {
+  margin-top: 14px;
+}
+.ai-primary-actions button {
+  font-size: 13px;
+}
+.ai-connect-step .provider-tiles {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+.ai-connect-flow .provider-tile-text {
+  display: none;
+}
+.ai-connect-flow .provider-tile {
+  min-height: 0;
+  padding: 8px;
+}
+.settings-hero-ai {
+  margin-bottom: 8px;
+}
+.provider-options summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--muted);
+}
+.provider-options[open] label {
+  margin-top: 8px;
+}
+.connection-cost {
+  padding: 10px;
+  border-left: 3px solid var(--accent-ink);
+  background: var(--paper);
+  font-size: 12px;
+}
+.connect-primary {
+  justify-self: start;
+  margin-top: 6px;
+}
+/* Choosing an AI service: one tile per service with how it connects, then the chosen one's key and cost. */
+.provider-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  /* Every card is as tall as the tallest one, so a long name or a wrapped label does not make a row stand out. */
+  grid-auto-rows: 1fr;
+  gap: 8px;
+}
+.provider-tile:hover {
+  border-color: var(--accent-ink);
+}
+.provider-tile.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: var(--accent-soft);
+}
+.provider-tile > span {
+  width: 100%;
+}
+.provider-tile-head > strong {
+  min-width: 0;
+}
+.provider-tile-head > .provider-kind {
+  flex: none;
+}
+/* "Recommended" sits on the card's top edge, so it does not add a line and make that card taller. */
+.provider-tile {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  justify-content: stretch;
+  justify-items: stretch;
+  text-align: left;
+  padding: 10px 12px;
+  min-height: 70px;
+  background: var(--paper);
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  font-weight: 400;
+  position: relative;
+}
+.provider-tile > .provider-recommended {
+  position: absolute;
+  top: -8px;
+  left: 10px;
+  width: auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+}
+.provider-tile-text {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.provider-kind {
+  font-size: 11px;
+  white-space: nowrap;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+}
+.provider-kind.account {
+  border-color: var(--accent-ink);
+  color: var(--accent-ink);
+}
+.provider-detail {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+}
+.provider-detail p {
+  margin: 0;
+}
+.provider-detail .text-link {
+  justify-self: start;
+}
+.settings-save {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+@media (max-width: 1150px) {
+  .settings-content {
+    padding: 26px;
+  }
+}
+.settings-tabs button.active {
+  color: var(--text);
+  border-bottom: 3px solid var(--accent);
+}
+.privacy-info h3 {
+  font-size: 13px;
+  margin: 18px 0 4px;
+}
+.privacy-info p {
+  font-size: 13px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.settings-illustration {
+  width: 136px;
+}
+.settings-art {
+  width: 150px;
+  height: 150px;
+  flex-shrink: 0;
+  margin: -20px -10px -20px 0;
+}
+@media (max-width: 1150px) {
+  .settings-art {
+    display: none;
+  }
+}
+.style-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.speaking-styles {
+  grid-template-columns: repeat(3, 1fr);
+  margin: 6px 0 20px;
+}
+.speaking-style-custom {
+  display: block;
+  margin: -8px 0 20px;
+}
+.style-card {
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  gap: 2px;
+}
+.style-card small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.style-card.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: var(--accent-soft);
+}
+.style-preview {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.style-preview .avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  flex-shrink: 0;
+}
+.style-preview small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.style-preview p {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+}
+@media (max-width: 920px) {
+  .style-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+/* Layers: wizard 30 < tour 40 < dialogs that need an answer (sign-in code, consent, confirm) 50 < toasts 60. */
+.connect-progress {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--accent-ink);
+  margin: 3px 0;
+}
+.connect-progress .text-link {
+  padding: 0 6px;
+}
+/* Claude Pro/Max route: explanation and Claude Code status in connection forms. */
+.claude-code-note {
+  display: grid;
+  gap: 8px;
+}
+.claude-code-note button {
+  justify-self: start;
+}
+/* Shown above the composer when the task's AI connection cannot answer. */
+.connection-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  font-size: 13px;
+}
+.connection-warning span {
+  flex: 1;
+}
+.connection-warning button {
+  padding: 3px 10px;
+}
+.policy-problems {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+.policy-problems code {
+  overflow-wrap: anywhere;
+}
+.policy-features p {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+/* Language choice on the first wizard step: small, visible before anything else. */
+.language-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  margin-bottom: 4px;
+  border-radius: 8px;
+  background: var(--hover, var(--selected));
+}
+.language-switch button {
+  padding: 4px 12px;
+  font-size: 12.5px;
+  background: transparent;
+  color: var(--muted);
+}
+.language-switch button.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px var(--shadow-soft);
+}
+/* Gemini API key on the main connection page: key, where to get one, and who pays. */
+.gemini-key {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+.gemini-key button {
+  justify-self: start;
+}
+.auth-code-steps {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+.connection-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--paper);
+  flex-wrap: wrap;
+}
+/* Developer-only switch: at the bottom, small, still discoverable. */
+.development-mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 14px;
+}
+.development-mode button {
+  white-space: nowrap;
+  font-size: 12px;
+  min-height: 0;
+  padding: 4px 10px;
+}
+/* The account list sits on the page itself; each account is its own card. */
+.ai-connect-step.ai-readiness {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+.connection-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.connection-card {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  gap: 6px;
+}
+.ai-readiness .connection-card:last-child {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.connection-card.ready {
+  border-left-color: var(--diff-added);
+}
+.connection-card.attention,
+.connection-card.busy {
+  border-left-color: var(--accent);
+}
+.connection-card.error {
+  border-left-color: var(--danger);
+}
+.connection-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+.connection-name {
+  font-size: 15px;
+}
+.connection-row .connection-state {
+  margin: 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--selected);
+  color: var(--muted);
+}
+.connection-state.ready {
+  color: var(--diff-added);
+  background: color-mix(in srgb, var(--diff-added) 12%, transparent);
+}
+.connection-state.attention,
+.connection-state.busy {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+.connection-state.error {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+.connection-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+}
+.connection-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 18px;
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+}
+.connection-more > details {
+  flex: 1 1 220px;
+  min-width: 0;
+  margin-top: 0;
+}
+.connection-more > details[open] {
+  flex-basis: 100%;
+}
+.connection-more .ai-account-management {
+  border-top: 0;
+  margin-top: 0;
+}
+.connection-more summary {
+  padding: 8px 0 0;
+  margin: 0;
+}
+.ai-provider-disclosure[data-first='true'] > summary {
+  display: none;
+}
+.ai-add-account summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  font-weight: 600;
+}
+.ai-add-account {
+  border-style: dashed;
+}
+.ai-capabilities {
+  margin-top: 8px;
+  min-width: 0;
+}
+.ai-capabilities summary {
+  cursor: pointer;
+  font-size: 13px;
+}
+.ai-capability-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.ai-capability-list li {
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.ai-capability-list li > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: baseline;
+}
+.ai-capability-list strong {
+  font-size: 13px;
+}
+.ai-capability-list p {
+  overflow-wrap: anywhere;
+  margin: 4px 0 0;
+}
+.ai-capability-state {
+  font-size: 12px;
+  color: var(--muted);
+}
+.ai-capability-state.available {
+  color: var(--accent-ink);
+}
+.ai-organization-capabilities {
+  padding: 12px 0;
+}
+/* Credential Settings reuses the workspace's restrained panels and accessible native controls. */
+.credential-settings {
+  max-width: 960px;
+}
+.credential-section {
+  padding: 24px 0;
+  border-bottom: 1px solid var(--border);
+}
+.credential-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.credential-heading,
+.credential-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.credential-actions,
+.google-launches {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.credential-note {
+  padding: 14px 18px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.credential-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 20px;
+  margin: 18px 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.credential-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.credential-form input:not([type='checkbox']) {
+  width: 100%;
+}
+.credential-form .credential-check {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+}
+.credential-form p,
+.credential-form .credential-actions {
+  grid-column: 1 / -1;
+}
+.credential-row {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+.credential-row p {
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+}
+.credential-search {
+  width: 100%;
+  margin-top: 18px;
+}
+/* Google Workspace: one hero, numbered first-time steps, service cards, account cards like Connect AI. */
+.google-hero {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.google-hero h2 {
+  margin: 0 0 4px;
+}
+.google-hero p {
+  margin: 0 0 2px;
+}
+.google-hero-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.google-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 18px 0 4px;
+  padding: 0;
+  list-style: none;
+  counter-reset: google-step;
+  font-size: 13px;
+  color: var(--muted);
+}
+.google-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  counter-increment: google-step;
+}
+.google-steps li::before {
+  content: counter(google-step);
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+.google-subhead {
+  margin: 20px 0 8px;
+  font-size: 14px;
+}
+.google-services {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  padding: 0;
+  margin: 16px 0 8px;
+  border: 0;
+}
+.google-services legend {
+  margin-bottom: 10px;
+  padding: 0;
+  font-weight: 600;
+}
+.google-service {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 40px 14px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.google-service:hover {
+  border-color: var(--line-strong);
+}
+.google-services > label.google-service {
+  margin: 0;
+}
+.google-service.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.google-service input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.google-service:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.google-service-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--selected);
+  color: var(--text);
+}
+.google-service.selected .google-service-icon {
+  background: var(--paper);
+}
+.google-service-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.google-service-text .muted {
+  line-height: 1.5;
+}
+.google-kind {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+.google-kind.read {
+  color: var(--diff-added);
+  background: color-mix(in srgb, var(--diff-added) 12%, transparent);
+}
+.google-kind.changes {
+  color: var(--accent-ink);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.google-service-tick {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 6px;
+  color: var(--on-accent);
+}
+.google-service.selected .google-service-tick {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.google-access {
+  flex-direction: column;
+  gap: 10px;
+}
+.google-access label.google-access-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  cursor: pointer;
+}
+.google-access-options {
+  display: grid;
+  gap: 7px;
+  width: 100%;
+  padding: 10px 0 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+.google-access-options legend {
+  margin: 0;
+  font-weight: 500;
+}
+.google-access-options label {
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  cursor: pointer;
+}
+.google-access-options input {
+  position: static;
+  opacity: 1;
+  pointer-events: auto;
+  margin: 0;
+  flex: none;
+}
+.google-admin {
+  margin: 4px 0 0;
+}
+.google-connect-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: 16px;
+}
+.google-promise {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.google-promise svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--diff-added);
+}
+.google-account {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  margin: 10px 0;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.google-account.ready {
+  border-left-color: var(--diff-added);
+}
+.google-account.attention {
+  border-left-color: var(--accent);
+}
+.google-account-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.google-account-name {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.google-account .connection-state {
+  margin: 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--selected);
+  color: var(--muted);
+}
+.google-account .connection-state.ready {
+  color: var(--diff-added);
+  background: color-mix(in srgb, var(--diff-added) 12%, transparent);
+}
+.google-account .connection-state.attention {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+.google-account p {
+  margin: 0;
+}
+.google-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+.google-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.google-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  font-size: 12px;
+}
+.google-more,
+.google-open {
+  margin-top: 4px;
+}
+.google-more summary,
+.google-open summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+}
+.google-open {
+  margin-top: 22px;
+}
+.google-launches {
+  margin-top: 8px;
+}
+.credential-check {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+}
+.credential-files {
+  max-height: 260px;
+  overflow: auto;
+  padding: 14px;
+}
+@media (max-width: 700px) {
+  .credential-form,
+  .google-services {
+    grid-template-columns: 1fr;
+  }
+  .google-account-head {
+    flex-wrap: wrap;
+  }
+  .credential-heading,
+  .credential-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+.profile small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+/* UI audit 2026-10-17: group B (Settings and AI usage) */
+.settings-tabs button {
+  background: transparent;
+  color: var(--muted);
+  border-radius: 7px 7px 0 0;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+@media (max-width: 1150px) {
+  .settings-tabs {
+    top: -26px;
+  }
+  .settings-save.sticky {
+    bottom: -26px;
+  }
+}
+/* Short windows: a compact header so content starts near the top. */
+@media (max-height: 760px) {
+  .settings-content {
+    padding-top: 18px;
+  }
+  .settings-tabs {
+    top: -18px;
+    margin-top: 8px;
+  }
+  .settings-hero .settings-art,
+  .settings-hero .settings-illustration,
+  .settings-hero p {
+    display: none;
+  }
+  .settings-content h1 {
+    font-size: 20px;
+    margin: 0;
+  }
+}
+.policy-features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.policy-badge.on {
+  color: var(--diff-added);
+  background: color-mix(in srgb, var(--diff-added) 13%, transparent);
+}
+/* A folded section for administrators (policy keys, file paths); staff never need to open it. */
+.settings-admin {
+  margin-top: 16px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.settings-admin summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--muted);
+}
+.settings-admin[open] summary {
+  margin-bottom: 8px;
+}
+.settings-admin code {
+  overflow-wrap: anywhere;
+}
+.policy-keys {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 2px 16px;
+}
+.policy-keys li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+}
+/* AI account management: normal-size buttons, and removing the account apart from signing out. */
+.connection-actions button,
+.ai-account-management .connection-actions button {
+  font-size: 13px;
+}
+.connection-runtime {
+  margin-top: 12px;
+}
+.connection-row .connection-runtime p {
+  display: block;
+  margin: 0 0 6px;
+}
+.connection-account-actions {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.connection-account-actions .connection-remove {
+  margin-left: auto;
+}
+.connection-remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.connection-remove:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+/* Website accounts: the add form has its own heading; the search says it is a search. */
+.credential-form h3 {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 15px;
+}
+.settings-content label.credential-search {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 8px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--muted);
+}
+.credential-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  padding: 8px 0;
+}
+.credential-search:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+/* --border is not a theme token; give these boxes a visible edge in both themes. */
+.settings-content .pilot-note,
+.credential-form {
+  border: 1px solid var(--line-strong);
+}
+/* The sticky footer draws its own top rule; avoid a second rule right above it. */
+.settings-content > section:has(+ .settings-save.sticky) {
+  border-bottom: 0;
+}
+.settings-hero .settings-art,
+.settings-hero .settings-illustration {
+  width: 80px;
+  height: 80px;
+  margin: 0;
+}
+.settings-content h1 {
+  font-weight: 500;
+  margin: 0 0 6px;
+  font-size: 24px;
+}
+.settings-content label,
+.settings-content .small {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.settings-content .muted {
+  color: var(--muted);
+  opacity: 1;
+}
+/* One tab row that scrolls sideways instead of wrapping, and stays in view while a tab scrolls. */
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 18px 0 4px;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  z-index: 4;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  background: var(--surface);
+  padding-top: 6px;
+  top: -24px;
+  scroll-padding-top: 12px;
+}
+.settings-search {
+  max-width: 36rem;
+  margin-top: 14px;
+}
+.settings-search-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.settings-profile-summary > .avatar-badge {
+  width: 48px;
+  height: 48px;
+}
+.settings-content .avatar-picker {
+  max-height: 290px;
+  overflow-y: auto;
+  padding: 5px;
+  margin-bottom: 16px;
+}
+.settings-style-example {
+  padding: 14px 16px;
+  margin: 16px 0;
+  background: var(--hover);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.settings-style-example p {
+  margin: 10px 0;
+}
+/* The save action is always reachable, however long the tab. */
+.settings-save.sticky {
+  position: sticky;
+  z-index: 4;
+  padding: 12px 0 14px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  bottom: -28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.settings-save .choice-row {
+  margin: 0;
+  flex-wrap: wrap;
+}
+.settings-save p {
+  margin: 0;
+}
+.settings-save-error {
+  flex-basis: 100%;
+  color: var(--danger);
+}
+.connection-card.selected {
+  box-shadow: inset 3px 0 var(--accent-ink);
+  padding-left: 16px;
+}
+.credential-settings .google-services {
+  display: block;
+}
+.credential-settings .google-service {
+  margin: 0;
+}
+.credential-global .credential-note {
+  margin-bottom: 0;
+}
+.google-selected-scope {
+  overflow-wrap: anywhere;
+}
+.password-managers .credential-row {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+@media (max-width: 760px) {
+  .settings-content {
+    padding: 18px 18px 24px;
+  }
+  .settings-tabs {
+    top: -18px;
+  }
+  .settings-save.sticky {
+    bottom: -24px;
+  }
+  .credential-settings .google-service-grid {
+    grid-template-columns: 1fr;
+  }
+  .settings-content .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* How a service connects is a plain label under its name, not a second button on the card. */
+/* The name wraps on its own line space; the sign-in or API key label stays at the top right of every card. */
+.provider-tile-head {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 2px;
+}
+.provider-kind,
+.provider-kind.account {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-weight: 400;
+}
+/* Settings: tabs at the top, then a compact search; the section title is in the tab. */
+.settings-content > .settings-tabs {
+  margin-top: 0;
+}
+.settings-content > .settings-hero {
+  min-height: 0;
+  margin: 14px 0 4px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+.settings-content > .settings-hero > p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.settings-content > .settings-hero .settings-search {
+  flex: 1 1 280px;
+  max-width: 420px;
+  margin: 0;
+}
+.settings-content > .settings-hero .settings-search-results {
+  flex-basis: 100%;
+}
+.settings-content > .settings-hero .settings-illustration {
+  margin-left: auto;
+}
+/* Language and theme choices use the soft selected state, like other choices in the app. */
+.theme-options button.active {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-color: var(--accent-ink);
+}
+/* The policy summary is read-only text, so it should not look like a text box. */
+.settings-content .pilot-note {
+  border: 0;
+  border-left: 3px solid var(--accent-ink);
+  border-radius: 0;
+  background: transparent;
+  padding: 2px 0 2px 12px;
+}
+.policy-badge.off {
+  color: var(--text);
+  background: var(--selected);
+}
+.privacy-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.privacy-heading .policy-badge {
+  font-weight: 400;
+}
+/* The account's tools sit in their own block under its test result. */
+.connection-tools {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.connection-tools h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.connection-tools .ai-capability-list {
+  margin-top: 4px;
+}
+/* Settings, compact: the same content in less height. Sections breathe through rhythm (one spacing scale, quiet
+   rules between them), not through padding; headings step down so the controls lead. */
+/* Settings: expose current choices before decoration and keep permission text readable. */
+.settings-content {
+  overflow: auto;
+  width: 100%;
+  margin: 0 auto;
+  flex: 1 1 auto;
+  scroll-padding-top: 72px;
+  scroll-padding-bottom: var(--settings-footer-height, 116px);
+  max-width: 1120px;
+  padding: 24px 32px 28px;
+  padding-top: 18px;
+}
+.settings-content .settings-tabs {
+  margin-top: 6px;
+}
+.settings-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 0;
+}
+.settings-content .settings-search {
+  max-width: 22rem;
+  margin: 10px 0 2px;
+}
+.settings-search input {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+.settings-content section {
+  border-bottom: 1px solid var(--line);
+  scroll-margin-top: 70px;
+  padding: 14px 0 18px;
+}
+.settings-content h2 {
+  font-weight: 600;
+  font-size: 15px;
+  margin: 0 0 10px;
+}
+.settings-content h3 {
+  font-size: 13px;
+  margin: 16px 0 6px;
+}
+.settings-content label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.settings-content .small,
+.settings-content p.muted {
+  font-size: 13px;
+  margin: 4px 0 8px;
+}
+.settings-content .form-grid {
+  gap: 4px 14px;
+}
+.settings-content .speaking-styles {
+  margin: 4px 0 12px;
+  gap: 6px;
+}
+.settings-content .style-card {
+  padding: 7px 10px;
+  border-radius: 8px;
+}
+.settings-content .style-card strong {
+  font-size: 13px;
+}
+.settings-content .settings-style-example {
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.settings-content .settings-style-example p {
+  margin: 2px 0 0;
+}
+.settings-content .theme-options {
+  margin: 4px 0 16px;
+}
+.settings-profile-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+/* Google services: icon beside the name, one tight card per service. */
+.settings-content .google-service {
+  padding: 9px 34px 9px 10px;
+  gap: 10px;
+  border-radius: 10px;
+}
+.settings-content .google-service-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+}
+.settings-content .google-service-text {
+  gap: 1px;
+}
+.settings-content .google-service-text .muted {
+  font-size: 12px;
+}
+.settings-content .google-service-tick {
+  top: 10px;
+  right: 10px;
+}
+/* Policy: a dense, scannable list; the badge says on or off at a glance. */
+.policy-features li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+  padding: 4px 0;
+  font-size: 13px;
+}
+.policy-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-size: 11px;
+  padding: 0 8px;
+}
+/* Policy: grouped switches with on/off badges that differ in colour and icon. */
+.policy-group h3 {
+  margin: 16px 0 4px;
+}
+/* The service's own label was inheriting the stacked Settings label, which put the icon above the name. */
+.settings-content label.google-access-toggle {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  font-size: 13px;
+}
+.credential-settings .google-service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 8px;
+}
+.credential-settings .google-service-group {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+  margin: 8px 0 14px;
+}
+.credential-settings .google-service-group legend {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.settings-content label.google-service {
+  flex-direction: row;
+  margin: 0;
+}
+.settings-content .google-kind {
+  margin-top: 2px;
+  font-size: 10.5px;
+  border-radius: 6px;
+}

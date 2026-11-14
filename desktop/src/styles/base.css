@@ -1,0 +1,395 @@
+body {
+  margin: 0;
+  font-family: 'IBM Plex Sans Thai', 'Leelawadee UI', 'Thonburi', system-ui, sans-serif;
+  color: var(--text);
+  background: var(--surface);
+  font-size: 14px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 8px 13px;
+  background: var(--accent);
+  color: var(--on-accent);
+  cursor: pointer;
+  /* One easing for every control: quick to answer, soft to settle. */
+  transition:
+    background-color 0.16s var(--ease-out),
+    border-color 0.16s var(--ease-out),
+    color 0.16s var(--ease-out),
+    box-shadow 0.16s var(--ease-out),
+    transform 0.12s var(--ease-out);
+}
+button:hover {
+  filter: brightness(0.95);
+}
+input,
+select,
+textarea {
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  min-width: 0;
+}
+/* The native option list does not inherit a transparent select's background: on Windows dark mode it opened white
+   behind light text. Give the list the panel colours explicitly so every picker stays readable in both themes. */
+option,
+optgroup {
+  background-color: var(--paper);
+  color: var(--text);
+}
+option:disabled {
+  color: var(--disabled-text);
+}
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+button:focus-visible,
+summary:focus-visible,
+[role='separator']:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll) transparent;
+}
+a,
+.text-link {
+  text-underline-offset: 3px;
+}
+.icon {
+  background: transparent;
+  color: var(--muted);
+  padding: 6px;
+  border-radius: 6px;
+}
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.quiet {
+  color: var(--text);
+  background: transparent;
+  border-color: var(--line);
+}
+.point-right {
+  transform: rotate(180deg);
+  color: var(--muted);
+}
+.spacer {
+  flex: 1;
+}
+.send {
+  /* The main action of the composer: round, and the largest button on its row. */
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+}
+.text-link {
+  background: transparent;
+  color: var(--accent-ink);
+  padding: 8px;
+  font-size: 12px;
+}
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 12px;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.connected {
+  color: var(--accent-ink);
+}
+.spin {
+  animation: spin 1.2s linear infinite;
+}
+@media (max-width: 920px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+/* A loading indicator is progress information: keep a gentle trace when motion is reduced
+   (Windows "Show animations" off, remote desktops), so a wait never looks frozen. */
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: spin 2.4s linear infinite !important;
+  }
+}
+button.danger {
+  background: var(--danger);
+  color: var(--on-danger);
+}
+.tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+::selection {
+  background: var(--selection);
+  color: var(--text);
+}
+/* Notion-like calm: ink on paper, quiet hovers, hairlines instead of boxes, hand-drawn art in empty states. */
+.illustration {
+  display: block;
+  user-select: none;
+  pointer-events: none;
+}
+/* Contextual hand-drawn scenes. The single approved sheet is clipped in the renderer, so its captions never
+   enter the UI. Blend the paper away in both themes while keeping the drawing's pencil texture. */
+.section-art {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  width: 160px;
+  max-width: 100%;
+  aspect-ratio: 440 / 390;
+  flex-shrink: 0;
+  mix-blend-mode: multiply;
+  filter: contrast(1.12);
+  pointer-events: none;
+  user-select: none;
+}
+.section-art img {
+  position: absolute;
+  display: block;
+  width: 349.090909%;
+  max-width: none;
+  height: auto;
+}
+.section-art:is([data-scene='chat'], [data-scene='workspace'], [data-scene='skills']) {
+  /* The upper-row captions sit in this otherwise empty corner; preserve the drawing above and beside it. */
+  clip-path: polygon(0 7%, 45% 7%, 45% 0, 100% 0, 100% 100%, 0 100%);
+}
+:root[data-theme='dark'] .section-art {
+  mix-blend-mode: screen;
+  filter: invert(1) contrast(1.12);
+  opacity: 0.86;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='system'] .section-art {
+    mix-blend-mode: screen;
+    filter: invert(1) contrast(1.12);
+    opacity: 0.86;
+  }
+}
+.empty-illustration {
+  width: 170px;
+  margin: 0 auto 12px;
+}
+@media (max-height: 740px) {
+  .empty-illustration {
+    width: 130px;
+  }
+}
+:root[data-theme='dark'] .illustration {
+  filter: invert(1);
+  opacity: 0.88;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='system'] .illustration {
+    filter: invert(1);
+    opacity: 0.88;
+  }
+}
+.empty-art {
+  width: 170px;
+  height: 170px;
+  margin: 0 auto 4px;
+}
+.quiet:hover {
+  background: var(--hover);
+  filter: none;
+}
+.beta {
+  margin-left: auto;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  letter-spacing: 0.02em;
+}
+.required {
+  color: var(--danger);
+}
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.check input {
+  accent-color: var(--text);
+}
+nav .count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+}
+.danger-text {
+  color: var(--danger);
+}
+.is-empty .welcome {
+  max-width: none;
+  padding: 0;
+  margin: 0 0 28px;
+  text-align: center;
+}
+.is-empty .welcome .welcome-greeting {
+  margin: 0 0 8px;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.is-empty .composer {
+  border-radius: 22px;
+}
+.is-empty .composer textarea {
+  min-height: 78px;
+  padding: 18px 20px 10px;
+}
+@media (max-width: 920px), (max-height: 650px) {
+  .is-empty .welcome {
+    margin-bottom: 20px;
+  }
+}
+/* Shared accessible states and compact navigation from the UI review. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.screen-loading,
+.screen-load-error {
+  padding: 24px;
+}
+button:disabled {
+  cursor: not-allowed;
+  background: var(--disabled-bg);
+  color: var(--disabled-text);
+  border-color: var(--disabled-line);
+  opacity: 1;
+  filter: none;
+}
+.field {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+.field > input,
+.field > select,
+.field > textarea {
+  width: 100%;
+}
+.field > small {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.code-field {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  resize: vertical;
+}
+/* UI audit 2026-10-17: group D (documents, receipt, media, Skills, setup, tour, dark theme, typography) */
+/* Thai phrases kept whole (src/thai-text.tsx): the dictionary would otherwise split "งบ|ประมาณ" or "รุ่น|นี้". */
+.thai-keep {
+  white-space: nowrap;
+}
+/* Native checkboxes and radios use the STeP yellow instead of the system blue, in both themes. */
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--accent);
+}
+/* Dark theme: danger fills are a clear red with white text, not a pastel that reads as disabled. */
+:root[data-theme='dark'] button.danger,
+:root[data-theme='dark'] .stop {
+  background: #c9372c;
+  color: #fff;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='system'] button.danger,
+  :root[data-theme='system'] .stop {
+    background: #c9372c;
+    color: #fff;
+  }
+}
+summary {
+  min-height: 24px;
+}
+.selected-ai {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+/* Craft details shared by every screen. Care shows in how things settle, not in sentences that say so. */
+:root {
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+p,
+li,
+small {
+  text-wrap: pretty;
+}
+/* A press is felt: enabled buttons give a fraction under the finger. */
+@media (prefers-reduced-motion: no-preference) {
+  button:active:not(:disabled) {
+    transform: translateY(0.5px) scale(0.985);
+  }
+}
+/* Corner close and other icon buttons: the hover reads as a soft pad, the icon itself steps up to full ink. */
+.icon:hover:not(:disabled) {
+  color: var(--text);
+}

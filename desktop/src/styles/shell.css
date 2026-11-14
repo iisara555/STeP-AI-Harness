@@ -1,0 +1,552 @@
+/* The window: the app's own title bar (src/titlebar.tsx) over the three columns. */
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+.app {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.titlebar {
+  position: relative;
+  z-index: 45;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* Leave room for the window buttons the system draws over the bar (Windows, Linux: on the right). */
+  padding: 0 calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw) + 10px) 0 10px;
+  background: var(--sidebar);
+  color: var(--text);
+  border-bottom: 1px solid var(--line);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+.titlebar.mac {
+  /* The traffic lights sit at the left of the bar on macOS. */
+  padding-left: 80px;
+  padding-right: 10px;
+}
+.titlebar button,
+.titlebar-dropdown {
+  -webkit-app-region: no-drag;
+}
+.titlebar-start,
+.titlebar-end {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+.titlebar-end {
+  justify-content: flex-end;
+}
+.titlebar-update {
+  -webkit-app-region: no-drag;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  margin-right: 4px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.titlebar-note {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-right: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.titlebar-menu {
+  position: relative;
+}
+.titlebar-app {
+  height: 28px;
+  padding: 0 7px 0 5px;
+  gap: 5px;
+  background: transparent;
+  color: var(--text);
+  border-radius: 7px;
+}
+.titlebar-app:hover,
+.titlebar-app[aria-expanded='true'],
+.titlebar-icon:hover {
+  background: var(--selected);
+  filter: none;
+}
+.titlebar-mark {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.titlebar-icon {
+  height: 28px;
+  width: 28px;
+  padding: 6px;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 6px;
+}
+.titlebar-icon[aria-pressed='true'] {
+  color: var(--text);
+}
+.titlebar-command {
+  flex: 0 1 460px;
+  min-width: 140px;
+  height: 27px;
+  padding: 0 6px 0 10px;
+  gap: 8px;
+  justify-content: flex-start;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+}
+/* With the task list open, the bar holds the task search; the shortcut opens the command palette (src/titlebar.tsx). */
+.titlebar-search {
+  -webkit-app-region: no-drag;
+  display: flex;
+  align-items: center;
+  cursor: text;
+}
+.titlebar-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font-size: 12px;
+  outline: none;
+}
+.titlebar-search:focus-within {
+  border-color: var(--line-strong);
+}
+.titlebar-search .titlebar-palette {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+.titlebar-search .titlebar-palette:hover {
+  background: var(--hover);
+}
+.titlebar-command span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.titlebar-command kbd,
+.titlebar-dropdown kbd {
+  margin-left: auto;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.titlebar-backdrop {
+  -webkit-app-region: no-drag;
+}
+.titlebar-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  width: 300px;
+  max-height: calc(100vh - 60px);
+  overflow: auto;
+  padding: 6px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+}
+.titlebar-group + .titlebar-group {
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+.titlebar-group-label {
+  padding: 4px 10px 2px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.titlebar-dropdown .titlebar-item {
+  width: 100%;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+}
+.titlebar-dropdown .titlebar-item:hover,
+.titlebar-dropdown .titlebar-item:focus-visible {
+  background: var(--selected);
+  filter: none;
+  outline: none;
+}
+.titlebar-dropdown .titlebar-danger {
+  color: var(--danger);
+}
+.titlebar-theme {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 13px;
+}
+.titlebar-theme > span {
+  margin-right: auto;
+}
+.titlebar-chip {
+  padding: 2px 9px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+}
+.titlebar-chip:hover {
+  background: var(--selected);
+  filter: none;
+}
+.titlebar-chip[aria-checked='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+@media (max-width: 760px) {
+  .titlebar-command kbd {
+    display: none;
+  }
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+.brand strong {
+  font-size: 18px;
+  letter-spacing: 0.03em;
+}
+.brand span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+.brand .icon {
+  margin-left: auto;
+}
+.main-pane {
+  min-width: 330px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.topbar {
+  height: 78px;
+  flex-shrink: 0;
+  padding: 17px 26px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.topbar > div {
+  min-width: 0;
+  flex: 1;
+}
+.topbar-title {
+  position: relative;
+}
+.topbar-heading {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.topbar-heading .icon {
+  padding: 3px;
+  flex: none;
+}
+.title-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 41;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+}
+.title-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  justify-content: flex-start;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+}
+.title-menu button:hover:not(:disabled),
+.title-menu button:focus-visible {
+  background: var(--hover);
+}
+.title-menu hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 4px 2px;
+}
+.topbar small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+.resize-handle {
+  width: 5px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  border-left: 1px solid var(--line);
+}
+.resize-handle:hover {
+  background: var(--selection);
+}
+@media (max-width: 1150px) {
+  .topbar {
+    padding-inline: 18px;
+  }
+}
+@media (max-width: 920px) {
+  .resize-handle {
+    display: none;
+  }
+}
+.statusbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 16px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--muted);
+  flex-shrink: 0;
+  min-height: 28px;
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  opacity: 0.6;
+}
+.status-dot.ok {
+  background: var(--accent);
+  opacity: 1;
+}
+.status-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.status-button {
+  background: transparent;
+  color: var(--muted);
+  padding: 2px 6px;
+  font-size: 11px;
+}
+/* The symbol keeps its artwork proportions and a clear margin; the tagline sits well outside it. */
+.brand-symbol {
+  display: block;
+  height: 24px;
+  margin: 2px 0 12px;
+}
+.brand-symbol img {
+  height: 100%;
+  width: auto;
+}
+.brand-symbol .on-dark {
+  display: none;
+}
+:root[data-theme='dark'] .brand-symbol .on-light {
+  display: none;
+}
+:root[data-theme='dark'] .brand-symbol .on-dark {
+  display: block;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='system'] .brand-symbol .on-light {
+    display: none;
+  }
+  :root[data-theme='system'] .brand-symbol .on-dark {
+    display: block;
+  }
+}
+.app .welcome h1 {
+  font-size: clamp(25px, 2.1vw, 30px);
+}
+@media (max-height: 740px) {
+  .brand {
+    margin-bottom: 14px;
+  }
+}
+.topbar strong {
+  display: block;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.app .is-empty .welcome h1 {
+  font-size: clamp(26px, 2.8vw, 34px);
+  font-weight: 500;
+  line-height: 1.5;
+  margin: 0;
+}
+.resize-region {
+  display: flex;
+}
+/* The grey fill is for filled buttons only. See-through buttons (outlined, icon, link and text) stay see-through
+   when disabled and only dim their text, so they never read as a pressed or selected control. */
+.attachments button:disabled,
+.avatar-option:disabled,
+.choice:disabled,
+.quiet:disabled,
+.style-card:disabled,
+.language-switch button:disabled,
+.browser-tab button[role='tab']:disabled,
+.icon:disabled,
+.palette-list button:disabled,
+.session-filter button:disabled,
+.session-open:disabled,
+.settings-button:disabled,
+.settings-tabs button:disabled,
+.skills-filters button:disabled,
+.slash-menu button:disabled,
+.status-button:disabled,
+.suggestions button:disabled,
+.text-link:disabled,
+.title-menu button:disabled,
+.titlebar-app:disabled,
+.titlebar-chip:disabled,
+.titlebar-dropdown .titlebar-item:disabled,
+.titlebar-icon:disabled,
+.version-line:disabled,
+.version-list button:disabled,
+.workbench-tabs button:disabled,
+nav button:disabled {
+  background: transparent;
+}
+.browser-tab button[role='tab']:disabled,
+.icon:disabled,
+.palette-list button:disabled,
+.session-filter button:disabled,
+.session-open:disabled,
+.settings-button:disabled,
+.settings-tabs button:disabled,
+.skills-filters button:disabled,
+.slash-menu button:disabled,
+.status-button:disabled,
+.suggestions button:disabled,
+.text-link:disabled,
+.title-menu button:disabled,
+.titlebar-app:disabled,
+.titlebar-chip:disabled,
+.titlebar-dropdown .titlebar-item:disabled,
+.titlebar-icon:disabled,
+.version-line:disabled,
+.version-list button:disabled,
+.workbench-tabs button:disabled,
+nav button:disabled {
+  border-color: transparent;
+}
+/* Minimum readable size for the sidebar tagline and the team line under the name. One line always: in a narrow
+   sidebar the letters close up instead of the tagline breaking in two. */
+.brand-tagline {
+  font-size: 11px !important;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+@media (max-width: 1000px) {
+  .brand-tagline {
+    letter-spacing: 0.03em;
+  }
+}
+/* M14: a failed last run shows on the status bar. */
+.status-dot.failed {
+  background: var(--danger);
+  opacity: 1;
+}
+/* H9: the toast sits above the draft panel's save and export buttons. */
+.shell.panel-open .toasts {
+  bottom: 84px;
+}
+/* M16: the side-panel tabs scroll in one row; the settings icon stays at the end of it. */
+.workbench-tabs {
+  flex-wrap: nowrap;
+}
+.workbench-tab-list {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.workbench-tabs .workbench-advanced {
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+.shell:has(.settings-content) .toasts {
+  bottom: 128px;
+}
+/* UX review: every tool page starts its content on the same left edge as the page title and caps its width at 1100px,
+   instead of each page centring or indenting on its own. */
+.main-pane .document-tools,
+.main-pane .internal-media,
+.main-pane .schedules,
+.main-pane .receipt-app,
+.main-pane .skills-hub {
+  padding-top: 22px;
+  padding-left: 28px;
+  padding-right: max(28px, calc(100% - 1128px));
+}
+.main-pane .document-form,
+.main-pane .media-workspace {
+  margin-left: 0;
+  margin-right: 0;
+}
