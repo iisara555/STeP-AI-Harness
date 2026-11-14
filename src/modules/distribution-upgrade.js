@@ -21,10 +21,20 @@ export const DISTRIBUTION_FILES = [
   'culture.md',
   '.env.example',
   'Install-STeP-AI.bat',
-  'Update-STeP-AI.bat',
-  'Feedback-STeP-AI.bat',
   'Install-STeP-AI.command',
+  'Tools/Update-STeP-AI.bat',
+  'Tools/Update-STeP-AI.command',
+  'Tools/Feedback-STeP-AI.bat',
+  'Tools/Feedback-STeP-AI.command',
+  'Tools/Check-Privacy-STeP-AI.bat',
+  'Tools/Check-Privacy-STeP-AI.command',
+];
+// Launchers that sat beside Install-STeP-AI before they moved to Tools/. They still count as distribution files so an upgrade
+// removes them from the release folder and a rollback can put them back.
+export const RETIRED_DISTRIBUTION_FILES = [
+  'Update-STeP-AI.bat',
   'Update-STeP-AI.command',
+  'Feedback-STeP-AI.bat',
   'Feedback-STeP-AI.command',
   'Check-Privacy-STeP-AI.bat',
   'Check-Privacy-STeP-AI.command',
@@ -33,6 +43,7 @@ export const DISTRIBUTION_FILES = [
 function isDistributionPath(relPath) {
   const normalized = String(relPath || '').replace(/\\/g, '/');
   return DISTRIBUTION_FILES.includes(normalized)
+    || RETIRED_DISTRIBUTION_FILES.includes(normalized)
     || DISTRIBUTION_DIRS.some((dirName) => normalized.startsWith(`${dirName}/`));
 }
 
@@ -197,6 +208,13 @@ export async function applyDistributionUpgrade({
     .filter((relPath) => isDistributionPath(relPath)
       && !sourcePaths.has(relPath)
       && !preservedPaths.has(relPath));
+  // A first install never tracks the root launchers, so retired ones are removed by name. They are backed up like
+  // every other removed file, so a rollback brings them back.
+  for (const relPath of RETIRED_DISTRIBUTION_FILES) {
+    if (sourcePaths.has(relPath) || preservedPaths.has(relPath) || removedPaths.includes(relPath)) continue;
+    await safeWorkspacePath(destDir, relPath);
+    if (await pathExists(join(destDir, relPath))) removedPaths.push(relPath);
+  }
 
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');

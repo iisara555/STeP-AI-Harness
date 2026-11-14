@@ -4,10 +4,10 @@ title STeP AI Update
 
 rem A copy downloaded from GitHub carries Setup-STeP-Skills.bat; the Pilot bundle does not. The folder workflow is
 rem retired for GitHub downloads, so hand over to the new setup there and keep this launcher for the Pilot bundle.
-if exist "%~dp0Setup-STeP-Skills.bat" (
+if exist "%~dp0..\Setup-STeP-Skills.bat" (
     echo กำลังติดตั้ง STeP Skills สำหรับ Claude, Codex และ Google Antigravity...
     echo.
-    call "%~dp0Setup-STeP-Skills.bat"
+    call "%~dp0..\Setup-STeP-Skills.bat"
     exit /b
 )
 
@@ -25,7 +25,7 @@ echo.
 echo กำลังเปิดตัวช่วยอัปเดต STeP AI...
 echo.
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0install\update-windows.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0..\install\update-windows.ps1"
 
 if %ERRORLEVEL% NEQ 0 (
     echo.

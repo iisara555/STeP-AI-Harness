@@ -300,7 +300,7 @@ Write-Host "     - 'ช่วยตรวจ TOR จัดซื้อระบ�
 Write-Host "     (สามารถลากไฟล์งาน Word, PDF หรือ Excel เข้ามาวางในโฟลเดอร์นี้เพื่อให้ AI ช่วยตรวจได้)" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  หากต้องการเปลี่ยนทีมในอนาคต: รัน 'step-ai config'" -ForegroundColor DarkGray
-Write-Host "  หากต้องการอัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.bat" -ForegroundColor DarkGray
+Write-Host "  หากต้องการอัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Tools\\Update-STeP-AI.bat" -ForegroundColor DarkGray
 Write-Host "=================================================================" -ForegroundColor Green
 Write-Host ""
 
@@ -662,7 +662,7 @@ echo -e "     - ${GRAY}'ช่วยตรวจ TOR จัดซื้อระ
 echo -e "     ${GRAY}(สามารถลากไฟล์งาน Word, PDF หรือ Excel เข้ามาวางในโฟลเดอร์นี้เพื่อให้ AI ช่วยตรวจได้)${NC}"
 echo ""
 echo -e "${GRAY}  หากต้องการเปลี่ยนทีมในอนาคต: รัน 'step-ai config'${NC}"
-echo -e "${GRAY}  หากต้องการอัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.command${NC}"
+echo -e "${GRAY}  หากต้องการอัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Tools/Update-STeP-AI.command${NC}"
 echo ""
 read -p "กด Enter เพื่อเสร็จสิ้น..." dummy
 """

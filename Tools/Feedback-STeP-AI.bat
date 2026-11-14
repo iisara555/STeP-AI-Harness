@@ -15,7 +15,7 @@ echo.
 echo กำลังเปิดตัวช่วยแจ้งปัญหา STeP AI...
 echo.
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0install\feedback-windows.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0..\install\feedback-windows.ps1"
 
 if %ERRORLEVEL% NEQ 0 (
     echo.

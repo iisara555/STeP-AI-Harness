@@ -53,7 +53,7 @@ UPDATE_BAT = (
     "echo กำลังเปิดตัวช่วยอัปเดต STeP AI...\r\n"
     "echo.\r\n"
     "\r\n"
-    'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0install\\update-windows.ps1"\r\n'
+    'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0..\\install\\update-windows.ps1"\r\n'
     "\r\n"
     "if %ERRORLEVEL% NEQ 0 (\r\n"
     "    echo.\r\n"
@@ -80,7 +80,7 @@ FEEDBACK_BAT = (
     "echo กำลังเปิดตัวช่วยแจ้งปัญหา STeP AI...\r\n"
     "echo.\r\n"
     "\r\n"
-    'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0install\\feedback-windows.ps1"\r\n'
+    'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0..\\install\\feedback-windows.ps1"\r\n'
     "\r\n"
     "if %ERRORLEVEL% NEQ 0 (\r\n"
     "    echo.\r\n"
@@ -92,8 +92,8 @@ FEEDBACK_BAT = (
 def main():
     files = {
         ROOT / "Install-STeP-AI.bat": INSTALL_BAT,
-        ROOT / "Update-STeP-AI.bat": UPDATE_BAT,
-        ROOT / "Feedback-STeP-AI.bat": FEEDBACK_BAT,
+        ROOT / "Tools" / "Update-STeP-AI.bat": UPDATE_BAT,
+        ROOT / "Tools" / "Feedback-STeP-AI.bat": FEEDBACK_BAT,
     }
 
     for path, content in files.items():

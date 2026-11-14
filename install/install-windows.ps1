@@ -62,6 +62,6 @@ Write-Host ""
 # 6. Finish
 Write-Host ""
 Write-Host "✓ ตรวจระบบเสร็จแล้ว — ใช้คำแนะนำเริ่มงานที่แสดงจาก STeP AI ด้านบน" -ForegroundColor Green
-Write-Host "อัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.bat" -ForegroundColor DarkGray
+Write-Host "อัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Tools\Update-STeP-AI.bat" -ForegroundColor DarkGray
 Write-Host ""
 Read-Host "กด Enter เพื่อเสร็จสิ้นการติดตั้ง"

@@ -5,7 +5,7 @@ import { chmod, copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } fro
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { DISTRIBUTION_FILES } from '../src/modules/distribution-upgrade.js';
+import { DISTRIBUTION_FILES, RETIRED_DISTRIBUTION_FILES } from '../src/modules/distribution-upgrade.js';
 import { PACKAGE_ROOT } from '../src/modules/role-resolver.js';
 
 // AI apps run the Router through these launchers. Employee machines usually
@@ -100,4 +100,13 @@ test('launchers ship in the package, the ZIP and version upgrades', async () => 
     assert.ok(DISTRIBUTION_FILES.includes(name), `version upgrade omits ${name}`);
   }
   assert.match(bundler, /str_arc == 'step-ai'/, 'the sh launcher must be packed executable');
+  // Only Install-STeP-AI sits at the top of the bundle; the other launchers live in Tools/.
+  for (const name of ['Update-STeP-AI', 'Feedback-STeP-AI', 'Check-Privacy-STeP-AI'].flatMap((n) => [`${n}.bat`, `${n}.command`])) {
+    const moved = `Tools/${name}`;
+    assert.ok(pkg.files.includes(moved), `package.json files omits ${moved}`);
+    assert.ok(bundler.includes(`"${moved}"`), `Pilot bundle omits ${moved}`);
+    assert.ok(DISTRIBUTION_FILES.includes(moved), `version upgrade omits ${moved}`);
+    assert.ok(!pkg.files.includes(name) && !bundler.includes(`"${name}"`), `${name} still ships beside the installer`);
+    assert.ok(RETIRED_DISTRIBUTION_FILES.includes(name), `upgrade does not remove the old ${name}`);
+  }
 });

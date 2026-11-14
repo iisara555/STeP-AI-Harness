@@ -85,6 +85,6 @@ echo ""
 
 echo ""
 echo -e "${GREEN}✓ ตรวจระบบเสร็จแล้ว — ใช้คำแนะนำเริ่มงานที่แสดงจาก STeP AI ด้านบน${NC}"
-echo -e "${GRAY}อัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.command${NC}"
+echo -e "${GRAY}อัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Tools/Update-STeP-AI.command${NC}"
 echo ""
 read -p "กด Enter เพื่อเสร็จสิ้น..." dummy

@@ -6,7 +6,7 @@
 
 1. รับไฟล์ชุดติดตั้งจาก Shared Drive หรือช่องทางภายในที่ทีมใช้อยู่และได้รับการแจ้งว่าเป็นชุดติดตั้งขององค์กร
 2. แตกไฟล์ ZIP
-3. ดับเบิลคลิก **`Install-STeP-AI`** เพียงไฟล์เดียว: `.bat` บน Windows หรือ `.command` บน macOS ไฟล์อื่นในโฟลเดอร์ไม่ต้องเปิดตอนติดตั้ง
+3. ดับเบิลคลิก **`Install-STeP-AI`** เพียงไฟล์เดียว: `.bat` บน Windows หรือ `.command` บน macOS เครื่องมืออื่นอยู่ในโฟลเดอร์ `Tools` และไม่ต้องเปิดตอนติดตั้ง
 4. เลือกทีมหลักจาก **22 ทีม**; `0` หรือกด Enter = **ยังไม่แน่ใจ — ข้ามก่อนและเลือกภายหลังได้**
 5. เปิดโฟลเดอร์นี้ด้วยโปรแกรม AI ที่องค์กรอนุมัติ — ตัวติดตั้งเตรียม instruction สำหรับโปรแกรมที่รองรับไว้ให้อัตโนมัติ ไม่ต้องเลือกค่ายตอนติดตั้ง
 6. พิมพ์ `เริ่มใช้งาน STeP AI` หรือเริ่มงานจริงเป็นภาษาไทย
@@ -15,7 +15,7 @@
 
 ## มีรุ่นเก่าอยู่แล้ว
 
-ไม่ต้องติดตั้งใหม่ เปิด `Update-STeP-AI` เมื่อ STeP AI Geek แจ้งว่าพร้อมอัปเดต ตัวอัปเดตเก็บ `USER.md`, `MEMORY.md` และ `output/` ไว้ให้
+ไม่ต้องติดตั้งใหม่ เปิด `Update-STeP-AI` ในโฟลเดอร์ `Tools` เมื่อ STeP AI Geek แจ้งว่าพร้อมอัปเดต ตัวอัปเดตเก็บ `USER.md`, `MEMORY.md` และ `output/` ไว้ให้
 
 ## First Run
 
@@ -26,9 +26,9 @@
 ## หลังติดตั้ง
 
 - เปลี่ยนทีมภายหลัง: `step-ai config`
-- แจ้งปัญหา: `Feedback-STeP-AI.bat` หรือ `Feedback-STeP-AI.command` แล้วทำตาม [SUPPORT.md](SUPPORT.md)
+- แจ้งปัญหา: `Tools/Feedback-STeP-AI.bat` หรือ `Tools/Feedback-STeP-AI.command` แล้วทำตาม [SUPPORT.md](SUPPORT.md)
 - คู่มือเต็ม: [docs/employee-guide.md](docs/employee-guide.md)
-- ก่อนแนบเอกสาร: เปิด `Check-Privacy-STeP-AI.bat` / `Check-Privacy-STeP-AI.command` แล้วตรวจผลตาม [คู่มือตรวจก่อนแนบ](docs/privacy-preflight.md); การแนบตรงให้ AI ข้ามตัวตรวจนี้
+- ก่อนแนบเอกสาร: เปิด `Tools/Check-Privacy-STeP-AI.bat` / `Tools/Check-Privacy-STeP-AI.command` แล้วตรวจผลตาม [คู่มือตรวจก่อนแนบ](docs/privacy-preflight.md); การแนบตรงให้ AI ข้ามตัวตรวจนี้
 
 ## รุ่นของชุดนี้
 
