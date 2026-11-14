@@ -13,7 +13,7 @@ done
 # A copy downloaded from GitHub carries Setup-STeP-Skills.command; the Pilot bundle does not. The folder workflow is
 # retired for GitHub downloads, so hand over to the new setup there and keep this launcher for the Pilot bundle.
 if [ -f "$SCRIPT_DIR/Setup-STeP-Skills.command" ]; then
-    echo "วิธีติดตั้งแบบนี้เลิกใช้แล้ว กำลังเปิด Setup-STeP-Skills แทน"
+    echo "กำลังติดตั้ง STeP Skills สำหรับ Claude, Codex และ Google Antigravity..."
     echo
     exec bash "$SCRIPT_DIR/Setup-STeP-Skills.command"
 fi

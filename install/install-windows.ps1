@@ -22,9 +22,9 @@ function Show-Header {
     Write-Host "  / ___|_   _|___|  _ \     / \  |_ _|   " -ForegroundColor Cyan -NoNewline
     Write-Host "STeP AI Setup (v$pilotVersion)       " -ForegroundColor Yellow
     Write-Host "  \___ \ | | / _ \ |_) |   / _ \  | |    " -ForegroundColor Cyan -NoNewline
-    Write-Host "Enterprise AI Architecture      " -ForegroundColor Gray
+    Write-Host "ผู้ช่วย AI ขององค์กร           " -ForegroundColor Gray
     Write-Host "   ___) || ||  __/  __/   / ___ \ | |    " -ForegroundColor Cyan -NoNewline
-    Write-Host "22 Teams • 5 Clusters           " -ForegroundColor Gray
+    Write-Host "22 ทีม · 5 กลุ่มงาน            " -ForegroundColor Gray
     Write-Host "  |____/ |_| \___|_|     /_/   \_\___|                           " -ForegroundColor Cyan
     Write-Host "=================================================================" -ForegroundColor Cyan
     Write-Host "   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North) " -ForegroundColor White

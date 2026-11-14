@@ -6,7 +6,7 @@ export PATH="$PATH:/usr/local/bin:/opt/homebrew/bin"
 
 echo "================================================================"
 echo "  Uninstall STeP Skills from Claude / Codex / Google Antigravity"
-echo "  STeP - Science and Technology Park, Chiang Mai University"
+echo "  อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่"
 echo "================================================================"
 echo
 

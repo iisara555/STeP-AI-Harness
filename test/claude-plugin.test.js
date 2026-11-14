@@ -267,7 +267,9 @@ test('Legacy Install/Update launchers hand over to Setup-STeP-Skills in a GitHub
     writeFileSync(join(dir, 'Setup-STeP-Skills.command'), '#!/bin/bash\necho NEW-SETUP-RAN\n');
     chmodSync(join(dir, 'Setup-STeP-Skills.command'), 0o755);
     const out = execFileSync('bash', [join(dir, 'Install-STeP-AI.command')], { encoding: 'utf8' });
-    assert.match(out, /เลิกใช้แล้ว/);
+    // One front door: the hand-over reads as the install going ahead, not as a retired method.
+    assert.match(out, /กำลังติดตั้ง STeP Skills/);
+    assert.doesNotMatch(out, /เลิกใช้แล้ว/);
     assert.match(out, /NEW-SETUP-RAN/);
   } finally {
     rmSync(dir, { recursive: true, force: true });

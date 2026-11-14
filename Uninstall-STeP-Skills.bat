@@ -6,7 +6,7 @@ rem Needs Node.js 18 or later; everything else is done by scripts\install-agent-
 
 echo ================================================================
 echo   Uninstall STeP Skills from Claude / Codex / Google Antigravity
-echo   STeP - Science and Technology Park, Chiang Mai University
+echo   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่
 echo ================================================================
 echo.
 
