@@ -1,7 +1,8 @@
 """
 STeP AI — Fix and Generate Windows Batch Launchers
 Ensures all .bat files have CRLF line endings, proper escape characters,
-and safe ASCII headers to prevent cmd.exe parser desynchronization bugs.
+and UTF-8 text under code page 65001 (the banners are Thai). CRLF is what prevents
+cmd.exe parser desynchronization.
 """
 from pathlib import Path
 
@@ -97,8 +98,8 @@ def main():
 
     for path, content in files.items():
         with open(path, "wb") as f:
-            f.write(content.encode("ascii"))
-        print(f"Updated {path.name} with CRLF and safe ASCII ({len(content)} bytes)")
+            f.write(content.encode("utf-8"))
+        print(f"Updated {path.name} with CRLF (UTF-8, code page 65001) ({len(content)} bytes)")
 
 if __name__ == "__main__":
     main()
