@@ -13,9 +13,8 @@ import type {
 } from './types';
 import { CLAUDE_CODE, connectionName, errorText, explainError, statusText } from './messages';
 import type { DocumentAttachment, DocumentForm } from './document-tool-app';
-import { type DocumentAttachmentRole, type DocumentToolId, documentRequest, documentTool } from './document-tools';
+import { type DocumentToolId, documentRequest, documentTool } from './document-tools';
 import type { FeedbackAsk, ReportAsk } from './feedback';
-import type { InvitationPresentation } from './invitation';
 import type { OpenedArtifact } from './artifacts-list';
 import { type PaletteItem, matchesSession } from './ui';
 import { RELEASE_NOTES, type ReleaseNote, compareVersions, unseenNotes } from './whats-new';
@@ -29,6 +28,22 @@ import { saveSidebarChoice } from './sidebar-rail';
 import { resolvePresentation } from './document-presentation';
 import { useAiChoice } from './ai-choice';
 import { composerCommand, typedSkill } from './composer-command';
+import {
+  type ConsentAsk,
+  type RunOptions,
+  REASONING_LIMIT,
+  STREAM_LIMIT,
+  appendStream,
+  composerRequest,
+  discardStream,
+  finishedNotice,
+  resolveRun,
+  runPayload,
+  sendBlocker,
+  turnBreak,
+  upsertById,
+  withoutId,
+} from './run-flow';
 import { useExportOptions, useInfoDialogs, useToasts, useWindowLayout } from './workspace-parts';
 import { setLanguage, t, teamName } from './i18n';
 import { skillsForStaff } from './skill-display';
@@ -39,28 +54,7 @@ import { createDraftEditor } from './draft-editor';
 import { useUpdate } from './update';
 import type { ReactElement } from 'react';
 
-/** How one request runs; anything left out uses the composer's current choice. */
-export type RunOptions = {
-  attachments?: string[];
-  /** The token from the consent dialog when the same request is sent again after the person agreed. */
-  consent?: string;
-  skill?: string;
-  allowIds?: string[];
-  sourceText?: string;
-  mode?: WorkMode;
-  imageModel?: string;
-  retry?: boolean;
-  coordinator?: boolean;
-  documentTool?: DocumentToolId;
-  attachmentRole?: DocumentAttachmentRole;
-  /** A run that must not pick up the composer's workflow or create images on its own. */
-  isolated?: boolean;
-  /** A side question answered beside the task without changing it. */
-  aside?: boolean;
-  autoContinue?: boolean;
-  documentVariant?: string;
-  invitation?: InvitationPresentation;
-};
+export type { RunOptions } from './run-flow';
 
 /** Everything the main window keeps: state, effects, derived values and the actions the screens call. */
 const NO_PALETTE_ITEMS: PaletteItem[] = [];
@@ -187,31 +181,7 @@ export function useWorkspace() {
   const [feedbackAsk, setFeedbackAsk] = useState<FeedbackAsk | null>(null);
   const [reportAsk, setReportAsk] = useState<ReportAsk | null>(null);
   const [chatMenu, setChatMenu] = useState(false);
-  const [consentAsk, setConsentAsk] = useState<{
-    sessionId: string;
-    text: string;
-    attachments: string[];
-    skill?: string;
-    allowIds?: string[];
-    sourceText?: string;
-    token: string;
-    first: boolean;
-    flagged: boolean;
-    labels: string[];
-    attachment: boolean;
-    vision?: boolean;
-    mode: WorkMode;
-    imageModel: string;
-    retry?: boolean;
-    coordinator?: boolean;
-    documentTool?: DocumentToolId;
-    documentVariant?: string;
-    invitation?: InvitationPresentation;
-    attachmentRole?: DocumentAttachmentRole;
-    isolated?: boolean;
-    aside?: boolean;
-    autoContinue?: boolean;
-  } | null>(null);
+  const [consentAsk, setConsentAsk] = useState<ConsentAsk | null>(null);
   // The first send (or the first after the terms change) needs the usage terms ticked; a new ask starts unticked.
   const [termsAccepted, setTermsAccepted] = useState(false);
   // Claude Pro/Max works only inside Anthropic's own apps, so that choice hands the request to the employee's Claude Code.
@@ -465,10 +435,8 @@ export function useWorkspace() {
           void refresh();
           return;
         }
-        if (event.type === 'vault-prompt' && event.vaultPrompt)
-          setVaultPrompts(items => [...items.filter(item => item.id !== event.vaultPrompt!.id), event.vaultPrompt!]);
-        if (event.type === 'vault-prompt-close' && event.vaultPrompt)
-          setVaultPrompts(items => items.filter(item => item.id !== event.vaultPrompt!.id));
+        if (event.type === 'vault-prompt' && event.vaultPrompt) setVaultPrompts(items => upsertById(items, event.vaultPrompt!));
+        if (event.type === 'vault-prompt-close' && event.vaultPrompt) setVaultPrompts(items => withoutId(items, event.vaultPrompt!.id));
         if (event.type === 'vault-open') {
           setVaultOrigin(event.text || '');
           setSettingsPage('credentials');
@@ -482,12 +450,10 @@ export function useWorkspace() {
             } catch {
               /* Notifications are optional. */
             }
-        if (event.type === 'approval' && event.approval)
-          setToolApprovals(list => [...list.filter(a => a.id !== event.approval!.id), event.approval!]);
-        if (event.type === 'approval-close') setToolApprovals(list => list.filter(a => a.id !== event.approvalId));
-        if (event.type === 'question' && event.question)
-          setQuestions(list => [...list.filter(q => q.id !== event.question!.id), event.question!]);
-        if (event.type === 'question-close') setQuestions(list => list.filter(q => q.id !== event.questionId));
+        if (event.type === 'approval' && event.approval) setToolApprovals(list => upsertById(list, event.approval!));
+        if (event.type === 'approval-close') setToolApprovals(list => withoutId(list, event.approvalId));
+        if (event.type === 'question' && event.question) setQuestions(list => upsertById(list, event.question!));
+        if (event.type === 'question-close') setQuestions(list => withoutId(list, event.questionId));
         // A page the assistant (or the employee) opens shows in the Web tab, so bring that tab forward.
         if (event.type === 'browser' && event.browser?.focus) {
           openPanel();
@@ -500,9 +466,9 @@ export function useWorkspace() {
             setProgress(label);
             setActivityAt(Date.now());
           }
-          if (event.type === 'delta') setStream(s => (s + (event.text || '')).slice(-60000));
-          if (event.type === 'discard' && event.count) setStream(s => s.slice(0, Math.max(0, s.length - event.count!)));
-          if (event.type === 'reasoning') setReasoning(s => (s + (event.text || '')).slice(-20000));
+          if (event.type === 'delta') setStream(s => appendStream(s, event.text || '', STREAM_LIMIT));
+          if (event.type === 'discard' && event.count) setStream(s => discardStream(s, event.count!));
+          if (event.type === 'reasoning') setReasoning(s => appendStream(s, event.text || '', REASONING_LIMIT));
           if (event.type === 'plan') setPlan((event.plan || []).map(step => ({ ...step, state: 'pending' })));
           if (event.type === 'step' && event.index !== undefined)
             setPlan(steps => steps.map((step, i) => (i === event.index ? { ...step, state: event.state || step.state } : step)));
@@ -514,8 +480,8 @@ export function useWorkspace() {
               setStream('');
               setReasoning('');
             } else {
-              setStream(s => (s.trim() && !s.endsWith('\n\n') ? s + '\n\n' : s));
-              setReasoning(s => (s.trim() && !s.endsWith('\n\n') ? s + '\n\n' : s));
+              setStream(turnBreak);
+              setReasoning(turnBreak);
             }
           }
         }
@@ -542,14 +508,7 @@ export function useWorkspace() {
             if (!done || runningIds.current.get(done.id) !== attempt) return;
             if (['running', 'queued'].includes(done.status)) return;
             runningIds.current.delete(done.id);
-            const text =
-              done.status === 'review'
-                ? t('“{0}” มีร่างให้ตรวจแล้ว', done.title)
-                : done.status === 'waiting'
-                  ? t('“{0}” รอข้อมูลเพิ่มจากคุณ', done.title)
-                  : done.status === 'error'
-                    ? t('“{0}” ต้องตรวจสอบ', done.title)
-                    : '';
+            const text = finishedNotice(done.status, done.title);
             if (!text) return;
             if (finished !== currentId.current)
               notify(text, done.status === 'error' ? 'error' : 'success', {
@@ -892,27 +851,15 @@ export function useWorkspace() {
       else setUsageOpen(true);
       return;
     }
-    const request = query.trim() ? query : files.some(file => file.imagePreview) ? t('ช่วยดูไฟล์ที่แนบ') : '';
+    const request = composerRequest(query, files);
     if (!request) return;
-    if (pastingImage || pasteInFlight.current) {
-      notify(t('กำลังเตรียมภาพ กรุณารอสักครู่ก่อนส่ง'), 'info');
-      return;
-    }
-    if (running || sendInFlight.current) {
-      notify(t('รอคำตอบปัจจุบันก่อนส่ง ข้อความยังอยู่ในช่องพิมพ์'), 'info');
-      return;
-    }
-    // A file that cannot go to the AI is never dropped quietly: the message waits until the person removes or replaces it.
-    const refused = files.find(f => !f.usable);
-    if (refused) {
-      notify(
-        t(
-          'ส่งไฟล์ “{0}” ให้ AI ไม่ได้: {1} · นำไฟล์ออกหรือแนบไฟล์อื่นก่อนส่ง',
-          refused.name,
-          errorText[refused.reason || ''] || refused.status,
-        ),
-        'error',
-      );
+    const blocker = sendBlocker({
+      preparingImage: pastingImage || pasteInFlight.current,
+      busy: running || sendInFlight.current,
+      files,
+    });
+    if (blocker) {
+      notify(blocker.text, blocker.kind);
       return;
     }
     sendInFlight.current = true;
@@ -948,24 +895,8 @@ export function useWorkspace() {
   }
   // The host answers with a consent request when this send needs one; the dialog replays the same payload with its token.
   async function start(id: string, text: string, options: RunOptions = {}) {
-    const {
-      attachments = [],
-      consent,
-      skill,
-      allowIds,
-      sourceText,
-      mode = workMode,
-      imageModel: selectedImageModel = imageModel,
-      retry,
-      documentTool,
-      attachmentRole,
-      isolated = false,
-      aside = false,
-      autoContinue = false,
-      documentVariant,
-      invitation,
-    } = options;
-    const coordinator = options.coordinator ?? (coordinated && mode === 'draft' && !skill && !retry);
+    const run = resolveRun(options, { mode: workMode, imageModel, coordinated });
+    const { attachments, sourceText, mode, aside, documentTool } = run;
     const submittedQuery = query;
     const attempt = {},
       previousAttempt = runningIds.current.get(id);
@@ -984,25 +915,7 @@ export function useWorkspace() {
     }
     let result;
     try {
-      result = await api!.call(aside ? 'sideQuestion' : 'send', {
-        id,
-        text,
-        attachments,
-        consent,
-        skill,
-        allowIdentifiers: allowIds,
-        sourceText,
-        mode,
-        imageModel: selectedImageModel,
-        retry,
-        coordinator,
-        documentTool,
-        documentVariant,
-        invitation,
-        attachmentRole,
-        autoContinue,
-        ...(isolated ? { autoImage: false } : mode === 'chat' && workflowRef.current ? { workflow: workflowRef.current } : {}),
-      });
+      result = await api!.call(aside ? 'sideQuestion' : 'send', runPayload(id, text, run, workflowRef.current));
     } catch (e) {
       if (aside) throw e;
       setRunning(false);
@@ -1022,26 +935,8 @@ export function useWorkspace() {
         setStartedAt(0);
       }
       setTermsAccepted(false);
-      setConsentAsk({
-        sessionId: id,
-        text,
-        attachments,
-        skill,
-        allowIds,
-        sourceText,
-        mode,
-        imageModel: selectedImageModel,
-        retry,
-        coordinator,
-        documentTool,
-        documentVariant,
-        invitation,
-        attachmentRole,
-        isolated,
-        aside,
-        autoContinue,
-        ...result.consent,
-      });
+      const { consent: _token, ...ask } = run;
+      setConsentAsk({ ...ask, sessionId: id, text, ...result.consent });
       return;
     }
     if (result.aside) {
