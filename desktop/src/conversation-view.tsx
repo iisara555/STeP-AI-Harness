@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { AccountQuotaMenuSummary, InlineQuotaChip } from './usage';
 import {
   AlertTriangle,
@@ -35,6 +36,7 @@ import { ThinkingScribble } from './thinking-scribble';
 import { VoiceButton } from './voice';
 import { WORKFLOW_LABELS, WorkPlanCard } from './work-plan';
 import { WelcomeGreeting } from './welcome-greeting';
+import { liveAnswer, useElapsed, useLiveRun } from './live-run';
 import { WorkAssistantActivity, WorkAssistantGuide, workActionsFromTrace } from './work-assistant';
 import type { WorkMode, Workflow } from './types';
 import { imageModels } from './image-routing';
@@ -75,23 +77,19 @@ export function ConversationView({ v }: { v: AppView }) {
     currentModel,
     defaultModel,
     discardFiles,
-    elapsed,
     failureCode,
     files,
     forTeam,
     forced,
     forcedSkill,
-    heartbeatAt,
     imageCatalogError,
     imageModel,
     lastAnswer,
     lastRequest,
-    liveText,
     myTeam,
     myTeamName,
     navigate,
     notify,
-    now,
     openAiSettings,
     openLink,
     openPanel,
@@ -108,7 +106,6 @@ export function ConversationView({ v }: { v: AppView }) {
     questions,
     quotaRefreshing,
     readyConnection,
-    reasoning,
     refresh,
     refreshActiveQuota,
     runFailed,
@@ -144,8 +141,8 @@ export function ConversationView({ v }: { v: AppView }) {
     snapshot,
     staffSkills,
     start,
+    startedAt,
     startupPending,
-    streamSaved,
     submitting,
     suggested,
     tour,
@@ -161,6 +158,20 @@ export function ConversationView({ v }: { v: AppView }) {
     workflow,
     workflowRef,
   } = v;
+  // Streamed text and the clock change many times a second, so only this view and the status bar follow them.
+  const stream = useLiveRun(run => run.stream);
+  const reasoning = useLiveRun(run => run.reasoning);
+  const heartbeatAt = useLiveRun(run => run.heartbeatAt);
+  const now = useLiveRun(run => run.now);
+  const elapsed = useElapsed(running, startedAt);
+  // A refresh can land after main saved the answer but before it reports the run finished; the saved message
+  // then already shows the streamed text, so the live copy is hidden instead of appearing twice.
+  const { liveText, streamSaved } = liveAnswer(stream, session?.messages.at(-1));
+  const messageCount = session?.messages.length;
+  useEffect(() => {
+    // An empty task shows the welcome from its greeting; only a conversation follows its latest message.
+    if (messageCount || stream || running) conversationEnd.current?.scrollIntoView({ block: 'end' });
+  }, [messageCount, stream, running, conversationEnd]);
   return (
     <>
       {settings ? null : view === 'receipt' || view === 'documents' || view === 'media' ? null : view === 'schedules' ? (
