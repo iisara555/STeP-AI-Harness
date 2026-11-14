@@ -1,0 +1,563 @@
+.sidebar {
+  width: 246px;
+  flex-shrink: 0;
+  /* In a short window the task list keeps a few rows and the sidebar scrolls instead of squeezing it away. */
+  overflow-y: auto;
+  background: var(--sidebar);
+  padding: 25px 17px 14px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--line);
+}
+.new-work {
+  justify-content: flex-start;
+  padding: 10px 13px;
+  margin-bottom: 17px;
+}
+nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+nav button,
+.settings-button {
+  justify-content: flex-start;
+  text-align: left;
+  background: transparent;
+  color: var(--muted);
+  padding: 9px 10px;
+}
+.nav-active {
+  background: var(--selected) !important;
+  color: var(--text) !important;
+}
+.recent-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 28px 9px 10px;
+}
+.sessions {
+  flex: 1;
+  min-height: 150px;
+  overflow: auto;
+}
+.session span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.session.selected {
+  background: var(--selected);
+}
+.avatar-badge {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  background: var(--selected);
+  color: var(--text);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  overflow: hidden;
+}
+/* The drawings are black ink on white paper: keep the paper in both themes, like a photo. */
+.avatar-badge.has-picture {
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.avatar-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.avatar-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 10px;
+  max-width: 760px;
+}
+.avatar-option {
+  padding: 3px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: transparent;
+  justify-self: center;
+  line-height: 0;
+}
+.avatar-option .avatar-badge {
+  width: 52px;
+  height: 52px;
+  font-size: 15px;
+}
+.avatar-option:hover {
+  border-color: var(--line-strong);
+}
+.avatar-option[aria-checked='true'] {
+  border-color: var(--accent);
+}
+.avatar-option:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.version-line:hover:not(:disabled) {
+  color: var(--text);
+  text-decoration: underline;
+}
+.version-line:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.version-line.available {
+  color: var(--text);
+  font-weight: 600;
+}
+.version-line.available::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  align-self: center;
+}
+.version-list {
+  padding: 0 20px 12px;
+  max-height: 180px;
+  overflow: auto;
+}
+.version-list button {
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+}
+.version-list small {
+  color: var(--muted);
+  font-size: 11px;
+}
+@media (max-width: 1150px) {
+  .sidebar {
+    width: 208px;
+    padding-inline: 12px;
+  }
+}
+@media (max-width: 920px) {
+  .sidebar {
+    width: 185px;
+  }
+}
+.session {
+  text-align: left;
+  background: transparent;
+  color: var(--text);
+  width: 100%;
+  margin-bottom: 3px;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  padding: 0;
+  gap: 0;
+  border-radius: 7px;
+}
+.session-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  background: transparent;
+  color: var(--text);
+  padding: 9px 10px;
+  gap: 3px;
+}
+.session-open span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session-open small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 11px;
+}
+/* A task's notification (src/task-alerts.ts): waiting on the employee, running, or finished or stopped and not opened
+   yet. It gives way to the task's buttons on hover. */
+.task-alert {
+  flex-shrink: 0;
+  align-self: center;
+  width: 8px;
+  height: 8px;
+  margin: 0 12px 0 4px;
+  border-radius: 50%;
+}
+.task-alert.needs-you {
+  background: var(--alert-needs-you);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--alert-needs-you) 22%, transparent);
+}
+.task-alert.running {
+  background: var(--accent);
+  box-shadow: inset 0 0 0 1.5px var(--alert-running-ring);
+  animation: task-alert-pulse 1.4s ease-in-out infinite;
+}
+.task-alert.done {
+  background: var(--alert-done);
+}
+.task-alert.stopped {
+  background: var(--alert-stopped);
+}
+.session:hover .task-alert,
+.session:focus-within .task-alert {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .task-alert.running {
+    animation: none;
+  }
+}
+.session-actions {
+  display: none;
+  align-items: center;
+  padding-right: 4px;
+}
+.session:hover .session-actions,
+.session:focus-within .session-actions {
+  display: flex;
+}
+.session-actions .icon {
+  padding: 4px;
+}
+.session-group {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 14px 10px 5px;
+  letter-spacing: 0.02em;
+}
+.session-rename {
+  width: 100%;
+  margin-bottom: 3px;
+  font-size: 13px;
+}
+.nav-active,
+.session.selected {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+@media (max-height: 740px) {
+  .sidebar {
+    padding-top: 14px;
+  }
+}
+nav button:hover,
+.settings-button:hover,
+.session-open:hover,
+.suggestions button:hover,
+.icon:hover,
+.status-button:hover {
+  background: var(--hover);
+  filter: none;
+}
+.session:hover {
+  background: var(--hover);
+}
+.session.selected:hover {
+  background: var(--selected);
+}
+.sessions > p.muted {
+  padding: 0 10px;
+}
+.tools-group {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tools-toggle {
+  padding: 3px 5px;
+  color: var(--muted);
+}
+/* Tools folded: one row of icon buttons with tooltips, so the task list above keeps the height. */
+/* Each icon carries a short name underneath, so a new employee does not have to guess which one is the receipt check. */
+.tools-nav.icons {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 2px;
+}
+.tools-nav.icons button {
+  position: relative;
+  flex: 1 1 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 0 4px;
+  min-width: 0;
+}
+.nav-short {
+  display: none;
+}
+.tools-nav.icons .nav-short {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--muted);
+}
+.tools-nav.icons .nav-active .nav-short {
+  color: var(--text);
+}
+.tools-nav.icons .nav-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.tools-nav.icons .count,
+.tools-nav.icons .beta {
+  display: none;
+}
+.tools-nav.icons .spin {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 11px;
+  height: 11px;
+}
+/* Names shown: shorter rows than the task list. */
+.tools-nav:not(.icons) button {
+  padding: 6px 10px;
+}
+.sidebar nav + .settings-button {
+  margin-top: 3px;
+}
+.team-mark,
+.tag.team {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-radius: 999px;
+  padding: 0 7px;
+  font-size: 11px;
+}
+/* Task list filter: one compact row so the list itself gets the height. */
+.session-filter {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--hover, var(--selected));
+}
+.session-filter button {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  background: transparent;
+  color: var(--muted);
+}
+.session-filter button.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px var(--shadow-soft);
+}
+.sidebar nav button {
+  min-width: 0;
+}
+.sidebar nav button svg,
+.sidebar nav button .count,
+.sidebar nav button .beta {
+  flex-shrink: 0;
+}
+.nav-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+/* The task list folded to icons, as in Claude and Codex. Tooltips name each icon on hover and keyboard focus. */
+.sidebar.rail {
+  width: 60px;
+  padding: 18px 10px 14px;
+  align-items: center;
+  gap: 4px;
+  overflow: visible;
+  z-index: 5;
+}
+.rail-brand .brand-symbol {
+  height: 20px;
+  margin: 0 0 14px;
+}
+.rail-button {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  /* Centred like the rest of the rail; the full sidebar's tool buttons are left-aligned with text. */
+  justify-content: center;
+  flex-shrink: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 9px;
+}
+/* Tasks waiting on the employee, on the task list's rail icon (src/sidebar-rail.tsx). */
+.rail-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--alert-needs-you);
+  color: var(--paper);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+.rail-button:hover {
+  background: var(--hover);
+  color: var(--text);
+  filter: none;
+}
+.rail-button.rail-new {
+  background: var(--accent);
+  color: var(--on-accent);
+  margin-bottom: 6px;
+}
+.rail-button.rail-new:hover {
+  background: var(--accent);
+  filter: brightness(0.95);
+}
+.sidebar.rail nav {
+  gap: 4px;
+}
+.rail-divider {
+  width: 24px;
+  height: 1px;
+  margin: 8px 0;
+  background: var(--line);
+}
+.rail-spacer {
+  flex: 1;
+  min-height: 12px;
+}
+.rail-profile {
+  width: 40px;
+  justify-content: center;
+  margin-top: 10px;
+  padding: 12px 3px 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+.rail-profile:hover,
+.rail-profile:focus-visible {
+  background: var(--hover);
+  filter: none;
+}
+.sidebar.rail [data-tip] {
+  position: relative;
+}
+.sidebar.rail [data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translate(-4px, -50%);
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: var(--text);
+  color: var(--paper);
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 0.12s,
+    transform 0.12s;
+  z-index: 20;
+}
+.sidebar.rail [data-tip]:hover::after,
+.sidebar.rail [data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar.rail [data-tip]::after {
+    transition: none;
+  }
+}
+.rail-icon {
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+@media (max-width: 1000px) {
+  /* Too narrow for the names under the tool icons: the tooltips name them. */
+  .tools-nav.icons .nav-short {
+    display: none;
+  }
+}
+/* Dark theme: avatars stay black ink on paper like a photo. Inverting them turned filled hair and clothes white,
+   so faces read as photo negatives; the paper is only dimmed so it does not glare. */
+:root[data-theme='dark'] .avatar-badge.has-picture img {
+  filter: brightness(0.88);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='system'] .avatar-badge.has-picture img {
+    filter: brightness(0.88);
+  }
+}
+/* H8: the task's actions float over its status line, so the title keeps its full width. */
+.sessions .session {
+  position: relative;
+}
+.sessions .session-actions {
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  padding-left: 16px;
+  background: linear-gradient(90deg, transparent, var(--sidebar) 14px);
+  border-radius: 0 7px 7px 0;
+}
+.sessions .session.selected .session-actions {
+  background: linear-gradient(90deg, transparent, var(--selected) 14px);
+}
+/* While the buttons show, the status line ends in an ellipsis before them instead of being cut mid-word. */
+.sessions .session:hover .session-open small,
+.sessions .session:focus-within .session-open small {
+  max-width: calc(100% - 72px);
+}
+/* Small targets: the version number and folded sections are at least 24px tall. */
+.version-line {
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: left;
+  min-height: 24px;
+  align-items: center;
+  padding: 2px 4px;
+  margin-left: -4px;
+  border-radius: 5px;
+}

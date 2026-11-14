@@ -14,6 +14,10 @@ Colour follows the STeP CI digital palette in `skills/common/step-brand/referenc
 - Use only the supplied symbol artwork in `desktop/src/assets/` (original colour on light surfaces, white mono on dark), unmodified and at its own proportions. Never redraw, recolour, or combine it with typed text into a new lockup. The CI wording **MAKE INNOVATION SIMPLE** sits below it with clear space.
 - The app icon is generated from the original-colour symbol by `npm run icon` (`desktop/scripts/make-icon.cjs`). The symbol file's yellow `#FFC609` versus the confirmed `#FFC709` is `รอยืนยัน` with CC.
 
+## Stylesheets
+
+`desktop/src/style.css` only imports, in order: `theme.css` (tokens), `workbench.css`, then one file per area in `desktop/src/styles/` (base, motion, shell, sidebar, chat, work, draft, skills, receipt, settings, onboarding, dialogs). Mini apps keep their own file next to the component. Put a rule in its area's file beside the rules it relates to; never append an override to the end of a file, and never redeclare a selector that already has a block in that file.
+
 ## Tone: calm and Notion-like
 
 Ink on paper: warm off-white surfaces, STeP Dark text, hairlines instead of boxes, quiet hover fills (`--hover`), and generous whitespace. Yellow stays reserved for primary actions and active markers.

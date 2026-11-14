@@ -1,0 +1,874 @@
+.conversation {
+  flex: 1;
+  overflow: auto;
+  padding: 28px max(24px, calc((100% - 720px) / 2));
+}
+.chat-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.welcome p {
+  color: var(--muted);
+  line-height: 1.9;
+  margin-bottom: 32px;
+}
+.suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.suggestions span {
+  flex: 1;
+  text-align: left;
+}
+.message {
+  margin: 0 0 27px;
+}
+.message-author {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 9px;
+}
+.message-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  line-height: 1.75;
+}
+.message.status .message-body {
+  color: var(--danger);
+}
+.activity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.streaming {
+  margin-bottom: 10px;
+}
+.composer-area {
+  padding: 0 26px 12px;
+}
+/* The textarea draws no outline of its own, so the box shows where typing goes. */
+.composer:focus-within {
+  border-color: var(--focus);
+}
+.composer textarea {
+  display: block;
+  /* Starts at one line and grows with the text, up to the max height. */
+  field-sizing: content;
+  resize: none;
+  width: 100%;
+  min-height: 44px;
+  max-height: 200px;
+  border: 0;
+  background: transparent;
+  padding: 10px 16px 6px;
+  outline: none;
+}
+.composer-tools {
+  display: flex;
+  align-items: center;
+  /* One row: pickers shrink with an ellipsis (full text in their tooltip) before anything wraps. */
+  flex-wrap: nowrap;
+  padding: 2px 8px 8px;
+  gap: 4px;
+}
+.composer-side-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 0 8px 4px;
+}
+.composer-tools > button {
+  flex-shrink: 0;
+}
+/* Compact pickers like Claude Desktop: as wide as the chosen option, highlighted on hover. */
+.composer-tools .pill-select {
+  field-sizing: content;
+  min-width: 0;
+  max-width: 190px;
+  font-size: 12.5px;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.composer-tools .pill-select:hover:not(:disabled),
+.composer-tools .pill-select:focus-visible {
+  background: var(--hover);
+  color: var(--text);
+}
+.composer-tools .model-select {
+  color: var(--text);
+  max-width: 170px;
+}
+/* The permission pill shows a shield and a short word; the real list lies over it, see-through, so a click opens it. */
+.composer-tools .permission-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.composer-tools .permission-pill:hover,
+.composer-tools .permission-pill:focus-within {
+  background: var(--hover);
+  color: var(--text);
+}
+.composer-tools .permission-pill:has(select:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.permission-pill select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.permission-pill:has(select:disabled) {
+  opacity: 0.45;
+}
+.composer-tools .ai-picker-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 230px;
+  color: var(--text);
+}
+.composer-add {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px;
+}
+.stop {
+  background: var(--danger);
+  color: var(--on-danger);
+}
+.sources {
+  padding: 6px 20px;
+  font-size: 11px;
+  color: var(--muted);
+  max-height: 130px;
+  overflow: auto;
+}
+.sources p {
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+.attachments {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  padding: 10px;
+}
+.attachments > span {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.attachments button {
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 4px 6px;
+}
+.attachments .attachment-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.attachments .attachment-preview img {
+  display: block;
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+.attachments .attachment-label {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+}
+.composer-image-status {
+  margin: 4px 10px;
+}
+.attachments > span.refused {
+  border-color: var(--danger);
+}
+.attachments > span.refused button {
+  color: var(--danger);
+}
+.message-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.message-files span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.message.user .message-files {
+  justify-content: flex-end;
+}
+.message-image {
+  margin: 0;
+  display: grid;
+  gap: 2px;
+  max-width: 240px;
+}
+.message-image img {
+  display: block;
+  max-width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel, transparent);
+}
+.message-image figcaption {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attachment-dialog {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 24px;
+  width: min(740px, 100%);
+  max-height: 85vh;
+  overflow: auto;
+}
+.attachment-dialog header {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+.attachment-dialog h2 {
+  font-size: 17px;
+  flex: 1;
+}
+.attachment-dialog pre {
+  max-height: 45vh;
+  overflow: auto;
+  border: 1px solid var(--line);
+  padding: 14px;
+}
+.browser-message {
+  max-width: 560px;
+  margin: 15vh auto;
+  padding: 30px;
+}
+.browser-message > svg {
+  color: var(--accent-ink);
+}
+@media (max-width: 1150px) {
+  .welcome h1 {
+    font-size: 29px;
+  }
+  .composer-area {
+    padding-inline: 18px;
+  }
+  .conversation {
+    padding: 24px;
+  }
+}
+@media (max-width: 920px) {
+  .welcome {
+    padding-top: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .thinking-scribble .scribble-stroke {
+    animation: scribble-trace 7.2s linear infinite !important;
+  }
+}
+.thinking {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.thinking summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.thinking div {
+  white-space: pre-wrap;
+  margin-top: 8px;
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+  max-height: 220px;
+  overflow: auto;
+  line-height: 1.7;
+}
+/* Answers read like Claude and ChatGPT: plain text on the page, generous spacing, Markdown structure. */
+.rich-text {
+  white-space: normal;
+}
+.rich-text > :first-child {
+  margin-top: 0;
+}
+.rich-text > :last-child {
+  margin-bottom: 0;
+}
+.rich-text p {
+  margin: 0 0 14px;
+}
+.rich-text h1,
+.rich-text h2,
+.rich-text h3,
+.rich-text h4,
+.rich-text h5,
+.rich-text h6 {
+  margin: 22px 0 10px;
+  line-height: 1.45;
+  font-weight: 600;
+}
+.rich-text h1 {
+  font-size: 21px;
+}
+.rich-text h2 {
+  font-size: 18px;
+}
+.rich-text h3 {
+  font-size: 16px;
+}
+.rich-text h4,
+.rich-text h5,
+.rich-text h6 {
+  font-size: 15px;
+}
+.rich-text ul,
+.rich-text ol {
+  margin: 0 0 14px;
+  padding-left: 24px;
+}
+.rich-text li {
+  margin: 4px 0;
+}
+.rich-text li > p {
+  margin: 0 0 6px;
+}
+.rich-text li > ul,
+.rich-text li > ol {
+  margin: 4px 0 0;
+}
+.rich-text li:has(> input[type='checkbox']) {
+  list-style: none;
+  margin-left: -20px;
+}
+.rich-text li > input[type='checkbox'] {
+  margin: 0 8px 0 0;
+  vertical-align: -2px;
+}
+.rich-text strong {
+  font-weight: 600;
+}
+.rich-text a {
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.rich-text :not(pre) > code {
+  font-family: Consolas, Menlo, monospace;
+  font-size: 0.88em;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: var(--selected);
+  border: 1px solid var(--line);
+}
+.rich-text blockquote {
+  margin: 0 0 14px;
+  padding: 2px 0 2px 14px;
+  border-left: 3px solid var(--line-strong);
+  color: var(--muted);
+}
+.rich-text blockquote p {
+  margin-bottom: 6px;
+}
+.rich-text hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 20px 0;
+}
+/* A caret at the end of an answer that is still arriving. */
+.rich-text.streaming > :is(p, h1, h2, h3, h4, h5, h6):last-child::after,
+.rich-text.streaming > :is(ul, ol):last-child > li:last-child::after {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 1.05em;
+  margin-left: 3px;
+  vertical-align: -3px;
+  border-radius: 1px;
+  background: var(--accent);
+  animation: caret 1s steps(2, start) infinite;
+}
+.welcome-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+.welcome-heading {
+  min-width: 0;
+}
+.welcome-illustration {
+  width: clamp(84px, 10vw, 140px);
+}
+.browser-empty-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.browser-empty-intro > div {
+  min-width: 0;
+}
+.browser-illustration {
+  width: 100px;
+}
+@media (max-width: 1000px) {
+  .browser-illustration {
+    width: 76px;
+  }
+  .welcome-intro {
+    gap: 12px;
+  }
+}
+@media (max-height: 740px) {
+  .welcome-illustration {
+    width: 84px;
+  }
+}
+.welcome-art {
+  width: 132px;
+  height: 132px;
+  margin: 0 0 4px -10px;
+}
+.welcome {
+  padding: 45px 8px 25px;
+  max-width: 500px;
+  margin: auto;
+  padding-top: 18px;
+}
+.welcome h1 {
+  font-size: 34px;
+  line-height: 1.45;
+  margin: 0 0 15px;
+  text-wrap: balance;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.message.user .message-body {
+  background: var(--selected);
+  padding: 13px 16px;
+  border-radius: 8px;
+}
+.composer {
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow:
+    0 1px 2px rgba(35, 31, 32, 0.04),
+    0 4px 14px rgba(35, 31, 32, 0.04);
+  position: relative;
+}
+.slash-menu {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: calc(100% + 6px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px var(--shadow-card);
+  padding: 5px;
+  z-index: 5;
+  max-height: 300px;
+  overflow: auto;
+}
+.slash-menu button.active {
+  background: var(--selected);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.slash-menu span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.greet {
+  margin: 0 0 4px;
+  color: var(--accent-ink);
+  font-weight: 500;
+}
+.welcome-tour {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 13px;
+}
+/* After a failed run: try again with the same request, or put it back in the box to edit. */
+.retry-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: -12px 0 24px;
+}
+.retry-row button {
+  font-size: 12px;
+  padding: 6px 12px;
+}
+/* A stop the person asked for is information, not an error. */
+.message.status.neutral .message-body {
+  color: var(--muted);
+}
+/* Slash menu and Skill hub: Thai title and description first, the command last; the person's team is marked. */
+.slash-menu button {
+  display: flex;
+  width: 100%;
+  justify-content: flex-start;
+  background: transparent;
+  color: var(--text);
+  padding: 7px 9px;
+  font-size: 12.5px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  text-align: left;
+}
+.slash-menu .slash-title {
+  font-size: 13px;
+  color: var(--text);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.slash-menu .slash-desc {
+  font-size: 11px;
+  color: var(--muted);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.slash-menu code {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+/* Context and local memory controls. */
+.context-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+/* Secondary task actions stay light so the conversation, not the toolbar, leads the page. */
+.context-bar > button {
+  font-size: 12.5px;
+  padding: 4px 10px;
+  border-color: transparent;
+  color: var(--muted);
+}
+.context-bar > button:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--hover);
+  filter: none;
+}
+.attachment-image {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+}
+.transmission-scope {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+/* Keep the first prompt and greeting together; conversation turns retain the bottom composer. */
+.chat-content.is-empty {
+  overflow-y: auto;
+}
+.chat-content.is-empty > .conversation {
+  flex: 0 0 auto;
+  overflow: visible;
+  padding: 0 24px;
+}
+.chat-content.is-empty > .composer-area {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 800px;
+  margin: auto;
+  padding: 40px 28px 60px;
+}
+.welcome-extras {
+  margin-top: 20px;
+}
+.welcome-quick-starts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.welcome-quick-starts button {
+  border-radius: 20px;
+  padding: 8px 14px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+.welcome-quick-starts button:hover {
+  color: var(--text);
+}
+.welcome-tools {
+  margin-top: 12px;
+}
+.welcome-tools > summary {
+  width: fit-content;
+  margin-inline: auto;
+  padding: 8px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.welcome-tools > summary:hover {
+  color: var(--text);
+}
+.welcome-tools[open] > summary {
+  margin-bottom: 16px;
+}
+.welcome-extras > .welcome-tour {
+  display: flex;
+  width: fit-content;
+  margin: 8px auto 0;
+  border-color: transparent;
+  color: var(--muted);
+}
+.welcome-extras > .welcome-tour:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+.welcome-extras .suggestions-label {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+@media (max-width: 920px), (max-height: 650px) {
+  .chat-content.is-empty > .composer-area {
+    padding: 24px 18px;
+  }
+}
+.suggestions button {
+  background: transparent;
+  color: var(--text);
+  justify-content: flex-start;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  border-radius: 6px;
+  padding: 12px 8px;
+  align-items: flex-start;
+  line-height: 1.6;
+  text-align: left;
+}
+.suggestions button > svg:first-child {
+  margin-top: 3px;
+  color: var(--accent-ink);
+  flex-shrink: 0;
+}
+.starter-tag {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+/* Above the composer: the plan and the assistant's questions, where the employee types (src/App.tsx). */
+.composer-dock:empty {
+  display: none;
+}
+.composer-dock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.composer-dock .work-plan {
+  margin: 0;
+}
+/* Only the task list scrolls; the run buttons and their limits below it stay in view however long the plan is. */
+.composer-dock .work-plan ol {
+  max-height: 24vh;
+  overflow: auto;
+}
+.retry-code {
+  flex-basis: 100%;
+}
+.composer textarea[hidden] {
+  display: none;
+}
+.composer-question-note {
+  margin: 0;
+  padding: 12px 16px 6px;
+}
+.message-body pre:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* สรุปเช้านี้: a card on the chat home, above the starters. */
+.morning-brief {
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  display: grid;
+  gap: 8px;
+  text-align: left;
+}
+.morning-brief header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.morning-brief h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 1rem;
+}
+.morning-brief h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.morning-brief p {
+  margin: 0;
+}
+.morning-brief ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.morning-brief li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.morning-brief li.conflict .morning-brief-time {
+  color: var(--danger);
+}
+.morning-brief-time {
+  min-width: 92px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.morning-brief-what {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.morning-brief-what small {
+  color: var(--muted);
+}
+.morning-brief .badge {
+  font-size: 0.75rem;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.morning-brief .badge.warn {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger);
+}
+.morning-brief-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.morning-brief-remember,
+.morning-brief-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0;
+}
+.morning-brief-settings {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+.morning-brief-settings .google-subhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+}
+.morning-brief-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin: 12px 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.morning-brief-settings label.morning-brief-toggle,
+.morning-brief-settings label.morning-brief-time-setting {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.morning-brief-time-setting input {
+  width: 110px;
+}
