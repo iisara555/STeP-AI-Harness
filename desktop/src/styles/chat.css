@@ -672,14 +672,14 @@
 .welcome-tools[open] > summary {
   margin-bottom: var(--space-4);
 }
-.welcome-extras > .welcome-tour {
+.welcome-tools > .welcome-tour {
   display: flex;
   width: fit-content;
   margin: var(--space-2) auto 0;
   border-color: transparent;
   color: var(--muted);
 }
-.welcome-extras > .welcome-tour:hover {
+.welcome-tools > .welcome-tour:hover {
   color: var(--text);
   background: var(--hover);
 }

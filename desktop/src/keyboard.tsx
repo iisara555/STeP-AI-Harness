@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ConfirmDialog } from './ui';
 import { COMMANDS, editableShortcut, parseShortcut, shortcutText, validateKeybindings, type Keybindings } from './commands';
 import { explainError } from './messages';
@@ -18,7 +18,16 @@ export function KeyboardDialog({
   const [keys, setKeys] = useState<Keybindings>(settings.keybindings || {}),
     [vim, setVim] = useState(settings.vimMode || false),
     [error, setError] = useState(''),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    // Rows the person added or edited while the dialog is open stay visible even when emptied.
+    [shown, setShown] = useState<string[]>([]),
+    [focusId, setFocusId] = useState('');
+  const combo = (id: string, fallback: string) => keys[id as keyof Keybindings] ?? fallback;
+  const rows = COMMANDS.filter(([id, , fallback]) => combo(id, fallback) || shown.includes(id));
+  const unset = COMMANDS.filter(([id, , fallback]) => !combo(id, fallback) && !shown.includes(id));
+  useEffect(() => {
+    if (focusId) document.getElementById('keybinding-' + focusId)?.focus();
+  }, [focusId]);
   return (
     <ConfirmDialog
       title={t('คีย์ลัดแป้นพิมพ์')}
@@ -39,11 +48,11 @@ export function KeyboardDialog({
         }
       }}
     >
-      <p>{t('พิมพ์คีย์ลัดในช่องทางขวาของแต่ละคำสั่ง เช่น {0} เว้นว่างเพื่อปิดคีย์ลัดของคำสั่งนั้น', shortcutText('Mod+Shift+k'))}</p>
+      <p className="small muted">{t('พิมพ์คีย์ เช่น {0} · เว้นว่างเพื่อปิด', shortcutText('Mod+Shift+k'))}</p>
       {error && <p role="alert">{error}</p>}
-      {/* One command per row: its name on the left, its key on the right, tied together by label/for. */}
+      {/* Only commands that have a key are listed; the rest are one pick away, so the list is not a wall of empty boxes. */}
       <div className="keybinding-table" role="group" aria-label={t('คีย์ลัดของแต่ละคำสั่ง')}>
-        {COMMANDS.map(([id, label, fallback]) => (
+        {rows.map(([id, label, fallback]) => (
           <div className="keybinding-row" key={id}>
             <label htmlFor={'keybinding-' + id}>{t(label)}</label>
             <input
@@ -51,12 +60,36 @@ export function KeyboardDialog({
               aria-label={t('คีย์ลัด {0}', t(label))}
               placeholder={t('ไม่มีคีย์ลัด')}
               spellCheck={false}
-              value={editableShortcut(keys[id] ?? fallback)}
-              onChange={e => setKeys({ ...keys, [id]: parseShortcut(e.target.value) })}
+              value={editableShortcut(combo(id, fallback))}
+              onChange={e => {
+                if (!shown.includes(id)) setShown([...shown, id]);
+                setKeys({ ...keys, [id]: parseShortcut(e.target.value) });
+              }}
             />
           </div>
         ))}
+        {!rows.length && <p className="small muted">{t('ยังไม่ได้ตั้งคีย์ลัด')}</p>}
       </div>
+      {unset.length > 0 && (
+        <select
+          className="keybinding-add"
+          aria-label={t('เพิ่มคีย์ลัด…')}
+          value=""
+          onChange={e => {
+            const id = e.target.value;
+            if (!id) return;
+            setShown([...shown, id]);
+            setFocusId(id);
+          }}
+        >
+          <option value="">{t('เพิ่มคีย์ลัด…')}</option>
+          {unset.map(([id, label]) => (
+            <option key={id} value={id}>
+              {t(label)}
+            </option>
+          ))}
+        </select>
+      )}
       <label className="keybinding-vim">
         <input type="checkbox" checked={vim} onChange={e => setVim(e.target.checked)} />
         {t('เปิด Vim ในช่องพิมพ์คำขอ')}
@@ -64,7 +97,13 @@ export function KeyboardDialog({
       <p className="small muted">
         {t('เริ่มใน Insert กด Escape เพื่อเข้า Normal ใช้ i/a, h/j/k/l, w/b, 0/$ และ x การพิมพ์ภาษาไทยผ่าน IME ยังคงทำงานตามปกติ')}
       </p>
-      <button className="quiet" onClick={() => setKeys({})}>
+      <button
+        className="quiet"
+        onClick={() => {
+          setKeys({});
+          setShown([]);
+        }}
+      >
         {t('คืนคีย์ลัดเริ่มต้น')}
       </button>
     </ConfirmDialog>

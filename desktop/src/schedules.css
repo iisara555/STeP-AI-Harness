@@ -118,6 +118,16 @@
   background: var(--paper);
   color: var(--text);
 }
+/* Once the person has jobs, templates step back: quieter heading, flat cards. */
+.schedules h2.schedules-secondary {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  margin-top: var(--space-7);
+}
+.schedule-templates.secondary .schedule-template {
+  background: transparent;
+  padding: var(--space-2-5) var(--space-3);
+}
 .schedule-template-use {
   display: inline-flex;
   align-items: center;

@@ -42,6 +42,5 @@ export const CHAT_STARTERS = [
   },
 ];
 
-export const TOOLS_KEY = 'step.sidebarTools';
 /** A background answer check that started within its step budget; a stale mark (the app closed mid-check) shows nothing. */
 export const checkStillRunning = (startedAt?: string) => Boolean(startedAt) && Date.now() - Date.parse(startedAt!) < 10 * 60_000;

@@ -1324,13 +1324,14 @@ export function ConversationView({ v }: { v: AppView }) {
                       );
                     })}
                   </div>
+                  {/* One quiet entry under the composer: the tour lives with the other first-day helpers. */}
+                  {!snapshot.settings.tourDone && (
+                    <button className="welcome-tour quiet" onClick={commands.tour}>
+                      <Compass size={15} />
+                      {t('ดูทัวร์แนะนำ')}
+                    </button>
+                  )}
                 </details>
-                {!snapshot.settings.tourDone && (
-                  <button className="welcome-tour quiet" onClick={commands.tour}>
-                    <Compass size={15} />
-                    {t('ดูทัวร์แนะนำ')}
-                  </button>
-                )}
               </div>
             )}
           </div>

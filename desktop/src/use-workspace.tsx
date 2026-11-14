@@ -46,7 +46,6 @@ import { updateWorkActions } from './work-assistant';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor } from '@tiptap/react';
 import { useUpdate } from './update';
-import { TOOLS_KEY } from './app-shared';
 import type { ReactElement } from 'react';
 
 /** Everything the main window keeps: state, effects, derived values and the actions the screens call. */
@@ -55,23 +54,6 @@ export function useWorkspace() {
   const [update] = useUpdate(api);
   const [toolApprovals, setToolApprovals] = useState<ApprovalRequest[]>([]);
   const [vaultPrompts, setVaultPrompts] = useState<VaultPrompt[]>([]);
-  // Tools start as one row of icons so the task list keeps the height; the choice is remembered.
-  const [toolsOpen, setToolsOpen] = useState(() => {
-    try {
-      return localStorage.getItem(TOOLS_KEY) === 'open';
-    } catch {
-      return false;
-    }
-  });
-  const toggleTools = () =>
-    setToolsOpen(open => {
-      try {
-        localStorage.setItem(TOOLS_KEY, open ? 'icons' : 'open');
-      } catch {
-        // The layout still switches for this session.
-      }
-      return !open;
-    });
   const [questions, setQuestions] = useState<ToolQuestion[]>([]),
     [usageOpen, setUsageOpen] = useState(false),
     [memoryOpen, setMemoryOpen] = useState(false);
@@ -1543,9 +1525,6 @@ export function useWorkspace() {
     setToolApprovals,
     vaultPrompts,
     setVaultPrompts,
-    toolsOpen,
-    setToolsOpen,
-    toggleTools,
     questions,
     setQuestions,
     usageOpen,

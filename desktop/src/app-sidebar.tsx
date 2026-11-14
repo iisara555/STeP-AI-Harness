@@ -1,8 +1,6 @@
 import {
   Blocks,
   CalendarClock,
-  ChevronDown,
-  ChevronUp,
   FileText,
   LoaderCircle,
   Megaphone,
@@ -57,8 +55,6 @@ export function AppSidebar({ v }: { v: AppView }) {
     snapshot,
     staffSkills,
     taskMeta,
-    toggleTools,
-    toolsOpen,
     update,
     view,
   } = v;
@@ -196,23 +192,11 @@ export function AppSidebar({ v }: { v: AppView }) {
               </p>
             )}
           </div>
-          <div className="session-group tools-group">
-            <span>{t('เครื่องมือ')}</span>
-            <button
-              className="quiet tools-toggle"
-              aria-expanded={toolsOpen}
-              aria-label={toolsOpen ? t('ย่อเครื่องมือเป็นไอคอน') : t('แสดงชื่อเครื่องมือ')}
-              title={toolsOpen ? t('ย่อเครื่องมือเป็นไอคอน') : t('แสดงชื่อเครื่องมือ')}
-              onClick={toggleTools}
-            >
-              {toolsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </button>
-          </div>
-          <nav className={toolsOpen ? 'tools-nav' : 'tools-nav icons'}>
+          <div className="session-group tools-group">{t('เครื่องมือ')}</div>
+          <nav className="tools-nav" aria-label={t('เครื่องมือ')}>
             <button
               data-tour="documents"
               className={view === 'documents' && !settings ? 'nav-active' : ''}
-              title={toolsOpen ? undefined : t('เครื่องมือร่างเอกสาร')}
               onClick={() => {
                 setSettings(false);
                 navigate('documents');
@@ -227,7 +211,6 @@ export function AppSidebar({ v }: { v: AppView }) {
             <button
               data-tour="media"
               className={view === 'media' && !settings ? 'nav-active' : ''}
-              title={toolsOpen ? undefined : t('สื่อภายใน')}
               onClick={() => {
                 setSettings(false);
                 navigate('media');
@@ -242,7 +225,6 @@ export function AppSidebar({ v }: { v: AppView }) {
             <button
               data-tour="skills"
               className={view === 'skills' && !settings ? 'nav-active' : ''}
-              title={toolsOpen ? undefined : t('ศูนย์รวม Skill')}
               onClick={() => {
                 setSettings(false);
                 navigate('skills');
@@ -258,7 +240,6 @@ export function AppSidebar({ v }: { v: AppView }) {
             <button
               data-tour="schedules"
               className={view === 'schedules' && !settings ? 'nav-active' : ''}
-              title={toolsOpen ? undefined : t('งานตั้งเวลา')}
               onClick={() => {
                 setSettings(false);
                 navigate('schedules');
@@ -273,7 +254,6 @@ export function AppSidebar({ v }: { v: AppView }) {
             <button
               data-tour="receipt"
               className={view === 'receipt' && !settings ? 'nav-active' : ''}
-              title={toolsOpen ? undefined : t('ตรวจใบเสร็จ AFP')}
               onClick={() => {
                 setSettings(false);
                 navigate('receipt');
@@ -291,16 +271,6 @@ export function AppSidebar({ v }: { v: AppView }) {
               )}
             </button>
           </nav>
-          <button
-            className={`settings-button ${settings ? 'nav-active' : ''}`}
-            data-tour="settings"
-            onClick={() => {
-              openSettings();
-            }}
-          >
-            <SlidersHorizontal size={18} />
-            <span>{t('การตั้งค่า')}</span>
-          </button>
           <UpdateCard api={api} update={update} />
           <div className="profile" data-tour="version">
             {profileAvatar}
@@ -312,6 +282,17 @@ export function AppSidebar({ v }: { v: AppView }) {
               </small>
               <VersionLine api={api} update={update} version={snapshot.appVersion || ''} />
             </div>
+            {/* Settings sits with the person it belongs to, as in Claude, Notion and Slack. */}
+            <button
+              className={`icon settings-button ${settings ? 'nav-active' : ''}`}
+              data-tour="settings"
+              aria-label={t('การตั้งค่า')}
+              title={t('การตั้งค่า')}
+              aria-pressed={settings}
+              onClick={() => openSettings()}
+            >
+              <SlidersHorizontal size={18} />
+            </button>
           </div>
         </aside>
       )}

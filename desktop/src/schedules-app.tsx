@@ -172,8 +172,8 @@ export function ScheduledTasks({
       )}
       {enabled && (
         <>
-          <h2>{t('งานของฉัน')}</h2>
-          {!data.jobs.length && <p className="schedules-empty">{t('ยังไม่มีงานตั้งเวลา')}</p>}
+          {/* The person's own jobs lead; with none yet, the page opens on the templates instead of an empty heading. */}
+          {data.jobs.length > 0 && <h2>{t('งานของฉัน')}</h2>}
           <ul className="schedule-list">
             {data.jobs.map(job => {
               const run = lastRun(job.id),
@@ -273,8 +273,8 @@ export function ScheduledTasks({
               );
             })}
           </ul>
-          <h2>{t('แม่แบบ')}</h2>
-          <ul className="schedule-templates">
+          <h2 className={data.jobs.length ? 'schedules-secondary' : undefined}>{data.jobs.length ? t('แม่แบบ') : t('เริ่มจากแม่แบบ')}</h2>
+          <ul className={data.jobs.length ? 'schedule-templates secondary' : 'schedule-templates'}>
             {SCHEDULE_TEMPLATES.map(template => (
               <li key={template.id}>
                 <button className="schedule-template" disabled={!!busy || !ready.length} onClick={() => fromTemplate(template)}>

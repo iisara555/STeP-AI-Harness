@@ -642,65 +642,79 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
             <fieldset className="google-services">
               {/* The numbered steps above already say "choose services"; the legend stays for screen readers. */}
               <legend className="sr-only">{t('เลือกบริการที่จะให้ AI ใช้')}</legend>
-              {(['gmail', 'calendar', 'documents', 'more'] as const).map(group => (
-                <fieldset className="google-service-group" key={group}>
-                  <legend>
-                    {group === 'gmail'
-                      ? 'Gmail'
-                      : group === 'calendar'
-                        ? 'Google Calendar'
-                        : group === 'documents'
-                          ? t('เอกสารและไฟล์')
-                          : t('บริการเพิ่มเติม')}
-                  </legend>
-                  <div className="google-service-grid">
-                    {visibleGoogleServices(google.services, services)
-                      .filter(s => groupForService(s) === group)
-                      .filter((s, index, all) =>
-                        s !== 'calendar-read' && s !== 'calendar'
-                          ? (s !== 'drive-read' && s !== 'drive') || index === all.findIndex(v => v === 'drive-read' || v === 'drive')
-                          : index === all.findIndex(v => v === 'calendar-read' || v === 'calendar'),
-                      )
-                      .map(s => {
-                        if (s === 'calendar-read' || s === 'calendar' || s === 'drive-read' || s === 'drive')
+              {(['gmail', 'calendar', 'documents', 'more'] as const).map(group => {
+                const fieldset = (
+                  <fieldset className="google-service-group" key={group}>
+                    <legend className={group === 'more' ? 'sr-only' : undefined}>
+                      {group === 'gmail'
+                        ? 'Gmail'
+                        : group === 'calendar'
+                          ? 'Google Calendar'
+                          : group === 'documents'
+                            ? t('เอกสารและไฟล์')
+                            : t('บริการเพิ่มเติม')}
+                    </legend>
+                    <div className="google-service-grid">
+                      {visibleGoogleServices(google.services, services)
+                        .filter(s => groupForService(s) === group)
+                        .filter((s, index, all) =>
+                          s !== 'calendar-read' && s !== 'calendar'
+                            ? (s !== 'drive-read' && s !== 'drive') || index === all.findIndex(v => v === 'drive-read' || v === 'drive')
+                            : index === all.findIndex(v => v === 'calendar-read' || v === 'calendar'),
+                        )
+                        .map(s => {
+                          if (s === 'calendar-read' || s === 'calendar' || s === 'drive-read' || s === 'drive')
+                            return (
+                              <WorkspaceAccessService
+                                key={s.startsWith('drive') ? 'drive' : 'calendar'}
+                                family={s.startsWith('drive') ? 'drive' : 'calendar'}
+                                allowed={google.services}
+                                selected={services}
+                                busy={Boolean(busy)}
+                                onChange={setServices}
+                              />
+                            );
+                          const info = SERVICES[s];
+                          const Icon = info.icon;
+                          const on = services.includes(s);
                           return (
-                            <WorkspaceAccessService
-                              key={s.startsWith('drive') ? 'drive' : 'calendar'}
-                              family={s.startsWith('drive') ? 'drive' : 'calendar'}
-                              allowed={google.services}
-                              selected={services}
-                              busy={Boolean(busy)}
-                              onChange={setServices}
-                            />
+                            <label className={`google-service${on ? ' selected' : ''}`} key={s}>
+                              <input
+                                type="checkbox"
+                                checked={on}
+                                disabled={Boolean(busy)}
+                                onChange={e => setServices(old => (e.target.checked ? [...old, s] : old.filter(v => v !== s)))}
+                              />
+                              <span className="google-service-icon" aria-hidden="true">
+                                <Icon size={18} />
+                              </span>
+                              <span className="google-service-text">
+                                <strong>{info.name[lang()]}</strong>
+                                <span className="muted small">{info.detail[lang()]}</span>
+                                <span className={`google-kind ${info.changes ? 'changes' : 'read'}`}>{serviceImpact(s)}</span>
+                              </span>
+                              <span className="google-service-tick" aria-hidden="true">
+                                {on && <Check size={14} />}
+                              </span>
+                            </label>
                           );
-                        const info = SERVICES[s];
-                        const Icon = info.icon;
-                        const on = services.includes(s);
-                        return (
-                          <label className={`google-service${on ? ' selected' : ''}`} key={s}>
-                            <input
-                              type="checkbox"
-                              checked={on}
-                              disabled={Boolean(busy)}
-                              onChange={e => setServices(old => (e.target.checked ? [...old, s] : old.filter(v => v !== s)))}
-                            />
-                            <span className="google-service-icon" aria-hidden="true">
-                              <Icon size={18} />
-                            </span>
-                            <span className="google-service-text">
-                              <strong>{info.name[lang()]}</strong>
-                              <span className="muted small">{info.detail[lang()]}</span>
-                              <span className={`google-kind ${info.changes ? 'changes' : 'read'}`}>{serviceImpact(s)}</span>
-                            </span>
-                            <span className="google-service-tick" aria-hidden="true">
-                              {on && <Check size={14} />}
-                            </span>
-                          </label>
-                        );
-                      })}
-                  </div>
-                </fieldset>
-              ))}
+                        })}
+                    </div>
+                  </fieldset>
+                );
+                // Less-used services fold away so the tab stays short; they open on their own once one is chosen.
+                if (group !== 'more') return fieldset;
+                const chosen = services.filter(s => groupForService(s) === 'more').length;
+                return (
+                  <details className="google-more-services" key={group} open={chosen > 0 || undefined}>
+                    <summary>
+                      {t('บริการเพิ่มเติม')}
+                      {chosen > 0 && <small>{t('เลือกแล้ว {0}', String(chosen))}</small>}
+                    </summary>
+                    {fieldset}
+                  </details>
+                );
+              })}
             </fieldset>
             {google.accounts.length > 0 && <p className="muted small">{w('reauthorize')}</p>}
             {connectionError !== undefined && (
