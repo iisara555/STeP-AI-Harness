@@ -15,6 +15,24 @@ import { ConversationView } from './conversation-view';
 import { StatusBar } from './status-bar';
 import { SidePanel } from './side-panel';
 import { AppDialogs } from './app-dialogs';
+import { useMemo, useRef } from 'react';
+import { WorkspaceViewProvider, createWorkspaceViewStore, region, useNotifyRegions, type WorkspaceViewStore } from './workspace-view';
+
+// Each region follows only the workspace values it reads (see workspace-view.tsx).
+const Sidebar = region(AppSidebar, 'Sidebar');
+const Topbar = region(AppTopbar, 'Topbar');
+const Tools = region(ToolScreens, 'ToolScreens');
+const Conversation = region(ConversationView, 'Conversation');
+const Status = region(StatusBar, 'StatusBar');
+const Panel = region(SidePanel, 'SidePanel');
+const Dialogs = region(AppDialogs, 'Dialogs');
+
+const brandSymbol = (
+  <span className="brand-symbol" role="img" aria-label="STeP">
+    <img className="on-light" src={symbolColour} alt="" />
+    <img className="on-dark" src={symbolWhite} alt="" />
+  </span>
+);
 
 export default function App() {
   // Re-render once the English dictionary arrives (it loads on demand when English is chosen).
@@ -37,6 +55,11 @@ export default function App() {
     initializeWorkspace,
     commandRef,
   } = ws;
+  const store = useRef<WorkspaceViewStore | null>(null);
+  useNotifyRegions(store);
+  const avatarId = snapshot?.settings.avatar;
+  const avatarFallback = initial(snapshot?.settings.userName || '') || snapshot?.settings.team.toUpperCase() || 'ST';
+  const profileAvatar = useMemo(() => <Avatar id={avatarId} fallback={avatarFallback} />, [avatarId, avatarFallback]);
   if (!api)
     return (
       <main className="browser-message">
@@ -82,46 +105,39 @@ export default function App() {
             : view === 'schedules'
               ? t('งานตั้งเวลา')
               : session?.title || t('เริ่มต้นงานที่อยากทำ');
-  const brandSymbol = (
-    <span className="brand-symbol" role="img" aria-label="STeP">
-      <img className="on-light" src={symbolColour} alt="" />
-      <img className="on-dark" src={symbolWhite} alt="" />
-    </span>
-  );
-  const profileAvatar = (
-    <Avatar
-      id={snapshot.settings.avatar}
-      fallback={initial(snapshot.settings.userName || '') || snapshot.settings.team.toUpperCase() || 'ST'}
-    />
-  );
   const v: AppView = { ...ws, api, snapshot, pageTitle, brandSymbol, profileAvatar };
+  // Published during render so a region mounting in this pass reads it; regions already mounted compare after commit.
+  if (store.current) store.current.current = v;
+  else store.current = createWorkspaceViewStore(v);
   return (
-    <div className={showPanel ? 'shell panel-open' : 'shell'}>
-      <TitleBar
-        api={api}
-        title={pageTitle}
-        run={id => commandRef.current[id]?.()}
-        hint={id => shortcutText(snapshot.settings.keybindings?.[id] ?? COMMANDS.find(c => c[0] === id)?.[2] ?? '')}
-        left={fullSidebar}
-        right={right}
-        showRight={!settings && view === 'chat'}
-        theme={snapshot.settings.theme}
-        feedback={snapshot.policy?.features.feedback !== false}
-        search={fullSidebar ? { value: search, onChange: setSearch } : undefined}
-      />
-      <div className="app" style={{ '--artifact-width': `${width}px` } as React.CSSProperties}>
-        <AppSidebar v={v} />
-        <main className="main-pane">
-          <AppTopbar v={v} />
-          <ToolScreens v={v} />
-          <ConversationView v={v} />
-          <StatusBar v={v} />
-        </main>
-        {/* The workbench stays mounted once shown, so a file opened in Files with unsaved edits, a typed command or the
+    <WorkspaceViewProvider value={store.current}>
+      <div className={showPanel ? 'shell panel-open' : 'shell'}>
+        <TitleBar
+          api={api}
+          title={pageTitle}
+          run={id => commandRef.current[id]?.()}
+          hint={id => shortcutText(snapshot.settings.keybindings?.[id] ?? COMMANDS.find(c => c[0] === id)?.[2] ?? '')}
+          left={fullSidebar}
+          right={right}
+          showRight={!settings && view === 'chat'}
+          theme={snapshot.settings.theme}
+          feedback={snapshot.policy?.features.feedback !== false}
+          search={fullSidebar ? { value: search, onChange: setSearch } : undefined}
+        />
+        <div className="app" style={{ '--artifact-width': `${width}px` } as React.CSSProperties}>
+          <Sidebar />
+          <main className="main-pane">
+            <Topbar />
+            <Tools />
+            <Conversation />
+            <Status />
+          </main>
+          {/* The workbench stays mounted once shown, so a file opened in Files with unsaved edits, a typed command or the
             folder being browsed survive Settings, another page or hiding the panel; it is only hidden. */}
-        <SidePanel v={v} />
-        <AppDialogs v={v} />
+          <Panel />
+          <Dialogs />
+        </div>
       </div>
-    </div>
+    </WorkspaceViewProvider>
   );
 }

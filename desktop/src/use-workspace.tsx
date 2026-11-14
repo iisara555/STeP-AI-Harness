@@ -33,13 +33,15 @@ import { resolvePresentation } from './document-presentation';
 import { setLanguage, t, teamName } from './i18n';
 import { skillsForStaff } from './skill-display';
 import { updateWorkActions } from './work-assistant';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/react';
 import { createDraftEditor } from './draft-editor';
 import { useUpdate } from './update';
 import type { ReactElement } from 'react';
 
 /** Everything the main window keeps: state, effects, derived values and the actions the screens call. */
+const NO_PALETTE_ITEMS: PaletteItem[] = [];
+const NO_SKILLS: SkillEntry[] = [];
 export function useWorkspace() {
   const api = window.step;
   const [update] = useUpdate(api);
@@ -1239,26 +1241,26 @@ export function useWorkspace() {
   }
   // Staff see Thai Skill names, and developer Skills only in Dev mode (skill-display.ts).
   const developerMode = Boolean(snapshot?.features?.developmentMode && snapshot?.settings.developmentMode);
-  const staffSkills = skills && skillsForStaff(skills, developerMode);
-  const routedSkills = (staffSkills || []).filter(s => s.status === 'routed');
+  const staffSkills = useMemo(() => skills && skillsForStaff(skills, developerMode), [skills, developerMode]);
+  const routedSkills = useMemo(() => (staffSkills || []).filter(s => s.status === 'routed'), [staffSkills]);
   // "/" lists the person's team first and also matches Thai descriptions and trigger words.
   const slash = /^\/(\S*)$/.exec(query);
   const myTeam = snapshot?.settings.team || '';
   const myTeamInfo = snapshot?.teams.find(team => team.id === myTeam);
   const myTeamName = myTeamInfo ? teamName(myTeamInfo) : '';
-  const forTeam = (s: SkillEntry) => Boolean(myTeam) && (s.owner === myTeam || s.teams.includes(myTeam));
-  const slashMatches = slash
-    ? routedSkills
-        .filter(s => {
-          const q = slash[1].toLowerCase();
-          return !q || [s.name, s.title, s.description, ...s.triggers].some(v => v.toLowerCase().includes(q));
-        })
-        .sort(
-          (a, b) =>
-            Number(!a.name.startsWith(slash[1])) - Number(!b.name.startsWith(slash[1])) || Number(!forTeam(a)) - Number(!forTeam(b)),
-        )
-        .slice(0, 8)
-    : [];
+  const forTeam = useCallback((s: SkillEntry) => Boolean(myTeam) && (s.owner === myTeam || s.teams.includes(myTeam)), [myTeam]);
+  const slashQuery = slash?.[1];
+  const slashMatches = useMemo(() => {
+    if (slashQuery === undefined) return NO_SKILLS;
+    const q = slashQuery.toLowerCase();
+    return routedSkills
+      .filter(s => !q || [s.name, s.title, s.description, ...s.triggers].some(v => v.toLowerCase().includes(q)))
+      .sort(
+        (a, b) =>
+          Number(!a.name.startsWith(slashQuery)) - Number(!b.name.startsWith(slashQuery)) || Number(!forTeam(a)) - Number(!forTeam(b)),
+      )
+      .slice(0, 8);
+  }, [slashQuery, routedSkills, forTeam]);
   const useSkill = (name: string) => {
     if (guardSettingsExit(() => useSkill(name))) return;
     setForcedSkill(name);
@@ -1299,14 +1301,20 @@ export function useWorkspace() {
   }, [api, query, canSuggest, dismissedSkills]);
   const suggested = canSuggest ? routedSkills.find(s => s.name === suggestedSkill) : undefined;
   // Tasks that were opened but never used (older versions created them eagerly) stay out of the list.
-  const filtered =
-    snapshot?.sessions.filter(
-      s =>
-        (s.messages.length > 0 || Boolean(s.draft) || s.id === selected) &&
-        // Until the full-text search answers, match titles and loaded text here, so the list never flashes "no results".
-        (!search.trim() || (searchMatches?.query === search ? searchMatches.ids.includes(s.id) : matchesSession(s, search))) &&
-        (filter !== 'artifacts' || s.draft),
-    ) || [];
+  // Values and helpers the regions read keep their identity until their inputs change, so a region re-renders only
+  // when what it shows changed (workspace-view.tsx).
+  const sessions = snapshot?.sessions;
+  const filtered = useMemo(
+    () =>
+      sessions?.filter(
+        s =>
+          (s.messages.length > 0 || Boolean(s.draft) || s.id === selected) &&
+          // Until the full-text search answers, match titles and loaded text here, so the list never flashes "no results".
+          (!search.trim() || (searchMatches?.query === search ? searchMatches.ids.includes(s.id) : matchesSession(s, search))) &&
+          (filter !== 'artifacts' || s.draft),
+      ) || [],
+    [sessions, selected, search, searchMatches, filter],
+  );
   // Escape cancels; the blur that follows the input closing must not save the name it was holding.
   const renameCancelled = useRef(false);
   async function saveRename() {
@@ -1323,25 +1331,34 @@ export function useWorkspace() {
       await refresh();
     });
   }
-  const providerName = (c?: Connection) => (c ? connectionName(c) : '');
+  const providerName = useCallback((c?: Connection) => (c ? connectionName(c) : ''), []);
   // A run that waits on the employee's answer or permission says so, instead of "working".
-  const taskStatus = (s: { id: string; status: string }) =>
-    questions.some(q => q.sessionId === s.id)
-      ? t('รอคุณตอบ')
-      : toolApprovals.some(a => a.sessionId === s.id)
-        ? t('รอคุณอนุญาต')
-        : statusText[s.status] || s.status;
+  const taskStatus = useCallback(
+    (s: { id: string; status: string }) =>
+      questions.some(q => q.sessionId === s.id)
+        ? t('รอคุณตอบ')
+        : toolApprovals.some(a => a.sessionId === s.id)
+          ? t('รอคุณอนุญาต')
+          : statusText[s.status] || s.status,
+    [questions, toolApprovals],
+  );
   // Team, then status only when it says something: "ready to start" is every new task's state, so it stays unsaid.
-  const taskMeta = (s: Session) => {
-    const team = s.project || s.team.toUpperCase() || t('ทุกทีม');
-    const status = taskStatus(s);
-    return s.status === 'idle' && status === statusText.idle ? team : `${team} · ${status}`;
-  };
+  const taskMeta = useCallback(
+    (s: Session) => {
+      const team = s.project || s.team.toUpperCase() || t('ทุกทีม');
+      const status = taskStatus(s);
+      return s.status === 'idle' && status === statusText.idle ? team : `${team} · ${status}`;
+    },
+    [taskStatus],
+  );
   // The notification dot of each task in the list (src/task-alerts.ts); the open task needs none.
-  const alertOf = (s: Session) => {
-    const alert = taskAlert(s, questions, toolApprovals, seen ? seen[s.id] : s.updatedAt);
-    return selected === s.id && view === 'chat' && alert !== 'needs-you' && alert !== 'running' ? undefined : alert;
-  };
+  const alertOf = useCallback(
+    (s: Session) => {
+      const alert = taskAlert(s, questions, toolApprovals, seen ? seen[s.id] : s.updatedAt);
+      return selected === s.id && view === 'chat' && alert !== 'needs-you' && alert !== 'running' ? undefined : alert;
+    },
+    [questions, toolApprovals, seen, selected, view],
+  );
   const needsYou = snapshot ? needsYouCount(snapshot.sessions, questions, toolApprovals) : 0;
   const setTheme = (theme: string) =>
     action(async () => {
@@ -1419,6 +1436,11 @@ export function useWorkspace() {
   const lastMessage = session?.messages.at(-1);
   const commandRef = useRef(commands);
   commandRef.current = commands;
+  // One object for the life of the window whose entries run the latest command, for regions that call them.
+  const stableCommands = useRef<typeof commands | null>(null);
+  stableCommands.current ??= Object.fromEntries(
+    Object.keys(commands).map(id => [id, () => commandRef.current[id as keyof typeof commands]?.()]),
+  ) as typeof commands;
   // Read the bindings during the key press rather than re-registering the listener: a shortcut pressed right
   // after saving new bindings would otherwise land between the render and the effect and be dropped.
   const keybindingsRef = useRef(snapshot?.settings.keybindings);
@@ -1444,43 +1466,45 @@ export function useWorkspace() {
     return () => window.removeEventListener('keydown', listener);
   }, []);
   const recentSessions = snapshot ? [...snapshot.sessions].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) : [];
-  const paletteItems: PaletteItem[] = snapshot
-    ? commandPalette(
-        commands,
-        snapshot.settings.keybindings || {},
-        [
-          ...routedSkills.map(s => ({
-            id: 'skill-' + s.name,
-            group: 'Skill',
-            label: t('ใช้ Skill: ') + s.title,
-            hint: '/' + s.name,
-            run: () => useSkill(s.name),
-          })),
-          ...(connection?.models || []).map(m => ({
-            id: 'model-' + m.id,
-            group: t('โมเดล'),
-            label: t('ใช้ ') + m.label,
-            hint: m.id === currentModel ? t('ใช้อยู่') : providerName(connection),
-            run: () => action(() => chooseModel(m.id)),
-          })),
-          ...recentSessions.slice(5, 50).map(s => ({
+  // Built only while the palette is open; closed, it is one empty list that never changes.
+  const paletteItems: PaletteItem[] =
+    snapshot && palette
+      ? commandPalette(
+          commands,
+          snapshot.settings.keybindings || {},
+          [
+            ...routedSkills.map(s => ({
+              id: 'skill-' + s.name,
+              group: 'Skill',
+              label: t('ใช้ Skill: ') + s.title,
+              hint: '/' + s.name,
+              run: () => useSkill(s.name),
+            })),
+            ...(connection?.models || []).map(m => ({
+              id: 'model-' + m.id,
+              group: t('โมเดล'),
+              label: t('ใช้ ') + m.label,
+              hint: m.id === currentModel ? t('ใช้อยู่') : providerName(connection),
+              run: () => action(() => chooseModel(m.id)),
+            })),
+            ...recentSessions.slice(5, 50).map(s => ({
+              id: 'session-' + s.id,
+              group: t('งาน'),
+              label: s.title,
+              hint: s.project || statusText[s.status],
+              run: () => action(() => selectSession(s.id)),
+            })),
+          ],
+          // The palette says it finds tasks too, so the latest five come first, above the commands.
+          recentSessions.slice(0, 5).map(s => ({
             id: 'session-' + s.id,
-            group: t('งาน'),
+            group: t('งานล่าสุด'),
             label: s.title,
             hint: s.project || statusText[s.status],
             run: () => action(() => selectSession(s.id)),
           })),
-        ],
-        // The palette says it finds tasks too, so the latest five come first, above the commands.
-        recentSessions.slice(0, 5).map(s => ({
-          id: 'session-' + s.id,
-          group: t('งานล่าสุด'),
-          label: s.title,
-          hint: s.project || statusText[s.status],
-          run: () => action(() => selectSession(s.id)),
-        })),
-      )
-    : [];
+        )
+      : NO_PALETTE_ITEMS;
   // The newest answer keeps its copy and feedback buttons in view; older ones show them on hover, as in other AI apps.
   const lastAnswer = session ? session.messages.map(m => m.role).lastIndexOf('assistant') : -1;
   // Links in answers open in the browser panel beside the chat, never in this window.
@@ -1786,7 +1810,7 @@ export function useWorkspace() {
     setTheme,
     showTour,
     showWizard,
-    commands,
+    commands: stableCommands.current,
     lastMessage,
     commandRef,
     keybindingsRef,
