@@ -18,7 +18,7 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   /* Leave room for the window buttons the system draws over the bar (Windows, Linux: on the right). */
   padding: 0 calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw) + 10px) 0 10px;
   background: var(--sidebar);
@@ -30,7 +30,7 @@
 .titlebar.mac {
   /* The traffic lights sit at the left of the bar on macOS. */
   padding-left: 80px;
-  padding-right: 10px;
+  padding-right: var(--space-2-5);
 }
 .titlebar button,
 .titlebar-dropdown {
@@ -40,7 +40,7 @@
 .titlebar-end {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-0-5);
   flex: 1 1 0;
   min-width: 0;
 }
@@ -51,18 +51,18 @@
   -webkit-app-region: no-drag;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-1);
   height: 26px;
-  padding: 0 10px;
-  margin-right: 4px;
-  border-radius: 999px;
-  font-size: 12px;
+  padding: 0 var(--space-2-5);
+  margin-right: var(--space-1);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
   white-space: nowrap;
 }
 .titlebar-note {
-  font-size: 11.5px;
+  font-size: var(--text-xs);
   color: var(--muted);
-  margin-right: 6px;
+  margin-right: var(--space-1-5);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -72,11 +72,11 @@
 }
 .titlebar-app {
   height: 28px;
-  padding: 0 7px 0 5px;
-  gap: 5px;
+  padding: 0 var(--space-1-5) 0 var(--space-1);
+  gap: var(--space-1);
   background: transparent;
   color: var(--text);
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
 }
 .titlebar-app:hover,
 .titlebar-app[aria-expanded='true'],
@@ -85,22 +85,22 @@
   filter: none;
 }
 .titlebar-mark {
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1;
-  padding: 4px 6px;
-  border-radius: 5px;
+  padding: var(--space-1) var(--space-1-5);
+  border-radius: var(--radius-sm);
   background: var(--accent);
   color: var(--on-accent);
 }
 .titlebar-icon {
   height: 28px;
   width: 28px;
-  padding: 6px;
+  padding: var(--space-1-5);
   background: transparent;
   color: var(--muted);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
 }
 .titlebar-icon[aria-pressed='true'] {
   color: var(--text);
@@ -109,14 +109,14 @@
   flex: 0 1 460px;
   min-width: 140px;
   height: 27px;
-  padding: 0 6px 0 10px;
-  gap: 8px;
+  padding: 0 var(--space-1-5) 0 var(--space-2-5);
+  gap: var(--space-2);
   justify-content: flex-start;
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 /* With the task list open, the bar holds the task search; the shortcut opens the command palette (src/titlebar.tsx). */
 .titlebar-search {
@@ -132,7 +132,7 @@
   border: 0;
   padding: 0;
   background: transparent;
-  font-size: 12px;
+  font-size: var(--text-xs);
   outline: none;
 }
 .titlebar-search:focus-within {
@@ -155,11 +155,11 @@
 .titlebar-dropdown kbd {
   margin-left: auto;
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
-  padding: 0 5px;
+  padding: 0 var(--space-1);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   white-space: nowrap;
 }
 .titlebar-backdrop {
@@ -173,32 +173,32 @@
   width: 300px;
   max-height: calc(100vh - 60px);
   overflow: auto;
-  padding: 6px;
+  padding: var(--space-1-5);
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
 }
 .titlebar-group + .titlebar-group {
   border-top: 1px solid var(--line);
-  margin-top: 4px;
-  padding-top: 4px;
+  margin-top: var(--space-1);
+  padding-top: var(--space-1);
 }
 .titlebar-group-label {
-  padding: 4px 10px 2px;
-  font-size: 11px;
+  padding: var(--space-1) var(--space-2-5) var(--space-0-5);
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 .titlebar-dropdown .titlebar-item {
   width: 100%;
   justify-content: space-between;
-  gap: 12px;
-  padding: 5px 10px;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-2-5);
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--text-sm);
   text-align: left;
 }
 .titlebar-dropdown .titlebar-item:hover,
@@ -213,17 +213,17 @@
 .titlebar-theme {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  font-size: 13px;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2-5);
+  font-size: var(--text-sm);
 }
 .titlebar-theme > span {
   margin-right: auto;
 }
 .titlebar-chip {
-  padding: 2px 9px;
-  font-size: 12px;
-  border-radius: 999px;
+  padding: var(--space-0-5) var(--space-2);
+  font-size: var(--text-xs);
+  border-radius: var(--radius-pill);
   border: 1px solid var(--line);
   background: transparent;
   color: var(--muted);
@@ -245,16 +245,16 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 30px;
+  gap: var(--space-2-5);
+  margin-bottom: var(--space-7);
 }
 .brand strong {
-  font-size: 18px;
+  font-size: var(--text-lg);
   letter-spacing: 0.03em;
 }
 .brand span {
   display: block;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 .brand .icon {
@@ -270,10 +270,10 @@
 .topbar {
   height: 78px;
   flex-shrink: 0;
-  padding: 17px 26px;
+  padding: var(--space-4) var(--space-6);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   border-bottom: 1px solid var(--line);
 }
 .topbar > div {
@@ -286,11 +286,11 @@
 .topbar-heading {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-0-5);
   min-width: 0;
 }
 .topbar-heading .icon {
-  padding: 3px;
+  padding: var(--space-0-5);
   flex: none;
 }
 .title-menu {
@@ -301,23 +301,23 @@
   min-width: 220px;
   display: flex;
   flex-direction: column;
-  padding: 5px;
+  padding: var(--space-1);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
 }
 .title-menu button {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: var(--space-2);
   justify-content: flex-start;
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-2-5);
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--text-sm);
   text-align: left;
 }
 .title-menu button:hover:not(:disabled),
@@ -327,11 +327,11 @@
 .title-menu hr {
   border: 0;
   border-top: 1px solid var(--line);
-  margin: 4px 2px;
+  margin: var(--space-1) var(--space-0-5);
 }
 .topbar small {
   display: block;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 .resize-handle {
@@ -345,7 +345,7 @@
 }
 @media (max-width: 1150px) {
   .topbar {
-    padding-inline: 18px;
+    padding-inline: var(--space-4);
   }
 }
 @media (max-width: 920px) {
@@ -356,10 +356,10 @@
 .statusbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 4px 16px;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-4);
   border-top: 1px solid var(--line);
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
   flex-shrink: 0;
   min-height: 28px;
@@ -378,20 +378,20 @@
 .status-item {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-1);
   white-space: nowrap;
 }
 .status-button {
   background: transparent;
   color: var(--muted);
-  padding: 2px 6px;
-  font-size: 11px;
+  padding: var(--space-0-5) var(--space-1-5);
+  font-size: var(--text-xs);
 }
 /* The symbol keeps its artwork proportions and a clear margin; the tagline sits well outside it. */
 .brand-symbol {
   display: block;
   height: 24px;
-  margin: 2px 0 12px;
+  margin: var(--space-0-5) 0 var(--space-3);
 }
 .brand-symbol img {
   height: 100%;
@@ -419,12 +419,12 @@
 }
 @media (max-height: 740px) {
   .brand {
-    margin-bottom: 14px;
+    margin-bottom: var(--space-3-5);
   }
 }
 .topbar strong {
   display: block;
-  font-size: 14px;
+  font-size: var(--text-base);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -496,7 +496,7 @@ nav button:disabled {
 /* Minimum readable size for the sidebar tagline and the team line under the name. One line always: in a narrow
    sidebar the letters close up instead of the tagline breaking in two. */
 .brand-tagline {
-  font-size: 11px !important;
+  font-size: var(--text-xs) !important;
   letter-spacing: 0.1em;
   white-space: nowrap;
 }
@@ -521,7 +521,7 @@ nav button:disabled {
 .workbench-tab-list {
   display: flex;
   align-items: flex-end;
-  gap: 2px;
+  gap: var(--space-0-5);
   flex: 1;
   min-width: 0;
   overflow-x: auto;
@@ -529,7 +529,7 @@ nav button:disabled {
 }
 .workbench-tabs .workbench-advanced {
   flex-shrink: 0;
-  margin-left: 4px;
+  margin-left: var(--space-1);
 }
 .shell:has(.settings-content) .toasts {
   bottom: 128px;
@@ -541,8 +541,8 @@ nav button:disabled {
 .main-pane .schedules,
 .main-pane .receipt-app,
 .main-pane .skills-hub {
-  padding-top: 22px;
-  padding-left: 28px;
+  padding-top: var(--space-5);
+  padding-left: var(--space-7);
   padding-right: max(28px, calc(100% - 1128px));
 }
 .main-pane .document-form,

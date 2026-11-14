@@ -3,7 +3,7 @@ body {
   font-family: 'IBM Plex Sans Thai', 'Leelawadee UI', 'Thonburi', system-ui, sans-serif;
   color: var(--text);
   background: var(--surface);
-  font-size: 14px;
+  font-size: var(--text-base);
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
 }
@@ -17,10 +17,10 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: var(--space-1-5);
   border: 1px solid transparent;
-  border-radius: 7px;
-  padding: 8px 13px;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
   background: var(--accent);
   color: var(--on-accent);
   cursor: pointer;
@@ -41,8 +41,8 @@ textarea {
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-2-5);
   min-width: 0;
 }
 /* The native option list does not inherit a transparent select's background: on Windows dark mode it opened white
@@ -79,8 +79,8 @@ a,
 .icon {
   background: transparent;
   color: var(--muted);
-  padding: 6px;
-  border-radius: 6px;
+  padding: var(--space-1-5);
+  border-radius: var(--radius-sm);
 }
 .menu-backdrop {
   position: fixed;
@@ -110,19 +110,19 @@ a,
 .text-link {
   background: transparent;
   color: var(--accent-ink);
-  padding: 8px;
-  font-size: 12px;
+  padding: var(--space-2);
+  font-size: var(--text-xs);
 }
 .muted {
   color: var(--muted);
 }
 .small {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: var(--space-4);
 }
 .connected {
   color: var(--accent-ink);
@@ -211,7 +211,7 @@ button.danger {
 }
 .empty-illustration {
   width: 170px;
-  margin: 0 auto 12px;
+  margin: 0 auto var(--space-3);
 }
 @media (max-height: 740px) {
   .empty-illustration {
@@ -231,7 +231,7 @@ button.danger {
 .empty-art {
   width: 170px;
   height: 170px;
-  margin: 0 auto 4px;
+  margin: 0 auto var(--space-1);
 }
 .quiet:hover {
   background: var(--hover);
@@ -239,9 +239,9 @@ button.danger {
 }
 .beta {
   margin-left: auto;
-  font-size: 11px;
-  padding: 1px 6px;
-  border-radius: 4px;
+  font-size: var(--text-xs);
+  padding: 1px var(--space-1-5);
+  border-radius: var(--radius-xs);
   background: var(--accent-soft);
   color: var(--accent-ink);
   letter-spacing: 0.02em;
@@ -252,8 +252,8 @@ button.danger {
 .check {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: var(--space-1-5);
+  font-size: var(--text-xs);
   white-space: nowrap;
   cursor: pointer;
 }
@@ -262,7 +262,7 @@ button.danger {
 }
 nav .count {
   margin-left: auto;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 .danger-text {
@@ -271,25 +271,25 @@ nav .count {
 .is-empty .welcome {
   max-width: none;
   padding: 0;
-  margin: 0 0 28px;
+  margin: 0 0 var(--space-7);
   text-align: center;
 }
 .is-empty .welcome .welcome-greeting {
-  margin: 0 0 8px;
-  font-size: 15px;
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-md);
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
 .is-empty .composer {
-  border-radius: 22px;
+  border-radius: var(--radius-xl);
 }
 .is-empty .composer textarea {
   min-height: 78px;
-  padding: 18px 20px 10px;
+  padding: var(--space-4) var(--space-5) var(--space-2-5);
 }
 @media (max-width: 920px), (max-height: 650px) {
   .is-empty .welcome {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-5);
   }
 }
 /* Shared accessible states and compact navigation from the UI review. */
@@ -306,7 +306,7 @@ nav .count {
 }
 .screen-loading,
 .screen-load-error {
-  padding: 24px;
+  padding: var(--space-6);
 }
 button:disabled {
   cursor: not-allowed;
@@ -318,8 +318,8 @@ button:disabled {
 }
 .field {
   display: grid;
-  gap: 4px;
-  font-size: 13px;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
 }
 .field > input,
 .field > select,
@@ -327,12 +327,12 @@ button:disabled {
   width: 100%;
 }
 .field > small {
-  font-size: 12px;
+  font-size: var(--text-xs);
   line-height: 1.5;
 }
 .code-field {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 13px;
+  font-size: var(--text-sm);
   resize: vertical;
 }
 /* UI audit 2026-10-17: group D (documents, receipt, media, Skills, setup, tour, dark theme, typography) */
@@ -363,7 +363,7 @@ summary {
 }
 .selected-ai {
   display: flex;
-  gap: 6px;
+  gap: var(--space-1-5);
   align-items: center;
   color: var(--accent-ink);
   font-weight: 600;

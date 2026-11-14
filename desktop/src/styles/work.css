@@ -1,20 +1,20 @@
 .work-plan-hint {
-  margin: 8px 0 0;
+  margin: var(--space-2) 0 0;
 }
 .work-plan-actions .work-plan-run {
   margin: 0;
 }
 .proposal {
-  margin: 0 14px 10px;
-  padding: 10px 12px;
+  margin: 0 var(--space-3-5) var(--space-2-5);
+  padding: var(--space-2-5) var(--space-3);
   border: 1px solid var(--line-strong);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: var(--surface);
   max-height: 38vh;
   overflow: auto;
 }
 .proposal p.small {
-  margin: 4px 0;
+  margin: var(--space-1) 0;
 }
 /* Title and decision stay in view while the proposal text scrolls inside the box. */
 .proposal-head {
@@ -23,9 +23,9 @@
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--space-1-5);
   margin: -10px -12px 0;
-  padding: 10px 12px 6px;
+  padding: var(--space-2-5) var(--space-3) var(--space-1-5);
   background: var(--surface);
   color: var(--accent-ink);
 }
@@ -33,54 +33,54 @@
   margin: 0 0 0 auto;
 }
 .proposal-head .proposal-actions button {
-  padding: 5px 10px;
+  padding: var(--space-1) var(--space-2-5);
 }
 .proposal strong {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .proposal pre,
 .attachment-dialog pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .proposal summary {
-  font-size: 12px;
+  font-size: var(--text-xs);
   cursor: pointer;
 }
 .proposal-actions {
   display: flex;
-  gap: 7px;
-  margin-top: 13px;
+  gap: var(--space-1-5);
+  margin-top: var(--space-3);
 }
 .proposal-actions button {
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 .proposal-text {
-  font-size: 13px;
-  margin-top: 8px;
+  font-size: var(--text-sm);
+  margin-top: var(--space-2);
 }
 .plan-card {
   list-style: none;
-  margin: 12px 0 4px;
-  padding: 10px 12px;
+  margin: var(--space-3) 0 var(--space-1);
+  padding: var(--space-2-5) var(--space-3);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 12px;
+  gap: var(--space-1-5);
+  font-size: var(--text-xs);
 }
 .plan-card li {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: flex-start;
   color: var(--muted);
 }
 .plan-card li svg {
   flex-shrink: 0;
-  margin-top: 3px;
+  margin-top: var(--space-0-5);
 }
 .plan-card li span {
   display: -webkit-box;
@@ -105,28 +105,28 @@
 }
 .approval-remember {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: flex-start;
-  margin-top: 16px;
+  margin-top: var(--space-4);
 }
 .approval-remember input {
   width: auto;
   flex: none;
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 /* The approved plan of the native plan workflow (src/work-plan.tsx), ticked off while "execute" runs. */
 .work-plan {
-  margin: 14px 0;
-  padding: 12px 14px;
+  margin: var(--space-3-5) 0;
+  padding: var(--space-3) var(--space-3-5);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: var(--surface);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .work-plan summary {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   cursor: pointer;
 }
 .work-plan summary > svg {
@@ -134,28 +134,28 @@
 }
 .work-plan summary .muted {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .work-plan-goal {
-  margin: 8px 0 4px;
+  margin: var(--space-2) 0 var(--space-1);
   color: var(--muted);
 }
 .work-plan ol {
   list-style: none;
-  margin: 8px 0 0;
+  margin: var(--space-2) 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: var(--space-1-5);
 }
 .work-plan li {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: flex-start;
 }
 .work-plan li > svg {
   flex-shrink: 0;
-  margin-top: 3px;
+  margin-top: var(--space-0-5);
   color: var(--muted);
 }
 .work-plan li.done > svg,
@@ -171,8 +171,8 @@
 .work-plan li small {
   display: block;
   color: var(--muted);
-  font-size: 11px;
-  margin-top: 2px;
+  font-size: var(--text-xs);
+  margin-top: var(--space-0-5);
 }
 /* Comments on plan tasks (src/work-plan.tsx): a small button on each task, the comment under its title. */
 .work-plan li > span {
@@ -182,53 +182,53 @@
 }
 .work-plan .work-plan-comment-button {
   flex-shrink: 0;
-  padding: 3px;
+  padding: var(--space-0-5);
   margin-top: -1px;
 }
 .work-plan li.done .work-plan-comment,
 .work-plan .work-plan-comment {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
   align-items: flex-start;
   color: var(--accent-ink);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .work-plan-comment svg {
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: var(--space-0-5);
 }
 .work-plan-comment-box {
   display: grid;
-  gap: 6px;
-  margin-top: 6px;
+  gap: var(--space-1-5);
+  margin-top: var(--space-1-5);
 }
 .work-plan-comment-box textarea {
   width: 100%;
   box-sizing: border-box;
   resize: vertical;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .work-plan-comment-box div {
   display: flex;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 .work-plan-comment-box button {
-  font-size: 12px;
-  padding: 5px 10px;
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2-5);
 }
 .work-plan-revise {
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 .work-plan-revise p {
-  margin: 6px 0 0;
+  margin: var(--space-1-5) 0 0;
 }
 .work-plan-run {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 12px;
-  font-size: 12px;
+  gap: var(--space-1-5);
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
 }
 /* A finished task shrinks to one line so the tasks still to do come into view. */
 .work-plan li.done > span {
@@ -244,42 +244,42 @@
 }
 .tool-question {
   border: 1px solid var(--accent);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: var(--paper);
-  padding: 12px 14px;
+  padding: var(--space-3) var(--space-3-5);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
 }
 .tool-question header {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 12px;
+  gap: var(--space-1-5);
+  font-size: var(--text-xs);
   color: var(--accent-ink);
   font-weight: 600;
 }
 .tool-question-text {
-  margin: 6px 0 10px;
-  font-size: 14px;
+  margin: var(--space-1-5) 0 var(--space-2-5);
+  font-size: var(--text-base);
 }
 .tool-question-options {
   list-style: none;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .tool-question-options button {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 10px;
+  gap: var(--space-2-5);
   text-align: left;
-  padding: 8px 10px;
-  border-radius: 8px;
+  padding: var(--space-2) var(--space-2-5);
+  border-radius: var(--radius-md);
   border: 1px solid var(--line);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .tool-question-options button:hover,
 .tool-question-options button:focus-visible {
@@ -291,15 +291,15 @@
   min-width: 20px;
   text-align: center;
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
   border: 1px solid var(--line);
-  border-radius: 5px;
-  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  padding: 1px var(--space-1);
 }
 .tool-question-other {
   display: flex;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 .tool-question-other input {
   flex: 1;
@@ -309,14 +309,14 @@
 /* H2: the consent dialog summarises what is sent; the raw data is folded away for administrators. */
 .approval-facts {
   display: grid;
-  gap: 4px;
-  margin: 8px 0;
-  font-size: 13px;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+  font-size: var(--text-sm);
 }
 .approval-facts div {
   display: grid;
   grid-template-columns: 120px 1fr;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .approval-facts dt {
   color: var(--muted);
@@ -327,86 +327,86 @@
 }
 .approval-preview {
   display: grid;
-  gap: 4px;
-  margin: 8px 0;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
 }
 .approval-preview blockquote {
   margin: 0;
   max-height: 140px;
   overflow: auto;
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-2-5);
   border-left: 3px solid var(--line-strong);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .approval-technical summary {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 .approval-technical pre {
   max-height: 120px;
   overflow: auto;
-  margin: 6px 0 0;
-  padding: 8px;
-  border-radius: 6px;
+  margin: var(--space-1-5) 0 0;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
   background: var(--surface);
-  font-size: 11.5px;
+  font-size: var(--text-xs);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 .approval-scope {
-  margin: 4px 0 0;
-  padding-left: 18px;
-  font-size: 12.5px;
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 .approval-scope li + li {
-  margin-top: 2px;
+  margin-top: var(--space-0-5);
 }
 /* M13: the plan's steps inside the approval. */
 .approval-plan {
-  margin: 4px 0 8px;
-  padding: 10px 12px;
+  margin: var(--space-1) 0 var(--space-2);
+  padding: var(--space-2-5) var(--space-3);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--surface);
 }
 .approval-plan ol {
-  margin: 6px 0 0;
-  padding-left: 20px;
+  margin: var(--space-1-5) 0 0;
+  padding-left: var(--space-5);
 }
 .approval-plan li + li {
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 .approval-plan p {
-  margin: 8px 0 0;
+  margin: var(--space-2) 0 0;
 }
 /* H3: the tool history gets its own line above the retry buttons. */
 .tool-observability {
   display: block;
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
 }
 .tool-observability + .retry-row {
   margin-top: 0;
 }
 .work-assistant-guide {
-  padding: 10px 12px;
+  padding: var(--space-2-5) var(--space-3);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: var(--surface);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .work-assistant-guide p {
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
 }
 .work-assistant-warning {
   color: var(--danger);
 }
 .work-assistant-activity {
-  margin: 8px 0 12px;
+  margin: var(--space-2) 0 var(--space-3);
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .work-assistant-activity summary {
   cursor: pointer;
@@ -414,19 +414,19 @@
 }
 .work-assistant-activity ol {
   list-style: none;
-  margin: 8px 0;
+  margin: var(--space-2) 0;
   padding: 0;
   display: grid;
-  gap: 7px;
+  gap: var(--space-1-5);
 }
 .work-assistant-activity li {
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr) auto;
   align-items: start;
-  gap: 4px 8px;
+  gap: var(--space-1) var(--space-2);
 }
 .work-assistant-activity li svg {
-  margin-top: 3px;
+  margin-top: var(--space-0-5);
 }
 .work-assistant-activity li small {
   grid-column: 2 / -1;
@@ -446,9 +446,9 @@
   background: var(--accent-soft);
 }
 .tool-question-cancel {
-  margin-top: 6px;
+  margin-top: var(--space-1-5);
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
   min-height: 28px;
-  padding: 4px 10px;
+  padding: var(--space-1) var(--space-2-5);
 }

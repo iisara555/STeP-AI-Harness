@@ -20,7 +20,7 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .usage-section-head h3 {
@@ -29,9 +29,9 @@
 
 .usage-account {
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px 14px;
-  margin: 10px 0 16px;
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-3-5);
+  margin: var(--space-2-5) 0 var(--space-4);
   overflow-wrap: anywhere;
   background: color-mix(in srgb, var(--surface, transparent) 60%, transparent);
 }
@@ -41,8 +41,8 @@
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
 .usage-account h4 {
@@ -50,17 +50,17 @@
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 
 .usage-plan-badge {
   display: inline-block;
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 1px 6px;
-  border-radius: 999px;
+  padding: 1px var(--space-1-5);
+  border-radius: var(--radius-pill);
   border: 1px solid var(--line);
   color: var(--muted);
 }
@@ -70,8 +70,8 @@
 .usage-api-spend,
 .usage-token-summary {
   border-top: 1px solid var(--line);
-  padding-top: 8px;
-  margin-top: 10px;
+  padding-top: var(--space-2);
+  margin-top: var(--space-2-5);
 }
 
 .usage-credit > .usage-meter {
@@ -85,24 +85,24 @@
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 
 .usage-meter-title {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1-5);
   min-width: 0;
 }
 
 .usage-window-badge {
   display: inline-grid;
   place-items: center;
-  font-size: 0.68rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.04em;
-  padding: 1px 6px;
-  border-radius: 999px;
+  padding: 1px var(--space-1-5);
+  border-radius: var(--radius-pill);
   font-variant-numeric: tabular-nums;
   background: color-mix(in srgb, #f59e0b 18%, transparent);
   color: inherit;
@@ -131,8 +131,8 @@
   display: block;
   width: 100%;
   height: 10px;
-  margin-top: 6px;
-  border-radius: 999px;
+  margin-top: var(--space-1-5);
+  border-radius: var(--radius-pill);
   background: var(--usage-track-bg);
   overflow: hidden;
 }
@@ -154,28 +154,28 @@
   display: block;
   width: 100%;
   height: 3px;
-  margin-top: 3px;
+  margin-top: var(--space-0-5);
   background-image: repeating-linear-gradient(to right, var(--usage-scale-tick) 0 1px, transparent 1px 25%);
   box-shadow: inset -1px 0 0 var(--usage-scale-tick);
 }
 
 .usage-meter-caption {
-  margin: 5px 0 0;
+  margin: var(--space-1) 0 0;
   font-variant-numeric: tabular-nums;
 }
 
 .usage-token-pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
+  gap: var(--space-1-5);
+  margin-top: var(--space-1);
 }
 
 .usage-token-pills span {
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
-  padding: 2px 8px;
-  border-radius: 999px;
+  padding: var(--space-0-5) var(--space-2);
+  border-radius: var(--radius-pill);
   border: 1px solid var(--line);
 }
 
@@ -187,8 +187,8 @@
 .usage-account-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
+  gap: var(--space-2);
+  margin-top: var(--space-2-5);
 }
 
 /* ---------------- Inline Composer Chip & AI Picker Quota Strip ---------------- */
@@ -196,8 +196,8 @@
 .quota-mini-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 3px 9px;
+  gap: var(--space-2);
+  padding: var(--space-0-5) var(--space-2);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -205,13 +205,13 @@
 .quota-mini-meter {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.75rem;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
 }
 
 .quota-mini-label {
-  font-size: 0.68rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.04em;
   opacity: 0.78;
@@ -222,7 +222,7 @@
   display: inline-block;
   width: 34px;
   height: 5px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--usage-track-bg);
   overflow: hidden;
 }
@@ -253,30 +253,30 @@
 
 .ai-picker-quota {
   border-top: 1px solid var(--line);
-  padding-top: 8px;
-  margin-top: 4px;
+  padding-top: var(--space-2);
+  margin-top: var(--space-1);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 
 .ai-picker-quota-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 
 .ai-picker-quota-actions {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 
 .ai-picker-quota-meters {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .ai-picker-quota-note {
