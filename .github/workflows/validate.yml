@@ -136,6 +136,10 @@ jobs:
       - name: Verify macOS unit and evaluator boundaries
         run: npm test
       - run: npm run build
+      # Electron downloads its binary on first use. Fetch it in its own step so a slow mirror cannot use up the first
+      # smoke's 45-second launch timeout (playwright resolves the binary inside launch).
+      - name: Download the Electron binary
+        run: node -e "require('electron')"
       - name: Verify Electron chat, browser and tools on macOS
         run: npm run test:electron
       - name: Preserve synthetic Phase 4 failure evidence
