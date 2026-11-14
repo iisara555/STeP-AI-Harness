@@ -1,6 +1,8 @@
 @echo off
 chcp 65001 > nul
 title STeP AI Update
+rem Tells the upgrade that this launcher, not the old one beside the installer, started it (distribution-upgrade.js).
+set "STEP_AI_LAUNCHER=tools"
 
 rem A copy downloaded from GitHub carries Setup-STeP-Skills.bat; the Pilot bundle does not. The folder workflow is
 rem retired for GitHub downloads, so hand over to the new setup there and keep this launcher for the Pilot bundle.
