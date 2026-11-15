@@ -23,8 +23,9 @@
   background: color-mix(in srgb, var(--surface) 70%, transparent);
   backdrop-filter: blur(6px);
   display: grid;
-  place-items: center;
-  padding: var(--space-6);
+  /* Anchored below the top, not centred: the step line stays where it is while each step's height differs. */
+  place-items: start center;
+  padding: clamp(var(--space-6), 8vh, var(--space-16)) var(--space-6) var(--space-6);
 }
 .wizard-card {
   width: min(760px, 100%);
@@ -181,7 +182,11 @@
   border-radius: var(--radius-lg);
   box-shadow: 0 0 0 9999px rgba(20, 17, 18, 0.55);
   outline: 2px solid var(--accent);
-  transition: all 0.2s ease;
+  transition:
+    top var(--motion-slow) var(--ease-out),
+    left var(--motion-slow) var(--ease-out),
+    width var(--motion-slow) var(--ease-out),
+    height var(--motion-slow) var(--ease-out);
   pointer-events: none;
 }
 .tour-dim {

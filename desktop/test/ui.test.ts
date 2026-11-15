@@ -119,6 +119,26 @@ test('theme tokens use the confirmed STeP CI colours and never the superseded te
   for (const old of ['#f9ae3b', '#f2a32d', '#2b333d', '#285d50']) assert.ok(!css.includes(old), old);
 });
 
+test('interface motion uses the three shared durations and one easing', async () => {
+  const { readFile, readdir } = await import('node:fs/promises');
+  const src = new URL('../src/', import.meta.url);
+  const files = (await readdir(src, { recursive: true })).filter(name => name.endsWith('.css'));
+  const stray: string[] = [];
+  for (const name of files) {
+    const css = (await readFile(new URL(name, src), 'utf8')).replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const [rule] of css.matchAll(/\b(?:transition|animation)\s*:[^;]+;/g)) {
+      // Loops (spinners, the typing caret, the drawing hand) keep their own tempo; everything that answers a person does not.
+      if (/\binfinite\b|\bnone\b/.test(rule)) continue;
+      if (/\d(?:ms|s)\b|\bease(?:-in|-out|-in-out)?\b(?!\))|cubic-bezier/.test(rule.replace(/var\(--[a-z-]+\)/g, '')))
+        stray.push(`${name}: ${rule.replace(/\s+/g, ' ')}`);
+    }
+  }
+  assert.deepEqual(stray, []);
+  const theme = await readFile(new URL('theme.css', src), 'utf8');
+  for (const token of ['--motion-fast: 120ms', '--motion: 160ms', '--motion-slow: 240ms', '--ease-out: cubic-bezier('])
+    assert.ok(theme.includes(token), token);
+});
+
 test('Claude provider offers supported Console OAuth and clearly separates it from Pro/Max', async () => {
   const source = await (await import('node:fs/promises')).readFile(new URL('../src/ui.tsx', import.meta.url), 'utf8');
   assert.match(source, /value="oauth">\{t\('Claude Console OAuth/);

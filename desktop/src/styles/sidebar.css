@@ -475,8 +475,8 @@ nav button:hover,
   pointer-events: none;
   opacity: 0;
   transition:
-    opacity 0.12s,
-    transform 0.12s;
+    opacity var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
   z-index: 20;
 }
 .sidebar.rail [data-tip]:hover::after,

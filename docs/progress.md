@@ -4,7 +4,7 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-14_
+_Last updated: 2026-11-15_
 
 ## Latest release
 
@@ -86,6 +86,8 @@ Release validation reproduced the sidebar's outdated expectation after explicit 
 - Follow-up decisions: measure staff latency with `eval:diagnostics`, public-holiday/MIS-signing search gaps, Thai-capable search replacement, remaining AI Harness guide phases and a team-shared Learning Inbox.
 
 ## In progress
+
+- **Desktop screens the UX/UI audit had not touched, and motion (2026-11-15, awaiting review)**: the first-run wizard is anchored below the top so its step line stays put while steps differ in height; schedule template cards are left-aligned with the "use" line on the bottom edge (a base `justify-content: center` had centred the short card's text); every transition and entrance animation uses `--motion-fast` (120ms), `--motion` (160ms) or `--motion-slow` (240ms) with `--ease-out`, all in `theme.css`, replacing 7 durations and 4 easings. `test/ui.test.ts` fails on a stray timing; loops (spinner, caret, drawing hand) keep their own tempo. No behaviour change. Not checked on a real Windows or macOS screen.
 
 - **macOS CI: Electron download in its own step (2026-11-14)**: `main` went red on `desktop-macos-electron` three times on 2026-11-14 with `TimeoutError: Timeout 45000ms exceeded` in the first smoke. Electron 44 downloads its binary on first `require('electron')`, which Playwright does inside `electron.launch`, so a slow `npmmirror` download (3–4 minutes in the failing runs, under 45 s in passing ones) used up the launch timeout. `validate.yml` (macOS) and `desktop-release.yml` (Windows smokes) now download it in a separate step first.
 - **Staff-only CLI help (2026-11-14, source only, unreleased)**: round 2 of the score-above-9 request. Bare `step-ai`, `--help` and `help` print the seven staff commands, examples and options (31 lines); `step-ai help --all` adds the admin section. `test/cli-help.test.js` covers both. Stacked on the Tools-folder pull request.

@@ -461,7 +461,7 @@
   gap: var(--space-1);
   margin-top: var(--space-2);
   flex-wrap: wrap;
-  transition: opacity 0.15s;
+  transition: opacity var(--motion) var(--ease-out);
 }
 /* Older answers show copy and feedback on hover or keyboard focus; the newest keeps them in view. */
 .message.assistant:not(.latest) .message-actions {
