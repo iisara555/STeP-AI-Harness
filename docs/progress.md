@@ -4,7 +4,7 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-14_
+_Last updated: 2026-11-15_
 
 ## Latest release
 
@@ -87,6 +87,7 @@ Release validation reproduced the sidebar's outdated expectation after explicit 
 
 ## In progress
 
+- **macOS CI: 30-minute budget (2026-11-15)**: after the Electron download got its own step, `desktop-macos-electron` was cancelled at its 20-minute limit on `main` and on a pull request while every smoke was passing (smokes about 13 minutes, unit tests 2-3, download 22 seconds to 3.5 minutes). The job limit is now 30 minutes. No test changed.
 - **macOS CI: Electron download in its own step (2026-11-14)**: `main` went red on `desktop-macos-electron` three times on 2026-11-14 with `TimeoutError: Timeout 45000ms exceeded` in the first smoke. Electron 44 downloads its binary on first `require('electron')`, which Playwright does inside `electron.launch`, so a slow `npmmirror` download (3–4 minutes in the failing runs, under 45 s in passing ones) used up the launch timeout. `validate.yml` (macOS) and `desktop-release.yml` (Windows smokes) now download it in a separate step first.
 - **Staff-only CLI help (2026-11-14, source only, unreleased)**: round 2 of the score-above-9 request. Bare `step-ai`, `--help` and `help` print the seven staff commands, examples and options (31 lines); `step-ai help --all` adds the admin section. `test/cli-help.test.js` covers both. Stacked on the Tools-folder pull request.
 - **Installer launchers move to `Tools/` (2026-11-14, source only, unreleased)**: owner chose "Move to subfolder" for the bundle front door. `Update-`, `Feedback-` and `Check-Privacy-STeP-AI` (`.bat` and `.command`) now live in `Tools/` and reach the release folder one level up; `Install-STeP-AI.command` clears quarantine on them too. Package files, the Pilot bundle, CI syntax checks, docs and messages point to the new paths. `distribution-upgrade.js` lists the old names as `RETIRED_DISTRIBUTION_FILES`, so an upgrade removes them from the top of the folder even when the first install never tracked them, and a rollback restores them. On Windows, the old root `Update-STeP-AI.bat` is the file running that one upgrade, so it is not deleted under cmd (that printed "The batch file cannot be found."): it becomes a one-line hand-over to `Tools\Update-STeP-AI.bat`, and the next update, which the Tools launcher marks with `STEP_AI_LAUNCHER=tools`, removes it. `version-upgrade.test.js` checks both steps, and on Windows CI runs real `cmd` to show the hand-over ends quietly while a delete prints the message. Stacked on the installer front-door pull request. Waits on the owner: merge and the next release; check the moved launchers on a real Windows and Mac.
