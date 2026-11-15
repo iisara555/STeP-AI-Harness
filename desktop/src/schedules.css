@@ -108,8 +108,11 @@
   width: 100%;
   height: 100%;
   display: grid;
+  /* Name, note, then the "use" line on the card's bottom edge, so a row of cards reads level whatever the note's length. */
+  grid-template-rows: auto 1fr auto;
   gap: var(--space-1);
-  align-content: start;
+  justify-content: stretch;
+  justify-items: start;
   text-align: left;
   padding: var(--space-3) var(--space-3-5);
   /* A solid card with its own "use" line: a dashed outline read as an empty or unavailable slot. */

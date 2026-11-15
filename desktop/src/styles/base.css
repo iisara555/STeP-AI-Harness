@@ -26,11 +26,11 @@ button {
   cursor: pointer;
   /* One easing for every control: quick to answer, soft to settle. */
   transition:
-    background-color 0.16s var(--ease-out),
-    border-color 0.16s var(--ease-out),
-    color 0.16s var(--ease-out),
-    box-shadow 0.16s var(--ease-out),
-    transform 0.12s var(--ease-out);
+    background-color var(--motion) var(--ease-out),
+    border-color var(--motion) var(--ease-out),
+    color var(--motion) var(--ease-out),
+    box-shadow var(--motion) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
 }
 button:hover {
   filter: brightness(0.95);
@@ -369,9 +369,6 @@ summary {
   font-weight: 600;
 }
 /* Craft details shared by every screen. Care shows in how things settle, not in sentences that say so. */
-:root {
-  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
-}
 h1,
 h2,
 h3,

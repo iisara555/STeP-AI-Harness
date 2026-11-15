@@ -168,4 +168,9 @@
   --radius-lg: 12px;
   --radius-xl: 16px;
   --radius-pill: 999px;
+  /* Motion: a press answers fast, colour and small parts change at the base pace, surfaces and bars settle slowly. */
+  --motion-fast: 120ms;
+  --motion: 160ms;
+  --motion-slow: 240ms;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
 }

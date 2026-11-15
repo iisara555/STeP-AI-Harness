@@ -78,8 +78,8 @@
   background: var(--paper);
   cursor: pointer;
   transition:
-    border-color 0.15s,
-    background 0.15s;
+    border-color var(--motion) var(--ease-out),
+    background var(--motion) var(--ease-out);
 }
 .google-service:hover {
   border-color: var(--line-strong);

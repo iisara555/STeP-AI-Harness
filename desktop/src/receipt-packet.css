@@ -426,7 +426,7 @@
 }
 @media (prefers-reduced-motion: no-preference) {
   .packet-empty {
-    animation: packet-enter 220ms ease-out;
+    animation: packet-enter var(--motion-slow) var(--ease-out);
   }
   @keyframes packet-enter {
     from {

@@ -226,7 +226,7 @@
   display: block;
   height: 100%;
   background: var(--accent);
-  transition: width 0.2s ease;
+  transition: width var(--motion-slow) var(--ease-out);
 }
 .receipt-progress small {
   font-size: var(--text-xs);
@@ -248,7 +248,7 @@
   padding: var(--space-2) var(--space-2-5) var(--space-2) var(--space-3);
   border-left: 3px solid transparent;
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
-  transition: background 0.15s ease;
+  transition: background var(--motion) var(--ease-out);
 }
 .receipt-field.match-differ {
   border-left-color: var(--danger);
