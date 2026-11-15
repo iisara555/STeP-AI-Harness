@@ -52,13 +52,6 @@
   background: var(--selected);
   color: var(--text);
 }
-.draft-title span {
-  font-weight: 600;
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .draft-title small {
   font-size: var(--text-xs);
   color: var(--muted);
@@ -257,6 +250,17 @@
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-2) var(--space-3);
+}
+.document-form .document-ai-choice {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.document-form .document-ai-choice select {
+  width: auto;
+  max-width: 240px;
 }
 .document-draft-reason,
 .receipt-pick-reason {

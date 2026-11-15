@@ -222,7 +222,9 @@ try {
     element.scrollTop = 0;
   });
   await page.screenshot({ path: join(output, 'packet-dark.png') });
-  await expect(page.locator('.receipt-modes button[aria-pressed="true"]')).toHaveCSS('background-color', 'rgb(58, 50, 25)');
+  // The modes are underline tabs: the selected one is marked by the accent line, in the dark theme too.
+  await expect(page.locator('.receipt-modes button[aria-pressed="true"]')).toHaveCSS('border-bottom-color', 'rgb(255, 199, 9)');
+  await expect(page.locator('.receipt-modes button[aria-pressed="false"]')).toHaveCSS('border-bottom-color', 'rgba(0, 0, 0, 0)');
   const packets = await page.evaluate(() => window.step.call('receiptPacketList'));
   packetId = packets[0].id;
   const persisted = await page.evaluate(id => window.step.call('receiptPacketGet', { id }), packetId);

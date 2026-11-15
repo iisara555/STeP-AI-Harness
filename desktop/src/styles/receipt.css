@@ -1,11 +1,7 @@
+/* Small enough that the buttons under the empty source stay in the upper half of the window. */
 .receipt-illustration {
-  width: 190px;
+  width: 120px;
   margin: 0 auto var(--space-2);
-}
-@media (max-height: 740px) {
-  .receipt-illustration {
-    width: 140px;
-  }
 }
 .receipt-app {
   flex: 1;
@@ -703,8 +699,8 @@
   overflow-wrap: anywhere;
 }
 .receipt-source .receipt-empty {
-  min-height: 240px;
-  padding: var(--space-6) var(--space-3);
+  min-height: 180px;
+  padding: var(--space-5) var(--space-3);
   background: var(--paper);
   border-radius: var(--radius-lg);
 }

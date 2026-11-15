@@ -180,10 +180,9 @@ export function SidePanel({ v }: { v: AppView }) {
                 </div>
               ) : (
                 <>
-                  {/* The tab above already says ผลงาน: the draft's own title leads, with its two actions beside it. */}
+                  {/* The task's name is in the top bar and the sidebar; here only the draft's state and its two actions. */}
                   <header className="draft-title">
                     <div>
-                      <span title={t(session.title)}>{t(session.title)}</span>
                       <small>
                         {/* An empty draft has no version yet: say what goes here instead of "version 0, saved". */}
                         {!session.revision && !session.draft.trim() ? (

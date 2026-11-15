@@ -1,16 +1,25 @@
+/* The page's two jobs are tabs, underlined like the tabs of Settings and the Skill hub. */
 .receipt-modes {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-1-5);
+  gap: var(--space-1);
   margin-top: var(--space-3-5);
+  border-bottom: 1px solid var(--line);
 }
 .receipt-modes button {
   flex: 0 1 auto;
   width: auto;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
 }
-.receipt-modes button[aria-pressed='true'],
+.receipt-modes button[aria-pressed='true'] {
+  color: var(--text);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
 .packet-form-modes button[aria-pressed='true'] {
   background: var(--accent-soft);
   color: var(--text);
