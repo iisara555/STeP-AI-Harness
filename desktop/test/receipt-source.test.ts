@@ -40,7 +40,7 @@ test('receipt UI passes structured source through workspace send and consent rep
   // App.tsx is split into a workspace hook and screen regions; read them together.
   const app = (
     await Promise.all(
-      ['App.tsx', 'use-workspace.tsx', 'app-tool-screens.tsx', 'app-dialogs.tsx'].map(name =>
+      ['App.tsx', 'use-workspace.tsx', 'run-flow.ts', 'app-tool-screens.tsx', 'app-dialogs.tsx'].map(name =>
         readFile(new URL(`../src/${name}`, import.meta.url), 'utf8'),
       ),
     )
@@ -49,7 +49,7 @@ test('receipt UI passes structured source through workspace send and consent rep
 
   assert.match(receipt, /receiptSourceText\(draft\(\)\)/);
   assert.match(app, /start\(\s*s\.id,\s*text,\s*\{\s*allowIds,\s*sourceText,\s*mode:\s*'chat'/);
-  assert.match(app, /allowIdentifiers: allowIds,\s*sourceText/);
+  assert.match(app, /allowIdentifiers: run\.allowIds,\s*sourceText: run\.sourceText/);
   assert.match(app, /allowIds:\s*ask\.allowIds,\s*sourceText:\s*ask\.sourceText/);
   assert.match(app, /handoff=\{receiptHandoff\}/);
   assert.match(main, /combinedSource/);
