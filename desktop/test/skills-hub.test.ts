@@ -59,3 +59,37 @@ test('organization Skills credit their consenting contributors and others show n
   assert.match(credited, /เพิ่มโดย Somchai · afp · /);
   assert.doesNotMatch(render({}), /เพิ่มโดย/);
 });
+
+test("the person's team Skills lead under their own heading, without a tag on every card", () => {
+  const skills = [
+    skill({ name: 'audit-prep', title: 'เตรียมตรวจประเมิน', owner: 'qa' }),
+    skill({ name: 'leave-letter', title: 'หนังสือลา', owner: 'cc' }),
+    skill({ name: 'meeting-summary', title: 'สรุปการประชุม', owner: 'common', teams: ['cc'] }),
+  ];
+  const html = render({ skills, team: 'cc' });
+  const team = html.indexOf('<h2>ทีมคุณ</h2>'),
+    organization = html.indexOf('Skill ขององค์กร');
+  assert.ok(team > -1 && organization > team);
+  // Owned by the team or shared with it: both sit in the team group. Another team's Skill follows the second heading.
+  for (const title of ['หนังสือลา', 'สรุปการประชุม']) {
+    const at = html.indexOf(title);
+    assert.ok(at > team && at < organization, title);
+  }
+  assert.ok(html.indexOf('เตรียมตรวจประเมิน') > organization);
+  assert.doesNotMatch(html, /tag team/);
+  // No team chosen: one plain list, no headings.
+  const plain = render({ skills });
+  assert.doesNotMatch(plain, /ทีมคุณ|Skill ขององค์กร/);
+});
+
+test('a usable card has one control named for its action, and a Skill that is not ready has none', () => {
+  const ready = render({});
+  assert.equal(ready.match(/class="skill-go"/g)?.length, 3); // two built-in tools and the Skill
+  assert.match(ready, /<button class="skill-go" aria-label="ใช้ Skill นี้" title="\/leave-letter · ทีม CC · draft · staff">/);
+  assert.equal(ready.match(/aria-label="เปิดเครื่องมือ"/g)?.length, 2);
+  // The action is named for screen readers only: the visible label is not repeated on every card.
+  assert.doesNotMatch(ready, />ใช้ Skill นี้</);
+  const waiting = render({ skills: [skill({ status: 'registered', inRouter: false })] });
+  assert.equal(waiting.match(/class="skill-go"/g)?.length, 2);
+  assert.doesNotMatch(waiting, /aria-label="ใช้ Skill นี้"/);
+});

@@ -57,6 +57,9 @@ export function SkillsHub({
       )
       .sort((a, b) => Number(!mine(a)) - Number(!mine(b)));
   }, [skills, query, filter, team]);
+  // The person's own team leads under its own heading; a heading says it once, so the cards carry no team tag.
+  const teamSkills = visible.filter(mine),
+    otherSkills = visible.filter(s => !mine(s));
   const visibleOwn =
     onAddOwn && filter === 'all'
       ? (ownPacks || []).filter(p => !query.trim() || fold([p.id, ...p.skills.map(s => s.id)].join(' ')).includes(fold(query.trim())))
@@ -64,6 +67,31 @@ export function SkillsHub({
   const visibleTools = tools.filter(
     t => (filter === 'all' || filter === 'tool') && (!query.trim() || fold(t.title + ' ' + t.description).includes(fold(query.trim()))),
   );
+
+  const skillCard = (s: SkillEntry) => {
+    // The name typed after "/" is for people who call Skills by name; owner, release stage and category are bookkeeping.
+    // All of it stays in the tooltip, not on the card.
+    const about = ['/' + s.name, s.owner && ownerLabel(s.owner), s.stage, s.category].filter(Boolean).join(' · ');
+    return (
+      <article key={s.name} className="skill-card" title={about}>
+        <header>
+          <Blocks size={16} />
+          <strong>{s.title}</strong>
+          {/* The arrow is the card's one control: its hit area covers the whole card, so 49 cards do not each repeat
+              a "use this Skill" button. */}
+          {s.status === 'routed' && (
+            <button className="skill-go" aria-label={t('ใช้ Skill นี้')} title={about} onClick={() => onUse(s.name)}>
+              <ArrowRight size={15} />
+            </button>
+          )}
+        </header>
+        <p>{s.description}</p>
+        {!!s.contributors?.length && <small className="skill-credit">{creditLine(s.contributors)}</small>}
+        {/* A Skill that cannot be used yet says why. */}
+        {s.status !== 'routed' && <small className="muted">{t(statusTag[s.status].hint)}</small>}
+      </article>
+    );
+  };
 
   return (
     <div className="skills-hub">
@@ -134,63 +162,46 @@ export function SkillsHub({
               </article>
             ))}
           </div>
-          <h2>{t('Skill ขององค์กร')}</h2>
         </section>
       )}
       {!skills && <p className="muted">{t('กำลังโหลด Skill…')}</p>}
+      {teamSkills.length > 0 && (
+        <section className="skills-group" aria-label={t('ทีมคุณ')}>
+          <h2>{t('ทีมคุณ')}</h2>
+          <div className="skills-grid">{teamSkills.map(skillCard)}</div>
+        </section>
+      )}
+      {(visibleOwn.length > 0 || teamSkills.length > 0) && (visibleTools.length > 0 || otherSkills.length > 0) && (
+        <h2 className="skills-group-title">{t('Skill ขององค์กร')}</h2>
+      )}
       <div className="skills-grid">
-        {visibleTools.map(tool => (
-          <article key={tool.id} className="skill-card">
-            <header>
-              <ReceiptText size={16} />
-              <strong>{t(tool.title)}</strong>
-            </header>
-            <p>{t(tool.description)}</p>
-            {/* One tag says what kind of card this is; release stage and owner are bookkeeping, kept in the tooltip. */}
-            <div className="skill-tags" title={[t(tool.stage), ownerLabel(tool.owner)].join(' · ')}>
-              <span className="tag tool" title={t(tool.id === 'documents' ? 'ใช้ Skill และแม่แบบที่ตรงกับเอกสารนี้' : statusTag.tool.hint)}>
-                {t(tool.id === 'documents' ? 'แบบฟอร์มช่วยร่าง' : statusTag.tool.label)}
-              </span>
-            </div>
-            <button className="quiet" onClick={() => onOpenTool(tool.id)}>
-              {t('เปิดเครื่องมือ')}
-              <ArrowRight size={14} />
-            </button>
-          </article>
-        ))}
-        {visible.map(s => {
-          const tag = statusTag[s.status];
+        {visibleTools.map(tool => {
+          const kind = t(tool.id === 'documents' ? 'ใช้ Skill และแม่แบบที่ตรงกับเอกสารนี้' : statusTag.tool.hint);
           return (
-            <article
-              key={s.name}
-              className="skill-card"
-              title={[s.owner && ownerLabel(s.owner), s.stage, s.category].filter(Boolean).join(' · ')}
-            >
-              {/* The name typed after "/" is for people who call Skills by name: it stays in the tooltip, not on the card. */}
-              <header title={'/' + s.name}>
-                <Blocks size={16} />
-                <strong>{s.title}</strong>
-              </header>
-              <p>{s.description}</p>
-              {/* One tag at most: the person's own team. A Skill that cannot be used yet says why in place of its button.
-                  Owner, release stage and category are bookkeeping; they stay in the tooltip. */}
-              {mine(s) && (
-                <div className="skill-tags">
-                  <span className="tag team">{t('ทีมคุณ')}</span>
-                </div>
-              )}
-              {!!s.contributors?.length && <small className="skill-credit">{creditLine(s.contributors)}</small>}
-              {s.status === 'routed' ? (
-                <button className="quiet" onClick={() => onUse(s.name)}>
-                  {t('ใช้ Skill นี้')}
-                  <ArrowRight size={14} />
+            <article key={tool.id} className="skill-card">
+              <header>
+                <ReceiptText size={16} />
+                <strong>{t(tool.title)}</strong>
+                {/* The arrow is the card's one control: its hit area covers the whole card. Release stage and owner are
+                    bookkeeping, kept in the tooltip. */}
+                <button
+                  className="skill-go"
+                  aria-label={t('เปิดเครื่องมือ')}
+                  title={[kind, t(tool.stage), ownerLabel(tool.owner)].join(' · ')}
+                  onClick={() => onOpenTool(tool.id)}
+                >
+                  <ArrowRight size={15} />
                 </button>
-              ) : (
-                <small className="muted">{t(tag.hint)}</small>
-              )}
+              </header>
+              <p>{t(tool.description)}</p>
+              {/* One tag says what kind of card this is. */}
+              <div className="skill-tags">
+                <span className="tag tool">{t(tool.id === 'documents' ? 'แบบฟอร์มช่วยร่าง' : statusTag.tool.label)}</span>
+              </div>
             </article>
           );
         })}
+        {otherSkills.map(skillCard)}
       </div>
       {skills && !visible.length && !visibleTools.length && <p className="muted">{t('ไม่พบ Skill ลองเปลี่ยนคำค้นหรือตัวกรอง')}</p>}
     </div>
