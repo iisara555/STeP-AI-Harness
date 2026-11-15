@@ -40,6 +40,17 @@ export const RETIRED_DISTRIBUTION_FILES = [
   'Check-Privacy-STeP-AI.command',
 ];
 
+// On Windows, cmd opens a batch file again by name after each command. The old Update-STeP-AI.bat beside the installer is
+// the file that started this upgrade, so deleting it makes cmd print "The batch file cannot be found." when the updater
+// closes. Until an update is started from Tools/ (its launcher sets STEP_AI_LAUNCHER=tools), the old file becomes a
+// one-line hand-over instead: cmd finds the end of the file and stops quietly, and the old name still opens the updater.
+// The hand-over starts the Tools launcher without `call`, so cmd never returns to it and the next upgrade can remove it.
+export const WINDOWS_UPDATE_LAUNCHER = 'Update-STeP-AI.bat';
+export const WINDOWS_LAUNCHER_HANDOVER = '@"%~dp0Tools\\Update-STeP-AI.bat"\r\n';
+export function isRunningWindowsLauncher(relPath, { platform = process.platform, env = process.env } = {}) {
+  return platform === 'win32' && relPath === WINDOWS_UPDATE_LAUNCHER && env.STEP_AI_LAUNCHER !== 'tools';
+}
+
 function isDistributionPath(relPath) {
   const normalized = String(relPath || '').replace(/\\/g, '/');
   return DISTRIBUTION_FILES.includes(normalized)
@@ -172,6 +183,8 @@ export async function applyDistributionUpgrade({
   sourceDir,
   destDir,
   targetVersion,
+  platform = process.platform,
+  env = process.env,
 } = {}) {
   if (!sourceDir || !destDir) throw new Error('sourceDir and destDir are required');
   await safeWorkspacePath(destDir, '.step-ai/manifest.json');
@@ -235,8 +248,12 @@ export async function applyDistributionUpgrade({
       copied++;
     }
 
+    let handedOver = 0;
     for (const relPath of removedPaths) {
-      await rm(join(destDir, relPath), { force: true });
+      if (isRunningWindowsLauncher(relPath, { platform, env }) && sourcePaths.has(`Tools/${relPath}`)) {
+        await writeFile(join(destDir, relPath), WINDOWS_LAUNCHER_HANDOVER, 'utf-8');
+        handedOver++;
+      } else await rm(join(destDir, relPath), { force: true });
     }
 
     await refreshManifestHashes(destDir, preservedPaths, relativeFiles, sourceVersion, removedPaths);
@@ -247,7 +264,7 @@ export async function applyDistributionUpgrade({
       snapshotId,
       versionBackupId: backupId,
       copied,
-      removed: removedPaths.length,
+      removed: removedPaths.length - handedOver,
       preserved: [...preservedPaths].sort(),
     };
   } catch (error) {

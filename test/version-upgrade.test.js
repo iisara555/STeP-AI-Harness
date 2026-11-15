@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import {
+  WINDOWS_LAUNCHER_HANDOVER,
   applyDistributionUpgrade,
   compareVersions,
   parseVersion,
@@ -143,7 +144,8 @@ test('Version Upgrade Core', async (t) => {
       // A first install tracks Skills and instructions, not the launchers beside the installer.
       await writeManifest(dest, { package: '@step-cmu/ai-harness', version: '0.3.0', role: 'all', tool: 'codex', files: {} });
 
-      const result = await applyDistributionUpgrade({ sourceDir: source, destDir: dest, targetVersion: '0.4.0' });
+      // Windows keeps a hand-over for the launcher that is running (next test); every other system removes all six.
+      const result = await applyDistributionUpgrade({ sourceDir: source, destDir: dest, targetVersion: '0.4.0', platform: 'linux' });
       assert.equal(result.removed, launchers.length);
       for (const name of launchers) {
         assert.equal(await pathExists(join(dest, name)), false, `${name} left beside the installer`);
@@ -157,6 +159,83 @@ test('Version Upgrade Core', async (t) => {
         assert.equal(await pathExists(join(dest, 'Tools', name)), false);
       }
       assert.equal(await readFile(join(dest, 'Install-STeP-AI.bat'), 'utf-8'), 'old install');
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  await t.test('on Windows the running update launcher becomes a hand-over, removed once Tools starts the update', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'step-version-handover-'));
+    const dest = join(root, 'dest');
+    const release = async (version) => {
+      const dir = join(root, `source-${version}`);
+      await mkdir(join(dir, 'Tools'), { recursive: true });
+      await writeFile(join(dir, 'package.json'), JSON.stringify({ version }), 'utf-8');
+      await writeFile(join(dir, 'Tools', 'Update-STeP-AI.bat'), `update ${version}`, 'utf-8');
+      await writeFile(join(dir, 'Tools', 'Feedback-STeP-AI.bat'), `feedback ${version}`, 'utf-8');
+      return dir;
+    };
+
+    try {
+      await mkdir(dest, { recursive: true });
+      await writeFile(join(dest, 'package.json'), JSON.stringify({ version: '0.3.0' }), 'utf-8');
+      await writeFile(join(dest, 'Update-STeP-AI.bat'), 'old update launcher, much longer than the hand-over that replaces it'.repeat(4), 'utf-8');
+      await writeFile(join(dest, 'Feedback-STeP-AI.bat'), 'old feedback', 'utf-8');
+      await writeManifest(dest, { package: '@step-cmu/ai-harness', version: '0.3.0', role: 'all', tool: 'codex', files: {} });
+
+      // Started by the old launcher beside the installer: it must not disappear under cmd.
+      const first = await applyDistributionUpgrade({
+        sourceDir: await release('0.4.0'),
+        destDir: dest,
+        targetVersion: '0.4.0',
+        platform: 'win32',
+        env: {},
+      });
+      assert.equal(await readFile(join(dest, 'Update-STeP-AI.bat'), 'utf-8'), WINDOWS_LAUNCHER_HANDOVER);
+      assert.equal(await pathExists(join(dest, 'Feedback-STeP-AI.bat')), false, 'a launcher that is not running is removed');
+      assert.equal(first.removed, 1);
+      assert.match(WINDOWS_LAUNCHER_HANDOVER, /^@"%~dp0Tools\\Update-STeP-AI\.bat"\r\n$/, 'starts the Tools launcher without call');
+
+      // A rollback still brings the old launcher back.
+      await runRollback({ dest, snapshot: first.snapshotId });
+      assert.match(await readFile(join(dest, 'Update-STeP-AI.bat'), 'utf-8'), /^old update launcher/);
+
+      await applyDistributionUpgrade({ sourceDir: await release('0.4.0'), destDir: dest, targetVersion: '0.4.0', platform: 'win32', env: {} });
+      // The next update is started from Tools (directly or through the hand-over), so the hand-over can go.
+      const second = await applyDistributionUpgrade({
+        sourceDir: await release('0.5.0'),
+        destDir: dest,
+        targetVersion: '0.5.0',
+        platform: 'win32',
+        env: { STEP_AI_LAUNCHER: 'tools' },
+      });
+      assert.equal(await pathExists(join(dest, 'Update-STeP-AI.bat')), false);
+      assert.equal(second.removed, 1);
+      assert.equal(await readFile(join(dest, 'Tools', 'Update-STeP-AI.bat'), 'utf-8'), 'update 0.5.0');
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  await t.test('cmd ends quietly when the running launcher is replaced by the hand-over', { skip: process.platform !== 'win32' }, async () => {
+    const root = await mkdtemp(join(tmpdir(), 'step-version-cmd-'));
+    const launcher = join(root, 'Update-STeP-AI.bat');
+    const run = async (script) => {
+      // The same shape as the real launcher: lines before, one long-running command, lines after.
+      const lines = ['@echo off', ...Array.from({ length: 20 }, (_, i) => `rem padding line ${i} so the file is longer than the hand-over`)];
+      await writeFile(launcher, [...lines, `node "${join(root, script)}"`, 'echo AFTER-UPDATE', ''].join('\r\n'), 'utf-8');
+      return execFileAsync('cmd.exe', ['/d', '/c', launcher], { cwd: root }).catch((error) => error);
+    };
+
+    try {
+      await writeFile(join(root, 'handover.js'), `require('fs').writeFileSync(${JSON.stringify(launcher)}, ${JSON.stringify(WINDOWS_LAUNCHER_HANDOVER)});`, 'utf-8');
+      await writeFile(join(root, 'remove.js'), `require('fs').rmSync(${JSON.stringify(launcher)});`, 'utf-8');
+
+      const kept = await run('handover.js');
+      assert.doesNotMatch(`${kept.stdout}${kept.stderr}`, /cannot be found|AFTER-UPDATE/);
+      // The reason for the hand-over: removing the running launcher is what prints the message.
+      const removed = await run('remove.js');
+      assert.match(`${removed.stdout}${removed.stderr}`, /cannot be found/);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
