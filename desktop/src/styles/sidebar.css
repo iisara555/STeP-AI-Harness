@@ -9,10 +9,19 @@
   flex-direction: column;
   border-right: 1px solid var(--line);
 }
+/* Yellow is for the one main action of the page in view. Starting a task is always at hand, so it stays quiet. */
 .new-work {
   justify-content: flex-start;
   padding: var(--pad-card);
   margin-bottom: var(--space-4);
+  background: var(--paper);
+  color: var(--text);
+  border-color: var(--line-strong);
+  font-weight: 600;
+}
+.new-work:hover {
+  background: var(--hover);
+  filter: none;
 }
 nav {
   display: flex;
@@ -421,13 +430,13 @@ nav button:hover,
   filter: none;
 }
 .rail-button.rail-new {
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--paper);
+  color: var(--text);
+  border-color: var(--line-strong);
   margin-bottom: var(--space-1-5);
 }
 .rail-button.rail-new:hover {
-  background: var(--accent);
-  filter: brightness(0.95);
+  background: var(--hover);
 }
 .sidebar.rail nav {
   gap: var(--space-1);

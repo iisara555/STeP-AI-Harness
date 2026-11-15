@@ -252,24 +252,6 @@ export function DocumentTools({
               ))}
             </select>
           </label>
-          <label>
-            {t('AI ที่ใช้ร่าง')}
-            <select
-              aria-label={t('AI ที่ใช้ร่าง')}
-              value={connected ? connectionId : ''}
-              disabled={disabled}
-              onChange={e => chooseConnection(e.target.value)}
-            >
-              <option value="" disabled>
-                {t('เลือก AI ที่เชื่อมต่อแล้ว')}
-              </option>
-              {ready.map(c => (
-                <option key={c.id} value={c.id}>
-                  {connectionName(c)}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
         {!connected && (
           <p className="small">
@@ -379,6 +361,25 @@ export function DocumentTools({
                 {blockedReason}
               </p>
             )}
+            {/* Which AI drafts is a detail of the action, so it sits beside the button, not among the document's fields. */}
+            <label className="document-ai-choice">
+              <span>{t('AI ที่ใช้ร่าง')}</span>
+              <select
+                aria-label={t('AI ที่ใช้ร่าง')}
+                value={connected ? connectionId : ''}
+                disabled={disabled}
+                onChange={e => chooseConnection(e.target.value)}
+              >
+                <option value="" disabled>
+                  {t('เลือก AI ที่เชื่อมต่อแล้ว')}
+                </option>
+                {ready.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {connectionName(c)}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button
               className="primary"
               type="submit"
