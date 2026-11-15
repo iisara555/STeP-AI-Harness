@@ -338,8 +338,7 @@ nav button:hover,
 .tools-nav button {
   padding: var(--pad-control);
 }
-.team-mark,
-.tag.team {
+.team-mark {
   background: var(--accent);
   color: var(--on-accent);
   border-radius: var(--radius-pill);

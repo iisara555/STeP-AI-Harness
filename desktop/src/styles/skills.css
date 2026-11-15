@@ -101,8 +101,63 @@
   border-radius: var(--radius-lg);
   background: var(--paper);
 }
-.skill-card:hover {
+/* A card that can be opened is one target: the arrow button's hit area is stretched over the whole card. */
+.skill-card {
+  position: relative;
+}
+.skill-card:has(.skill-go):hover {
   border-color: var(--line-strong);
+  background: var(--hover);
+}
+.skill-card header strong {
+  flex: 1;
+  min-width: 0;
+}
+.skill-card .skill-go {
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  padding: var(--space-0-5);
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  transition: color var(--motion-fast) var(--ease-out);
+}
+/* A filter or transform on the button would make it the containing block of the stretched hit area and shrink it back
+   to the arrow, so the button itself never moves: the arrow inside slides, and the card takes the press. */
+.skill-card .skill-go:hover,
+.skill-card .skill-go:active:not(:disabled) {
+  filter: none;
+  transform: none;
+}
+.skill-card .skill-go svg {
+  margin: 0;
+  color: inherit;
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+.skill-go::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+}
+.skill-card:hover .skill-go {
+  color: var(--text);
+}
+.skill-card:hover .skill-go svg {
+  transform: translateX(2px);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .skill-card:has(.skill-go:active) {
+    transform: translateY(0.5px) scale(0.995);
+  }
+}
+.skill-go:focus-visible {
+  outline: none;
+}
+.skill-go:focus-visible::after {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 .skill-card header {
   display: flex;
@@ -207,13 +262,18 @@
   padding: 0 var(--space-3-5);
   border-radius: var(--radius-md);
 }
-.skills-own h2 {
-  font-size: var(--text-base);
+/* Group headings (my Skills, my team, the organization): small labels, so the cards stay the content. */
+.skills-own h2,
+.skills-group h2,
+.skills-group-title {
+  font-size: var(--text-sm);
   font-weight: 600;
-  margin: 0 0 var(--space-2-5);
+  color: var(--muted);
+  margin: 0 0 var(--space-2);
 }
-.skills-own .skills-grid + h2 {
-  margin-top: var(--space-5);
+.skills-own,
+.skills-group {
+  margin-bottom: var(--space-5);
 }
 .skill-card > .skill-credit {
   margin-top: 0;
