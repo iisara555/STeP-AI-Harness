@@ -1016,6 +1016,13 @@ export const en: Record<string, string> = {
   'โมเดล Kimi สำหรับอ่านและวิเคราะห์บริบทยาว': 'Kimi models for reading and analyzing long context',
   'เปิดดูไฟล์ Word, Excel, PowerPoint และรูปภาพในแท็บไฟล์งานได้เลย พร้อมปุ่มเปิดด้วยโปรแกรมในเครื่อง':
     'View Word, Excel, PowerPoint files and pictures right in the Files tab, with a button to open them in their app.',
+  'หน้าจอเรียบและอ่านง่ายขึ้นทั้งแอป สีเหลืองเหลือไว้ให้ปุ่มหลักของแต่ละหน้า':
+    "Calmer, easier-to-read screens across the app. Yellow now marks only each page's main button.",
+  'ศูนย์รวม Skill แสดง Skill ของทีมคุณก่อน และกดได้ทั้งการ์ด':
+    "The Skill hub shows your team's Skills first, and the whole card opens a Skill.",
+  'แผงร่างเหลือ 3 แท็บหลัก ส่วนเว็บ งานเบื้องหลัง และคำสั่งอยู่หลังปุ่มแท็บเพิ่มเติม':
+    'The draft panel has three main tabs. Web, background jobs and commands sit behind the more-tabs button.',
+  'แอปเปิดเร็วขึ้น และลื่นขึ้นระหว่างที่ AI พิมพ์คำตอบยาว': 'The app starts faster and stays smooth while the AI writes a long answer.',
   'ภาพที่ส่งให้ AI แสดงเป็นภาพย่อในแชต ย้อนดูได้ว่าถามเรื่องภาพไหน': 'Pictures you send to the AI now show as thumbnails in the chat.',
   'Gemini ผ่าน Antigravity อ่านภาพถ่ายได้อีกครั้งโดยไม่ค้นเว็บเอง':
     'Gemini through Antigravity reads photos again without searching the web on its own.',

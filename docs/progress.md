@@ -4,9 +4,11 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-15_
+_Last updated: 2026-11-16_
 
 ## Latest release
+
+- **Desktop v0.6.34 prepared (2026-11-16, owner asked to release)**: carries the UX/UI audit rounds merged since 0.6.33 (shared type, spacing, padding and motion tokens; split CSS and lazy screens; region-level rendering; three draft-panel tabs; the minimal-screen passes) and the hierarchy changes (#351 one yellow per page, receipt tabs, document tool; #352 Skill hub with the team first and one control per card). Harness remains 0.7.7: the installer `Tools/` launchers and staff-only CLI help stay under `## Unreleased` until a Harness bundle release. Merge after exact-head CI passes, then publish via `desktop-release.yml` on `main` with `publish=true`.
 
 - **Desktop v0.6.33 prepared (2026-11-11, owner authorized merge and release)**: combines #326 (Antigravity image runs without stray search_web), #327 (sent pictures as chat thumbnails) and #328 (Word/Excel/PowerPoint previews and open-in-app in the Files tab), preserving the #328 head. Harness remains 0.7.7. Merge after exact-head CI passes, then publish via `desktop-release.yml` on `main` with `publish=true`.
 
