@@ -50,6 +50,12 @@ try {
   await card.getByRole('button', { name: 'ลองอัปเดตอีกครั้ง', exact: true }).click();
   await expect(card).toContainText('กำลังดาวน์โหลดเวอร์ชัน 0.5.24');
   await send({ status: 'ready' });
+  // The version under the name is one icon and the number on a single line; the state is in its name, not beside it.
+  const versionLine = page.locator('.profile .version-line');
+  await expect(versionLine).toHaveText('v0.5.23');
+  await expect(versionLine).toHaveAccessibleName('v0.5.23 · มีอัปเดต 0.5.24');
+  await expect(versionLine.locator('svg')).toHaveCount(1);
+  assert.ok((await versionLine.boundingBox()).height < 30, 'the version line stays on one line');
   await card.getByRole('button', { name: 'รีสตาร์ทเพื่ออัปเดต', exact: true }).click();
   await send({ status: 'manual', reason: 'UPDATE_NOT_REPLACEABLE' });
   await expect(card).toContainText('ย้ายแอปออกจาก DMG');
