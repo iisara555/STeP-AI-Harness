@@ -91,6 +91,7 @@ import {
   antigravityCurrent,
   antigravitySignIn,
   installAntigravityCli,
+  repairManagedAgy,
   openAntigravitySignIn,
   openAntigravityBrowserSignIn,
   antigravitySignedInWithProfile,
@@ -649,6 +650,25 @@ async function main() {
       installingAgy = false;
     }
   }
+  // Puts STeP's own agy back when it updated itself to a version STeP has not tested (see repairManagedAgy). A failed
+  // or busy repair is left to the run's own version check, which shows the reconnect note as before.
+  async function repairAgy(connection: Connection) {
+    if (connection.customRuntime || installingAgy) return;
+    try {
+      const repaired = await repairManagedAgy(agyPath(), connection.executable, join(data, 'runtimes', 'agy-check'), async () => {
+        if (installingAgy) throw new Error('INSTALL_BUSY');
+        installingAgy = true;
+        try {
+          await installAntigravityCli(agyHome, () => {});
+        } finally {
+          installingAgy = false;
+        }
+      });
+      if (repaired) diagnose('agy-repaired');
+    } catch (error) {
+      diagnose('agy-repair-failed', { code: errorCode(error) });
+    }
+  }
   async function runtime(connection: Connection, signOut = false, webSearch = false) {
     if (connection.customRuntime) executionAllowed();
     if (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscriptionOn() && !signOut)
@@ -656,6 +676,7 @@ async function main() {
     if (connection.provider === 'compatible') compatibleEndpoint(connection, policyState.policy, testPresetBaseUrl());
     if (connection.provider === 'copilot' && !signOut && !policyState.policy.features.copilot) throw new Error('FEATURE_DISABLED');
     if (!['compatible', 'copilot'].includes(connection.provider)) connection.executable = resolveRuntime(connection, agyPath());
+    if (connection.provider === 'antigravity' && !signOut) await repairAgy(connection);
     // Isolate runtime configuration from personal MCP servers, plugins, and files.
     const { cwd, env } = await isolatedRuntimeHome(join(data, 'runtimes', connection.id), connection, webSearch);
     // Development test runs only: point the bundled Gemini CLI at a local fake API. Installed copies ignore this.

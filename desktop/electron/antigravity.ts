@@ -1077,6 +1077,12 @@ function fileStamp(executable: string) {
   }
 }
 
+/** Whether this exact file (same size and change time) already passed checkAntigravity, without starting it. */
+export function antigravityChecked(executable: string) {
+  const stamp = fileStamp(executable);
+  return Boolean(stamp) && checked.get(executable) === stamp;
+}
+
 /** agy major.minor from which STeP's isolated agent is not loaded (raise after a live check of a newer agy). */
 export const ANTIGRAVITY_TESTED_BELOW = [1, 4] as const;
 export async function checkAntigravity(executable: string, context: Pick<ProviderContext, 'cwd' | 'env'>, signal?: AbortSignal) {

@@ -4,7 +4,7 @@ import { createWriteStream, existsSync } from 'node:fs';
 import { chmod, copyFile, mkdir, mkdtemp, readdir, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { antigravityHome, checkAntigravity, runAntigravity } from './antigravity';
+import { antigravityChecked, antigravityHome, checkAntigravity, runAntigravity } from './antigravity';
 import { tm } from './i18n';
 import type { ProviderContext } from './providers';
 
@@ -498,4 +498,24 @@ export async function antigravityCurrent(executable: string, cwd: string, signal
   } finally {
     await home.close().catch(() => {});
   }
+}
+
+/**
+ * agy replaces its own file with the newest release when something starts it with the employee's real profile more
+ * than 15 minutes after its last update check. On the owner's PC (2026-11-10) STeP's pinned 1.3.2 became 1.5.5 that
+ * way, and the next chat failed with ANTIGRAVITY_VERSION_UNTESTED until Antigravity was connected again. Before a run,
+ * a managed copy that no longer answers as a tested version is put back with `reinstall`. Only STeP's own copy is
+ * touched; an agy the employee installed is never replaced. Returns whether it reinstalled.
+ */
+export async function repairManagedAgy(
+  managed: string | undefined,
+  executable: string,
+  checkCwd: string,
+  reinstall: () => Promise<unknown>,
+  signal?: AbortSignal,
+) {
+  if (!managed || executable !== managed || antigravityChecked(managed)) return false;
+  if (await antigravityCurrent(managed, checkCwd, signal)) return false;
+  await reinstall();
+  return true;
 }
