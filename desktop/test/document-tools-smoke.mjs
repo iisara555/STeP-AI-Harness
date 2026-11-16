@@ -363,8 +363,15 @@ try {
     }
     if (id === 'memo' || id === 'letter') {
       assert.match(document, /<w:titlePg\/>/);
-      const header = await zip.file('word/header1.xml').async('string');
-      assert.match(header, new RegExp(`cy="${id === 'memo' ? '540000' : '1080000'}"`));
+      // The Garuda sits in the page-1 header; the page-2+ header only carries the "- ๒ -" number.
+      const headers = await Promise.all(
+        Object.keys(zip.files)
+          .filter(p => /^word\/header\d+\.xml$/.test(p))
+          .map(p => zip.file(p).async('string')),
+      );
+      const garuda = headers.filter(xml => /<w:drawing>/.test(xml));
+      assert.equal(garuda.length, 1);
+      assert.match(garuda[0], new RegExp(`cy="${id === 'memo' ? '540000' : '1080000'}"`));
       await page.getByLabel('ตราครุฑ', { exact: true }).selectOption('none');
       await page.getByRole('button', { name: 'ส่งออก', exact: true }).click();
       await expect(page.locator('.document-export-info')).toContainText('ไม่ใส่ตราครุฑ');
