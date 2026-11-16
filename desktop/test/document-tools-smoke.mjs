@@ -295,7 +295,11 @@ try {
     assert.ok(accepted.documentReview.text.includes('Skill Verification'));
     await expect(page.locator('.tiptap')).not.toContainText('Skill Verification');
     assert.match(document, /<w:keepNext\/>/);
-    assert.match(await zip.file('word/footer1.xml').async('string'), /PAGE/);
+    // TOR numbers pages x/y in the footer; other official documents use the saraban "- ๒ -" header from page 2.
+    const numbered = [];
+    for (const part of Object.keys(zip.files).filter(p => /^word\/(?:header|footer)\d+\.xml$/.test(p)))
+      if (/PAGE/.test(await zip.file(part).async('string'))) numbered.push(part.replace(/\d+\.xml$/, '').slice(5));
+    assert.deepEqual(numbered, [id === 'tor' ? 'footer' : 'header']);
     if (id === 'project') {
       await page.evaluate(async () => {
         const s = await window.step.call('snapshot');
