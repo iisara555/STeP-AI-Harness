@@ -28,6 +28,11 @@ const esc = (text: string) =>
 const lines = (text: string) => esc(text).replace(/\n/g, '<br>');
 const missing = (text: string) => text.trim() || '........................................................';
 const amount = (value: number | null) => (value === null ? 'รอยืนยัน' : formatSatang(value));
+/** A typed figure prints with two decimals like the totals ("0" → "0.00"); unreadable input stays as typed. */
+const figure = (value: string) => {
+  const satang = moneySatang(value);
+  return satang === null ? value : formatSatang(satang);
+};
 const itemNet = (item: PaymentVoucher['items'][number]) => {
   const g = moneySatang(item.gross),
     w = moneySatang(item.withholding),
@@ -87,9 +92,9 @@ export async function paymentVoucherDocx(packet: ReceiptPacket, voucher = packet
             height: { value: 340, rule: HeightRule.ATLEAST },
             children: [
               cell(item.description, 0),
-              cell(item.gross, 1),
-              cell(item.withholding, 2),
-              cell(item.deduction, 3),
+              cell(figure(item.gross), 1),
+              cell(figure(item.withholding), 2),
+              cell(figure(item.deduction), 3),
               cell(itemNet(item) === null ? '' : amount(itemNet(item)), 4),
             ],
           }),
@@ -186,7 +191,7 @@ export function paymentVoucherHtml(packet: ReceiptPacket, fontCss: string) {
     <p>เอกสารอ้างอิง ${esc(missing(voucher.reference))}</p>
     <table class="payment-items"><colgroup><col style="width:41.5%"><col style="width:14.625%"><col style="width:14.625%"><col style="width:14.625%"><col style="width:14.625%"></colgroup>
     <thead><tr><th>รายการจ่าย</th><th>ยอดรายการ</th><th>หัก ณ ที่จ่าย</th><th>หักอื่น</th><th>สุทธิ</th></tr></thead>
-    <tbody>${voucher.items.map(item => `<tr><td>${lines(item.description)}</td><td>${esc(item.gross)}</td><td>${esc(item.withholding)}</td><td>${esc(item.deduction)}</td><td>${itemNet(item) === null ? '' : amount(itemNet(item))}</td></tr>`).join('')}
+    <tbody>${voucher.items.map(item => `<tr><td>${lines(item.description)}</td><td>${esc(figure(item.gross))}</td><td>${esc(figure(item.withholding))}</td><td>${esc(figure(item.deduction))}</td><td>${itemNet(item) === null ? '' : amount(itemNet(item))}</td></tr>`).join('')}
     <tr><td><b>รวม (บาท)</b></td><td>${amount(totals.gross)}</td><td>${amount(totals.withholding)}</td><td>${amount(totals.deduction)}</td><td>${amount(totals.net)}</td></tr></tbody></table>
     <p>${totals.net === null ? 'จำนวนเงินสุทธิเป็นตัวอักษร [รอยืนยันยอดหัก]' : 'จำนวนเงินสุทธิเป็นตัวอักษร ' + thaiBahtWords(totals.net)}</p>
     <p>${reviewText(packet, voucher)}</p><p>เอกสารประกอบ: ตามหน้าสรุปชุดและรายการหลักฐานที่เลือกไว้</p>

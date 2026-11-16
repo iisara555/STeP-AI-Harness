@@ -74,6 +74,7 @@ export function DocumentPresentationControls({
           onChange={event => update({ pageNumber: event.target.value as DocumentPresentation['pageNumber'] })}
         >
           <option value="none">{t('ไม่ใส่เลขหน้า')}</option>
+          <option value="saraban">{t('- ๒ - หัวกระดาษ ตั้งแต่หน้า ๒')}</option>
           <option value="thai">{t('หน้า ๑')}</option>
           <option value="arabic-total">1 / 10</option>
         </select>
@@ -82,7 +83,7 @@ export function DocumentPresentationControls({
         {t('ตำแหน่งเลขหน้า')}
         <select
           aria-label={t('ตำแหน่งเลขหน้า')}
-          disabled={locked || value.pageNumber === 'none'}
+          disabled={locked || value.pageNumber === 'none' || value.pageNumber === 'saraban'}
           value={value.pageNumberPosition}
           onChange={event => update({ pageNumberPosition: event.target.value as DocumentPresentation['pageNumberPosition'] })}
         >

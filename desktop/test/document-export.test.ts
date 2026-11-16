@@ -36,8 +36,17 @@ test('Thai document styles and emphasis retain language, complex-script size and
   const italic = Array.from(doc.paragraphs[0].getElementsByTagNameNS(W, 'r')).find(run => doc.text(run) === 'ข้อความตัวเอียง')!;
   assert.ok(italic.getElementsByTagNameNS(W, 'i').length);
   assert.ok(italic.getElementsByTagNameNS(W, 'iCs').length);
-  const footer = new DOMParser().parseFromString(await doc.zip.file('word/footer1.xml')!.async('string'), 'application/xml');
-  assert.equal(attr(footer.documentElement, 'szCs', 'val'), '28');
+  // Saraban page numbers ("- ๒ -") sit in the page header at the body size.
+  const numbered = await Promise.all(
+    Object.keys(doc.zip.files)
+      .filter(p => /^word\/header\d+\.xml$/.test(p))
+      .map(async p => await doc.zip.file(p)!.async('string')),
+  );
+  const header = new DOMParser().parseFromString(
+    numbered.find(xml => /PAGE/.test(xml))!,
+    'application/xml',
+  );
+  assert.equal(attr(header.documentElement, 'szCs', 'val'), '32');
   assert.equal(doc.paragraphs.map(doc.text).join(''), documentText(markdownDocument(input)));
   assert.doesNotMatch(doc.xml, /[\u200B\u00AD]/);
 });
@@ -85,8 +94,9 @@ async function word(markdown: string | DraftNode, options?: { documentTool?: str
       .filter(p => /^word\/header\d+\.xml$/.test(p))
       .map(async p => new DOMParser().parseFromString(await zip.file(p)!.async('string'), 'application/xml')),
   );
+  // Page-number fields ("- ๒ -") are layout, not draft text.
   const paragraphs = [
-    ...headers.flatMap(h => Array.from(h.getElementsByTagNameNS(W, 'p'))),
+    ...headers.flatMap(h => Array.from(h.getElementsByTagNameNS(W, 'p')).filter(p => !p.getElementsByTagNameNS(W, 'fldChar').length)),
     ...Array.from(dom.getElementsByTagNameNS(W, 'p')),
   ];
   const text = (p: Element) =>
@@ -157,9 +167,15 @@ test('all document profiles export native editable content with their selected f
     assert.equal(attr(doc.paragraph('ร่างสังเคราะห์'), 'jc', 'val'), documentTool === 'memo' ? 'left' : 'center', documentTool);
     assert.equal(attr(doc.paragraph('๑. หัวข้อ'), 'sz', 'val'), documentTool === 'tor' ? '32' : '36');
     assert.match(doc.xml, new RegExp('<w:pgNumType[^>]*w:fmt="' + (documentTool === 'tor' ? 'decimal' : 'thaiNumbers') + '"'));
-    assert.match(doc.xml, /<w:footerReference/);
-    const footer = await doc.zip.file('word/footer1.xml')!.async('string');
-    assert.match(footer, /PAGE/);
+    // TOR keeps its footer counter; saraban documents number pages 2+ in the header and leave page 1 blank.
+    const part = documentTool === 'tor' ? 'footer' : 'header';
+    assert.match(doc.xml, new RegExp(`<w:${part}Reference`));
+    const parts = Object.keys(doc.zip.files).filter(p => new RegExp(`^word/${part}\\d+\\.xml$`).test(p));
+    assert.ok(
+      (await Promise.all(parts.map(p => doc.zip.file(p)!.async('string')))).some(xml => /PAGE/.test(xml)),
+      documentTool,
+    );
+    if (documentTool !== 'tor') assert.match(doc.xml, /<w:titlePg\/>/);
     assert.ok(doc.xml.includes('00123') && doc.xml.includes('[รอยืนยัน: งบประมาณ]'));
     assert.equal((doc.xml.match(/<w:tbl>/g) || []).length, 1);
     assert.doesNotMatch(doc.xml, /<w:(?:drawing|documentProtection|ins|del)\b/);
@@ -185,7 +201,7 @@ test('memo fields, letter sender/date and signatures receive distinct layouts wi
     '# ร่างหนังสือ\n\nส่วนราชการ หน่วยงานสังเคราะห์\n\nที่ 0007/๖๙ วันที่ [รอยืนยัน: วันที่]\n\nหน่วยงานและที่อยู่ [รอยืนยัน: ผู้ส่ง]\n\nวันที่ [รอยืนยัน: วันที่]\n\nเรื่อง สังเคราะห์\n\nเรียน [รอยืนยัน: ผู้รับ]\n\nสาระจากต้นเรื่องสังเคราะห์\n\n(ลงชื่อ) [รอยืนยัน: ผู้ลงนาม]\n\nตำแหน่ง [รอยืนยัน: ตำแหน่ง]';
   const memo = await word(markdown, { documentTool: 'memo' });
   assert.ok(Array.from(memo.paragraph('ที่ 0007/๖๙').getElementsByTagNameNS(W, 'tab')).some(tab => tab.parentNode?.nodeName === 'w:r'));
-  assert.equal(attr(memo.paragraph('สาระจากต้นเรื่อง'), 'ind', 'firstLine'), '709');
+  assert.equal(attr(memo.paragraph('สาระจากต้นเรื่อง'), 'ind', 'firstLine'), '1418');
   assert.equal(attr(memo.paragraph('(ลงชื่อ)'), 'jc', 'val'), 'center');
   assert.equal(attr(memo.paragraph('(ลงชื่อ)'), 'ind', 'left'), '4535');
   const letter = await word(markdown, { documentTool: 'letter' });

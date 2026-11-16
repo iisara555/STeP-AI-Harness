@@ -23,7 +23,7 @@ const text = (p: Element) =>
 test('STeP TOR defaults differ from standard letters and explicit saved choices win', () => {
   assert.equal(resolvePresentation({}, 'tor').pageNumber, 'arabic-total');
   assert.equal(resolvePresentation({}, 'tor').pageNumberPosition, 'footer-right');
-  assert.equal(resolvePresentation({}, 'letter').pageNumber, 'thai');
+  assert.equal(resolvePresentation({}, 'letter').pageNumber, 'saraban');
   assert.equal(resolvePresentation({ pageNumber: 'none', pageNumberPosition: 'footer-center' }, 'tor').pageNumber, 'none');
 });
 

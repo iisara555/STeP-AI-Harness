@@ -31,7 +31,7 @@ import ExcelJS from 'exceljs';
 import PptxGenJS from 'pptxgenjs';
 import { type DraftNode, documentMarkdown, documentText, plainDocument, validateDocument, documentImageIds } from '../src/draft';
 import type { DocumentImage } from './document-assets';
-import { documentLayoutRoles, resolveDocumentLayout, type DocumentLayout, type LayoutRole } from '../src/document-layout';
+import { documentLayoutRoles, resolveDocumentLayout, sarabanSpacing, type DocumentLayout, type LayoutRole } from '../src/document-layout';
 import { GARUDA_DATA_URI, GARUDA_PNG } from './garuda-image';
 import { renderDocumentTemplate } from './document-template';
 import { longestWordUnits, textUnits, THAI_DOCUMENT_CSS, THAI_DOCUMENT_LANGUAGE, withThaiBreaks } from '../src/thai-typography';
@@ -137,7 +137,7 @@ function richHtml(node: DraftNode, images: ReadonlyMap<string, DocumentImage> = 
   if (node.type === 'caption') return '<p class="caption">' + (node.content || []).map(child => richHtml(child, images)).join('') + '</p>';
 
   if (node.type === 'text') {
-    let text = escapeHtml(node.text || '');
+    let text = escapeHtml(keepPhone(node.text || ''));
     for (const mark of node.marks || []) text = mark.type === 'bold' ? `<strong>${text}</strong>` : `<em>${text}</em>`;
     return text;
   }
@@ -239,8 +239,8 @@ export function pdfHtml(
       ? [
           '@page{size:A4;margin:2.5cm 2cm 2cm 3cm}body{line-height:1.15}.block p{margin:0}h1,h2,h3{font-size:16pt;margin:6pt 0 3pt}.block:has(h1,h2,h3){break-after:avoid}',
           '.block.sender,.block.date,.block.front,.block.signature{break-after:avoid}',
-          '.memo-reference-row{display:grid;grid-template-columns:1fr 1fr;break-inside:avoid}',
-          `.block.title :is(h1,h2,h3){font-size:${layout.id === 'memo' ? 30 : 18}pt}`,
+          '.memo-reference-row{display:grid;grid-template-columns:1fr 1fr;break-inside:avoid}.memo-label{font-size:20pt}',
+          `.block.title :is(h1,h2,h3){font-size:${layout.id === 'memo' ? 29 : 18}pt}`,
         ]
       : []),
     ...(layout.garudaHeightCm
@@ -248,7 +248,7 @@ export function pdfHtml(
           '@page:first{margin-top:1.5cm}',
           '.letterhead{break-inside:avoid;margin-bottom:.5cm}.letterhead.letter{text-align:center;margin-left:-1cm}',
           '.letterhead.memo{position:relative;min-height:1.5cm;display:flex;align-items:flex-end;justify-content:center}',
-          '.letterhead.memo img{position:absolute;left:0;bottom:0}.letterhead.memo :is(h1,h2,h3){font-size:30pt;margin:0 2cm;line-height:1.1}',
+          '.letterhead.memo img{position:absolute;left:0;bottom:0}.letterhead.memo :is(h1,h2,h3){font-size:29pt;margin:0 2cm;line-height:1.1}',
         ]
       : []),
   ].join('');
@@ -286,6 +286,7 @@ export function pdfHtml(
   const title =
     layout.id === 'memo' && layout.garudaHeightCm && ['heading', 'title'].includes(blocks[0]?.type || '') ? blocks[0] : undefined;
   const roles = documentLayoutRoles(document, layout.id);
+  const spacing = sarabanSpacing(document, layout.id);
   const tor = layout.id === 'tor' ? torPdfFurniture(document, layout.font, presentation) : undefined;
   const torStyle = tor ? torPreset(presentation) : undefined;
   const content = layout.id
@@ -308,7 +309,17 @@ export function pdfHtml(
             : role === 'memo-reference'
               ? memoReferenceHtml(node)
               : richHtml(node, images);
-          return `<div class="block ${role}${tor && node.type === 'heading' && role !== 'title' ? ' section-heading' : ''}" style="${css}${numbered ? '' : indent}">${inner}</div>`;
+          const labelled =
+            layout.id === 'memo' && (role === 'memo-reference' || role === 'field')
+              ? inner
+                  .replace(
+                    /^(<p[^>]*>(?:<span class="memo-number">)?)(ส่วนราชการ|ส่วนงาน|ที่|เรื่อง)(?=[ \t])/,
+                    '$1<b class="memo-label">$2</b>',
+                  )
+                  .replace(/(<span class="memo-date">)(วันที่)(?=[ \t])/, '$1<b class="memo-label">$2</b>')
+              : inner;
+          const before = spacing[index] ? `margin-top:${spacing[index]}pt;` : '';
+          return `<div class="block ${role}${tor && node.type === 'heading' && role !== 'title' ? ' section-heading' : ''}" style="${css}${numbered ? '' : indent}${before}">${labelled}</div>`;
         })
         .join('')
     : richHtml(document, images);
@@ -331,15 +342,42 @@ export function pdfHtml(
     th{background:#f2f2f2}th,td{border-color:#777}
   `
     : '';
-  return `<!doctype html><html lang="th"><meta charset="utf-8"><style>${style}${torCss}</style><body>${letterhead}${content}</body></html>`;
+  // Continuation pages carry "- ๒ -" centred at the top; page 1 has none (the saraban print explanation).
+  const sarabanCss =
+    layout.id && !tor && !presentation.invitation && presentation.pageNumber === 'saraban'
+      ? `@page{@top-center{content:"- " counter(page, thai) " -";font-family:"${layout.font}","STeP Fallback",sans-serif;font-size:16pt;vertical-align:bottom;padding-bottom:.4cm}}@page:first{@top-center{content:none}}`
+      : '';
+  return `<!doctype html><html lang="th"><meta charset="utf-8"><style>${style}${torCss}${sarabanCss}</style><body>${letterhead}${content}</body></html>`;
 }
 
-function runs(node: DraftNode, size: number, bold = false, font = OFFICIAL_FONT, dateTab = false, thaiBreaks = false): ParagraphChild[] {
+/** Memo header labels print bold at 20 pt, as the saraban print explanation sets them; values keep the body size. */
+const MEMO_LABEL = /^(?:ส่วน\u200b?ราชการ|ส่วน\u200b?งาน|ที่|เรื่อง)(?=[ \t])/;
+const MEMO_LABEL_SIZE = 40;
+/** A spaced Thai phone number ("๐ ๕๓๒๐ ๐๐๐๐", "0 5320 0000") stays on one line in the exported copy only. */
+const keepPhone = (text: string) => text.replace(/(^|[^0-9๐-๙])([0๐]) ([0-9๐-๙]{4}) ([0-9๐-๙]{4})(?![0-9๐-๙])/g, '$1$2\u00a0$3\u00a0$4');
+
+function runs(
+  node: DraftNode,
+  size: number,
+  bold = false,
+  font = OFFICIAL_FONT,
+  dateTab = false,
+  thaiBreaks = false,
+  memoLabels = false,
+): ParagraphChild[] {
   if (thaiBreaks) node = withThaiBreaks(node);
+  const plain = documentText(node);
   // Locate the label across rich-text runs, rather than matching a word inside its placeholder/value.
-  const date = dateTab ? /[ \t]+(วันที่[ \t])/.exec(documentText(node).split(/\r\n?|\n/)[0]) : null;
+  // Thai line-break opportunities (U+200B) may sit inside the label, so the label tolerates them.
+  const date = dateTab ? /[ \t]+(วัน\u200b?ที่[ \t])/.exec(plain.split(/\r\n?|\n/)[0]) : null;
   const spaceStart = date?.index ?? -1;
   const labelStart = date ? date.index + date[0].length - date[1].length : -1;
+  const labels: [number, number][] = [];
+  if (memoLabels) {
+    const lead = MEMO_LABEL.exec(plain);
+    if (lead) labels.push([0, lead[0].length]);
+    if (date) labels.push([labelStart, labelStart + date[1].trimEnd().length]);
+  }
   let offset = 0;
   return (node.content || []).flatMap(child => {
     if (child.type === 'hardBreak') {
@@ -356,8 +394,8 @@ function runs(node: DraftNode, size: number, bold = false, font = OFFICIAL_FONT,
       italicsComplexScript: child.marks?.some(m => m.type === 'italic'),
       language: THAI_DOCUMENT_LANGUAGE,
     };
-    const text = child.text || '';
-    const textRuns = (value: string): ParagraphChild[] =>
+    const label = { bold: true, boldComplexScript: true, size: MEMO_LABEL_SIZE, sizeComplexScript: MEMO_LABEL_SIZE };
+    const pieces = (value: string, at: number): ParagraphChild[] =>
       value
         .split(/(\t|\r\n?|\n)/)
         .filter(Boolean)
@@ -365,19 +403,32 @@ function runs(node: DraftNode, size: number, bold = false, font = OFFICIAL_FONT,
           part =>
             new TextRun({
               ...style,
-              ...(part === '\t' ? { children: [new Tab()] } : /^[\r\n]/.test(part) ? { break: 1 } : { text: part }),
+              ...(part === '\t' ? { children: [new Tab()] } : /^[\r\n]/.test(part) ? { break: 1 } : { text: keepPhone(part) }),
+              ...(labels.some(([from, to]) => at >= from && at < to) && !/^[\t\r\n]/.test(part) ? label : {}),
             }),
         );
+    // Split a run at label edges so only the label takes the label style.
+    const textRuns = (value: string, at: number): ParagraphChild[] => {
+      const cuts = [...new Set(labels.flat().filter(edge => edge > at && edge < at + value.length))].sort((a, b) => a - b);
+      const parts: ParagraphChild[] = [];
+      let from = at;
+      for (const edge of [...cuts, at + value.length]) {
+        if (edge > from) parts.push(...pieces(value.slice(from - at, edge - at), from));
+        from = edge;
+      }
+      return parts;
+    };
+    const text = child.text || '';
     const start = offset;
     offset += text.length;
     // Layout only: retain all field characters, including unknown dates and leading zeroes.
     return date && start < labelStart && offset > spaceStart
       ? [
-          ...textRuns(text.slice(0, Math.max(0, spaceStart - start))),
+          ...textRuns(text.slice(0, Math.max(0, spaceStart - start)), start),
           ...(start <= spaceStart ? [new TextRun({ ...style, children: [new Tab()] })] : []),
-          ...textRuns(text.slice(Math.max(0, labelStart - start))),
+          ...textRuns(text.slice(Math.max(0, labelStart - start)), Math.max(start, labelStart)),
         ]
-      : textRuns(text);
+      : textRuns(text, start);
   });
 }
 
@@ -443,6 +494,7 @@ function docxBlocks(
   depth = 0,
   firstPageSpace = false,
   breakBefore = false,
+  extraBefore = 0,
 ): (Paragraph | Table)[] {
   if (node.type === 'pageBreak') return [new Paragraph({ pageBreakBefore: true, spacing: { line: 20, lineRule: LineRuleType.EXACT } })];
   if (node.type === 'image') {
@@ -492,7 +544,7 @@ function docxBlocks(
     const points = wordPreset(layout).points;
     const size = title
       ? layout.id === 'memo'
-        ? 60
+        ? 58
         : layout.id === 'tor'
           ? (points + TOR_LAYOUT.titleExtra) * 2
           : 44
@@ -553,13 +605,15 @@ function docxBlocks(
             : {}),
           before: firstPageSpace
             ? Math.round(0.5 * CM)
-            : layout.id === 'tor' && title
-              ? 0
-              : node.type === 'heading' && layout.id === 'tor'
-                ? 160
-                : title || node.type === 'heading'
-                  ? 120
-                  : 0,
+            : extraBefore
+              ? Math.round(extraBefore * 20)
+              : layout.id === 'tor' && title
+                ? 0
+                : node.type === 'heading' && layout.id === 'tor'
+                  ? 160
+                  : title || node.type === 'heading'
+                    ? 120
+                    : 0,
           after:
             layout.id === 'tor' && title
               ? 120
@@ -584,6 +638,7 @@ function docxBlocks(
               layout.font,
               role === 'memo-reference',
               layout.presentation.thaiBreaks,
+              layout.id === 'memo' && (role === 'memo-reference' || role === 'field'),
             ),
       }),
     ];
@@ -791,11 +846,14 @@ function docx(document: DraftNode, layout: WordLayout) {
     paragraph: { spacing: { before: 120, after: 60 }, keepNext: true, keepLines: true },
   });
   const roles = documentLayoutRoles(document, layout.id);
+  const spacing = sarabanSpacing(document, layout.id);
   const blocks = document.content || [];
   const title =
     layout.id === 'memo' && layout.garudaHeightCm && ['heading', 'title'].includes(blocks[0]?.type || '') ? blocks[0] : undefined;
   const appearance = layout.presentation;
-  const pageAt = (position: 'header' | 'footer') => appearance.pageNumber !== 'none' && appearance.pageNumberPosition.startsWith(position);
+  const saraban = appearance.pageNumber === 'saraban' && !appearance.invitation;
+  const pageAt = (position: 'header' | 'footer') =>
+    saraban ? position === 'header' : appearance.pageNumber !== 'none' && appearance.pageNumberPosition.startsWith(position);
   const textLine = (text: string) =>
     new Paragraph({
       spacing: { before: 0, after: 0 },
@@ -810,19 +868,23 @@ function docx(document: DraftNode, layout: WordLayout) {
     });
   const numberLine = () =>
     new Paragraph({
-      alignment: appearance.pageNumberPosition === 'footer-center' ? AlignmentType.CENTER : AlignmentType.RIGHT,
+      alignment: saraban || appearance.pageNumberPosition === 'footer-center' ? AlignmentType.CENTER : AlignmentType.RIGHT,
       spacing: { before: 0, after: 0 },
       children: [
         new TextRun({
           font: layout.font,
-          size: layout.id === 'tor' ? 24 : 28,
-          sizeComplexScript: layout.id === 'tor' ? 24 : 28,
+          size: layout.id === 'tor' ? 24 : saraban ? preset.points * 2 : 28,
+          sizeComplexScript: layout.id === 'tor' ? 24 : saraban ? preset.points * 2 : 28,
           language: THAI_DOCUMENT_LANGUAGE,
           bold: false,
           boldComplexScript: false,
           italics: false,
           italicsComplexScript: false,
-          children: appearance.pageNumber === 'thai' ? ['หน้า ', PageNumber.CURRENT] : [PageNumber.CURRENT, ' / ', PageNumber.TOTAL_PAGES],
+          children: saraban
+            ? ['- ', PageNumber.CURRENT, ' -']
+            : appearance.pageNumber === 'thai'
+              ? ['หน้า ', PageNumber.CURRENT]
+              : [PageNumber.CURRENT, ' / ', PageNumber.TOTAL_PAGES],
         }),
       ],
     });
@@ -856,7 +918,9 @@ function docx(document: DraftNode, layout: WordLayout) {
     });
   const hasHeader = layout.id === 'tor' || Boolean(appearance.headerText || pageAt('header'));
   const hasFooter = layout.id === 'tor' || Boolean(appearance.footerText || pageAt('footer'));
-  const firstHeader =
+  // Page 1 never carries the saraban page number; with a Garuda it carries the emblem instead.
+  const firstHeaderText = () => (appearance.headerText ? [textLine(appearance.headerText)] : []);
+  const garudaHeader =
     layout.garudaHeightCm && !layout.presentation.invitation
       ? new Header({
           children: [
@@ -873,14 +937,15 @@ function docx(document: DraftNode, layout: WordLayout) {
                   altText: { name: 'Garuda', title: 'ตราครุฑ', description: 'Garuda' },
                 }),
                 ...(title
-                  ? [new TextRun({ children: [new Tab()] }), ...runs(title, 60, true, layout.font, false, appearance.thaiBreaks)]
+                  ? [new TextRun({ children: [new Tab()] }), ...runs(title, 58, true, layout.font, false, appearance.thaiBreaks)]
                   : []),
               ],
             }),
-            ...headerLines(),
+            ...(saraban ? firstHeaderText() : headerLines()),
           ],
         })
       : undefined;
+  const firstHeader = garudaHeader || (saraban ? new Header({ children: firstHeaderText() }) : undefined);
   const tocBlocks = appearance.toc
     ? [
         new Paragraph({
@@ -901,7 +966,18 @@ function docx(document: DraftNode, layout: WordLayout) {
         breakBefore = true;
         continue;
       }
-      body.push(...docxBlocks(node, layout, roles[index], undefined, 0, Boolean(firstHeader && index === (title ? 1 : 0)), breakBefore));
+      body.push(
+        ...docxBlocks(
+          node,
+          layout,
+          roles[index],
+          undefined,
+          0,
+          Boolean(garudaHeader && index === (title ? 1 : 0)),
+          breakBefore,
+          spacing[index],
+        ),
+      );
       breakBefore = false;
     }
   if (breakBefore) body.push(...docxBlocks({ type: 'pageBreak' }, layout));
@@ -965,12 +1041,14 @@ function docx(document: DraftNode, layout: WordLayout) {
               bottom: Math.round(preset.margins.bottom * CM),
               left: Math.round(preset.margins.left * CM),
               right: Math.round(preset.margins.right * CM),
-              ...(firstHeader || hasHeader ? { header: Math.round((firstHeader ? 1.5 : 1) * CM) } : {}),
+              ...(firstHeader || hasHeader ? { header: Math.round((garudaHeader ? 1.5 : 1) * CM) } : {}),
               ...(layout.id === 'tor'
                 ? { header: Math.round(TOR_LAYOUT.headerCm * CM), footer: Math.round(TOR_LAYOUT.footerCm * CM) }
                 : {}),
             },
-            pageNumbers: { formatType: appearance.pageNumber === 'thai' ? NumberFormat.THAI_NUMBERS : NumberFormat.DECIMAL },
+            pageNumbers: {
+              formatType: saraban || appearance.pageNumber === 'thai' ? NumberFormat.THAI_NUMBERS : NumberFormat.DECIMAL,
+            },
           },
         },
         ...(firstHeader || hasHeader
@@ -1287,7 +1365,7 @@ export async function exportDocument(
       (presentation.toc ||
         presentation.headerText ||
         presentation.footerText ||
-        presentation.pageNumber !== (options.documentTool ? 'thai' : 'none') ||
+        !(options.documentTool ? ['thai', 'saraban'] : ['none']).includes(presentation.pageNumber) ||
         presentation.pageNumberPosition !== 'footer-center')
     )
       throw new Error('DOCUMENT_TEMPLATE_LAYOUT_LOCKED');
