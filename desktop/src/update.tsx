@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowDownToLine, LoaderCircle, RefreshCw } from './icons';
+import { ArrowDownToLine, CircleAlert, CircleCheck, LoaderCircle, RefreshCw } from './icons';
 import type { DesktopAPI, UpdateState } from './types';
 import { t } from './i18n';
 
@@ -78,25 +78,26 @@ export function UpdateCard({ api, update }: { api: DesktopAPI; update: UpdateSta
 }
 
 /**
- * The app version under the person's name, with whether a newer one is out. Clicking it checks for updates, or
- * installs a downloaded one, so nobody has to wonder whether they are on the latest version.
+ * The app version under the person's name: one icon for the update state, then the number, so it stays on one line in
+ * a narrow task list. The state is spelled out in the tooltip and for screen readers. Clicking it checks for updates,
+ * or installs a downloaded one, so nobody has to wonder whether they are on the latest version.
  */
 export function VersionLine({ api, update, version }: { api: DesktopAPI; update: UpdateState | null; version: string }) {
   const current = update?.current || version;
   if (!current) return null;
   const status = update?.status;
   const available = status === 'ready' || status === 'manual' || status === 'downloading';
-  const note = available
-    ? t('มีอัปเดต {0}', update?.version || '')
+  const [Icon, note] = available
+    ? [ArrowDownToLine, t('มีอัปเดต {0}', update?.version || '')]
     : status === 'checking'
-      ? t('กำลังตรวจอัปเดต…')
+      ? [LoaderCircle, t('กำลังตรวจอัปเดต…')]
       : status === 'none'
-        ? t('เป็นเวอร์ชันล่าสุด')
+        ? [CircleCheck, t('เป็นเวอร์ชันล่าสุด')]
         : status === 'error'
-          ? t('ตรวจอัปเดตไม่สำเร็จ')
+          ? [CircleAlert, t('ตรวจอัปเดตไม่สำเร็จ')]
           : status === 'disabled' || !update
-            ? ''
-            : t('ตรวจอัปเดต');
+            ? [null, '']
+            : [RefreshCw, t('ตรวจอัปเดต')];
   // A version/status click retries in the app. Only the explicit download
   // button opens the manual fallback page.
   const action = status === 'ready' ? 'updateInstall' : 'updateCheck';
@@ -105,11 +106,12 @@ export function VersionLine({ api, update, version }: { api: DesktopAPI; update:
       type="button"
       className={available ? 'version-line available' : 'version-line'}
       disabled={status === 'checking' || status === 'downloading' || status === 'disabled'}
-      title={available ? t('มีเวอร์ชันใหม่ {0}', update?.version || '') : t('ตรวจหาเวอร์ชันใหม่')}
+      title={note || t('ตรวจหาเวอร์ชันใหม่')}
+      aria-label={note ? `v${current} · ${note}` : undefined}
       onClick={() => void api.call(action).catch(() => {})}
     >
+      {Icon && <Icon size={13} className={status === 'checking' ? 'spin' : undefined} aria-hidden="true" />}
       <span>v{current}</span>
-      {note && <span>· {note}</span>}
     </button>
   );
 }
