@@ -13,6 +13,7 @@
   --hover: rgba(35, 31, 32, 0.05);
   --text: #231f20;
   --muted: #645e5f;
+  --placeholder: #6e696a;
   --accent: #ffc709;
   --on-accent: #231f20;
   --accent-ink: #7a5b00;
@@ -58,6 +59,7 @@
   --hover: rgba(244, 241, 234, 0.06);
   --text: #f4f1ea;
   --muted: #ada6a0;
+  --placeholder: #948e89;
   --accent: #ffc709;
   --on-accent: #231f20;
   --accent-ink: #ffc709;
@@ -96,6 +98,7 @@
     --hover: rgba(244, 241, 234, 0.06);
     --text: #f4f1ea;
     --muted: #ada6a0;
+    --placeholder: #948e89;
     --accent: #ffc709;
     --on-accent: #231f20;
     --accent-ink: #ffc709;
