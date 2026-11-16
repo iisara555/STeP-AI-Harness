@@ -13,6 +13,7 @@ import {
   googleSignInUrl,
   installAntigravityCli,
   openAntigravityBrowserSignIn,
+  repairManagedAgy,
 } from '../electron/antigravity-install';
 
 test('Antigravity CLI builds are pinned for Windows and macOS', () => {
@@ -452,4 +453,49 @@ test('stops waiting when only the real profile sees the sign-in', async () => {
     /ANTIGRAVITY_SIGNIN_HIDDEN/,
   );
   assert.equal(profileChecks, 2, 'checked twice, every third poll');
+});
+
+test("puts back STeP's own agy when it updated itself to an untested version, and only that copy", async () => {
+  // A stand-in that answers --version with whatever version.txt beside it says, and counts how often it was started.
+  const dir = await mkdtemp(join(tmpdir(), 'step-agy-repair-'));
+  const managed = join(dir, 'agy.cjs');
+  const script = (version: string) =>
+    `const fs = require('fs'), path = require('path');
+fs.appendFileSync(path.join(__dirname, 'starts.txt'), 'x');
+if (process.argv.includes('--version')) { console.log(${JSON.stringify(version)}); process.exit(0); }
+process.exit(1);`;
+  const starts = async () => (existsSync(join(dir, 'starts.txt')) ? (await readFile(join(dir, 'starts.txt'), 'utf8')).length : 0);
+  let reinstalls = 0;
+  const reinstall = async () => {
+    reinstalls++;
+    await writeFile(managed, script('1.3.2'));
+  };
+  const check = join(dir, 'check');
+
+  // The pinned copy replaced itself with a newer release (1.5.5 on the owner's PC): it is reinstalled before the run.
+  await writeFile(managed, script('1.5.5'));
+  assert.equal(await repairManagedAgy(managed, managed, check, reinstall), true);
+  assert.equal(reinstalls, 1);
+  // The reinstalled copy is current; once checked, later runs do not start it again just to ask its version.
+  assert.equal(await repairManagedAgy(managed, managed, check, reinstall), false);
+  const afterCheck = await starts();
+  assert.equal(await repairManagedAgy(managed, managed, check, reinstall), false);
+  assert.equal(await starts(), afterCheck, 'a checked file is not started again');
+  assert.equal(reinstalls, 1);
+
+  // An agy the employee installed (or a custom runtime) is never replaced, and no managed copy means nothing to repair.
+  const own = join(dir, 'own-agy.cjs');
+  await writeFile(own, script('1.5.5'));
+  assert.equal(await repairManagedAgy(managed, own, check, reinstall), false);
+  assert.equal(await repairManagedAgy(undefined, own, check, reinstall), false);
+  assert.equal(reinstalls, 1);
+
+  // A reinstall that fails is reported to the caller, which leaves the run's own version check to explain it.
+  await writeFile(managed, script('1.4.12'));
+  await assert.rejects(
+    repairManagedAgy(managed, managed, check, async () => {
+      throw new Error('ANTIGRAVITY_DOWNLOAD_FAILED');
+    }),
+    /ANTIGRAVITY_DOWNLOAD_FAILED/,
+  );
 });
