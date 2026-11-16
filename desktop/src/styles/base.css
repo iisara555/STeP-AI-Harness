@@ -45,6 +45,12 @@ textarea {
   padding: var(--pad-control);
   min-width: 0;
 }
+/* Chromium's default hint grey (#757575) is 3.8:1 on the dark surface; this token keeps 4.5:1 in both themes while
+   staying quieter than real text, so an empty field never reads as filled. */
+::placeholder {
+  color: var(--placeholder);
+  opacity: 1;
+}
 /* The native option list does not inherit a transparent select's background: on Windows dark mode it opened white
    behind light text. Give the list the panel colours explicitly so every picker stays readable in both themes. */
 option,

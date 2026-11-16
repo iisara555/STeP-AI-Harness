@@ -362,9 +362,9 @@
   flex: 1 1 auto;
   scroll-padding-top: 72px;
   scroll-padding-bottom: var(--settings-footer-height, 116px);
-  max-width: 1120px;
-  padding: var(--space-6) var(--space-8) var(--space-7);
-  padding-top: var(--space-4);
+  /* Like the tool pages: content starts at the page title's left edge and is capped at 1100px by padding, so the
+     scroller (and its scrollbar) spans the whole pane instead of floating inside it. */
+  padding: var(--space-4) max(28px, calc(100% - 1128px)) var(--space-7) var(--space-7);
 }
 .settings-content .settings-tabs {
   margin-top: var(--space-1-5);

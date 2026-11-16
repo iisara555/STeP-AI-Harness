@@ -543,3 +543,7 @@ nav button:disabled {
   margin-left: 0;
   margin-right: 0;
 }
+/* The form uses the page's 1100px cap like the type cards above it, so their right edges line up. */
+.main-pane .document-form {
+  max-width: none;
+}
