@@ -872,8 +872,9 @@ export class WorkService {
         // A source-reference question may keep the reviewed source/history, but it
         // is still routed from the latest request. Only an edit/resume request, or a
         // message that only points at a file, keeps the prior route.
-        // A chat turn beside a document answers on its own route but keeps the document, its template and checks.
-        const keepDocument = chat && besideDocument;
+        // A chat turn beside a document answers on its own route but keeps the document, its template and checks, also
+        // when the person picked a Skill for it: chat makes no draft, so the document's type must not be lost.
+        const keepDocument = chat && !selectedDocument && Boolean(documentTool(session.documentTool));
         if (keepDocument && !session.documentTask)
           session.documentTask = {
             originalQuery: session.originalQuery,

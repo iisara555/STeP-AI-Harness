@@ -713,6 +713,11 @@ test('revisions, retries and chat turns beside the document retain the selected 
   assert.equal(store.session(session.id).documentTool, 'project');
   assert.deepEqual(store.session(session.id).documentTemplate, template);
   assert.ok(!seen.at(-1)?.includes('<document_tool_contract>'));
+  // A chat turn with a picked Skill makes no draft either, so the document keeps its type for the next edit.
+  await service.run(session.id, 'ช่วยเกลาประโยคนี้ให้กระชับ', '', true, 'step-writing', 'chat');
+  assert.equal(store.session(session.id).documentTool, 'project');
+  assert.deepEqual(store.session(session.id).documentTemplate, template);
+  assert.equal(store.session(session.id).documentTask?.skill, 'project-plan');
   store.close();
 });
 
