@@ -91,7 +91,8 @@ test('a tool loop that never finishes still stops at three step budgets and logs
 test('a reading loop that reaches the last step budget is asked to answer, and its answer is delivered', async () => {
   // The same never-ending reader as above, but a model that follows the final-turn notice: the person gets an answer
   // written from what was read, not RUN_TIMEOUT and nothing.
-  const f = fixture(70, Infinity, 100, true);
+  // Wider margins than the test above: Windows timers run late, and the final turn must end inside the last budget.
+  const f = fixture(40, Infinity, 150, true);
   try {
     await f.service.run(f.session.id, 'Synthetic request', '', true, undefined, 'chat');
     const session = f.store.session(f.session.id);

@@ -24,7 +24,8 @@ import type { LoopRequest } from '../src/tools';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const skillDir = join(root, 'skills', 'pm', 'tor-government-writing');
-const read = (path: string) => readFileSync(path, 'utf8');
+// Windows checkouts may turn line ends into CRLF; the replay measures the same text on every platform.
+const read = (path: string) => readFileSync(path, 'utf8').replace(/\r\n/g, '\n');
 
 type Doc = { name: string; request: LoopRequest; text: string; maxPages: number };
 const skill = (name: string, resource?: string): Doc => ({
