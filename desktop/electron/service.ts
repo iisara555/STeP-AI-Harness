@@ -65,6 +65,8 @@ export { fence, section } from './prompt';
 export { RETRYABLE_CODES, RETRY_DELAYS_MS } from './retry';
 
 export const STEP_TIMEOUT_MS = 600_000;
+/** A step whose model turns keep completing may run this many step budgets in all (30 minutes by default). */
+export const STEP_PROGRESS_BUDGETS = 3;
 export const MAX_PARALLEL_RUNS = 3;
 // Failures that usually pass on their own: a dropped connection, a busy service, a runtime that exited.
 const TRACE_LIMIT = 20;
@@ -911,14 +913,21 @@ export class WorkService {
     session.status = 'running';
     this.store.save(session);
     // Each model step gets its own budget; high reasoning levels can take several minutes per step.
+    // A model turn that completes is progress, so a long tool loop (an xhigh model reading Skills and references
+    // turn after turn) restarts the budget for its next turn, up to STEP_PROGRESS_BUDGETS budgets per step.
     let timedOut = false,
-      timeout = setTimeout(() => {}, 0);
-    const arm = () => {
+      timeout = setTimeout(() => {}, 0),
+      stepLimit = Date.now() + STEP_PROGRESS_BUDGETS * this.stepTimeoutMs;
+    const arm = (ms = this.stepTimeoutMs) => {
       clearTimeout(timeout);
       timeout = setTimeout(() => {
         timedOut = true;
         controller.abort();
-      }, this.stepTimeoutMs);
+      }, ms);
+    };
+    const progressed = () => {
+      const left = stepLimit - Date.now();
+      if (left > 0 && !controller.signal.aborted) arm(Math.min(this.stepTimeoutMs, left));
     };
     arm();
     const status = (message: string) => this.emit({ sessionId: id, type: 'status', text: message });
@@ -1350,6 +1359,7 @@ export class WorkService {
           break;
         }
         this.emit({ sessionId: id, type: 'step', index, state: 'running' });
+        stepLimit = Date.now() + STEP_PROGRESS_BUDGETS * this.stepTimeoutMs;
         arm();
         const stepStarted = Date.now();
         const skillId = step.skill || step.skillId || contract.skill;
@@ -1732,6 +1742,7 @@ export class WorkService {
               if (search && (searchFailed || !completed || !answer.trim())) throw new Error('WEB_SEARCH_UNAVAILABLE');
               if (partialTor && repeatedTorContinuation(partialTor, answer)) throw new Error('DOCUMENT_OUTPUT_INVALID');
               call.outcome = 'completed';
+              if (!search && !analysisImage) progressed();
               return partialTor + answer;
             } catch (error) {
               call.outcome = 'error';
@@ -2154,7 +2165,7 @@ export class WorkService {
       this.store.save(session);
       // The scrubbed runtime messages go to the host's diagnostics only, never into the conversation.
       if (session.status === 'error')
-        this.emit({ sessionId: id, type: 'failed', text: code, detail: ((error as any)?.detail || []).slice(-8) });
+        this.emit({ sessionId: id, type: 'failed', text: shown, detail: ((error as any)?.detail || []).slice(-8) });
     } finally {
       clearTimeout(timeout);
       clearInterval(heartbeat);
