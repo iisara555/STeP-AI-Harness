@@ -1032,6 +1032,17 @@ export const en: Record<string, string> = {
     'An attached agency form is checked against the MIS quality register for its code and revision.',
   'ตรวจใบกำกับภาษี (เลขผู้เสียภาษี เลขที่ และ VAT) และเตือนเรื่องหัก ณ ที่จ่ายในใบสำคัญจ่าย':
     'Tax invoices are checked for the tax ID, number and VAT, and payment vouchers flag withholding to review.',
+  'ความคิดของ AI อยู่เหนือคำตอบ กดดูย้อนหลังได้ ไม่หายไปเมื่อตอบเสร็จ':
+    "The AI's thinking stays above its answer and can be opened again after it finishes.",
+  'หน้าเชื่อมต่อ AI กระชับขึ้น มีโลโก้ผู้ให้บริการและไอคอนบอกความสามารถ':
+    'The AI connection page is more compact, with provider logos and capability icons.',
+  'บัญชี Claude เลือก Fable 5.2 และรุ่น 5.5 ได้': 'Claude accounts can choose Fable 5.2 and the 5.5 models.',
+  'ขอเอกสารใหม่ในแชตเดิม งานไม่แตกเป็นงานใหม่ ร่างเดิมอยู่ในประวัติเวอร์ชัน':
+    'Asking for a new document in a chat keeps the same task; the earlier draft stays in version history.',
+  'ร่าง TOR ที่ AI คิดนานไม่ถูกตัดที่ 10 นาที และ "ขอ TOR" ใช้ Skill TOR ทันที':
+    'Long TOR drafts are not cut off at 10 minutes while the AI keeps working, and asking for a TOR uses the TOR Skill.',
+  'Skill ที่นำเข้าแล้วไม่ผ่านมาตรฐาน ให้ AI แก้ให้ได้ และลบ Skill ของฉันได้':
+    'Imported Skills that fail the standard can be fixed by the AI, and your own Skills can be deleted.',
   'ร่าง TOR หรือเอกสารยาวที่ AI ส่งมาผิดรูปแบบ แอปให้ AI จัดใหม่ให้เองหนึ่งครั้งก่อนแจ้งข้อผิดพลาด':
     'When the AI returns a TOR or other long draft in the wrong shape, the app asks it to fix the layout once before showing an error.',
   'แอปเปิดเร็วขึ้น และลื่นขึ้นระหว่างที่ AI พิมพ์คำตอบยาว': 'The app starts faster and stays smooth while the AI writes a long answer.',
