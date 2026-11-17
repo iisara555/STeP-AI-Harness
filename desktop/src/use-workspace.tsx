@@ -20,7 +20,7 @@ import { type PaletteItem, matchesSession } from './ui';
 import { RELEASE_NOTES, type ReleaseNote, compareVersions, unseenNotes } from './whats-new';
 import { TASK_SEEN_KEY, initialSeen, needsYouCount, taskAlert } from './task-alerts';
 import { type ToolRequest, type ToolTab } from './tools';
-import { setHeartbeatAt, setReasoning, setStream, tickLiveClock } from './live-run';
+import { resetThinking, setHeartbeatAt, setStream, think, tickLiveClock } from './live-run';
 import type { VaultPrompt } from './vault-prompt';
 import { commandForKey, commandPalette } from './commands';
 import { documentText, plainDocument as toDoc } from './draft';
@@ -31,7 +31,6 @@ import { composerCommand, typedSkill } from './composer-command';
 import {
   type ConsentAsk,
   type RunOptions,
-  REASONING_LIMIT,
   STREAM_LIMIT,
   appendStream,
   composerRequest,
@@ -468,7 +467,7 @@ export function useWorkspace() {
           }
           if (event.type === 'delta') setStream(s => appendStream(s, event.text || '', STREAM_LIMIT));
           if (event.type === 'discard' && event.count) setStream(s => discardStream(s, event.count!));
-          if (event.type === 'reasoning') setReasoning(s => appendStream(s, event.text || '', REASONING_LIMIT));
+          think(event);
           if (event.type === 'plan') setPlan((event.plan || []).map(step => ({ ...step, state: 'pending' })));
           if (event.type === 'step' && event.index !== undefined)
             setPlan(steps => steps.map((step, i) => (i === event.index ? { ...step, state: event.state || step.state } : step)));
@@ -476,13 +475,7 @@ export function useWorkspace() {
           // turn stays on screen while the assistant works (as in Claude, ChatGPT and Cursor), each turn after the last.
           if (event.type === 'status') {
             setProgress(errorText[event.text || ''] || event.text || '');
-            if (sessionMode.current === 'draft') {
-              setStream('');
-              setReasoning('');
-            } else {
-              setStream(turnBreak);
-              setReasoning(turnBreak);
-            }
+            setStream(sessionMode.current === 'draft' ? '' : turnBreak);
           }
         }
         if (event.type === 'changed') {
@@ -493,7 +486,7 @@ export function useWorkspace() {
           if (event.sessionId === currentId.current) {
             setRunning(false);
             setStream('');
-            setReasoning('');
+            resetThinking();
             setPlan([]);
             setStartedAt(0);
             // The authority notice stays visible after the run; main sends it in the chosen language.
@@ -665,6 +658,7 @@ export function useWorkspace() {
     setPendingSource('');
     discardFiles();
     setStream('');
+    resetThinking();
     setProgress('');
     setDirty(false);
     dirtyRef.current = false;
@@ -907,7 +901,7 @@ export function useWorkspace() {
       currentId.current = id;
       setRunning(true);
       setStream('');
-      setReasoning('');
+      resetThinking();
       setProgress(t('กำลังส่งข้อความ'));
       setStartedAt(Date.now());
       setHeartbeatAt(Date.now());

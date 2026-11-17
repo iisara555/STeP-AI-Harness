@@ -47,6 +47,7 @@ import { selfContainedText } from './text-intent';
 import { selectDiscovery } from './discovery';
 import { highConfidenceSkill, prepareSkillSelection, shouldRunModelSkillSelection } from './skill-selection';
 import { parseDocumentOutput } from '../src/document-output';
+import { ThinkingLog } from '../src/thinking';
 import { missingTorSections } from './tor-coverage';
 import { GOOGLE_CHANGE_LIMIT, type GoogleChange } from '../src/google-changes';
 import { markdownDocument, documentText } from '../src/draft';
@@ -921,8 +922,18 @@ export class WorkService {
       }, this.stepTimeoutMs);
     };
     arm();
-    const status = (message: string) => this.emit({ sessionId: id, type: 'status', text: message });
-    const activity = (message: string) => this.emit({ sessionId: id, type: 'activity', text: message });
+    // Each stage and the model's reasoning stay with the answer (src/thinking.ts). A quiet update is a routine wait
+    // ("preparing the answer") that says nothing about how the answer was reached, so it is not kept as a stage.
+    const thinking = new ThinkingLog();
+    const status = (message: string, quiet = false) => {
+      if (quiet) thinking.turn();
+      else thinking.step(message);
+      this.emit({ sessionId: id, type: 'status', text: message, ...(quiet ? { quiet } : {}) });
+    };
+    const activity = (message: string, quiet = false) => {
+      if (!quiet) thinking.step(message);
+      this.emit({ sessionId: id, type: 'activity', text: message, ...(quiet ? { quiet } : {}) });
+    };
     // A host heartbeat means the app is responsive, not that the provider made progress.
     const heartbeat = setInterval(() => this.emit({ sessionId: id, type: 'heartbeat' }), 3000);
     const checkAbort = () => {
@@ -954,7 +965,7 @@ export class WorkService {
     const googleChanges: GoogleChange[] = [];
     const artifacts = new Map<string, ArtifactRef>();
     try {
-      status(tm('กำลังเตรียมงาน'));
+      status(tm('กำลังเตรียมงาน'), true);
       let routed = await this.harness.route(session.originalQuery, {
         team: session.team,
         workspaceDir,
@@ -1401,7 +1412,8 @@ export class WorkService {
           if (skillBundle?.preloadedText) selectedInstructions.push(skillBundle.preloadedText);
         }
         sources = [...new Set([...sources, ...paths, ...known.map(k => k.path)])];
-        status(step.description || tm('กำลังจัดทำร่าง'));
+        // Only a Playbook's own steps are stages worth keeping; the single default step is a routine "answering" line.
+        status(step.description || tm('กำลังจัดทำร่าง'), !step.description || !(contract.mode === 'PLAYBOOK' && contract.steps?.length));
         // Standing rules and registries precede task-specific instructions and preferences.
         const toolsEnabled = Boolean(
           !target && !options.isolatedQuestion && !textOnly && !options.draftOnly && this.harness.tools && this.harness.toolLoop?.(),
@@ -1621,11 +1633,8 @@ export class WorkService {
         };
         prompt = await compactPrompt(prompt);
         // Name the STeP document the answer reads when keyword search is sure of it, so the wait is not a blank line (S5).
-        activity(
-          (given[0]?.score || 0) >= STRONG_MATCH
-            ? tm('กำลังเตรียมคำตอบจากเอกสาร {0}', shortTitle(given[0].title))
-            : tm('กำลังรอ AI เตรียมคำตอบ'),
-        );
+        const strong = (given[0]?.score || 0) >= STRONG_MATCH;
+        activity(strong ? tm('กำลังเตรียมคำตอบจากเอกสาร {0}', shortTitle(given[0].title)) : tm('กำลังรอ AI เตรียมคำตอบ'), !strong);
         // The runtime conversation stays open across this step's tool turns (closed below when the step ends).
         const providerSession = new ProviderSession();
         // With the policy feature on, an Antigravity answer turn may call this step's tools through the governed
@@ -1678,7 +1687,7 @@ export class WorkService {
               if (!search && (analysisImage || options.images?.length) && !this.harness.visionEnabled?.())
                 throw new Error('VISION_DISABLED');
               stepTrace.promptChars = Math.max(stepTrace.promptChars, nextPrompt.length);
-              if (!search) status(tm('กำลังเตรียมคำตอบ'));
+              if (!search) status(tm('กำลังเตรียมคำตอบ'), true);
               checkAbort();
               const answer = await selectedRuntime.adapter.run(nextPrompt, connection, {
                 ...selectedRuntime.context,
@@ -1702,7 +1711,9 @@ export class WorkService {
                   : undefined,
                 effort,
                 onReasoning: text => {
-                  if (!analysisImage) this.emit({ sessionId: id, type: 'reasoning', text });
+                  if (analysisImage) return;
+                  thinking.reason(text);
+                  this.emit({ sessionId: id, type: 'reasoning', text });
                 },
                 onUsage: count => {
                   const next = combineUsage(counted, count, 'max');
@@ -1718,7 +1729,7 @@ export class WorkService {
                   if (continueTor) streamed += delta;
                   if (!receiving) {
                     receiving = true;
-                    activity(tm('กำลังเขียนคำตอบ'));
+                    activity(tm('กำลังเขียนคำตอบ'), true);
                   }
                   this.emit({ sessionId: id, type: 'delta', text: delta });
                 },
@@ -2108,6 +2119,7 @@ export class WorkService {
         .filter((source, index, all) => all.findIndex(other => other.url === source.url) === index)
         .slice(0, 12);
       const answeredAt = new Date().toISOString();
+      const thought = thinking.result();
       session.messages.push({
         role: 'assistant',
         text: chat
@@ -2125,6 +2137,7 @@ export class WorkService {
         ...(check ? { check } : {}),
         ...(checkLater ? { checkPending: answeredAt } : {}),
         ...(shownSources.length ? { webSources: shownSources } : {}),
+        ...(thought ? { thinking: thought } : {}),
       });
       finish(session, 'review');
       this.store.save(session);

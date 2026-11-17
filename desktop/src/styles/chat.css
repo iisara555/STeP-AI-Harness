@@ -302,25 +302,101 @@
     animation: scribble-trace 7.2s linear infinite !important;
   }
 }
-.thinking {
-  margin-top: var(--space-2-5);
-  font-size: var(--text-xs);
+/* The AI's thinking above its answer (src/thinking-panel.tsx): one quiet line, opened to a rail of stages and thoughts. */
+.thinking-panel {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
   color: var(--muted);
 }
-.thinking summary {
+.thinking-panel summary {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1-5);
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
+  margin-left: calc(-1 * var(--space-1));
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  list-style: none;
+  transition:
+    background-color var(--motion) var(--ease-out),
+    color var(--motion) var(--ease-out);
 }
-.thinking div {
-  white-space: pre-wrap;
-  margin-top: var(--space-2);
-  padding-left: var(--space-3);
-  border-left: 2px solid var(--line);
-  max-height: 220px;
+.thinking-panel summary::-webkit-details-marker {
+  display: none;
+}
+.thinking-panel summary:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.thinking-chevron {
+  transform: rotate(-90deg);
+  transition: transform var(--motion) var(--ease-out);
+}
+.thinking-panel[open] > summary .thinking-chevron {
+  transform: none;
+}
+.thinking-panel .thinking-time,
+.thinking-stage-title .thinking-time {
+  font-variant-numeric: tabular-nums;
+}
+.thinking-stages {
+  list-style: none;
+  margin: var(--space-1-5) 0 0 var(--space-2);
+  padding: 0 var(--space-2) 0 var(--space-4);
+  border-left: 1px solid var(--line);
+  max-height: 360px;
   overflow: auto;
+  overscroll-behavior: contain;
+}
+.thinking-stage + .thinking-stage {
+  margin-top: var(--space-3);
+}
+.thinking-stage-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text);
+  font-weight: 500;
+}
+.thinking-stage-title svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.thinking-stage-title .thinking-time {
+  margin-left: auto;
+  padding-left: var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 400;
+}
+.thinking-detail {
+  color: var(--muted);
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.thinking-note {
+  margin-top: var(--space-2);
+  padding-left: calc(15px + var(--space-2));
   line-height: 1.7;
+}
+.thinking-note strong {
+  display: block;
+  color: var(--text);
+  font-weight: 600;
+}
+.thinking-note p {
+  margin: var(--space-1) 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.thinking-stage:not(:has(.thinking-stage-title)) .thinking-note {
+  padding-left: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .thinking-panel summary,
+  .thinking-chevron {
+    transition: none;
+  }
 }
 /* Answers read like Claude and ChatGPT: plain text on the page, generous spacing, Markdown structure. */
 .rich-text {

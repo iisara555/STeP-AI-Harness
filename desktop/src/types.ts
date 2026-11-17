@@ -226,6 +226,8 @@ export type Message = {
   google?: import('./google-changes').GoogleChange[];
   /** Artifacts the AI saved in this answer's run, opened from the answer (IPC artifactOpen). */
   artifacts?: ArtifactRef[];
+  /** The stages and reasoning on the way to this answer, shown folded above it; never sent to a model. */
+  thinking?: import('./thinking').Thinking;
 };
 /** A file sent in a chat: its checked, masked text stays with the conversation. */
 export type ConversationFile = { name: string; text: string; at: string };
@@ -573,6 +575,8 @@ export type RunEvent = {
   approval?: ApprovalRequest;
   approvalId?: string;
   text?: string;
+  /** For status and activity: a routine wait that is shown but not kept among the answer's thinking stages. */
+  quiet?: boolean;
   /** For discard: how many characters of the streamed answer to take back. */
   count?: number;
   trace?: RunTrace;
