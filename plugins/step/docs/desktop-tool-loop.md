@@ -160,6 +160,31 @@ Host URLs allow HTTP(S), ports 80/443 and no credentials. Local/reserved IPv4, n
 
 Trusted policy can set `"network": {"proxyUrl": "https://proxy.example.org:8443/"}`. The proxy URL has no credentials/path/query/fragment. CONNECT targets the verified public IP; HTTPS verifies the destination certificate. Administrators choose the trusted proxy, including internal endpoints. Proxy authentication is unsupported. Tests cover a real local HTTP CONNECT proxy and private redirects; live corporate configuration and HTTPS proxy E2E remain unverified. This setting governs host fetches, not provider runtime traffic.
 
+## Long tasks: re-reads, folding and the final turn
+
+A real TOR run on Gemini 4 Hydrogen xhigh (2026-11-17) read the same Skill and references turn after turn, paged long
+references 4,000 characters at a time, and once the prompt reached the compaction budget it resent 115k–165k characters
+on every turn (compacting changed the start of the prompt each time, so the kept Antigravity conversation could not send
+only the new part). It stopped at the time limit with nothing delivered. `ToolLoop` now:
+
+- answers a repeated static read (`skill`, `reference`, `tool_describe`, local `tool_search` with the same input and
+  arguments, in the same run) with a pointer to the earlier result id instead of running it again; the text stays one
+  `read_remaining` away. Trace rows and `tool-call` diagnostics carry `repeat: 1`;
+- pages `skill`, `reference` and `doc_section` results three times larger than other results (12,000 characters by
+  default);
+- folds earlier tool results and long request contents to 600-character previews once the prompt passes
+  `LOOP_FOLD_SHARE` (60%) of the context budget, and keeps the folded history, so later turns append to it. It folds again
+  only after the history has grown by half. Folded rows say which id to page with `read_remaining`;
+- when the step's last time budget starts (`deadline`, the last 10 of 30 minutes), adds a final-turn notice once and stops
+  running tools: the model writes the answer from what it has read. A model that still asks gets `TIME_BUDGET_SPENT` rows
+  and the step's own time limit still applies. Native bridge calls past the deadline get the same code, and each answered
+  bridge call counts as progress for the per-turn timer;
+- after two turns in a row in which every request was such a repeat, adds the same kind of notice
+  (`ALREADY_READ`): the model already has what it asked for.
+
+`npm run eval:long-task` replays the TOR run's reading pattern on the real Skill and documents with the real `ToolLoop`
+and `compact()`, and `test/long-task-replay.test.ts` keeps its results (limits only tighten).
+
 ## Retry and usage
 
 `PROVIDER_BUSY`, `PROVIDER_NETWORK` and `RUNTIME_EXITED` get three retries at 2/4/8 seconds with 25% jitter and cancellation-aware waits. Compatible API transport errors map to the Desktop codes at the adapter boundary; structured quota codes stop retries. Structured `retry-after` seconds/date or `retryAfterMs` takes precedence, bounded at two minutes. Tests inject delays. Non-transient errors, quota failures and tool effects are not replayed. Usage before a failed provider attempt stays counted, including a dropped retained RPC session recovered once with a fresh conversation.
