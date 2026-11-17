@@ -169,7 +169,7 @@ test('external letter: any sender name, a bare date, the position and the closin
   const spacing = sarabanSpacing(document, 'letter');
   const before = (start: string) => spacing[document.content!.findIndex(n => documentText(n).startsWith(start))];
   assert.equal(before('ขอแสดงความนับถือ'), 12);
-  assert.equal(before('([รอยืนยัน'), 90);
+  assert.equal(before('([รอยืนยัน'), 72);
   assert.equal(before('ทีมสังเคราะห์'), 54);
   assert.equal(before('เรียน'), 6);
   const doc = await word(letter, 'letter');
@@ -183,7 +183,7 @@ test('external letter: any sender name, a bare date, the position and the closin
   assert.equal(doc.paragraph('หน่วยงานสังเคราะห์'), undefined);
   assert.equal(doc.attr(doc.paragraph('รองผู้อำนวยการ'), 'jc', 'val'), 'center');
   assert.equal(doc.attr(doc.paragraph('ทีมสังเคราะห์'), 'ind', 'firstLine'), undefined);
-  assert.equal(doc.attr(doc.paragraph('([รอยืนยัน'), 'spacing', 'before'), '1800');
+  assert.equal(doc.attr(doc.paragraph('([รอยืนยัน'), 'spacing', 'before'), '1440');
 });
 
 test('external letter PDF puts ที่ and the sender on one row; an invitation keeps its own header', () => {
