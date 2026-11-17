@@ -17,7 +17,12 @@ import { runKnowledge, type Case } from './knowledge-live';
 import { liveRuntime } from './skill-selection-live';
 
 export const LONG_TASKS: Case[] = [
-  { q: 'ผมขอ TOR อีกฉบับ จัดซื้อเครื่องคอมพิวเตอร์โน้ตบุ๊ก 10 เครื่องสำหรับห้องอบรม งบประมาณ 350,000 บาท', doc: 'none' },
+  {
+    q: 'ผมขอ TOR อีกฉบับ จัดซื้อเครื่องคอมพิวเตอร์โน้ตบุ๊ก 10 เครื่องสำหรับห้องอบรม งบประมาณ 350,000 บาท',
+    doc: 'none',
+    // When the app asks back which Skill fits, staff answer in their own words, as on the real device.
+    reply: 'ไม่ใช่ครับ ขอให้ร่าง TOR ฉบับใหม่ตามรายละเอียดข้างบน',
+  },
   {
     q: 'สรุปขั้นตอนจัดซื้อจัดจ้างของ STeP ตั้งแต่ขออนุมัติจนตรวจรับ บอกแบบฟอร์มที่ต้องใช้ในแต่ละขั้น และอ้างเอกสารของ STeP ให้ครบทุกขั้น',
     doc: ['qp-af-001', 'qp-af-002'],
