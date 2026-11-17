@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { CircleAlert, CircleCheck, LoaderCircle, Search, X } from './icons';
+import { CircleAlert, CircleCheck, KeyRound, LoaderCircle, Monitor, Search, UserRound, X, type LucideIcon } from './icons';
+import { ProviderLogo } from './provider-logo';
 import type { Session } from './types';
 import { explainError } from './messages';
 import { t } from './i18n';
@@ -572,6 +573,16 @@ const tileFor = (tiles: Tile[], c: ProviderChoice) =>
 // Antigravity is on the first page so staff with only a Google account can connect without a key.
 const MAIN_TILES = ['chatgpt', 'claude-sub', 'gemini-api', 'antigravity'];
 const KIND_LABEL: Record<Tile['kind'], string> = { account: 'ลงชื่อเข้าใช้', key: 'API key', local: 'ในเครื่องนี้' };
+const KIND_ICON: Record<Tile['kind'], LucideIcon> = { account: UserRound, key: KeyRound, local: Monitor };
+function TileKind({ kind }: { kind: Tile['kind'] }) {
+  const Icon = KIND_ICON[kind];
+  return (
+    <span className={'provider-kind ' + kind}>
+      <Icon size={12} aria-hidden="true" />
+      {t(KIND_LABEL[kind])}
+    </span>
+  );
+}
 
 export function ProviderFields(props: {
   value: ProviderChoice;
@@ -610,9 +621,10 @@ export function ProviderFields(props: {
                 className={selected?.id === tile.id ? 'provider-tile active' : 'provider-tile'}
                 onClick={() => props.onChange({ ...tile.choice })}
               >
+                <ProviderLogo provider={tile.choice.provider} preset={tile.choice.preset} />
                 <span className="provider-tile-head">
                   <strong>{tile.label}</strong>
-                  <span className={'provider-kind ' + tile.kind}>{t(KIND_LABEL[tile.kind])}</span>
+                  <TileKind kind={tile.kind} />
                 </span>
                 {tile.id === 'antigravity' && <span className="provider-recommended">{t('แนะนำ')}</span>}
                 <span className="provider-tile-text">{tile.description}</span>

@@ -364,6 +364,7 @@
   margin: 0 0 var(--space-3);
 }
 /* Organisation functions, administrator fields and the developer pilot stay in Settings, out of the first run. */
+.wizard .ai-connect-footer,
 .wizard .ai-organization-capabilities,
 .wizard .ai-developer-options,
 .wizard .provider-picker + p {

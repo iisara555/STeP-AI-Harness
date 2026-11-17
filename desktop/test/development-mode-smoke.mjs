@@ -133,7 +133,7 @@ try {
   await expect(page.getByRole('button', { name: 'ทดสอบใช้งาน', exact: true })).toBeDisabled();
   // One footer label on every Settings tab; it becomes the primary button only once an account is ready.
   await expect(page.getByRole('button', { name: 'กลับไปทำงาน', exact: true })).toHaveClass(/quiet/);
-  await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();
+  await page.getByRole('button', { name: 'โมเดลและการจัดการบัญชี', exact: true }).click();
   await expect(page.getByRole('button', { name: 'ออกจากระบบ', exact: true })).toBeEnabled();
 
   // With an administrator passcode in the policy, turning the switch on asks for it; turning it off never does.

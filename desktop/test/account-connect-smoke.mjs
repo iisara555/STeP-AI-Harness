@@ -23,6 +23,12 @@ try {
   await page.screenshot({ path: 'release/qa/connect-ai/new-user.png' });
   await expect(page.getByRole('radio', { name: /Gemini ผ่าน Antigravity/ })).toHaveAttribute('aria-checked', 'true');
   await expect(page.getByRole('radio', { name: /Gemini ผ่าน Antigravity/ })).toContainText('แนะนำ');
+  // Each service shows its own logo, drawn from the bundled marks rather than a generic plug.
+  await expect(page.getByRole('radio', { name: /^ChatGPT/ }).locator('.provider-logo')).toHaveAttribute('data-logo', 'openai');
+  await expect(page.getByRole('radio', { name: /Gemini ผ่าน Antigravity/ }).locator('.provider-logo img')).toHaveJSProperty(
+    'complete',
+    true,
+  );
   await expect(page.getByLabel('API key', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('combobox', { name: /วิธีเชื่อมต่อ/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /แพ็กเกจของคุณผ่าน Claude Code/ })).toHaveCount(0);
@@ -102,16 +108,22 @@ try {
   await page.getByRole('button', { name: 'ทดสอบใช้งาน', exact: true }).click();
   await expect(page.getByRole('button', { name: 'กำลังเชื่อมต่อและทดสอบ…', exact: true })).toBeDisabled();
   await app.evaluate(() => globalThis.finishConnect());
-  await expect(page.getByText('ทดสอบรับคำตอบสำเร็จ', { exact: true })).toBeVisible();
   await expect(page.locator('.connection-state')).toHaveText('ทดสอบข้อความผ่าน');
+  // The status pill says it once; no second success sentence under it.
+  await expect(page.locator('.connection-card .connection-note')).toHaveCount(0);
+  await expect(page.locator('.connection-card .provider-logo')).toHaveAttribute('data-logo', 'openai');
+  await expect(page.locator('.connection-card .capability-icon.available')).toHaveAttribute('aria-label', 'ค้นเว็บและอ่านหน้าเว็บ: ใช้ได้');
   await expect(page.locator('.connection-card')).toHaveAttribute('data-state', 'ready');
   await expect(page.getByRole('button', { name: 'กลับไปทำงาน', exact: true })).toHaveClass(/quiet/);
   await expect(page.getByRole('combobox', { name: 'โมเดลสำหรับงานใหม่' })).toBeHidden();
   await expect(page.getByRole('button', { name: 'ลบบัญชีนี้', exact: true })).toBeHidden();
 
-  const capabilities = page.locator('.ai-connect-step .ai-capabilities');
-  await capabilities.locator('summary').focus();
+  const manage = page.getByRole('button', { name: 'โมเดลและการจัดการบัญชี', exact: true });
+  const capabilities = page.locator('.connection-card .connection-panel');
+  await expect(capabilities).toBeHidden();
+  await manage.focus();
   await page.keyboard.press('Enter');
+  await expect(manage).toHaveAttribute('aria-expanded', 'true');
   await expect(capabilities.locator('[data-capability="chat"]')).toContainText('ผ่านการทดสอบข้อความสั้นแล้ว');
   await expect(page.locator('.connection-card').locator('[data-capability="web"] .ai-capability-state')).toHaveText('ใช้ได้');
   await expect(capabilities.locator('[data-capability="image"]')).toContainText('OAuth อย่างเดียวใช้ไม่ได้');
@@ -120,11 +132,13 @@ try {
   await expect(organization.locator('[data-capability="routing"] .ai-capability-state')).toHaveText('ใช้ได้');
   await expect(organization.locator('[data-capability="routing"]')).toContainText('AI ค้นหาและเลือก Skill');
   await expect(organization.locator('[data-capability="mcp"] .ai-capability-state')).toHaveText('ยังใช้ไม่ได้');
+  await manage.click();
+  await expect(capabilities).toBeHidden();
   await page.screenshot({ path: 'release/qa/connect-ai/ready.png' });
-  await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();
+  await manage.click();
   await expect(page.getByRole('combobox', { name: 'โมเดลสำหรับงานใหม่' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'ลบบัญชีนี้', exact: true })).toBeVisible();
-  await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();
+  await manage.click();
   await page.evaluate(() => {
     document.documentElement.dataset.theme = 'dark';
   });

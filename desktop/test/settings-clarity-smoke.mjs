@@ -183,7 +183,7 @@ try {
   await expect(antigravity.locator('[data-capability=vision]')).toContainText('ต้องตรวจเงื่อนไข');
   await antigravity.getByRole('button', { name: 'ใช้สำหรับงานใหม่', exact: true }).click();
   await expect(antigravity).toHaveAttribute('data-selected', 'true');
-  await expect(panel.locator('.connection-note').first()).toHaveText('ทดสอบรับคำตอบสำเร็จ');
+  await expect(panel.locator('.connection-card').first().locator('.connection-note')).toHaveCount(0);
   await expect(panel.locator('.connection-card').first()).toContainText('ทดสอบสำเร็จล่าสุด');
   await tab('ทั่วไป');
   await expect(panel.getByLabel('ชื่อเรียกของคุณ', { exact: true })).toHaveValue('Synthetic edited');

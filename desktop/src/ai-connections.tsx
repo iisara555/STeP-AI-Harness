@@ -1,5 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Check, LoaderCircle, Plug, Plus, RefreshCw, Trash2 } from './icons';
+import {
+  AlertTriangle,
+  Building2,
+  Check,
+  Command,
+  Eye,
+  Globe,
+  LoaderCircle,
+  Plug,
+  Plus,
+  RefreshCw,
+  SlidersHorizontal,
+  Trash2,
+  type LucideIcon,
+} from './icons';
+import { ProviderLogo } from './provider-logo';
 import {
   ConfirmDialog,
   ProviderFields,
@@ -76,7 +91,6 @@ export function AIConnections({
     }
   };
   const connections = snapshot.connections;
-  const readyCount = connections.filter(c => c.ready).length;
   const developmentControl = (
     <div className="development-mode">
       <small id="dev-mode-help" className="muted">
@@ -148,7 +162,6 @@ export function AIConnections({
       {connections.length > 0 && (
         <div className="ai-connect-step ai-readiness" ref={readiness} tabIndex={-1} role="region" aria-labelledby="ai-accounts-heading">
           <StepHeading id="ai-accounts-heading">{t('บัญชี AI ของคุณ')}</StepHeading>
-          <p className="muted small">{t('ทดสอบข้อความผ่าน {0} จาก {1} บัญชี', readyCount, connections.length)}</p>
           <ul className="connection-list">
             {connections.map(c => (
               <ConnectionCard
@@ -175,7 +188,6 @@ export function AIConnections({
       {/* One stable element for the picker, so a choice in progress survives the first account appearing above it. */}
       <div className={connections.length ? 'ai-connect-step ai-add-account' : 'ai-connect-step'}>
         {!connections.length && <StepHeading>{t('เลือก AI และเชื่อมต่อ')}</StepHeading>}
-        {!connections.length && <p className="muted small">{t('Antigravity และ ChatGPT ลงชื่อด้วยบัญชีได้ ไม่ต้องกรอก API key')}</p>}
         <details
           className="ai-provider-disclosure"
           data-first={!connections.length}
@@ -189,17 +201,25 @@ export function AIConnections({
           {picker}
         </details>
       </div>
-      <details className="ai-capabilities ai-organization-capabilities">
-        <summary>{t('ฟังก์ชันที่องค์กรเปิดให้ใช้')}</summary>
-        <CapabilityList items={organizationCapabilities(snapshot.policy)} />
-      </details>
-      {/* For developers only: kept visible so it can be found, but out of the way of everyone else. */}
-      {!connections.some(c => c.provider === 'claude') && (
-        <details className="ai-developer-options">
-          <summary>{t('Claude Pro/Max สำหรับทดสอบ')}</summary>
-          {developmentControl}
+      {/* Reference for the curious, on one quiet line: what the organization allows, and the developer-only switch. */}
+      <div className="ai-connect-footer">
+        <details className="ai-capabilities ai-organization-capabilities">
+          <summary>
+            <Building2 size={14} aria-hidden="true" />
+            {t('ฟังก์ชันที่องค์กรเปิดให้ใช้')}
+          </summary>
+          <CapabilityList items={organizationCapabilities(snapshot.policy)} />
         </details>
-      )}
+        {!connections.some(c => c.provider === 'claude') && (
+          <details className="ai-developer-options">
+            <summary>
+              <Command size={14} aria-hidden="true" />
+              {t('Claude Pro/Max สำหรับทดสอบ')}
+            </summary>
+            {developmentControl}
+          </details>
+        )}
+      </div>
       {devPasscode !== null && (
         <ConfirmDialog
           title={t('เปิด Dev mode')}
@@ -316,17 +336,51 @@ function ConnectionCard({
       if (state.action === 'sign-in-again') await call('disconnect', { id: c.id });
       await call('connect', { id: c.id });
     });
+  const [managing, setManaging] = useState(false);
+  const capabilities = connectionCapabilities(c, snapshot.policy);
+  const manageLabel = t('โมเดลและการจัดการบัญชี');
   return (
     <li
       className={`connection-row connection-card ${tone}${selected ? ' selected' : ''}`}
       data-state={tone}
       data-selected={Boolean(selected)}
     >
+      {/* One row per account: who it is, whether it answers, and the one button that fixes it. The rest folds away. */}
       <div className="connection-head">
-        <strong className="connection-name">
-          {/* The same name as everywhere else (connectionName), split so the kind reads as a subtitle. */}
-          {connectionBrand(c)} <small>{connectionKind(c)}</small>
-        </strong>
+        <ProviderLogo provider={c.provider} preset={c.preset} />
+        <div className="connection-title">
+          <strong className="connection-name">
+            {/* The same name as everywhere else (connectionName), split so the kind reads as a subtitle. */}
+            {connectionBrand(c)} <small>{connectionKind(c)}</small>
+          </strong>
+          <p className="connection-meta">
+            {selected && (
+              <span className="selected-ai">
+                <Check size={13} aria-hidden="true" />
+                {selectionScope === 'task' ? t('ใช้กับงานนี้') : t('ใช้สำหรับงานใหม่')}
+              </span>
+            )}
+            {c.ready && c.testedAt && <span>{t('ทดสอบสำเร็จล่าสุด: {0}', shownDate(c.testedAt))}</span>}
+            {/* Not ready: the reason sits where the date would be, so the row keeps one height. */}
+            {!c.ready && !working && (
+              <span className="connection-note">
+                {c.policyBlocked ? t('ผู้ดูแลปิดบริการนี้ ผลทดสอบเดิมใช้ไม่ได้จนกว่าจะเปิดอีกครั้ง · ลงชื่อออกหรือลบบัญชีได้') : t(c.note)}
+              </span>
+            )}
+            {c.ready &&
+              capabilities
+                .filter(item => item.id in CAPABILITY_ICONS)
+                .map(item => {
+                  const Icon = CAPABILITY_ICONS[item.id];
+                  const label = `${t(item.title)}: ${t(CAPABILITY_STATES[item.state])}`;
+                  return (
+                    <span key={item.id} className={`capability-icon ${item.state}`} role="img" aria-label={label} title={label}>
+                      <Icon size={14} aria-hidden="true" />
+                    </span>
+                  );
+                })}
+          </p>
+        </div>
         <span className={`ai-connection-status connection-state ${tone}`} role="status">
           {working ? (
             <LoaderCircle size={14} className="spin" aria-hidden="true" />
@@ -339,60 +393,49 @@ function ConnectionCard({
           )}
           {working ? t('กำลังเชื่อมต่อและทดสอบ…') : t(state.label)}
         </span>
+        <div className="connection-actions ai-primary-actions">
+          {onSelect && !selected && c.ready && !c.policyBlocked && (
+            <button
+              className="quiet"
+              disabled={Boolean(busy) || selectionDisabled}
+              onClick={() => void run(c.id + ':select', () => onSelect(c.id))}
+            >
+              {selectionScope === 'task' ? t('ใช้กับงานนี้') : t('ใช้สำหรับงานใหม่')}
+            </button>
+          )}
+          <button className={state.action === 'retest' ? 'quiet' : undefined} disabled={Boolean(busy) || c.policyBlocked} onClick={fix}>
+            {working ? (
+              <LoaderCircle size={15} className="spin" />
+            ) : state.action === 'sign-in-again' || state.action === 'retest' ? (
+              <RefreshCw size={15} />
+            ) : (
+              <Plug size={15} />
+            )}
+            {working ? t('กำลังเชื่อมต่อและทดสอบ…') : actionLabel}
+          </button>
+          {working && (
+            <button className="quiet" onClick={() => void call('cancelConnect', { id: c.id })}>
+              {t('ยกเลิก')}
+            </button>
+          )}
+          <button
+            type="button"
+            className="quiet icon-only connection-manage"
+            aria-expanded={managing}
+            aria-controls={`connection-panel-${c.id}`}
+            aria-label={manageLabel}
+            title={manageLabel}
+            onClick={() => setManaging(open => !open)}
+          >
+            <SlidersHorizontal size={15} aria-hidden="true" />
+          </button>
+        </div>
       </div>
-      {selected && (
-        <p className="selected-ai">
-          <Check size={14} />
-          {selectionScope === 'task' ? t('ใช้กับงานนี้') : t('ใช้สำหรับงานใหม่')}
-        </p>
-      )}
-      {c.testedAt && <p className="small muted">{t('ทดสอบสำเร็จล่าสุด: {0}', shownDate(c.testedAt))}</p>}
-      {working && progress ? (
+      {working && progress && (
         <p className="connect-progress">
           <LoaderCircle size={13} className="spin" />
           {progress}
         </p>
-      ) : (
-        <p className={c.ready ? 'connection-note connected' : 'connection-note muted'}>
-          {c.policyBlocked
-            ? t('ผู้ดูแลปิดบริการนี้ ผลทดสอบเดิมใช้ไม่ได้จนกว่าจะเปิดอีกครั้ง · ลงชื่อออกหรือลบบัญชีได้')
-            : c.ready
-              ? t('ทดสอบรับคำตอบสำเร็จ')
-              : t(c.note)}
-        </p>
-      )}
-      {c.provider === 'gemini' && c.googleCloudProject && <p className="small muted">Google Cloud Project: {c.googleCloudProject}</p>}
-      <div className="connection-actions ai-primary-actions">
-        {onSelect && !selected && c.ready && !c.policyBlocked && (
-          <button disabled={Boolean(busy) || selectionDisabled} onClick={() => void run(c.id + ':select', () => onSelect(c.id))}>
-            {selectionScope === 'task' ? t('ใช้กับงานนี้') : t('ใช้สำหรับงานใหม่')}
-          </button>
-        )}
-        <button className={state.action === 'retest' ? 'quiet' : undefined} disabled={Boolean(busy) || c.policyBlocked} onClick={fix}>
-          {working ? (
-            <LoaderCircle size={15} className="spin" />
-          ) : state.action === 'sign-in-again' ? (
-            <RefreshCw size={15} />
-          ) : (
-            <Check size={15} />
-          )}
-          {working ? t('กำลังเชื่อมต่อและทดสอบ…') : actionLabel}
-        </button>
-        {working && (
-          <button className="quiet" onClick={() => void call('cancelConnect', { id: c.id })}>
-            {t('ยกเลิก')}
-          </button>
-        )}
-      </div>
-      {c.ready && (
-        <>
-          <p className="small muted">{t('Google Workspace เชื่อมแยกในแท็บบัญชีและบริการ')}</p>
-          {/* Tools are their own block under the account's test result, so a tool that is off does not read as a failed account. */}
-          <div className="connection-tools">
-            <h2>{t('เครื่องมือที่ใช้กับบัญชีนี้')}</h2>
-            <CapabilityList items={connectionCapabilities(c, snapshot.policy).filter(item => ['web', 'vision'].includes(item.id))} />
-          </div>
-        </>
       )}
       {c.provider === 'claude' && c.mode === 'subscription' && (
         <p className="credential-note">
@@ -400,16 +443,9 @@ function ConnectionCard({
         </p>
       )}
       {developmentControl}
-      <div className="connection-more">
-        <details className="ai-capabilities">
-          <summary>{t('บัญชีนี้ทำอะไรได้บ้าง')}</summary>
-          <CapabilityList
-            items={connectionCapabilities(c, snapshot.policy).filter(item => !c.ready || !['web', 'vision'].includes(item.id))}
-          />
-        </details>
-        <details className="ai-account-management">
-          <summary>{t('โมเดลและการจัดการบัญชี')}</summary>
-          <div>
+      <div className="connection-panel" id={`connection-panel-${c.id}`} hidden={!managing}>
+        {Boolean(c.models?.length || c.model || c.ready) && (
+          <div className="connection-models-line">
             {Boolean(c.models?.length || c.model) && (
               <label className="connection-model">
                 {t('โมเดลสำหรับงานใหม่')}
@@ -435,36 +471,27 @@ function ConnectionCard({
                 </select>
               </label>
             )}
-            {c.modelsAt && (
-              <p className="small muted">
-                {t('โมเดล')} {c.models?.length || 0} {t('รายการ · อัปเดต')} {shownDate(c.modelsAt, true)}
-              </p>
-            )}
-          </div>
-          <div className="connection-actions">
             {c.ready && (
               <button
                 className="quiet"
                 disabled={Boolean(busy)}
+                title={
+                  c.modelsAt ? `${t('โมเดล')} ${c.models?.length || 0} ${t('รายการ · อัปเดต')} ${shownDate(c.modelsAt, true)}` : undefined
+                }
                 onClick={() => void run(c.id + ':models', () => call('models', { id: c.id }))}
               >
-                {busy === c.id + ':models' ? <LoaderCircle size={15} className="spin" /> : null}
+                {busy === c.id + ':models' ? <LoaderCircle size={15} className="spin" /> : <RefreshCw size={14} aria-hidden="true" />}
                 {t('ดูโมเดลที่ใช้ได้')}
               </button>
             )}
-            {/* Only the CLI-based connections have a runtime to choose; API endpoints and Copilot do not. */}
-            {!['claude', 'compatible', 'copilot'].includes(c.provider) && !c.customRuntime && (
-              <button
-                className="quiet"
-                disabled={Boolean(busy)}
-                title={t('สำหรับผู้ดูแลระบบ: ใช้ Codex หรือ Gemini CLI ที่ติดตั้งเอง')}
-                onClick={() => void run(c.id, () => call('runtime', { id: c.id }))}
-              >
-                {t('เลือกโปรแกรมเชื่อมต่อเอง')}
-              </button>
-            )}
           </div>
-          {!['claude', 'compatible', 'copilot'].includes(c.provider) && c.customRuntime && (
+        )}
+        {c.provider === 'gemini' && c.googleCloudProject && <p className="small muted">Google Cloud Project: {c.googleCloudProject}</p>}
+        <CapabilityList items={capabilities} />
+        {c.ready && <p className="small muted">{t('Google Workspace เชื่อมแยกในแท็บบัญชีและบริการ')}</p>}
+        {/* Only the CLI-based connections have a runtime to choose; API endpoints and Copilot do not. */}
+        {!['claude', 'compatible', 'copilot'].includes(c.provider) &&
+          (c.customRuntime ? (
             <div className="connection-runtime">
               <p className="small muted">
                 {c.provider === 'antigravity'
@@ -480,44 +507,61 @@ function ConnectionCard({
                 {c.provider === 'antigravity' ? t('ใช้ Antigravity ที่ STeP ติดตั้ง') : t('กลับไปใช้ตัวเชื่อมที่มากับแอป')}
               </button>
             </div>
-          )}
-          {/* Signing out keeps the account; removing it is destructive, so it sits apart in the danger style. */}
-          <div className="connection-actions connection-account-actions">
-            {/* Signing out of an API-key connection would only delete the key; removing it says that plainly. */}
-            {(c.mode === 'subscription' || c.mode === 'oauth' || c.signedIn || (c.ready && c.mode !== 'api')) && (
-              <button
-                className="quiet"
-                disabled={Boolean(busy)}
-                title={
-                  c.provider === 'antigravity'
-                    ? t('เลิกเชื่อมต่อกับ STeP บัญชี Google ใน Antigravity ยังลงชื่ออยู่')
-                    : t('ลบข้อมูลลงชื่อของการเชื่อมต่อนี้ออกจากเครื่อง')
-                }
-                onClick={() => void run(c.id, () => call('disconnect', { id: c.id }))}
-              >
-                {c.provider === 'antigravity' ? t('เลิกเชื่อมต่อ') : t('ออกจากระบบ')}
-              </button>
-            )}
-            <button className="quiet danger-text connection-remove" disabled={Boolean(busy)} onClick={onRemove}>
-              <Trash2 size={14} aria-hidden="true" />
-              {t('ลบบัญชีนี้')}
+          ) : null)}
+        {/* Signing out keeps the account; removing it is destructive, so it sits apart in the danger style. */}
+        <div className="connection-actions connection-account-actions">
+          {!['claude', 'compatible', 'copilot'].includes(c.provider) && !c.customRuntime && (
+            <button
+              className="quiet"
+              disabled={Boolean(busy)}
+              title={t('สำหรับผู้ดูแลระบบ: ใช้ Codex หรือ Gemini CLI ที่ติดตั้งเอง')}
+              onClick={() => void run(c.id, () => call('runtime', { id: c.id }))}
+            >
+              {t('เลือกโปรแกรมเชื่อมต่อเอง')}
             </button>
-          </div>
-        </details>
+          )}
+          {/* Signing out of an API-key connection would only delete the key; removing it says that plainly. */}
+          {(c.mode === 'subscription' || c.mode === 'oauth' || c.signedIn || (c.ready && c.mode !== 'api')) && (
+            <button
+              className="quiet"
+              disabled={Boolean(busy)}
+              title={
+                c.provider === 'antigravity'
+                  ? t('เลิกเชื่อมต่อกับ STeP บัญชี Google ใน Antigravity ยังลงชื่ออยู่')
+                  : t('ลบข้อมูลลงชื่อของการเชื่อมต่อนี้ออกจากเครื่อง')
+              }
+              onClick={() => void run(c.id, () => call('disconnect', { id: c.id }))}
+            >
+              {c.provider === 'antigravity' ? t('เลิกเชื่อมต่อ') : t('ออกจากระบบ')}
+            </button>
+          )}
+          <button className="quiet danger-text connection-remove" disabled={Boolean(busy)} onClick={onRemove}>
+            <Trash2 size={14} aria-hidden="true" />
+            {t('ลบบัญชีนี้')}
+          </button>
+        </div>
       </div>
     </li>
   );
 }
 
+/** Shown as icons on a ready account; the full list with reasons is in its management panel. */
+const CAPABILITY_ICONS: Record<string, LucideIcon> = { web: Globe, vision: Eye };
+const CAPABILITY_STATES: Record<Capability['state'], string> = {
+  available: 'ใช้ได้',
+  conditional: 'ต้องตรวจเงื่อนไข',
+  blocked: 'ยังใช้ไม่ได้',
+  unknown: 'ยังไม่ทราบ',
+};
+
 function CapabilityList({ items }: { items: Capability[] }) {
-  const statuses = { available: 'ใช้ได้', conditional: 'ต้องตรวจเงื่อนไข', blocked: 'ยังใช้ไม่ได้', unknown: 'ยังไม่ทราบ' };
   return (
     <ul className="ai-capability-list">
       {items.map(item => (
         <li key={item.id} data-capability={item.id}>
           <div>
             <strong>{t(item.title)}</strong>
-            <span className={`ai-capability-state ${item.state}`}>{t(statuses[item.state])}</span>
+            <span className={`ai-capability-state ${item.state}`}>{t(CAPABILITY_STATES[item.state])}</span>
           </div>
           <p className="small muted">{t(item.detail)}</p>
         </li>
