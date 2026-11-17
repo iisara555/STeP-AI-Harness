@@ -58,7 +58,8 @@ test('satang arithmetic and Thai words do not round or silently accept malformed
     { description: 'Synthetic item B', amount: '0.20' },
   ];
   assert.equal(voucherTotal(voucher), 30);
-  assert.equal(thaiBahtWords(30), 'ศูนย์บาทสามสิบสตางค์');
+  assert.equal(thaiBahtWords(30), 'สามสิบสตางค์');
+  assert.equal(thaiBahtWords(0), 'ศูนย์บาทถ้วน');
   assert.equal(thaiBahtWords(2101), 'ยี่สิบเอ็ดบาทหนึ่งสตางค์');
   assert.equal(thaiBahtWords(10100), 'หนึ่งร้อยเอ็ดบาทถ้วน');
   assert.equal(thaiBahtWords(100000100), 'หนึ่งล้านเอ็ดบาทถ้วน');

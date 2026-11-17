@@ -20,6 +20,11 @@ const REASONS: Record<string, string> = {
   'receipt-values-differ': 'ผู้รับเงินหรือยอดรายการต่างจาก FM-AF-014 โปรดตรวจและแจ้ง AFP',
   'source-comparison': 'รอผู้จัดทำตรวจข้อมูลเทียบกับหลักฐาน',
 };
+const NOTES: Record<string, string> = {
+  'withholding-rate': 'ยอดหัก ณ ที่จ่ายบางรายการไม่ตรงอัตรา 1, 2, 3 หรือ 5% ของยอดรายการ โปรดตรวจอัตรากับ AFP',
+  'withholding-certificate':
+    'มีภาษีหัก ณ ที่จ่าย: เตรียมหนังสือรับรองการหักภาษี ภ.ง.ด.3 พร้อมใบสำคัญรับเงิน (FM-AF-014) ถ้าจ่ายบุคคลธรรมดา หรือ ภ.ง.ด.53 ถ้าจ่ายนิติบุคคล (QP-AF-004)',
+};
 export function PaymentVoucherForm({ packet, active, onChange, onConfirm, onInclude, onImport, onExport }: Props) {
   const voucher = packet.disbursement,
     assessment = paymentVoucherAssessment(voucher, packet.voucher);
@@ -151,10 +156,13 @@ export function PaymentVoucherForm({ packet, active, onChange, onConfirm, onIncl
         {t('หมายเหตุให้ AFP ตรวจ')}
         <textarea rows={2} value={voucher.note} maxLength={1200} onChange={event => edit({ note: event.target.value })} />
       </label>
-      {assessment.missing.length > 0 && (
+      {assessment.missing.length + assessment.notes.length > 0 && (
         <ul className="payment-review-reasons">
           {assessment.missing.map(reason => (
             <li key={reason}>{t(REASONS[reason])}</li>
+          ))}
+          {assessment.notes.map(note => (
+            <li key={note}>{t(NOTES[note])}</li>
           ))}
         </ul>
       )}

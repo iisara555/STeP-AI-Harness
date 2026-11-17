@@ -227,6 +227,20 @@ function describe(body: Element, doc: Document, id: unknown) {
     .join('\n');
   return { documentTool: profile.id, font, tables, headers, context };
 }
+/** Header and footer text first, then the body: where a controlled form prints its number and revision (QP-DC-001). */
+export async function templateControlText(bytes: Uint8Array) {
+  const { zip, body } = await open(bytes);
+  const parts = Object.keys(zip.files)
+    .filter(name => /^word\/(?:header|footer)\d*\.xml$/.test(name))
+    .sort((a, b) => Number(a.includes('header')) - Number(b.includes('header')));
+  const furniture = await Promise.all(
+    parts.map(async name => {
+      const xml = parse(await zip.file(name)!.async('string'));
+      return elements(xml.documentElement, 'p').map(text).join('\n');
+    }),
+  );
+  return [...furniture, elements(body, 'p').map(text).join('\n')].join('\n');
+}
 export async function inspectDocumentTemplate(bytes: Uint8Array, id: unknown) {
   const { body, doc } = await open(bytes);
   return describe(body, doc, id);

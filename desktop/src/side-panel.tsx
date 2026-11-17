@@ -22,6 +22,22 @@ const DocumentToolbar = lazyScreen<ComponentProps<typeof Toolbar>>(
 const EditorContent = lazyScreen<{ editor: Editor }>(() => import('@tiptap/react').then(m => ({ default: m.EditorContent })), true);
 
 /** The draft editor and the workbench tabs beside the chat. */
+/** A required document part named by the export check, in the interface language (Thai names come from the check). */
+const checkPart = (part: string) =>
+  ({
+    ส่วนราชการ: t('ส่วนราชการ'),
+    ที่: t('ที่ (เลขที่หนังสือ)'),
+    วันที่: t('วันที่'),
+    เรื่อง: t('เรื่อง'),
+    เรียน: t('เรียน'),
+    ชื่อผู้ลงนาม: t('ชื่อผู้ลงนาม'),
+    คำลงท้าย: t('คำลงท้าย'),
+    ครั้งที่: t('ครั้งที่'),
+    ผู้มาประชุม: t('ผู้มาประชุม'),
+    เลิกประชุม: t('เลิกประชุม'),
+    ผู้จดรายงาน: t('ผู้จดรายงาน'),
+  })[part] || part;
+
 export function SidePanel({ v }: { v: AppView }) {
   const {
     action,
@@ -478,6 +494,25 @@ export function SidePanel({ v }: { v: AppView }) {
                     <div className="export-status">
                       {exportInfo && (
                         <div className="document-export-info" role="status">
+                          {exportInfo.checks?.map(check => (
+                            <p className="export-check" key={check.code}>
+                              {check.code === 'missing'
+                                ? t('ยังไม่มี {0}', check.parts.map(checkPart).join(' / '))
+                                : check.code === 'placeholders'
+                                  ? t('ยังมี [รอยืนยัน] {0} จุด', check.count)
+                                  : check.status === 'outdated'
+                                    ? t(
+                                        'แบบฟอร์ม {0} ที่แนบเป็น {1} ทะเบียน MIS เป็น {2} (บังคับใช้ {3}) ใช้ฉบับล่าสุดจาก MIS',
+                                        check.form,
+                                        check.used,
+                                        check.current,
+                                        check.effective,
+                                      )
+                                    : check.status === 'cancelled'
+                                      ? t('แบบฟอร์ม {0} ยกเลิกแล้วในทะเบียน MIS', check.form)
+                                      : t('ไม่พบ {0} ในทะเบียน MIS ตรวจใน MIS ก่อนใช้', check.form)}
+                            </p>
+                          ))}
                           <p>{t('ไฟล์ใช้ฟอนต์ {0}', exportInfo.font)}</p>
                           {exportInfo.templateName ? (
                             <p>{t('รักษารูปแบบและตราจากแม่แบบ {0}', exportInfo.templateName)}</p>

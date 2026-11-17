@@ -98,7 +98,7 @@ test('slips and invoices are not proof of payment; missing elements and AFP to-d
     category: 'B',
   });
   const ids = (status: string) => bare.filter(i => i.status === status).map(i => i.id);
-  assert.deepEqual(ids('missing'), ['payee', 'date', 'signature']);
+  assert.deepEqual(ids('missing'), ['payee', 'date', 'signature', 'seller_tax_id', 'invoice_number']);
   assert.ok(ids('todo').includes('thermal_copy'), 'abbreviated tax invoices are thermal slips');
   assert.ok(ids('todo').includes('translation'));
   assert.ok(ids('warn').includes('drinks'));
@@ -139,4 +139,28 @@ test('basic receipt completeness includes an issuer address and unknown signatur
   });
   assert.equal(receiptCompleteness(unsigned).status, 'incomplete');
   assert.ok(receiptCompleteness(unsigned).missingIds.includes('signature'));
+});
+
+test('a tax invoice carries the seller tax ID, its number and, when full, VAT shown separately', () => {
+  const check = (type: 'tax_invoice' | 'abbreviated_tax_invoice', values: Record<string, string>) =>
+    complianceChecklist({ type, features: { receiverSigned: true }, values, category: 'B' });
+  const status = (items: ReturnType<typeof check>, id: string) => items.find(i => i.id === id)?.status;
+  const bare = check('tax_invoice', { total: '107' });
+  assert.equal(status(bare, 'seller_tax_id'), 'missing');
+  assert.equal(status(bare, 'invoice_number'), 'missing');
+  assert.equal(status(bare, 'vat_separate'), 'missing');
+  assert.match(bare.find(i => i.id === 'seller_tax_id')!.text, /86\/4/);
+  const short = check('tax_invoice', { total: '107', taxId: '0-1055-12345-67' });
+  assert.equal(status(short, 'seller_tax_id'), 'missing', 'twelve digits are not a tax ID');
+  const full = check('tax_invoice', {
+    total: '107',
+    vat: '7',
+    receiptNumber: 'INV-0001',
+    taxId: '๐๑๐๕๕๑๒๓๔๕๖๗๘',
+  });
+  for (const id of ['seller_tax_id', 'invoice_number', 'vat_separate']) assert.equal(status(full, id), 'ok', id);
+  const abbreviated = check('abbreviated_tax_invoice', { total: '107' });
+  assert.equal(status(abbreviated, 'vat_separate'), undefined, 'an abbreviated invoice may include VAT in the price');
+  const cash = complianceChecklist({ type: 'cash_bill', features: {}, values: { total: '107' }, category: 'B' });
+  assert.ok(!cash.some(i => ['seller_tax_id', 'invoice_number', 'vat_separate'].includes(i.id)), 'cash bills are not tax invoices');
 });

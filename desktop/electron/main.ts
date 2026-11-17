@@ -69,7 +69,7 @@ import { documentTool, documentVariant } from '../src/document-tools';
 import { resolveInvitation } from '../src/invitation';
 import { documentConversationContext, requestedDocumentTool, requestedLetterVariant } from '../src/document-intent';
 import { isDocumentQuestion } from './document-tools';
-import { inspectDocumentTemplate } from './document-template';
+import { inspectDocumentTemplate, templateControlText } from './document-template';
 import { DocumentTemplates, readTemplateSnapshot } from './document-template-store';
 import { DocumentAssets, documentImageDimensions, readDocumentImage } from './document-assets';
 import { sensitivePath, deniedPath } from './permissions';
@@ -99,6 +99,9 @@ import {
 import { isolatedRuntimeHome } from './runtime-home';
 import { PDF_MARGINS, exportDocument, exportFormats } from './export';
 import { resolveDocumentLayout, probeDocumentFont } from '../src/document-layout';
+import { documentChecks } from '../src/saraban-checks';
+import { formRevisionCheck, parseRegister, type RegisterEntry } from '../src/qs-register';
+import { markdownDocument } from '../src/draft';
 import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython, type OcrStatus, readOcrInput } from './ocr';
 import { ReceiptOperations } from './receipt-operations';
@@ -351,6 +354,12 @@ async function main() {
       throw new Error('VAULT_EXECUTION_CONFLICT');
   };
   const documentTemplates = new DocumentTemplates(store);
+  // The MIS quality-document register shipped with the organization documents; read once, on the first template export.
+  let qsRegister: Promise<Map<string, RegisterEntry>> | undefined;
+  const loadQsRegister = () =>
+    (qsRegister ??= readFile(join(root, 'docs/knowledge/mis-iso-document-register.md'), 'utf8')
+      .then(parseRegister)
+      .catch(() => new Map()));
   const documentAssets = new DocumentAssets(store);
   useLanguage(() => store?.settings().language);
   const credentialTitle = (title: string) => credentialTitles[title]?.[store.settings().language === 'en' ? 1 : 0] || title;
@@ -4936,6 +4945,12 @@ async function main() {
               fontStatus,
               ...(exported ? exported : {}),
               ...(template ? { templateName: s.documentTemplate!.name } : { garudaHeightCm: layout.garudaHeightCm }),
+              checks: [
+                ...(template
+                  ? [formRevisionCheck(await templateControlText(template), await loadQsRegister())].filter(check => check !== undefined)
+                  : []),
+                ...documentChecks(s.document || markdownDocument(s.draft), layout.id),
+              ],
             },
           };
         } finally {

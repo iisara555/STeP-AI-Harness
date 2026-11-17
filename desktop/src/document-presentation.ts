@@ -1,7 +1,7 @@
 import { resolveInvitation, type InvitationPresentation } from './invitation';
 
 export const DOCUMENT_PRESETS = {
-  saraban: { points: 16, margins: { top: 2.5, bottom: 2, left: 3, right: 2 }, line: 1, indent: 1.25, after: 0 },
+  saraban: { points: 16, margins: { top: 2.5, bottom: 2, left: 3, right: 2 }, line: 1, indent: 2.5, after: 0 },
   report: { points: 14, margins: { top: 2.54, bottom: 2.54, left: 2.54, right: 2.54 }, line: 1.5, indent: 0, after: 6 },
   book: { points: 16, margins: { top: 2.54, bottom: 2.54, left: 3, right: 2.54 }, line: 1.3, indent: 1.25, after: 0 },
 } as const;
@@ -14,7 +14,8 @@ export type DocumentPresentation = {
   toc: boolean;
   headerText: string;
   footerText: string;
-  pageNumber: 'none' | 'thai' | 'arabic-total';
+  /** saraban: "- ๒ -" centred in the header from page 2, as the saraban print explanation places continuation pages. */
+  pageNumber: 'none' | 'saraban' | 'thai' | 'arabic-total';
   pageNumberPosition: 'footer-center' | 'footer-right' | 'header-right';
 };
 
@@ -48,7 +49,7 @@ export function resolvePresentation(value: unknown = {}, official: boolean | str
       (typeof input[key] !== 'string' || input[key].length > 500 || /[\u0000-\u0008\u000b-\u001f\u007f]/.test(input[key]))
     )
       throw new Error('INVALID_DOCUMENT_PRESENTATION');
-  if (input.pageNumber !== undefined && !['none', 'thai', 'arabic-total'].includes(input.pageNumber))
+  if (input.pageNumber !== undefined && !['none', 'saraban', 'thai', 'arabic-total'].includes(input.pageNumber))
     throw new Error('INVALID_DOCUMENT_PRESENTATION');
   if (input.pageNumberPosition !== undefined && !['footer-center', 'footer-right', 'header-right'].includes(input.pageNumberPosition))
     throw new Error('INVALID_DOCUMENT_PRESENTATION');
@@ -60,7 +61,7 @@ export function resolvePresentation(value: unknown = {}, official: boolean | str
     toc: input.toc ?? false,
     headerText: input.headerText ?? '',
     footerText: input.footerText ?? '',
-    pageNumber: input.pageNumber ?? (official === 'tor' ? 'arabic-total' : official ? 'thai' : 'none'),
+    pageNumber: input.pageNumber ?? (official === 'tor' ? 'arabic-total' : official ? 'saraban' : 'none'),
     pageNumberPosition: input.pageNumberPosition ?? (official === 'tor' ? 'footer-right' : 'footer-center'),
   };
 }

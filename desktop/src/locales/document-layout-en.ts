@@ -11,6 +11,7 @@ export const documentLayoutEn: Record<string, string> = {
   ข้อความท้ายกระดาษ: 'Footer text',
   รูปแบบเลขหน้า: 'Page number format',
   ไม่ใส่เลขหน้า: 'No page numbers',
+  '- ๒ - หัวกระดาษ ตั้งแต่หน้า ๒': '- 2 - at the top, from page 2',
   'หน้า ๑': 'Thai page numbers',
   ตำแหน่งเลขหน้า: 'Page number position',
   'ท้ายกระดาษ ตรงกลาง': 'Footer, center',

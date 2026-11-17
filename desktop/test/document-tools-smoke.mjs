@@ -295,7 +295,11 @@ try {
     assert.ok(accepted.documentReview.text.includes('Skill Verification'));
     await expect(page.locator('.tiptap')).not.toContainText('Skill Verification');
     assert.match(document, /<w:keepNext\/>/);
-    assert.match(await zip.file('word/footer1.xml').async('string'), /PAGE/);
+    // TOR numbers pages x/y in the footer; other official documents use the saraban "- ๒ -" header from page 2.
+    const numbered = [];
+    for (const part of Object.keys(zip.files).filter(p => /^word\/(?:header|footer)\d+\.xml$/.test(p)))
+      if (/PAGE/.test(await zip.file(part).async('string'))) numbered.push(part.replace(/\d+\.xml$/, '').slice(5));
+    assert.deepEqual(numbered, [id === 'tor' ? 'footer' : 'header']);
     if (id === 'project') {
       await page.evaluate(async () => {
         const s = await window.step.call('snapshot');
@@ -359,8 +363,15 @@ try {
     }
     if (id === 'memo' || id === 'letter') {
       assert.match(document, /<w:titlePg\/>/);
-      const header = await zip.file('word/header1.xml').async('string');
-      assert.match(header, new RegExp(`cy="${id === 'memo' ? '540000' : '1080000'}"`));
+      // The Garuda sits in the page-1 header; the page-2+ header only carries the "- ๒ -" number.
+      const headers = await Promise.all(
+        Object.keys(zip.files)
+          .filter(p => /^word\/header\d+\.xml$/.test(p))
+          .map(p => zip.file(p).async('string')),
+      );
+      const garuda = headers.filter(xml => /<w:drawing>/.test(xml));
+      assert.equal(garuda.length, 1);
+      assert.match(garuda[0], new RegExp(`cy="${id === 'memo' ? '540000' : '1080000'}"`));
       await page.getByLabel('ตราครุฑ', { exact: true }).selectOption('none');
       await page.getByRole('button', { name: 'ส่งออก', exact: true }).click();
       await expect(page.locator('.document-export-info')).toContainText('ไม่ใส่ตราครุฑ');

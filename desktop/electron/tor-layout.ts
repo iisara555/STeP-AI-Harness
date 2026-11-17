@@ -8,7 +8,12 @@ export const TOR_LAYOUT = { titleExtra: 2, headerCm: 1, footerCm: 1, logoWidthCm
 
 export function torPreset(presentation: DocumentPresentation) {
   const preset = DOCUMENT_PRESETS[presentation.preset];
-  return { ...preset, line: presentation.preset === 'saraban' ? 1.15 : preset.line };
+  // The owner-supplied TOR examples indent narrative 1.25 cm, not the 2.5 cm of a saraban letter or memo.
+  return {
+    ...preset,
+    line: presentation.preset === 'saraban' ? 1.15 : preset.line,
+    indent: presentation.preset === 'saraban' ? 1.25 : preset.indent,
+  };
 }
 
 export function torSubject(document: DraftNode) {

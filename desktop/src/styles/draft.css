@@ -77,6 +77,10 @@
 .document-export-info p {
   margin: var(--space-1) 0;
 }
+/* What the draft still lacks reads first, in the text colour; the rest of the report stays quiet. */
+.document-export-info .export-check {
+  color: var(--text);
+}
 .editor-scroll {
   flex: 1;
   min-height: 120px;

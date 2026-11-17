@@ -114,6 +114,25 @@ export function paymentVoucherAmounts(voucher: PaymentVoucher) {
   const net = !invalidRow && gross !== null && withholding !== null && deduction !== null ? gross - withholding - deduction : null;
   return { gross, withholding, deduction, net, invalidRow };
 }
+/** Common withholding rates on the amount before deduction: 1, 2, 3 and 5 percent. */
+const WITHHOLDING_RATES = [1, 2, 3, 5];
+/**
+ * Advice that never blocks: a withholding that is not a common rate of its item, and the tax certificate QP-AF-004
+ * asks the finance officer to prepare once tax is withheld (ภ.ง.ด.3 for a person with FM-AF-014, ภ.ง.ด.53 for a company).
+ */
+export function paymentVoucherNotes(voucher: PaymentVoucher, amounts = paymentVoucherAmounts(voucher)) {
+  const notes: ('withholding-rate' | 'withholding-certificate')[] = [];
+  const rateOff = voucher.items.some(item => {
+    const gross = moneySatang(item.gross),
+      withheld = moneySatang(item.withholding);
+    if (gross === null || withheld === null || gross <= 0 || withheld <= 0) return false;
+    // One satang either way covers the rounding of a percentage of an amount in satang.
+    return !WITHHOLDING_RATES.some(rate => Math.abs(withheld - Math.round((gross * rate) / 100)) <= 1);
+  });
+  if (rateOff) notes.push('withholding-rate');
+  if (amounts.withholding !== null && amounts.withholding > 0) notes.push('withholding-certificate');
+  return notes;
+}
 export function paymentVoucherSourceStale(voucher: PaymentVoucher, receipt: ReceiptVoucher) {
   return Boolean(
     voucher.sourceReceipt &&
@@ -133,6 +152,7 @@ export function paymentVoucherAssessment(voucher: PaymentVoucher, receipt: Recei
   return {
     status: missing.length ? ('needs-review' as const) : ('prepared-for-afp' as const),
     missing,
+    notes: paymentVoucherNotes(voucher, amounts),
     amounts,
     paymentApproved: false as const,
     policyVerified: false as const,

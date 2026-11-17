@@ -33,7 +33,14 @@ async function word(documentTool?: string, garuda?: string, font?: string, docum
       .filter(p => /^word\/header\d+\.xml$/.test(p))
       .map(async p => parse(await zip.file(p)!.async('string'))),
   );
-  return { zip, body, headers };
+  // The page-1 header (Garuda, or blank) is the one the section references as "first".
+  const firstId = Array.from(body.getElementsByTagNameNS(W, 'headerReference'))
+    .find(ref => ref.getAttributeNS(W, 'type') === 'first')
+    ?.getAttribute('r:id');
+  const rels = (await zip.file('word/_rels/document.xml.rels')?.async('string')) || '';
+  const target = firstId ? new RegExp(`Id="${firstId}"[^>]*Target="([^"]+)"|Target="([^"]+)"[^>]*Id="${firstId}"`).exec(rels) : null;
+  const first = target ? parse(await zip.file('word/' + (target[1] || target[2]))!.async('string')) : undefined;
+  return { zip, body, headers, first };
 }
 
 test('Garuda height follows the stored document type; opt-out never enables it on unrelated profiles', () => {
@@ -45,20 +52,20 @@ test('Garuda height follows the stored document type; opt-out never enables it o
     assert.throws(() => resolveDocumentLayout('memo', undefined, input), /INVALID_EXPORT_GARUDA/);
 });
 
-test('DOCX embeds a pinned high-resolution graphic at its physical height on the first page only, with live first-page footer', async () => {
+test('DOCX embeds a pinned high-resolution graphic at its physical height on page 1 only; page 2+ carry "- ๒ -" in the header', async () => {
   for (const [id, height] of [
     ['memo', 1.5],
     ['letter', 3],
   ] as const) {
-    const { zip, body, headers } = await word(id);
-    assert.equal(headers.length, 1);
-    const extent = headers[0].getElementsByTagNameNS(WP, 'extent')[0];
+    const { zip, body, headers, first } = await word(id);
+    assert.equal(headers.length, 2);
+    const extent = first!.getElementsByTagNameNS(WP, 'extent')[0];
     assert.ok(extent);
     assert.equal(Number(extent.getAttribute('cy')), height * 360000);
     assert.equal(Number(extent.getAttribute('cx')), height * 360000);
     assert.equal(body.getElementsByTagNameNS(W, 'drawing').length, 0);
     assert.equal(body.getElementsByTagNameNS(W, 'tbl').length, 1);
-    assert.equal(attr(body, 'headerReference', 'type'), 'first');
+    assert.ok(Array.from(body.getElementsByTagNameNS(W, 'headerReference')).some(ref => ref.getAttributeNS(W, 'type') === 'first'));
     assert.equal(body.getElementsByTagNameNS(W, 'titlePg').length, 1);
     assert.equal(attr(body, 'pgMar', 'top'), '1418');
     const media = Object.keys(zip.files).filter(p => p.startsWith('word/media/') && !zip.files[p].dir);
@@ -67,36 +74,39 @@ test('DOCX embeds a pinned high-resolution graphic at its physical height on the
     assert.equal(createHash('sha256').update(png).digest('hex'), sourceHash);
     assert.equal(png.readUInt32BE(16), 800);
     assert.equal(png.readUInt32BE(20), 800);
-    const footers = Object.keys(zip.files).filter(p => /^word\/footer\d+\.xml$/.test(p));
-    assert.equal(footers.length, 2);
-    for (const footer of footers) assert.match(await zip.file(footer)!.async('string'), /PAGE/);
+    assert.equal(Object.keys(zip.files).filter(p => /^word\/footer\d+\.xml$/.test(p)).length, 0);
+    const continuation = headers.find(header => header !== first)!;
+    assert.match(texts(continuation), /^- {2}-$/);
+    assert.equal(continuation.getElementsByTagNameNS(W, 'fldChar').length > 0 || /PAGE/.test(continuation.toString()), true);
+    assert.doesNotMatch(first!.toString(), /PAGE/);
     for (const part of Object.keys(zip.files).filter(p => p.endsWith('.rels')))
       assert.doesNotMatch(await zip.file(part)!.async('string'), /TargetMode="External"/);
-    const actual = (id === 'memo' ? texts(headers[0]) : '') + texts(body);
+    const actual = (id === 'memo' ? texts(first!) : '') + texts(body);
     assert.equal(actual.replace(/\s/g, ''), documentText(draft).replace(/\s/g, ''));
   }
 });
 
-test('memo header keeps the source title editable and gives Thai and Latin the same 30 pt bold face', async () => {
+test('memo header keeps the source title editable and gives Thai and Latin the same 29 pt bold face', async () => {
   for (const font of ['TH Sarabun PSK', 'TH Sarabun New']) {
-    const { headers } = await word('memo', 'auto', font);
-    const header = headers[0];
+    const { first } = await word('memo', 'auto', font);
+    const header = first!;
     assert.equal(texts(header), 'บันทึกข้อความ (ร่าง)');
-    assert.equal(attr(header, 'sz', 'val'), '60');
-    assert.equal(attr(header, 'szCs', 'val'), '60');
+    assert.equal(attr(header, 'sz', 'val'), '58');
+    assert.equal(attr(header, 'szCs', 'val'), '58');
     assert.equal(attr(header, 'rFonts', 'cs'), resolveDocumentLayout('memo', font).font);
     assert.ok(header.getElementsByTagNameNS(W, 'bCs').length);
   }
   const plain = markdownDocument('ส่วนราชการ [รอยืนยัน: หน่วยงาน]\n\nเนื้อหาสังเคราะห์');
-  const { body, headers } = await word('memo', 'auto', undefined, plain);
-  assert.equal(texts(headers[0]), '');
+  const { body, first } = await word('memo', 'auto', undefined, plain);
+  assert.equal(texts(first!), '');
   assert.equal(texts(body).replace(/\s/g, ''), documentText(plain).replace(/\s/g, ''));
 });
 
 test('opt-out and unrelated DOCX exports have no Garuda; TOR retains only its STeP wordmark and native source text', async () => {
   for (const id of [undefined, 'memo', 'letter', 'tor', 'project', 'minutes']) {
     const { zip, body, headers } = await word(id, id === 'memo' || id === 'letter' ? 'none' : 'auto');
-    assert.equal(headers.length, id === 'tor' ? 1 : 0);
+    // Saraban documents add a page-2+ number header and a blank page-1 header; neither carries an image.
+    assert.equal(headers.length, id === 'tor' ? 1 : id ? 2 : 0);
     const media = Object.keys(zip.files).filter(p => p.startsWith('word/media/') && !zip.files[p].dir);
     assert.equal(media.length, id === 'tor' ? 1 : 0);
     if (id === 'tor') {

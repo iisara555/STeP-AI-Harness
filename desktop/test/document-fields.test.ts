@@ -131,6 +131,6 @@ test('header/footer/TOC settings survive revision restore and native template la
   legacy.documentTemplate = restored.documentTemplate;
   legacy.presentation = { preset: 'saraban', thaiBreaks: true, embedFonts: true } as typeof legacy.presentation;
   store.save(legacy);
-  assert.equal(store.edit(legacy.id, 'legacy edit', 0).presentation?.pageNumber, 'thai');
+  assert.equal(store.edit(legacy.id, 'legacy edit', 0).presentation?.pageNumber, 'saraban');
   store.close();
 });
