@@ -55,4 +55,19 @@ export const skillImportEn: Record<string, string> = {
     'Choose a Skill text file (.md or .txt). Word and PDF files cannot be imported as Skills yet',
   'ไฟล์ Skill ใหญ่หรือมีไฟล์ย่อยมากเกินกำหนด ลองเลือกเฉพาะไฟล์ Skill':
     'The Skill is too large or has too many files. Try choosing only the Skill file',
+  'ให้ AI แก้ตามมาตรฐาน': 'Have the AI fix it to the Standard',
+  'เชื่อมต่อ AI ก่อน จึงให้ AI แก้ให้ได้': 'Connect an AI first to have it fix this',
+  '{0} กำลังแก้ให้ได้มาตรฐาน โดยคงเนื้อหาเดิมไว้…': '{0} is fixing it to the Standard, keeping the original content…',
+  'เนื้อหาเดิมหายไป {0} บรรทัด ตรวจก่อนใช้': '{0} original lines are missing. Check before using',
+  'เนื้อหาเดิมอยู่ครบ {0} บรรทัด': 'All {0} original lines are kept',
+  'ฉบับที่ AI แก้ แก้ต่อได้ก่อนใช้': 'The AI-fixed version, editable before use',
+  ฉบับเดิม: 'Original',
+  ใช้ฉบับนี้: 'Use this version',
+  'Skill นี้ไม่มีข้อที่ AI แก้ให้ได้ ข้อด้านความปลอดภัยต้องให้คนแก้หรือผู้ดูแลตรวจ':
+    'There is nothing here the AI can fix. Safety findings must be fixed by a person or checked by an admin',
+  'ลบ Skill': 'Delete Skill',
+  'ลบ Skill {0} ออกจากเครื่องนี้': 'Delete the Skill {0} from this computer',
+  'กู้คืนไม่ได้ ถ้ายังอยากเก็บไว้ ให้ส่งออกเป็นโฟลเดอร์ Skill ก่อน':
+    'This cannot be undone. To keep a copy, export it as a Skill folder first',
+  'ไม่พบ Skill นี้บนเครื่องแล้ว เปิดรายการใหม่อีกครั้ง': 'This Skill is no longer on this computer. Reopen the list',
 };

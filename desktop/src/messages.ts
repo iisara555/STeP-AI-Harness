@@ -90,6 +90,8 @@ export const errorText: Record<string, string> = localized({
   PACK_PROMOTION_TEXT_ONLY: 'เสนอให้องค์กรได้เฉพาะ Skill แบบข้อความที่ไม่มี Hooks หรือ Agent',
   PACK_CREDIT_REQUIRED: 'ยังไม่มีชื่อผู้เสนอ กรุณาใส่ชื่อในการตั้งค่าโปรไฟล์ก่อนเสนอ',
   PACK_CHANGED: 'ไฟล์ Skill เปลี่ยนระหว่างส่ง กรุณาเปิดรายการใหม่แล้วลองอีกครั้ง',
+  PACK_NOT_FOUND: 'ไม่พบ Skill นี้บนเครื่องแล้ว เปิดรายการใหม่อีกครั้ง',
+  PACK_FIX_UNAVAILABLE: 'Skill นี้ไม่มีข้อที่ AI แก้ให้ได้ ข้อด้านความปลอดภัยต้องให้คนแก้หรือผู้ดูแลตรวจ',
   SKILL_SUBMIT_UNAVAILABLE: 'ผู้ดูแลยังไม่ได้ตั้งช่องทางรับ Skill ที่เสนอให้องค์กร',
   SKILL_SUBMIT_TOO_LARGE: 'Skill นี้ใหญ่เกินกว่าจะส่งทางช่องทางนี้ กรุณาติดต่อผู้ดูแล',
   SKILL_SUBMIT_FAILED: 'ส่งไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง',

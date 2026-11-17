@@ -185,6 +185,132 @@ function CreateSkill({
     </section>
   );
 }
+type SkillFix = {
+  pack: string;
+  path: string;
+  digest: string;
+  before: string;
+  text: string;
+  review: PackReviewResult;
+  coverage: { total: number; kept: number; missing: string[] };
+};
+/**
+ * "ให้ AI แก้ตามมาตรฐาน": the connected AI restructures an imported Skill that fails the Standard check. The person
+ * sees the new review, any original line the rewrite dropped, and can edit it; nothing changes until "ใช้ฉบับนี้".
+ */
+function FixSkill({
+  api,
+  id,
+  connection,
+  onSaved,
+  onCancel,
+}: {
+  api: DesktopAPI;
+  id: string;
+  connection: { id: string; name: string };
+  onSaved: (result: any) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [fix, setFix] = useState<SkillFix | null>(null),
+    [text, setText] = useState(''),
+    [working, setWorking] = useState(true),
+    [error, setError] = useState('');
+  const alive = useRef(true);
+  const run = async (job: () => Promise<void>) => {
+    setWorking(true);
+    setError('');
+    try {
+      await job();
+    } catch (e) {
+      if (alive.current) setError(explainError(e));
+    } finally {
+      if (alive.current) setWorking(false);
+    }
+  };
+  const ask = () =>
+    run(async () => {
+      const result: SkillFix = await api.call('skillFix', { connectionId: connection.id, id });
+      if (!alive.current) return;
+      setFix(result);
+      setText(result.text);
+    });
+  const started = useRef(false);
+  useEffect(() => {
+    alive.current = true;
+    // Clicking the button is the request: start once, also under React's development double mount.
+    if (!started.current) {
+      started.current = true;
+      void ask();
+    }
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+  const lost = fix?.coverage.missing.length || 0;
+  return (
+    <section className="skill-create skill-fix" aria-label={t('ให้ AI แก้ตามมาตรฐาน')} aria-busy={working}>
+      {!fix ? (
+        working && (
+          <p className="small muted" role="status">
+            {t('{0} กำลังแก้ให้ได้มาตรฐาน โดยคงเนื้อหาเดิมไว้…', connection.name)}
+          </p>
+        )
+      ) : (
+        <>
+          <PackReview review={fix.review} />
+          {lost ? (
+            <details className="skill-fix-lost" open>
+              <summary role="alert">{t('เนื้อหาเดิมหายไป {0} บรรทัด ตรวจก่อนใช้', fix.coverage.total - fix.coverage.kept)}</summary>
+              <ul>
+                {fix.coverage.missing.map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+            </details>
+          ) : (
+            fix.coverage.total > 0 && <p className="small muted">{t('เนื้อหาเดิมอยู่ครบ {0} บรรทัด', fix.coverage.total)}</p>
+          )}
+          <label className="field">
+            <span>{t('ฉบับที่ AI แก้ แก้ต่อได้ก่อนใช้')}</span>
+            <textarea
+              className="skill-create-preview"
+              rows={14}
+              maxLength={200_000}
+              value={text}
+              disabled={working}
+              onChange={e => setText(e.target.value)}
+            />
+          </label>
+          <details className="admin-fold">
+            <summary>{t('ฉบับเดิม')}</summary>
+            <pre className="skill-fix-before">{fix.before}</pre>
+          </details>
+        </>
+      )}
+      {error && <p role="alert">{error}</p>}
+      <div className="dialog-actions">
+        <button className="quiet" disabled={working && !!fix} onClick={onCancel}>
+          {t('ยกเลิก')}
+        </button>
+        {fix ? (
+          <button
+            disabled={working || !text.trim()}
+            onClick={() =>
+              void run(async () => {
+                const result = await api.call('skillFixSave', { id, path: fix.path, digest: fix.digest, text });
+                await onSaved(result);
+              })
+            }
+          >
+            {t('ใช้ฉบับนี้')}
+          </button>
+        ) : (
+          !working && <button onClick={() => void ask()}>{t('ลองอีกครั้ง')}</button>
+        )}
+      </div>
+    </section>
+  );
+}
 export function PacksDialog({
   api,
   features,
@@ -240,6 +366,9 @@ export function PacksDialog({
   const afterInstall = async (result: any) => {
     await load();
     if (alive.current) setImported({ id: result.id, notes: result.notes || [] });
+    await offerUse(result);
+  };
+  const offerUse = async (result: any) => {
     const usable = features?.staffSkills !== false && result.review?.status !== 'fail' && !result.hooks && !(result.agents || []).length;
     if (!usable) return;
     try {
@@ -249,7 +378,8 @@ export function PacksDialog({
       if (!String((e as Error)?.message || e).includes('CANCELLED')) throw e;
     }
   };
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState(false),
+    [fixing, setFixing] = useState('');
   const canCreate = importAllowed && features?.staffSkills !== false;
   const importSkill = async (kind: 'file' | 'folder') => {
     if (busy) return;
@@ -261,6 +391,21 @@ export function PacksDialog({
       if (result) await afterInstall(result);
     } catch (e) {
       if (alive.current) setError(explainError(e));
+    } finally {
+      if (alive.current) setBusy(false);
+    }
+  };
+  // Removal asks once in the main process; cancelling there changes nothing and says nothing.
+  const remove = async (id: string) => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      await api.call('packRemove', { id });
+      if (alive.current) setImported(current => (current?.id === id ? null : current));
+      await load();
+    } catch (e) {
+      if (alive.current && !String((e as Error)?.message || e).includes('CANCELLED')) setError(explainError(e));
     } finally {
       if (alive.current) setBusy(false);
     }
@@ -365,7 +510,25 @@ export function PacksDialog({
                 {p.credit.team ? ' · ' + p.credit.team : ''} · {shownDate(p.credit.uploadedAt)}
               </p>
             )}
-            {p.review && <PackReview review={p.review} />}
+            {p.review && fixing !== p.id && <PackReview review={p.review} />}
+            {fixing === p.id && connection && (
+              <FixSkill
+                api={api}
+                id={p.id}
+                connection={connection}
+                onCancel={() => setFixing('')}
+                onSaved={async result => {
+                  setFixing('');
+                  setImported(null);
+                  await load();
+                  try {
+                    await offerUse(result);
+                  } catch (e) {
+                    if (alive.current) setError(explainError(e));
+                  }
+                }}
+              />
+            )}
             {p.usage?.count > 0 && (
               <p className="small muted">
                 {t('ใช้แล้ว {0} ครั้ง', p.usage.count)}
@@ -396,7 +559,21 @@ export function PacksDialog({
                     {t('ยืนยันเปิดใช้')}
                   </button>
                 )}
-                {!p.invalid && !p.personalAllowed && !p.adminApproved && (
+                {/* A Standard failure has one next step: the AI restructures the file and the person checks it. */}
+                {!p.invalid &&
+                  !p.personalAllowed &&
+                  !p.adminApproved &&
+                  p.fixable &&
+                  fixing !== p.id &&
+                  features?.staffSkills !== false && (
+                    <>
+                      <button disabled={busy || !!fixing || !connection} onClick={() => setFixing(p.id)}>
+                        {t('ให้ AI แก้ตามมาตรฐาน')}
+                      </button>
+                      {!connection && <p className="small muted">{t('เชื่อมต่อ AI ก่อน จึงให้ AI แก้ให้ได้')}</p>}
+                    </>
+                  )}
+                {!p.invalid && !p.personalAllowed && !p.adminApproved && !p.fixable && (
                   <p className="small muted">{t('ยังใช้ไม่ได้: แก้ตามผลตรวจ หรือขอให้ผู้ดูแลรับรองชุดนี้')}</p>
                 )}
               </>
@@ -420,9 +597,14 @@ export function PacksDialog({
               <p className="small muted">
                 digest {p.digest} · Hooks {p.hooks}
               </p>
-              <button className="quiet" disabled={busy || p.invalid} onClick={() => void act('packExport', { id: p.id })}>
-                {t('ส่งออกเป็นโฟลเดอร์ Skill')}
-              </button>
+              <div className="pack-file-actions">
+                <button className="quiet" disabled={busy || p.invalid} onClick={() => void act('packExport', { id: p.id })}>
+                  {t('ส่งออกเป็นโฟลเดอร์ Skill')}
+                </button>
+                <button className="quiet danger-text" disabled={busy || fixing === p.id} onClick={() => void remove(p.id)}>
+                  {t('ลบ Skill')}
+                </button>
+              </div>
             </details>
           </section>
         );
