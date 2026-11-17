@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ToolLoop, FINAL_TURN, type LoopHost } from '../electron/tool-loop';
+import { offerWriteNow } from '../src/live-run';
 
 // Long-task behaviour seen in real runs (synthetic data): a high-reasoning model re-reading the same Skill, paging through
 // long references, a conversation that outgrows the context budget, and a step that runs out of time mid-read.
@@ -326,4 +327,23 @@ test('a model that keeps asking after the final-turn notice is not given more tu
   // Its own words are kept as the answer; with none, the tool-turn limit stands. Two turns either way, not forty.
   assert.deepEqual(await run('สรุปจากที่อ่านแล้ว\n'), { answer: 'สรุปจากที่อ่านแล้ว', turns: 2 });
   assert.deepEqual(await run(''), { error: 'TOOL_TURN_LIMIT', turns: 2 });
+});
+
+test('"เขียนคำตอบเลย" is offered while the AI reads, even when it narrates its reads, and not once it writes', () => {
+  const minutes = (n: number) => n * 60_000;
+  const reading = '```step-tool\n{"tool":"reference","input":"qp-af-002"}\n```';
+  assert.equal(offerWriteNow({ elapsedMs: minutes(1), stream: '', liveText: '' }), false, 'not in the first two minutes');
+  assert.equal(offerWriteNow({ elapsedMs: minutes(3), stream: '', liveText: '' }), true, 'silent: thinking or reading');
+  assert.equal(
+    offerWriteNow({ elapsedMs: minutes(3), stream: 'กำลังตรวจเอกสารจัดซื้อ\n' + reading, liveText: 'กำลังตรวจเอกสารจัดซื้อ' }),
+    true,
+    'a narrated read is still a read',
+  );
+  assert.equal(offerWriteNow({ elapsedMs: minutes(3), stream: 'ร่าง', liveText: 'ร่าง', progress: 'กำลังอ่านเอกสาร QP-AF-002' }), true);
+  assert.equal(offerWriteNow({ elapsedMs: minutes(3), stream: 'ร่าง TOR', liveText: 'ร่าง TOR' }), false, 'writing the answer');
+  assert.equal(
+    offerWriteNow({ elapsedMs: minutes(3), stream: reading + 'ร่าง', liveText: 'ร่าง', progress: 'อ่านครบแล้ว กำลังเขียนคำตอบ' }),
+    false,
+    'already on the final turn',
+  );
 });

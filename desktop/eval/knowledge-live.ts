@@ -55,6 +55,8 @@ export type Outcome = {
   repeats?: number;
   /** Long-task loop events per step (folds, reads given back, final-turn reason). */
   loop?: { folds: number; repeats: number; seeded: number; final?: string }[];
+  /** Each AI call of the turn, for comparing builds: how long, first token, and whether the whole prompt was sent. */
+  calls?: { kind: string; outcome: string; ms: number; ttftMs?: number; transport?: string; sentChars?: number; resetReason?: string }[];
 };
 
 /** Right document reached: in the search excerpts or opened by the AI. A general question must reach none. */
@@ -228,6 +230,18 @@ export async function runKnowledge(options: {
           loop: turns
             .flatMap(run => run.steps || [])
             .flatMap(step => ((step as { loop?: any }).loop ? [(step as { loop?: any }).loop] : [])),
+          calls: turns
+            .flatMap(run => run.steps || [])
+            .flatMap(step => step.providerCalls || [])
+            .map(c => ({
+              kind: c.kind,
+              outcome: c.outcome,
+              ms: c.ms,
+              ttftMs: c.ttftMs,
+              transport: c.transport?.mode,
+              sentChars: c.transport?.sentChars,
+              resetReason: c.transport?.resetReason,
+            })),
           ms: Date.now() - turnStarted,
           ...(code ? { code } : {}),
           answer: done.messages.filter(m => m.role === 'assistant').at(-1)?.text || '',

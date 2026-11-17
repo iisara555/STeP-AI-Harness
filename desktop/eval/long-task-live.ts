@@ -7,6 +7,10 @@
  *   STEP_EVAL_APPROVE_LIVE=1 STEP_EVAL_PROVIDER=antigravity STEP_EVAL_ANTIGRAVITY_EXECUTABLE=<pinned agy.exe> \
  *   STEP_EVAL_MODEL=gemini-3.8-flash-medium npm run eval:long-task:live
  *
+ * A fast model at medium effort usually drafts these in one round without opening anything; the reading loop this
+ * measures shows with a slow, high-effort model (the real TOR timeouts were at xhigh), so run that one with
+ * STEP_EVAL_CASES=1 to keep the run short.
+ *
  * Runtimes as eval:knowledge (eval/skill-selection-live.ts). Requests are synthetic; nothing is sent anywhere else.
  */
 import { execFileSync } from 'node:child_process';
@@ -39,7 +43,12 @@ async function main(env = process.env) {
   try {
     outcomes = await runKnowledge({
       root,
-      cases: LONG_TASKS,
+      // STEP_EVAL_CASES=1 runs only the first request (comma-separated, from 1), to spend a slow model's time on one.
+      cases: env.STEP_EVAL_CASES
+        ? env.STEP_EVAL_CASES.split(',')
+            .map(n => LONG_TASKS[Number(n) - 1])
+            .filter(Boolean)
+        : LONG_TASKS,
       live: { ...live, connection },
       onProgress: line => console.log(line),
     });
@@ -70,6 +79,7 @@ async function main(env = process.env) {
     resends: o.resends,
     loop: o.loop,
     answerChars: o.answer.length,
+    calls: o.calls,
   }));
   const folder = join(here, '..', 'eval-results', `${meta.date.replace(/[:.]/g, '-')}-long-task`);
   await mkdir(folder, { recursive: true });

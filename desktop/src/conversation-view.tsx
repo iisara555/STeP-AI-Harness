@@ -35,7 +35,7 @@ import { ThinkingScribble } from './thinking-scribble';
 import { VoiceButton } from './voice';
 import { WORKFLOW_LABELS, WorkPlanCard } from './work-plan';
 import { WelcomeGreeting } from './welcome-greeting';
-import { liveAnswer, liveThinking, useElapsed, useLiveRun } from './live-run';
+import { liveAnswer, liveThinking, offerWriteNow, useElapsed, useLiveRun } from './live-run';
 import { SavedThinking, ThinkingPanel } from './thinking-panel';
 import { WorkAssistantActivity, WorkAssistantGuide, workActionsFromTrace } from './work-assistant';
 import type { WorkMode, Workflow } from './types';
@@ -51,7 +51,6 @@ import { CHAT_STARTERS, PERMISSION_SHORT, ScheduledTasks, SkillsHub, checkStillR
 import type { AppView } from './use-workspace';
 
 /** When the "write the answer now" control appears during a run. */
-const WRITE_NOW_AFTER_MS = 120_000;
 /** The chat: welcome, messages, plan and questions, and the composer; or the schedules and Skill pages. */
 export function ConversationView({ v }: { v: AppView }) {
   const {
@@ -510,18 +509,21 @@ export function ConversationView({ v }: { v: AppView }) {
                     {elapsed || t('0 วินาที')}
                     {now - heartbeatAt > 15000 && <> · {t('ยังไม่ได้รับสถานะจากแอป')}</>}
                   </span>
-                  {selected && startedAt && now - startedAt >= WRITE_NOW_AFTER_MS && !liveText && writeNowAt !== startedAt && (
-                    <button
-                      className="quiet write-now"
-                      title={t('ให้ AI หยุดอ่านเพิ่ม แล้วเขียนคำตอบจากที่อ่านมา')}
-                      onClick={() => {
-                        setWriteNowAt(startedAt);
-                        void api.call('writeNow', { id: selected });
-                      }}
-                    >
-                      {t('เขียนคำตอบเลย')}
-                    </button>
-                  )}
+                  {selected &&
+                    startedAt &&
+                    writeNowAt !== startedAt &&
+                    offerWriteNow({ elapsedMs: now - startedAt, stream, liveText, progress }) && (
+                      <button
+                        className="quiet write-now"
+                        title={t('ให้ AI หยุดอ่านเพิ่ม แล้วเขียนคำตอบจากที่อ่านมา')}
+                        onClick={() => {
+                          setWriteNowAt(startedAt);
+                          void api.call('writeNow', { id: selected });
+                        }}
+                      >
+                        {t('เขียนคำตอบเลย')}
+                      </button>
+                    )}
                 </div>
                 {now - activityAt > 45000 && !liveText && (
                   <p className="small muted">{t('ขั้นตอนนี้ยังไม่ส่งผลกลับมา คุณรอต่อหรือกดหยุดได้')}</p>
