@@ -42,6 +42,8 @@ export type Connection = {
   problem?: string;
   models?: ModelOption[];
   modelsAt?: string;
+  /** App version that loaded `models`; Claude's catalog ships inside the app, so an update reloads it once. */
+  modelsVersion?: string;
 };
 export type SkillEntry = {
   name: string;

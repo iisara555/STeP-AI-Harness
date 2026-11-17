@@ -387,6 +387,13 @@ async function main() {
   // A new install has nothing to catch up on: "What's new" starts from the version it was installed with.
   if (!store.settings().onboarding && !store.settings().whatsNewSeen)
     store.put('settings', 'main', { ...store.settings(), whatsNewSeen: app.getVersion() });
+  // Claude's model catalog comes from the Agent SDK bundled with the app (new models such as Fable 5.2 arrive with an
+  // app update), so a list loaded by an older version is marked stale and reloaded the next time the connection is used.
+  for (const c of store.list<Connection>('connection')) {
+    if (c.provider !== 'claude' || !c.modelsAt || c.modelsVersion === app.getVersion()) continue;
+    delete c.modelsAt;
+    store.put('connection', c.id, c);
+  }
   // Before the first-run wizard, start it from the profile set in Setup-STeP-Skills, if there is one.
   if (!store.settings().onboarding) {
     const shared = await readSharedProfile(sharedProfile);
@@ -2034,6 +2041,7 @@ async function main() {
     const current = await runtime(connection);
     connection.models = await listModels(connection, current.context);
     connection.modelsAt = new Date().toISOString();
+    connection.modelsVersion = app.getVersion();
   }
   // Empty means the provider default; anything else must come from the provider's own catalog.
   const modelChoice = (connection: Connection, value: unknown) => {
@@ -4159,6 +4167,7 @@ async function main() {
             : tm('ออกจากระบบแล้ว กดเชื่อมต่อและทดสอบเพื่อลงชื่อใหม่');
         delete c.models;
         delete c.modelsAt;
+        delete c.modelsVersion;
         delete c.problem;
         store.put('connection', c.id, c);
         removeKey(c.id);
