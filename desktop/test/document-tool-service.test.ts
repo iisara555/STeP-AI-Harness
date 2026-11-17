@@ -1056,3 +1056,42 @@ test('template attachment purpose reaches the Skill contract without verifying i
     store.close();
   }
 });
+
+test('a fresh draft that lost its output envelope is re-wrapped once by the same model instead of failing', async () => {
+  for (const second of ['wrapped', 'unwrapped'] as const) {
+    const { store, session, harness } = fixture();
+    const prompts: string[] = [];
+    const body = '# บันทึกข้อความ\n\nส่วนงาน หน่วยงานสังเคราะห์\n\nเรื่อง ทดสอบ\n\nเรียน ผู้รับสังเคราะห์\n\nข้อความสังเคราะห์';
+    const service = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: root, env: {} },
+        adapter: {
+          run: async prompt => {
+            prompts.push(prompt);
+            return prompts.length === 1 || second === 'unwrapped' ? body : envelope(body);
+          },
+        },
+      }),
+      () => {},
+    );
+    try {
+      const request = documentRequest('memo', { subject: 'ทดสอบ' });
+      await service.run(session.id, request.text, request.sourceText, true, undefined, 'draft', undefined, [], { documentTool: 'memo' });
+      const after = store.session(session.id);
+      assert.equal(prompts.length, 2, 'one repair call, never more');
+      assert.match(prompts[1], /MISSING_DOCUMENT_ENVELOPE/);
+      assert.ok(prompts[1].includes('ข้อความสังเคราะห์'), 'the repair sees the earlier response');
+      if (second === 'wrapped') {
+        assert.equal(after.status, 'review');
+        assert.ok(after.proposals.at(-1)?.text.includes('ข้อความสังเคราะห์'));
+      } else {
+        assert.equal(after.messages.at(-1)?.text, 'DOCUMENT_OUTPUT_INVALID');
+        assert.equal(after.proposals.length, 0);
+      }
+    } finally {
+      store.close();
+    }
+  }
+});

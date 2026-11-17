@@ -1942,7 +1942,16 @@ export class WorkService {
         writtenFilesCount: written.size,
         groundingCorpus,
       });
-      if (qualityReport.needsRepair && this.harness.qualityRepair?.()) {
+      // A fresh document whose response lost its <document_draft>/<document_review> wrapping gets one repair call
+      // that asks the same model to re-wrap it, instead of failing after a long draft. An existing draft is never
+      // replaced this way: a chat-style answer to an edit still fails and leaves the document as it was.
+      const envelopeRepair =
+        !target &&
+        Boolean(draftingTool) &&
+        !revising &&
+        !working.trim() &&
+        qualityReport.findings.some(finding => finding.code === 'MISSING_DOCUMENT_ENVELOPE');
+      if (qualityReport.needsRepair && (this.harness.qualityRepair?.() || envelopeRepair)) {
         const repairPrompt = buildRepairPrompt(handoff, qualityReport.findings, target ? undefined : draftingTool?.id);
         let counted: TokenCount = { input: 0, output: 0, total: 0 };
         try {

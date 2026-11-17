@@ -4,7 +4,7 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-16_
+_Last updated: 2026-11-17_
 
 ## Latest release
 
@@ -88,6 +88,8 @@ Release validation reproduced the sidebar's outdated expectation after explicit 
 - Follow-up decisions: measure staff latency with `eval:diagnostics`, public-holiday/MIS-signing search gaps, Thai-capable search replacement, remaining AI Harness guide phases and a team-shared Learning Inbox.
 
 ## In progress
+
+- **Fresh drafts re-wrapped instead of failing (2026-11-17)**: on the owner's PC (0.6.34, Gemini 3.8 Flash via Antigravity) two TOR drafts completed (~10k output tokens each) and then failed with `DOCUMENT_OUTPUT_INVALID`; the log had no detail. The quality-repair call existed but `harness.qualityRepair` is never set, so it never ran. A fresh document (no existing draft, not a revision or patch) whose response fails the envelope check now gets one repair call on the same model (`buildRepairPrompt`, previous response up to 80,000 characters for documents). An existing draft is never replaced this way. `parseDocumentOutput` errors carry `envelope <tags> chars=<n>` (shape only) into `run-failed` diagnostics. Open: the actual malformed shape is still unknown; read the next `run-failed` detail.
 
 - **Managed agy repairs itself before a run (2026-11-16, awaiting review)**: on the owner's PC the first chat after updating to 0.6.34 failed once with `ANTIGRAVITY_VERSION_UNTESTED`. agy's own logs in the real profile (`%USERPROFILE%\.gemini\antigravity-cli`) show that on 2026-11-10 16:47Z STeP's pinned 1.3.2 was started with the real profile (not by STeP: no STeP event at that time), found its last update check older than 15 minutes, spawned its background updater and was 1.5.5 thirty seconds later. A plain `--version` does not start the updater. `runtime()` now calls `repairManagedAgy`: when the resolved executable is STeP's own copy and it no longer answers as a tested version, the pinned build is reinstalled (sha512-checked as on connect) before the run; an agy the employee installed is never replaced, a checked file is not started again (`antigravityChecked`), and a failed repair falls back to the existing reconnect message. Diagnostics: `agy-repaired`, `agy-repair-failed`. Open: the download (~190 MB on Windows) happens inside the chat's wait without its own progress line.
 

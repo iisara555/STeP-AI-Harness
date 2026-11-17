@@ -44,9 +44,22 @@ function separateLegacy(text: string): DocumentOutput {
 export function parseDocumentOutput(output: string, id: DocumentToolId, options: { requireEnvelope?: boolean } = {}): DocumentOutput {
   if (!documentTool(id)) throw new Error('INVALID_DOCUMENT_TOOL');
   const text = output.replace(/\r\n?/g, '\n').trim();
+  const tags = [...text.matchAll(OUTPUT_TAG)].map(m => m[0]);
+  try {
+    return parseEnvelope(text, tags, id, options);
+  } catch (error) {
+    // Diagnostics get the shape of the response only (tag names and length), never its text.
+    if ((error as Error).message === 'DOCUMENT_OUTPUT_INVALID')
+      (error as Error & { detail?: string[] }).detail = [
+        `envelope ${tags.map(tag => tag.replace(/^<(\/?)document_(draft|review)\b[^>]*>$/i, '$1$2')).join(',') || 'none'} chars=${text.length}`,
+      ];
+    throw error;
+  }
+}
+
+function parseEnvelope(text: string, tags: string[], id: DocumentToolId, options: { requireEnvelope?: boolean }): DocumentOutput {
   let draft = '',
     review = '';
-  const tags = [...text.matchAll(OUTPUT_TAG)].map(m => m[0]);
   // Fresh AI responses must satisfy the trusted contract. Legacy saved proposals remain readable.
   if (options.requireEnvelope && tags.length !== 4) throw new Error('DOCUMENT_OUTPUT_INVALID');
   if (tags.length) {
