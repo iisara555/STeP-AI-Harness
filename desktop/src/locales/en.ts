@@ -11,6 +11,7 @@ import { internalMediaEn } from './internal-media-en';
 import { credentialErrorsEn } from '../credential-copy';
 import { documentLayoutEn } from './document-layout-en';
 import { feedbackEn } from './feedback-en';
+import { thinkingEn } from './thinking-en';
 import { skillSuggestEn } from './skill-suggest-en';
 import { skillImportEn } from './skill-import-en';
 import { filePreviewEn } from './file-preview-en';
@@ -370,6 +371,7 @@ export const en: Record<string, string> = {
   'เลือกไฟล์ OAuth client แบบ Desktop app': 'Choose a Desktop app OAuth client file',
   ...documentLayoutEn,
   ...feedbackEn,
+  ...thinkingEn,
   ...skillSuggestEn,
   ...skillImportEn,
   ...filePreviewEn,

@@ -1,10 +1,27 @@
-import { AlertTriangle, Check, LoaderCircle } from './icons';
+import {
+  AlertTriangle,
+  Blocks,
+  BookOpen,
+  Bot,
+  Check,
+  Command,
+  FileSearch,
+  FileText,
+  Globe,
+  KeyRound,
+  ListChecks,
+  LoaderCircle,
+  Mail,
+  MessageCircleQuestion,
+  PenLine,
+  Search,
+} from './icons';
 import { useEffect, useState } from 'react';
 import { t } from './i18n';
 import { errorText } from './messages';
 import type { RunTrace, WorkAction } from './types';
 
-const ACTION_LABELS: Record<string, string> = {
+export const ACTION_LABELS: Record<string, string> = {
   files: 'อ่านไฟล์ในพื้นที่งาน',
   search_files: 'ค้นหาไฟล์ในพื้นที่งาน',
   doc_outline: 'ตรวจโครงสร้างเอกสาร',
@@ -32,6 +49,37 @@ const ACTION_LABELS: Record<string, string> = {
   read_remaining: 'อ่านผลเพิ่มเติม',
   terminal: 'ใช้คำสั่ง',
   sandbox: 'ใช้คำสั่ง',
+};
+
+/** One icon per kind of tool, so a step reads at a glance (the AI's thinking panel, src/thinking-panel.tsx). */
+export const ACTION_ICONS: Record<string, typeof Check> = {
+  files: FileSearch,
+  search_files: FileSearch,
+  doc_outline: BookOpen,
+  doc_section: BookOpen,
+  reference: BookOpen,
+  read_remaining: FileText,
+  sheet_read: FileText,
+  sheet_edit: FileText,
+  sheet_create: FileText,
+  slides_create: FileText,
+  changes: PenLine,
+  patch: PenLine,
+  web_search: Search,
+  web_fetch: Globe,
+  web_extract: Globe,
+  browser: Globe,
+  browser_control: Globe,
+  browser_vault: KeyRound,
+  google_workspace: Mail,
+  skill: Bot,
+  ask_user: MessageCircleQuestion,
+  plan: ListChecks,
+  plan_update: ListChecks,
+  tool_search: Blocks,
+  tool_describe: Blocks,
+  terminal: Command,
+  sandbox: Command,
 };
 
 /** Update by the host's unique action ID, including concurrent tool calls. */

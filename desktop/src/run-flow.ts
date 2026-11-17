@@ -124,8 +124,7 @@ export function finishedNotice(status: string, title: string) {
 }
 
 /** Streamed text keeps only its most recent part so a very long answer cannot slow the window. */
-export const STREAM_LIMIT = 60000,
-  REASONING_LIMIT = 20000;
+export const STREAM_LIMIT = 60000;
 export const appendStream = (text: string, chunk: string, limit: number) => (text + chunk).slice(-limit);
 /** The host takes back the last characters it streamed (for example a tool call that was not text after all). */
 export const discardStream = (text: string, count: number) => text.slice(0, Math.max(0, text.length - count));

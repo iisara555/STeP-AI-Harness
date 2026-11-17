@@ -340,6 +340,15 @@ test('reasoning streams to the UI and provider token usage accumulates per sessi
   await service.run(session.id, 'ทำ Designer Brief งานประชาสัมพันธ์กิจกรรม', '');
   await service.run(session.id, 'ปรับโทนให้สุภาพขึ้น', '');
   assert.ok(events.some(e => e.type === 'reasoning' && e.text === 'วางโครงก่อน'));
+  // The reasoning stays with each answer instead of vanishing when the answer arrives; routine waits are not stages.
+  const answers = store.session(session.id).messages.filter(m => m.role === 'assistant');
+  assert.equal(answers.length, 2);
+  for (const answer of answers) {
+    assert.ok(answer.thinking && answer.thinking.ms >= 0);
+    assert.ok(answer.thinking.steps.some(step => step.notes.some(note => note.text === 'วางโครงก่อน')));
+    assert.ok(!answer.thinking.steps.some(step => ['กำลังเตรียมงาน', 'กำลังเตรียมคำตอบ', 'กำลังเขียนคำตอบ'].includes(step.title)));
+  }
+  assert.ok(events.some(e => e.type === 'status' && e.quiet && e.text === 'กำลังเตรียมงาน'));
   assert.deepEqual(store.session(session.id).usage, { input: 300, output: 80, total: 380, runs: 2 });
   store.close();
 });
