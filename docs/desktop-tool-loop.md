@@ -182,6 +182,18 @@ only the new part). It stopped at the time limit with nothing delivered. `ToolLo
 - after two turns in a row in which every request was such a repeat, adds the same kind of notice
   (`ALREADY_READ`): the model already has what it asked for.
 
+A task that stops (an error, the time limit, or Stop) keeps the requests of its static reads, never their text, in
+`session.resumeReads`. The next attempt, "ลองอีกครั้ง" or a typed "ต่อ", passes them back to `ToolLoop.run` as `seed`: they
+run first through the same check, consent and masking as any request, without a model turn, and the prompt says they come
+from the previous attempt. They are re-read through the request parser, given back once and then forgotten. While a task
+has run for two minutes the chat offers "เขียนคำตอบเลย" (`writeNow`), which starts the same final turn as the deadline.
+Each step's trace carries `loop` (folds, repeats, seeded reads, final-turn reason); `run-trace` diagnostics print it, and
+an Antigravity conversation that starts over records why (`resetReason`: `prefix-changed`, `identity-changed`,
+`runtime-exited`). `plan_update` is asked to travel with the next step's tool requests instead of costing a turn alone.
+
+`npm run eval:long-task:live` runs real long requests through the real service and a real model and prints the same
+measures, for comparing two builds on a device.
+
 `npm run eval:long-task` replays the TOR run's reading pattern on the real Skill and documents with the real `ToolLoop`
 and `compact()`, and `test/long-task-replay.test.ts` keeps its results (limits only tighten).
 

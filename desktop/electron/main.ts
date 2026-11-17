@@ -1770,7 +1770,10 @@ async function main() {
           steps: t.steps
             .map(
               s =>
-                `${s.attempts}x ${s.ms}ms sys=${s.systemChars} msg=${s.promptChars} refs=${s.references.length} tok=${s.usage?.total ?? '?'} scope=${s.contextScope || 'full'} tools=${s.toolMs || 0}ms`,
+                `${s.attempts}x ${s.ms}ms sys=${s.systemChars} msg=${s.promptChars} refs=${s.references.length} tok=${s.usage?.total ?? '?'} scope=${s.contextScope || 'full'} tools=${s.toolMs || 0}ms` +
+                (s.loop
+                  ? ` folds=${s.loop.folds} repeats=${s.loop.repeats} seeded=${s.loop.seeded}${s.loop.final ? ` final=${s.loop.final}` : ''}`
+                  : ''),
             )
             .join(' | ')
             .slice(0, 1200),
@@ -4676,6 +4679,8 @@ async function main() {
         coordinator.cancel(input.id);
         service.cancel(input.id);
         return true;
+      case 'writeNow':
+        return service.writeNow(inputText(input.id, 60));
       case 'cancelSideQuestion':
         service.cancelSideQuestion(inputText(input.id, 60));
         return true;

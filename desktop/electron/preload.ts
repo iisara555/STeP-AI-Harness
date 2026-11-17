@@ -149,6 +149,7 @@ const allowed = new Set([
   'ocrTrialSave',
   'send',
   'cancel',
+  'writeNow',
   'pin',
   'rename',
   'remove',

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AccountQuotaMenuSummary, InlineQuotaChip } from './usage';
 import {
   AlertTriangle,
@@ -50,6 +50,8 @@ import { vimEdit } from './commands';
 import { CHAT_STARTERS, PERMISSION_SHORT, ScheduledTasks, SkillsHub, checkStillRunning } from './app-shared';
 import type { AppView } from './use-workspace';
 
+/** When the "write the answer now" control appears during a run. */
+const WRITE_NOW_AFTER_MS = 120_000;
 /** The chat: welcome, messages, plan and questions, and the composer; or the schedules and Skill pages. */
 export function ConversationView({ v }: { v: AppView }) {
   const {
@@ -166,6 +168,9 @@ export function ConversationView({ v }: { v: AppView }) {
   // Read again whenever a stage or a thought arrives (`thought`) and each second for the running time.
   const thinking = running && thought >= 0 ? liveThinking(now) : undefined;
   const elapsed = useElapsed(running, startedAt);
+  // A long read (a high reasoning level going through Skills and references) can be cut short by the person: the AI then
+  // writes its answer from what it has read (the tool loop's final turn). Offered after two minutes, once per run.
+  const [writeNowAt, setWriteNowAt] = useState(0);
   // A refresh can land after main saved the answer but before it reports the run finished; the saved message
   // then already shows the streamed text, so the live copy is hidden instead of appearing twice.
   const { liveText, streamSaved } = liveAnswer(stream, session?.messages.at(-1));
@@ -505,6 +510,18 @@ export function ConversationView({ v }: { v: AppView }) {
                     {elapsed || t('0 วินาที')}
                     {now - heartbeatAt > 15000 && <> · {t('ยังไม่ได้รับสถานะจากแอป')}</>}
                   </span>
+                  {selected && startedAt && now - startedAt >= WRITE_NOW_AFTER_MS && !liveText && writeNowAt !== startedAt && (
+                    <button
+                      className="quiet write-now"
+                      title={t('ให้ AI หยุดอ่านเพิ่ม แล้วเขียนคำตอบจากที่อ่านมา')}
+                      onClick={() => {
+                        setWriteNowAt(startedAt);
+                        void api.call('writeNow', { id: selected });
+                      }}
+                    >
+                      {t('เขียนคำตอบเลย')}
+                    </button>
+                  )}
                 </div>
                 {now - activityAt > 45000 && !liveText && (
                   <p className="small muted">{t('ขั้นตอนนี้ยังไม่ส่งผลกลับมา คุณรอต่อหรือกดหยุดได้')}</p>

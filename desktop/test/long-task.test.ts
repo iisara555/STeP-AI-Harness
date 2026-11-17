@@ -212,3 +212,118 @@ test('a model that only re-reads what it already has is asked to write the answe
   assert.equal(executed, 2);
   assert.equal(turn, 4, 'one reading turn, two re-reading turns, then the answer');
 });
+
+test('a stopped task gets its reads back on the next attempt without model turns, through the normal gates', async () => {
+  const executed: string[] = [],
+    checked: string[] = [];
+  let reported: unknown[] = [];
+  const first = new ToolLoop(
+    host({
+      execute: async r => (executed.push(r.input), `content of ${r.input}`),
+      reads: requests => (reported = requests),
+    }),
+  );
+  let turn = 0;
+  // The first attempt reads a Skill, a resource and a file, then the provider fails.
+  await assert.rejects(
+    first.run(
+      'ร่าง TOR',
+      async () => {
+        if (++turn === 1)
+          return (
+            request('skill', 'tor-government-writing') +
+            request('skill', 'tor-government-writing', { resource: 'references/tor-drafting-guide.md' }) +
+            request('files', 'notes.txt')
+          );
+        throw new Error('PROVIDER_NETWORK');
+      },
+      signal(),
+    ),
+    /PROVIDER_NETWORK/,
+  );
+  // Only static reads are reported, as requests (no text); a workspace file may change, so it is read again if needed.
+  assert.deepEqual(reported, [
+    { tool: 'skill', input: 'tor-government-writing' },
+    { tool: 'skill', input: 'tor-government-writing', args: { resource: 'references/tor-drafting-guide.md' } },
+  ]);
+  assert.doesNotMatch(JSON.stringify(reported), /content of/);
+  executed.length = 0;
+  const second = new ToolLoop(
+    host({
+      check: async () => void checked.push('check'),
+      execute: async r => (executed.push(r.input), `content of ${r.input}`),
+      outgoing: async t => (checked.push('outgoing'), t),
+    }),
+  );
+  const prompts: string[] = [];
+  const answer = await second.run(
+    'ร่าง TOR',
+    async prompt => {
+      prompts.push(prompt);
+      return 'ร่าง TOR';
+    },
+    signal(),
+    [...(reported as any[]), { tool: 'files', input: 'x' }, ...(reported as any[])],
+  );
+  assert.equal(answer, 'ร่าง TOR');
+  assert.equal(prompts.length, 1, 'the reads cost no model turn');
+  assert.match(prompts[0], /previous attempt/);
+  assert.match(prompts[0], /content of tor-government-writing/);
+  assert.deepEqual(executed, ['tor-government-writing', 'tor-government-writing'], 'duplicates and non-static seeds are dropped');
+  assert.ok(checked.includes('check') && checked.filter(c => c === 'outgoing').length === 2, 'seeds pass the host check and outgoing scan');
+  assert.equal(second.stats.seeded, 2);
+  // A seeded read counts as read: asking again is a repeat.
+});
+
+test('the loop reports why the model was asked to write now, and its stats go to the trace', async () => {
+  const reasons: string[] = [];
+  let late = false;
+  const loop = new ToolLoop(host({ deadline: () => late, finalTurn: reason => reasons.push(reason) }));
+  let turn = 0;
+  await loop.run(
+    'q',
+    async () => {
+      if (++turn === 1) return request('skill', 'a');
+      if (turn === 2) return request('skill', 'a');
+      late = true;
+      return turn === 3 ? request('skill', 'b') : 'done';
+    },
+    signal(),
+  );
+  assert.deepEqual(reasons, ['deadline']);
+  assert.deepEqual(loop.stats, { folds: 0, repeats: 1, seeded: 0, final: 'deadline' });
+});
+
+test('a seeded read that the gates now refuse is left out, not given back', async () => {
+  const loop = new ToolLoop(
+    host({
+      execute: async r => {
+        if (r.input === 'withdrawn') throw new Error('TOOL_DENIED');
+        return `content of ${r.input}`;
+      },
+    }),
+  );
+  let prompt = '';
+  await loop.run('q', async p => ((prompt = p), 'done'), signal(), [
+    { tool: 'reference', input: 'withdrawn' },
+    { tool: 'reference', input: 'qp-af-002' },
+  ]);
+  assert.match(prompt, /content of qp-af-002/);
+  assert.doesNotMatch(prompt, /withdrawn/);
+  assert.equal(loop.stats.seeded, 1);
+});
+
+test('a model that keeps asking after the final-turn notice is not given more turns', async () => {
+  const run = async (prefix: string) => {
+    let turns = 0;
+    const loop = new ToolLoop(host({ deadline: () => true }));
+    try {
+      return { answer: await loop.run('q', async () => (turns++, prefix + request('reference', `doc-${turns}`)), signal()), turns };
+    } catch (error) {
+      return { error: (error as Error).message, turns };
+    }
+  };
+  // Its own words are kept as the answer; with none, the tool-turn limit stands. Two turns either way, not forty.
+  assert.deepEqual(await run('สรุปจากที่อ่านแล้ว\n'), { answer: 'สรุปจากที่อ่านแล้ว', turns: 2 });
+  assert.deepEqual(await run(''), { error: 'TOOL_TURN_LIMIT', turns: 2 });
+});

@@ -100,7 +100,13 @@ type Result = {
   seconds: number;
 };
 
-async function scenario(name: string, passes: string[][], endless = false, think = 20): Promise<Result> {
+type Options = { endless?: boolean; think?: number; failAt?: number; seed?: LoopRequest[] };
+async function scenario(
+  name: string,
+  passes: string[][],
+  { endless = false, think = 20, failAt, seed = [] }: Options = {},
+): Promise<Result & { reads: LoopRequest[] }> {
+  let reads: LoopRequest[] = [];
   let now = 0,
     turns = 0,
     requests = 0,
@@ -129,6 +135,7 @@ async function scenario(name: string, passes: string[][], endless = false, think
     // The same hooks service.ts wires (ignored by a ToolLoop without them).
     deadline: () => now >= STEP_CAP_S - STEP_BUDGET_S,
     tooLarge: (text: string) => tokens(SYSTEM + text) > budget * 0.6,
+    reads: (requests: LoopRequest[]) => (reads = requests),
   };
   const loop = new ToolLoop(host);
 
@@ -144,7 +151,22 @@ async function scenario(name: string, passes: string[][], endless = false, think
     tasks = names.map(n => ({ doc: DOCS[n], pages: 0, done: false }));
     return true;
   };
+  let resumed = false;
   const model = (prompt: string): { reply: string; output: number } => {
+    // A resumed attempt starts with the earlier reads given back: those documents continue from where they are.
+    if (!resumed && prompt.includes('previous attempt')) {
+      resumed = true;
+      const requests = JSON.parse(prompt.match(/<tool_history>\n(.+)\n<\/tool_history>/)![1]).requests;
+      const rows = JSON.parse(prompt.match(/<tool_results>\n(.+)\n<\/tool_results>/)![1]);
+      requests.forEach((r: LoopRequest, i: number) => {
+        const task = tasks.find(t => JSON.stringify(t.doc.request) === JSON.stringify(r));
+        if (!task || !rows[i]?.ok) return;
+        task.id = rows[i].id;
+        task.pages = 1;
+        if (rows[i].nextOffset === undefined || task.doc.maxPages <= 1) task.done = true;
+        else task.offset = rows[i].nextOffset;
+      });
+    }
     if (/<tool_limit>/.test(prompt.slice(-4000)) || prompt.includes('No tools ran. Write the complete answer now.')) {
       const finalTurn = prompt.includes('time for this message is nearly used up');
       return finalTurn || !/No more tool turns/.test(prompt.slice(-4000))
@@ -200,6 +222,7 @@ async function scenario(name: string, passes: string[][], endless = false, think
     sentChars += chars;
     inputTokens += tokens(SYSTEM + prompt);
     turns++;
+    if (turns === failAt) throw new Error('PROVIDER_QUOTA');
     const { reply, output } = model(prompt);
     const seconds = turnSeconds(full, chars, SYSTEM.length + prompt.length, output, think);
     // service.ts: each completed turn re-arms a 600 s budget, up to 1800 s for the step.
@@ -217,6 +240,7 @@ async function scenario(name: string, passes: string[][], endless = false, think
       '<current_message>\nผมขอ TOR อีกฉบับ จัดซื้อครุภัณฑ์คอมพิวเตอร์\n</current_message>',
       provider,
       controller.signal,
+      seed,
     );
     outcome = answer === DRAFT ? 'draft' : answer === 'PROGRESS_REPORT' ? 'progress-report' : answer.slice(0, 40);
   } catch (error) {
@@ -233,17 +257,22 @@ async function scenario(name: string, passes: string[][], endless = false, think
     sentChars,
     inputTokens,
     seconds: Math.round(now),
+    reads,
   };
 }
 
-export async function replayScenarios() {
-  return [
+export async function replayScenarios(): Promise<Result[]> {
+  // 5: the first attempt stops at turn 6 (quota), the person presses "ลองอีกครั้ง"; the row is the second attempt.
+  const stopped = await scenario('5 first attempt', [[...FIRST, ...FIRST_MORE], ...CHECKS], { failAt: 6 });
+  const rows = [
     await scenario('1 TOR: read, re-check twice, write', [[...FIRST, ...FIRST_MORE], ...CHECKS]),
-    await scenario('2 TOR: keeps re-checking (never satisfied)', [[...FIRST, ...FIRST_MORE], ...CHECKS], true),
+    await scenario('2 TOR: keeps re-checking (never satisfied)', [[...FIRST, ...FIRST_MORE], ...CHECKS], { endless: true }),
     await scenario('3 TOR: reads every large STeP document', [[...FIRST, ...FIRST_MORE, ...WIDE], ...CHECKS]),
     // The same wide reading on a slower turn (an xhigh model thinking a minute and a half per turn).
-    await scenario('4 TOR: wide reading, 90 s thinking per turn', [[...FIRST, ...FIRST_MORE, ...WIDE], ...CHECKS], false, 90),
+    await scenario('4 TOR: wide reading, 90 s thinking per turn', [[...FIRST, ...FIRST_MORE, ...WIDE], ...CHECKS], { think: 90 }),
+    await scenario('5 TOR: "ลองอีกครั้ง" after a stop at turn 6', [[...FIRST, ...FIRST_MORE], ...CHECKS], { seed: stopped.reads }),
   ];
+  return rows.map(({ reads: _reads, ...row }) => row);
 }
 async function main() {
   const rows = await replayScenarios();
