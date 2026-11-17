@@ -120,7 +120,7 @@ test('memo: date tab survives Thai line breaks, labels print bold 20 pt, narrati
   assert.equal(doc.attr(Array.from(doc.paragraph('เรียน').getElementsByTagNameNS(W, 'r'))[0], 'sz', 'val'), '32');
   assert.equal(doc.attr(doc.paragraph('ด้วยทีม'), 'ind', 'firstLine'), '1418');
   assert.equal(doc.attr(doc.paragraph('ด้วยทีม'), 'spacing', 'before'), '120');
-  assert.equal(doc.attr(doc.paragraph('(ลงชื่อ)'), 'spacing', 'before'), '960');
+  assert.equal(doc.attr(doc.paragraph('(ลงชื่อ)'), 'spacing', 'before'), '1320');
   // A spaced phone number is kept on one line in the exported copy.
   assert.ok(doc.text(doc.paragraph('ส่วนงาน')).includes('๐ ๕๓๒๐ ๐๐๐๐'));
   const html = pdfHtml(markdownDocument(memo), resolveDocumentLayout('memo'), new Map(), resolvePresentation({}, 'memo'));
@@ -169,7 +169,7 @@ test('external letter: any sender name, a bare date, the position and the closin
   const spacing = sarabanSpacing(document, 'letter');
   const before = (start: string) => spacing[document.content!.findIndex(n => documentText(n).startsWith(start))];
   assert.equal(before('ขอแสดงความนับถือ'), 12);
-  assert.equal(before('([รอยืนยัน'), 72);
+  assert.equal(before('([รอยืนยัน'), 90);
   assert.equal(before('ทีมสังเคราะห์'), 54);
   assert.equal(before('เรียน'), 6);
   const doc = await word(letter, 'letter');
@@ -183,7 +183,7 @@ test('external letter: any sender name, a bare date, the position and the closin
   assert.equal(doc.paragraph('หน่วยงานสังเคราะห์'), undefined);
   assert.equal(doc.attr(doc.paragraph('รองผู้อำนวยการ'), 'jc', 'val'), 'center');
   assert.equal(doc.attr(doc.paragraph('ทีมสังเคราะห์'), 'ind', 'firstLine'), undefined);
-  assert.equal(doc.attr(doc.paragraph('([รอยืนยัน'), 'spacing', 'before'), '1440');
+  assert.equal(doc.attr(doc.paragraph('([รอยืนยัน'), 'spacing', 'before'), '1800');
 });
 
 test('external letter PDF puts ที่ and the sender on one row; an invitation keeps its own header', () => {
