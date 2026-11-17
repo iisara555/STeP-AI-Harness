@@ -22,6 +22,22 @@ const DocumentToolbar = lazyScreen<ComponentProps<typeof Toolbar>>(
 const EditorContent = lazyScreen<{ editor: Editor }>(() => import('@tiptap/react').then(m => ({ default: m.EditorContent })), true);
 
 /** The draft editor and the workbench tabs beside the chat. */
+/** A required document part named by the export check, in the interface language (Thai names come from the check). */
+const checkPart = (part: string) =>
+  ({
+    ส่วนราชการ: t('ส่วนราชการ'),
+    ที่: t('ที่ (เลขที่หนังสือ)'),
+    วันที่: t('วันที่'),
+    เรื่อง: t('เรื่อง'),
+    เรียน: t('เรียน'),
+    ชื่อผู้ลงนาม: t('ชื่อผู้ลงนาม'),
+    คำลงท้าย: t('คำลงท้าย'),
+    ครั้งที่: t('ครั้งที่'),
+    ผู้มาประชุม: t('ผู้มาประชุม'),
+    เลิกประชุม: t('เลิกประชุม'),
+    ผู้จดรายงาน: t('ผู้จดรายงาน'),
+  })[part] || part;
+
 export function SidePanel({ v }: { v: AppView }) {
   const {
     action,
@@ -481,7 +497,7 @@ export function SidePanel({ v }: { v: AppView }) {
                           {exportInfo.checks?.map(check => (
                             <p className="export-check" key={check.code}>
                               {check.code === 'missing'
-                                ? t('ยังไม่มี {0}', check.parts.join(' / '))
+                                ? t('ยังไม่มี {0}', check.parts.map(checkPart).join(' / '))
                                 : t('ยังมี [รอยืนยัน] {0} จุด', check.count)}
                             </p>
                           ))}
