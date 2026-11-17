@@ -236,8 +236,14 @@ export type DraftVersion = {
   text: string;
   document?: DraftNode;
   presentation?: import('./document-presentation').DocumentPresentation;
+  /** The document type this version was drafted as, so restoring it brings back its own layout. */
+  documentTool?: DocumentToolId;
+  documentVariant?: string;
+  /** The request this version answered, kept when another document took over the task, so a restore can edit it again. */
+  task?: DocumentTask;
   at: string;
 };
+export type DocumentTask = { originalQuery: string; answers: string[]; followUps: string[]; skill?: string; contextStart?: number };
 export type Proposal = {
   id: string;
   text: string;
@@ -309,7 +315,7 @@ export type Session = {
   /** Index of the first message in the current task boundary inside this Workspace session. */
   contextStart?: number;
   /** A document's own request, set aside while chat turns answer beside it; the next document edit resumes it. */
-  documentTask?: { originalQuery: string; answers: string[]; followUps: string[]; skill?: string; contextStart?: number };
+  documentTask?: DocumentTask;
   model?: string;
   effort?: string;
   pinned?: boolean;

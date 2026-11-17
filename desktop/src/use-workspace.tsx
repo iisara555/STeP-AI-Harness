@@ -953,25 +953,16 @@ export function useWorkspace() {
     if (result.started && result.warning) notify(t('ส่งแล้ว ข้อความนี้มีคำที่อาจเป็นข้อมูลอ่อนไหว อย่าใส่ชื่อหรือรหัสของบุคคลในงานนี้'));
     else if (result.started && result.masked?.length) notify(t('ระบบปิดบังก่อนส่งให้ AI: {0}', result.masked.join(', ')));
     if (result.started) {
-      const runId = typeof result.sessionId === 'string' ? result.sessionId : id;
       const focused = currentId.current === id;
-      if (runId !== id) {
-        if (runningIds.current.get(id) === attempt) runningIds.current.delete(id);
-        runningIds.current.set(runId, attempt);
-        if (focused) {
-          currentId.current = runId;
-          setSelected(runId);
-          notify(t('เริ่มเอกสารใหม่โดยเก็บบทสนทนาและร่างเดิมไว้'), 'info');
-        }
-      }
-      if (documentTool) setConsumedDocumentTask(runId);
+      if (result.newDocument && focused) notify(t('เริ่มเอกสารใหม่ในงานนี้ ร่างเดิมอยู่ในประวัติเวอร์ชัน'), 'info');
+      if (documentTool) setConsumedDocumentTask(id);
       setForcedSkill('');
       setQuery(current => (current === submittedQuery ? '' : current));
       setPendingSource(current => (current === sourceText ? '' : current));
       setFiles(current => current.filter(file => !attachments.includes(file.id)));
       tickLiveClock();
       const updated = await refresh();
-      const state = updated?.sessions.find(s => s.id === runId)?.status;
+      const state = updated?.sessions.find(s => s.id === id)?.status;
       if (state && !['queued', 'running'].includes(state)) {
         setRunning(false);
         setProgress('');
