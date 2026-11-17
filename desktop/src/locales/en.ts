@@ -2609,7 +2609,7 @@ export const en: Record<string, string> = {
   '- มี {0} จุดที่ระบบปิดบังข้อมูลส่วนบุคคลไว้ ใส่ข้อมูลจริงเองหลังตรวจร่าง':
     '- {0} pieces of personal data were masked; fill in the real details yourself after review',
   'ตรวจในแผงผลงาน แล้วกด “ใช้ร่างนี้”': 'Review it in the Output panel, then press “Use this draft”',
-  เริ่มเอกสารใหม่โดยเก็บบทสนทนาและร่างเดิมไว้: 'Started a new document while keeping the conversation and previous draft.',
+  'เริ่มเอกสารใหม่ในงานนี้ ร่างเดิมอยู่ในประวัติเวอร์ชัน': 'Started a new document in this task. The earlier draft is in version history.',
   'เทียบโครงกลาง TOR 16 ข้อแล้ว ยังตรวจไม่พบ {0} หัวข้อ ดูรายละเอียดในผลตรวจ':
     'Compared with the 16-section TOR working outline, {0} headings were not detected. See the review for details.',
   '**ตรวจโครงกลาง TOR 16 ข้อ:** ยังตรวจไม่พบหัวข้อต่อไปนี้: {0} ระบบตรวจจากเลขและชื่อหัวข้อ จึงอาจไม่พบรูปแบบบางชนิด หากใช้แบบหน่วยงานอื่น ให้ตรวจเทียบกับแบบที่เลือก':

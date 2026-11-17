@@ -120,8 +120,10 @@ try {
   assert.equal(torPdf.layout.documentTool, 'tor');
   assert.equal((await readFile(torPdf.path)).subarray(0, 5).toString(), '%PDF-');
 
-  // A different document starts a linked task and keeps the TOR intact; the referenced draft is privacy-reviewed.
+  // A different document stays in the same task (a conversation never splits); the TOR goes to version history and the
+  // referenced draft is privacy-reviewed.
   const original = (await snapshot()).sessions.find(session => session.id === first.id);
+  const tasksBefore = (await snapshot()).sessions.length;
   await composer.fill('ช่วยร่างบันทึกข้อความจาก TOR ฉบับนี้');
   await composer.press('Enter');
   const consent = page.getByRole('button', { name: 'มีสิทธิ์ส่งข้อมูลนี้', exact: true });
@@ -129,32 +131,50 @@ try {
   await consent.click();
   await expect
     .poll(
-      async () =>
-        (await snapshot()).sessions.find(session => session.parentId === first.id && session.documentTool === 'memo')?.proposals.length,
-      {
-        timeout: 30000,
+      async () => {
+        const current = (await snapshot()).sessions.find(session => session.id === first.id);
+        return current?.documentTool === 'memo' ? current.proposals.length : 0;
       },
+      { timeout: 30000 },
     )
     .toBe(1);
   const after = await snapshot();
-  const parent = after.sessions.find(session => session.id === first.id);
-  const child = after.sessions.find(session => session.parentId === first.id && session.documentTool === 'memo');
-  assert.equal(parent.draft, original.draft);
-  assert.equal(parent.documentTool, 'tor');
-  assert.equal(child.mode, 'draft');
-  assert.ok(child.messages.some(message => message.text.includes('SYNTHETIC-DECISION')));
+  assert.equal(after.sessions.length, tasksBefore);
+  assert.ok(!after.sessions.some(session => session.parentId === first.id));
+  const same = after.sessions.find(session => session.id === first.id);
+  assert.equal(same.mode, 'draft');
+  assert.equal(same.draft, '');
+  assert.ok(same.messages.some(message => message.text.includes('SYNTHETIC-DECISION')));
+  const shelved = same.versions.find(version => version.text === original.draft);
+  assert.equal(shelved?.documentTool, 'tor');
+  assert.equal(shelved?.task?.skill, original.skill);
   const memoCall = calls.find(call => call.type === 'ร่างบันทึกข้อความ');
   assert.ok(memoCall.prompt.includes('SYNTHETIC-DECISION'));
   assert.ok(memoCall.prompt.includes('Prior document for this request'));
   assert.ok(memoCall.prompt.includes('หลักการและเหตุผล'));
   await page.getByRole('button', { name: 'ใช้ร่างนี้', exact: true }).click();
-  const memo = await page.evaluate(id => window.step.call('export', { id, format: 'docx' }), child.id);
+  await expect
+    .poll(async () => (await snapshot()).sessions.find(session => session.id === first.id)?.draft.length, { timeout: 30000 })
+    .toBeGreaterThan(0);
+  const memo = await page.evaluate(id => window.step.call('export', { id, format: 'docx' }), first.id);
   assert.equal(memo.layout.documentTool, 'memo');
-  const memoPdf = await page.evaluate(id => window.step.call('export', { id, format: 'pdf' }), child.id);
+  const memoPdf = await page.evaluate(id => window.step.call('export', { id, format: 'pdf' }), first.id);
   assert.equal(memoPdf.layout.documentTool, 'memo');
   assert.equal((await readFile(memoPdf.path)).subarray(0, 5).toString(), '%PDF-');
+  // Restoring the TOR brings back its own type and layout, and keeps the memo in the history.
+  const memoDraft = (await snapshot()).sessions.find(session => session.id === first.id).draft;
+  const restored = await page.evaluate(({ id, revision }) => window.step.call('restore', { id, revision }), {
+    id: first.id,
+    revision: shelved.revision,
+  });
+  assert.equal(restored.documentTool, 'tor');
+  assert.equal(restored.draft, original.draft);
+  assert.equal(restored.skill, original.skill);
+  assert.ok(restored.versions.some(version => version.text === memoDraft && version.documentTool === 'memo'));
+  const torAgain = await page.evaluate(id => window.step.call('export', { id, format: 'docx' }), first.id);
+  assert.equal(torAgain.layout.documentTool, 'tor');
 
-  // An unsent credential in the earlier draft must be blocked before creating a child or contacting the provider.
+  // An unsent credential in the earlier draft must be blocked before the draft is set aside or the provider is contacted.
   const protectedSession = await page.evaluate(connectionId => window.step.call('create', { connectionId }), connection);
   await page.evaluate(
     ({ id, revision }) => window.step.call('edit', { id, revision, text: 'password=synthetic-test-secret' }),
@@ -171,7 +191,7 @@ try {
   );
   assert.match(blocked, /PRIVACY_REVIEW_REQUIRED/);
   assert.equal(calls.length, beforeBlocked);
-  assert.ok(!(await snapshot()).sessions.some(session => session.parentId === protectedSession.id));
+  assert.equal((await snapshot()).sessions.find(session => session.id === protectedSession.id).draft, 'password=synthetic-test-secret');
 
   // A consent for the old draft cannot authorize a different draft after the user edits it.
   const changedSource = await page.evaluate(connectionId => window.step.call('create', { connectionId }), connection);
@@ -188,7 +208,7 @@ try {
     { id: changedSource.id, token: firstConsent.consent.token },
   );
   assert.ok(secondConsent.consent?.token && secondConsent.consent.token !== firstConsent.consent.token);
-  assert.ok(!(await snapshot()).sessions.some(session => session.parentId === changedSource.id));
+  assert.equal((await snapshot()).sessions.find(session => session.id === changedSource.id).draft, 'SYNTHETIC-CHANGED-DRAFT');
   const intervening = await page.evaluate(
     id => window.step.call('send', { id, text: 'SYNTHETIC-ADDITIONAL-CONTEXT', mode: 'chat' }),
     changedSource.id,
@@ -232,7 +252,7 @@ try {
     .poll(async () => (await snapshot()).sessions.find(session => session.id === plan.id)?.status, { timeout: 30000 })
     .toBe('review');
   assert.equal((await snapshot()).sessions.find(session => session.id === plan.id).documentTool, undefined);
-  console.log('PASS: chat drafts TOR and a separate memo with their template layouts, preserving the previous document.');
+  console.log('PASS: chat drafts TOR then a memo in the same task with their own layouts; the TOR stays restorable.');
 } finally {
   await app?.close().catch(() => {});
   await new Promise(resolveServer => server.close(resolveServer));

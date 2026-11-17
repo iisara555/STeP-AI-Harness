@@ -4324,16 +4324,16 @@ async function main() {
           /ฉบับใหม่|อีก(?:ฉบับ|เรื่อง|โครงการ)|เรื่องใหม่|(?:tor|โครงการ|เอกสาร|บันทึก|หนังสือ|รายงาน)\s*ใหม่|\bnew\s+(?:document|draft)\b/i.test(
             text,
           );
-        const forkDocument = Boolean(
+        const anotherDocument = Boolean(
           requested &&
           hasDraft &&
           (sending.documentTool !== requested.id || newDocument || (requestedVariant && sending.documentVariant !== requestedVariant)),
         );
         const autoDocument =
-          requested && (!input.skill || ((!hasDraft || forkDocument) && input.skill === requested.skill)) ? requested : undefined;
+          requested && (!input.skill || ((!hasDraft || anotherDocument) && input.skill === requested.skill)) ? requested : undefined;
         const workMode = imageRequest ? 'image' : autoDocument ? 'draft' : workflow ? 'chat' : mode;
         const draftingTool =
-          input.documentTool === undefined ? (!hasDraft || forkDocument ? autoDocument : undefined) : documentTool(input.documentTool);
+          input.documentTool === undefined ? (!hasDraft || anotherDocument ? autoDocument : undefined) : documentTool(input.documentTool);
         if (input.documentTool !== undefined && (!draftingTool || workMode !== 'draft')) throw new Error('INVALID_DOCUMENT_TOOL');
         const variant = documentVariant(
           draftingTool?.id,
@@ -4388,7 +4388,7 @@ async function main() {
         const questionSnapshot = aside ? service.questionSnapshot(id) : undefined;
         const priorDraft =
           autoDocument &&
-          forkDocument &&
+          anotherDocument &&
           /(?:จาก|ตาม|อ้างอิง|อิง|ใช้|based on|from)\s*(?:ร่าง|เอกสาร|ฉบับ|tor\b|บันทึก|หนังสือ|รายงาน|โครงการ)/i.test(text)
             ? sending.proposals.at(-1)?.text || sending.draft
             : '';
@@ -4526,26 +4526,12 @@ async function main() {
           });
           return { started: true, aside: true, mode: 'chat', masked: review.labels, warning };
         }
-        let runId = id;
-        if (autoDocument && forkDocument) {
-          const child = store.forkConversationDocument(id, autoDocument.title);
-          if (allowIds.length) {
-            child.allowedIdentifiers = allowIds;
-            store.save(child);
-          }
-          try {
-            const started = await fireHook({ event: 'session_start', sessionId: child.id });
-            if (started.blocked) throw new Error('HOOK_BLOCKED');
-          } catch (error) {
-            store.remove('session', child.id);
-            throw error;
-          }
-          runId = child.id;
-        }
-        const queued = store.session(runId);
+        // A conversation is one task: a different document starts here, and the earlier draft goes to version history.
+        if (autoDocument && anotherDocument) store.startConversationDocument(id);
+        const queued = store.session(id);
         const templateInfo =
           nativeTemplate && templateDescription && variant !== 'invitation'
-            ? documentTemplates.save(runId, nativeTemplate, draftingTool!.id, selected[0].view.name, templateDescription.font)
+            ? documentTemplates.save(id, nativeTemplate, draftingTool!.id, selected[0].view.name, templateDescription.font)
             : undefined;
         const coordinatorScan = coordinated ? harness.privacy(text, { allowedIdentifiers: queued.allowedIdentifiers || [] }) : undefined;
         if (coordinatorScan?.action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
@@ -4564,12 +4550,12 @@ async function main() {
         ];
         const execution = (
           coordinated
-            ? coordinator.run(runId, text, combinedSource, {
+            ? coordinator.run(id, text, combinedSource, {
                 text: coordinatorScan!.redactedText,
                 files: requestFiles,
                 onAccepted: () => acceptRequest(),
               })
-            : service.run(runId, text, combinedSource, true, skill || undefined, workMode, selectedImageModel, requestFiles, {
+            : service.run(id, text, combinedSource, true, skill || undefined, workMode, selectedImageModel, requestFiles, {
                 retry: input.retry === true,
                 autoContinue: input.autoContinue === true,
                 images: selected.flatMap(a => a.images || []),
@@ -4583,13 +4569,13 @@ async function main() {
               })
         ).catch(error => {
           diagnose('run-rejected', { code: errorCode(error) });
-          const failed = store.session(runId);
+          const failed = store.session(id);
           failed.status = error.message === 'CANCELLED' ? 'interrupted' : 'error';
           if (failed.messages.at(-1)?.text !== errorCode(error))
             failed.messages.push({ role: 'status', text: errorCode(error), at: new Date().toISOString() });
           store.save(failed);
-          emit({ sessionId: runId, type: 'status', text: /^[A-Z_]+$/.test(error.message) ? error.message : 'RUN_FAILED' });
-          emit({ sessionId: runId, type: 'changed' });
+          emit({ sessionId: id, type: 'status', text: /^[A-Z_]+$/.test(error.message) ? error.message : 'RUN_FAILED' });
+          emit({ sessionId: id, type: 'changed' });
           acceptRequest(error);
         });
         // Do not clear the composer's text until its masked message is durable, including coordinated runs.
@@ -4598,7 +4584,13 @@ async function main() {
         if (failure) throw failure;
         for (const a of selected) attachments.delete(a.view.id);
         // Without a dialog, the person still learns what was masked before sending.
-        return { started: true, mode: workMode, masked: review.labels, warning, ...(runId !== id ? { sessionId: runId } : {}) };
+        return {
+          started: true,
+          mode: workMode,
+          masked: review.labels,
+          warning,
+          ...(autoDocument && anotherDocument ? { newDocument: true } : {}),
+        };
       }
       case 'cancel':
         coordinator.cancel(input.id);
@@ -4683,7 +4675,7 @@ async function main() {
         const s = store.session(input.id),
           version = s.versions.find(v => v.revision === input.revision);
         if (!version) throw new Error('VERSION_NOT_FOUND');
-        return store.edit(s.id, version.text, s.revision, version.document, version.presentation || {});
+        return store.restore(s.id, version.revision);
       }
       case 'detach': {
         const sessionId = inputText(input.id, 60),

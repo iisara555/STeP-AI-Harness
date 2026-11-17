@@ -53,5 +53,5 @@ test('receipt UI passes structured source through workspace send and consent rep
   assert.match(app, /allowIds:\s*ask\.allowIds,\s*sourceText:\s*ask\.sourceText/);
   assert.match(app, /handoff=\{receiptHandoff\}/);
   assert.match(main, /combinedSource/);
-  assert.match(main, /service\.run\(\s*runId,\s*text,\s*combinedSource,\s*true/);
+  assert.match(main, /service\.run\(\s*id,\s*text,\s*combinedSource,\s*true/);
 });
