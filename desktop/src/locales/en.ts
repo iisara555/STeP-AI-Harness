@@ -2870,6 +2870,14 @@ export const en: Record<string, string> = {
   'มีชื่อผู้รับเงิน / ร้าน': 'Payee / shop name shown',
   'ยังไม่เห็นชื่อผู้รับเงิน / ร้าน': 'No payee / shop name seen',
   มีวันที่รับเงิน: 'Payment date shown',
+  'มีเลขประจำตัวผู้เสียภาษี 13 หลักของผู้ขาย': 'Seller 13-digit tax ID shown',
+  'ใบกำกับภาษีต้องมีเลขประจำตัวผู้เสียภาษี 13 หลักของผู้ขาย (ประมวลรัษฎากร มาตรา 86/4, 86/6) ยังไม่เห็นหรืออ่านได้ไม่ครบ':
+    'A tax invoice must show the seller 13-digit tax ID (Revenue Code sections 86/4 and 86/6). It is missing or incomplete',
+  มีเลขที่ใบกำกับภาษี: 'Tax invoice number shown',
+  'ใบกำกับภาษีต้องมีเลขที่ของใบกำกับภาษี ยังไม่เห็นเลขที่': 'A tax invoice must have its own number. No number found',
+  แยกภาษีมูลค่าเพิ่มออกจากราคาสินค้าแล้ว: 'VAT shown separately from the price',
+  'ใบกำกับภาษีเต็มรูปต้องแยกจำนวนภาษีมูลค่าเพิ่มออกจากราคาสินค้าให้ชัด (มาตรา 86/4) ยังไม่เห็นยอดภาษี':
+    'A full tax invoice must show VAT separately from the price (section 86/4). No VAT amount found',
   ยังไม่เห็นวันที่รับเงิน: 'No payment date seen',
   มีรายการว่าจ่ายค่าอะไร: 'What was paid for is listed',
   ยังไม่เห็นรายการว่าจ่ายค่าอะไร: 'What was paid for is not listed',

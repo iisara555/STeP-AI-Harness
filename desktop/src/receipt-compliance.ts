@@ -204,6 +204,34 @@ export function complianceChecklist(input: {
             ? 'มีลายมือชื่อผู้รับเงิน'
             : 'ยังไม่เห็นลายมือชื่อผู้รับเงิน ขอให้ผู้รับเงินลงชื่อ (ห้ามลงชื่อแทนผู้อื่น)',
     });
+    // What a tax invoice itself must carry (ประมวลรัษฎากร มาตรา 86/4 full, 86/6 abbreviated).
+    if (type === 'tax_invoice' || type === 'abbreviated_tax_invoice') {
+      const sellerId = thaiDigits(String(values.taxId || '')).replace(/\D/g, '');
+      items.push({
+        id: 'seller_tax_id',
+        status: sellerId.length === 13 ? 'ok' : 'missing',
+        source: 'general',
+        text:
+          sellerId.length === 13
+            ? 'มีเลขประจำตัวผู้เสียภาษี 13 หลักของผู้ขาย'
+            : 'ใบกำกับภาษีต้องมีเลขประจำตัวผู้เสียภาษี 13 หลักของผู้ขาย (ประมวลรัษฎากร มาตรา 86/4, 86/6) ยังไม่เห็นหรืออ่านได้ไม่ครบ',
+      });
+      items.push({
+        id: 'invoice_number',
+        status: has('receiptNumber') ? 'ok' : 'missing',
+        source: 'general',
+        text: has('receiptNumber') ? 'มีเลขที่ใบกำกับภาษี' : 'ใบกำกับภาษีต้องมีเลขที่ของใบกำกับภาษี ยังไม่เห็นเลขที่',
+      });
+      if (type === 'tax_invoice')
+        items.push({
+          id: 'vat_separate',
+          status: has('vat') ? 'ok' : 'missing',
+          source: 'general',
+          text: has('vat')
+            ? 'แยกภาษีมูลค่าเพิ่มออกจากราคาสินค้าแล้ว'
+            : 'ใบกำกับภาษีเต็มรูปต้องแยกจำนวนภาษีมูลค่าเพิ่มออกจากราคาสินค้าให้ชัด (มาตรา 86/4) ยังไม่เห็นยอดภาษี',
+        });
+    }
     items.push({
       id: 'buyer',
       status: f.buyerNamed ? 'ok' : 'info',

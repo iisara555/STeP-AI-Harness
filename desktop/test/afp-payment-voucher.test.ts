@@ -11,6 +11,7 @@ import {
   paymentVoucherAmounts,
   paymentVoucherAssessment,
   paymentVoucherFromReceipt,
+  paymentVoucherNotes,
   paymentVoucherSourceStale,
 } from '../src/afp-payment-voucher';
 import { createReceiptPacket, editReceiptPacket, blankReceiptVoucher, packetAssessment } from '../src/receipt-packet';
@@ -180,4 +181,23 @@ test('combined PDF and index place the AFP draft between receipt form and source
   );
   assert.equal(packetIndex(packet, 1, 1, 1)[0].outputPages, '4');
   assert.match(receiptPacketCoverHtml(packet, 1, 1, '', 1), /ร่างใบสำคัญจ่ายสำหรับ AFP อยู่หน้า 3/);
+});
+
+test('withholding advice flags an unusual rate and reminds the QP-AF-004 tax certificate without blocking', () => {
+  const voucher = completeVoucher();
+  voucher.items = [{ description: 'Synthetic service', gross: '1000.00', withholding: '30.00', deduction: '' }];
+  assert.deepEqual(paymentVoucherNotes(voucher), ['withholding-certificate'], '3% is a common rate');
+  voucher.items[0].withholding = '10.01';
+  assert.deepEqual(paymentVoucherNotes(voucher), ['withholding-certificate'], 'one satang of rounding is allowed');
+  voucher.items[0].withholding = '25.00';
+  assert.deepEqual(paymentVoucherNotes(voucher), ['withholding-rate', 'withholding-certificate']);
+  voucher.items[0].withholding = '0';
+  assert.deepEqual(paymentVoucherNotes(voucher), [], 'no tax withheld, nothing to remind');
+  voucher.items[0].withholding = '';
+  assert.deepEqual(paymentVoucherNotes(voucher), [], 'an unknown amount is reported as missing elsewhere, not guessed');
+  voucher.items[0].withholding = '25.00';
+  voucher.checked = true;
+  const assessment = paymentVoucherAssessment(voucher, blankReceiptVoucher());
+  assert.ok(assessment.notes.includes('withholding-rate'));
+  assert.ok(!assessment.missing.includes('withholding-rate'), 'advice never holds the voucher back');
 });

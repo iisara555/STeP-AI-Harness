@@ -4,7 +4,7 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-16_
+_Last updated: 2026-11-17_
 
 ## Latest release
 
@@ -88,6 +88,8 @@ Release validation reproduced the sidebar's outdated expectation after explicit 
 - Follow-up decisions: measure staff latency with `eval:diagnostics`, public-holiday/MIS-signing search gaps, Thai-capable search replacement, remaining AI Harness guide phases and a team-shared Learning Inbox.
 
 ## In progress
+
+- **Tax-invoice and withholding checks (2026-11-17, awaiting review)**: from the 2026-11-16 output audit (finance side). `complianceChecklist` adds `seller_tax_id` (13 digits, Thai digits accepted), `invoice_number` and, for full tax invoices only, `vat_separate`, citing ประมวลรัษฎากร มาตรา 86/4 and 86/6. `paymentVoucherNotes` gives advice that never blocks: a withheld amount that is not 1/2/3/5% of its item (±1 satang), and the QP-AF-004 certificate reminder (ภ.ง.ด.3 with FM-AF-014 for a person, ภ.ง.ด.53 for a company) whenever tax is withheld. `thaiBahtWords` reads amounts under one baht as satang only (BAHTTEXT style). Open: the payee type (person or company) is not a field yet, so the reminder names both forms.
 
 - **Managed agy repairs itself before a run (2026-11-16, awaiting review)**: on the owner's PC the first chat after updating to 0.6.34 failed once with `ANTIGRAVITY_VERSION_UNTESTED`. agy's own logs in the real profile (`%USERPROFILE%\.gemini\antigravity-cli`) show that on 2026-11-10 16:47Z STeP's pinned 1.3.2 was started with the real profile (not by STeP: no STeP event at that time), found its last update check older than 15 minutes, spawned its background updater and was 1.5.5 thirty seconds later. A plain `--version` does not start the updater. `runtime()` now calls `repairManagedAgy`: when the resolved executable is STeP's own copy and it no longer answers as a tested version, the pinned build is reinstalled (sha512-checked as on connect) before the run; an agy the employee installed is never replaced, a checked file is not started again (`antigravityChecked`), and a failed repair falls back to the existing reconnect message. Diagnostics: `agy-repaired`, `agy-repair-failed`. Open: the download (~190 MB on Windows) happens inside the chat's wait without its own progress line.
 

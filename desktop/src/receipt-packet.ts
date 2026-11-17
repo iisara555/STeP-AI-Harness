@@ -259,7 +259,9 @@ export function thaiBahtWords(satang: number): string {
   if (!Number.isSafeInteger(satang) || satang < 0 || satang > 9_999_999_999_999) throw new Error('INVALID_INPUT');
   const whole = Math.floor(satang / 100),
     fraction = satang % 100;
-  return (whole ? thaiInteger(whole) : 'ศูนย์') + 'บาท' + (fraction ? thaiInteger(fraction) + 'สตางค์' : 'ถ้วน');
+  // Under one baht the words name only the satang (ห้าสิบสตางค์), as Thai baht text is written.
+  if (!whole) return fraction ? thaiInteger(fraction) + 'สตางค์' : 'ศูนย์บาทถ้วน';
+  return thaiInteger(whole) + 'บาท' + (fraction ? thaiInteger(fraction) + 'สตางค์' : 'ถ้วน');
 }
 
 export function packetAssessment(packet: ReceiptPacket) {
