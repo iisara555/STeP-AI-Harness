@@ -1022,6 +1022,14 @@ export const en: Record<string, string> = {
     "The Skill hub shows your team's Skills first, and the whole card opens a Skill.",
   'แผงร่างเหลือ 3 แท็บหลัก ส่วนเว็บ งานเบื้องหลัง และคำสั่งอยู่หลังปุ่มแท็บเพิ่มเติม':
     'The draft panel has three main tabs. Web, background jobs and commands sit behind the more-tabs button.',
+  'บันทึกข้อความและหนังสือภายนอกที่ส่งออกจัดหน้าตามแบบหนังสือราชการ: "ที่" อยู่แถวเดียวกับส่วนราชการ เลขหน้า "- ๒ -" และมีที่ว่างพอลงนาม':
+    'Exported memos and letters follow the government print layout: the reference number and the sender on one row, "- 2 -" page numbers and room to sign.',
+  'หลังส่งออกเอกสาร แอปบอกส่วนที่ยังขาดและจุด [รอยืนยัน] ที่ยังต้องเติม':
+    'After an export, the app lists missing parts and the placeholders still to confirm.',
+  'แนบแบบฟอร์มหน่วยงานแล้ว แอปเทียบรหัสและ REV กับทะเบียนเอกสารคุณภาพ MIS ให้':
+    'An attached agency form is checked against the MIS quality register for its code and revision.',
+  'ตรวจใบกำกับภาษี (เลขผู้เสียภาษี เลขที่ และ VAT) และเตือนเรื่องหัก ณ ที่จ่ายในใบสำคัญจ่าย':
+    'Tax invoices are checked for the tax ID, number and VAT, and payment vouchers flag withholding to review.',
   'แอปเปิดเร็วขึ้น และลื่นขึ้นระหว่างที่ AI พิมพ์คำตอบยาว': 'The app starts faster and stays smooth while the AI writes a long answer.',
   'ภาพที่ส่งให้ AI แสดงเป็นภาพย่อในแชต ย้อนดูได้ว่าถามเรื่องภาพไหน': 'Pictures you send to the AI now show as thumbnails in the chat.',
   'Gemini ผ่าน Antigravity อ่านภาพถ่ายได้อีกครั้งโดยไม่ค้นเว็บเอง':

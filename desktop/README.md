@@ -10,7 +10,7 @@
 
 ภาพใช้ข้อมูลตัวอย่าง หน้าจอและตัวเลือกอาจต่างตามรุ่นและการตั้งค่าขององค์กร
 
-Source version: Desktop **0.6.34**. A calmer screen hierarchy (yellow only on each page's main action, three draft-panel tabs, a Skill hub that leads with your team), a faster start and smoother long answers.
+Source version: Desktop **0.6.35**. Official letters and memos exported to the government print layout (ที่ and sender on one row, "- ๒ -" page numbers, room to sign), attached QS forms checked against the MIS register, and tax-invoice and withholding checks on AFP documents.
 
 Desktop **0.6.15** กดปุ่มเข้าสู่ระบบเว็บอย่าง STeP MBS ให้เองหลังกรอกบัญชีจาก Vault ไม่ต้องสลับไปกดเอง
 
@@ -168,4 +168,4 @@ AI ได้รับโครงและชื่อช่องที่ร�
 
 อ่าน [ภาพรวม STeP AI](../README.md) หรือ [รายละเอียดสำหรับผู้ดูแลและนักพัฒนา](../docs/desktop-development.md) เมื่อต้องตั้งค่าระบบ ทดสอบ หรือสร้างตัวติดตั้ง
 
-รุ่นใน source: **STeP Desktop v0.6.34** ดูไฟล์ที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การมี release ไม่ได้แทนการอนุมัติใช้งานในหน่วยงาน
+รุ่นใน source: **STeP Desktop v0.6.35** ดูไฟล์ที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การมี release ไม่ได้แทนการอนุมัติใช้งานในหน่วยงาน
