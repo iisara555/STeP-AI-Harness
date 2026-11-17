@@ -176,6 +176,8 @@ export const documentToolsEn: Record<string, string> = {
   'ตามประเภทเอกสาร (สูง {0} ซม.)': 'Document type default ({0} cm high)',
   ไม่ใส่ตราครุฑ: 'No Garuda emblem',
   'ตราครุฑสูง {0} ซม. (เฉพาะหน้าแรก)': 'Garuda emblem: {0} cm high (first page only)',
+  'ยังไม่มี {0}': 'Not in the draft yet: {0}',
+  'ยังมี [รอยืนยัน] {0} จุด': '{0} placeholders still to confirm',
   'ตัวเลือกตราครุฑไม่ถูกต้อง กรุณาเลือกจากรายการ': 'Invalid Garuda option. Select one from the list.',
   'ตามแม่แบบร่าง ({0})': 'Working template ({0})',
   'ไฟล์ใช้ฟอนต์ {0}': 'This file uses {0}',

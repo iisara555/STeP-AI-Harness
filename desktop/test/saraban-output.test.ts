@@ -12,6 +12,7 @@ import { documentLayoutRoles, resolveDocumentLayout, sarabanSpacing } from '../s
 import { resolvePresentation } from '../src/document-presentation';
 import { documentText, markdownDocument } from '../src/draft';
 import { createReceiptPacket } from '../src/receipt-packet';
+import { documentChecks } from '../src/saraban-checks';
 import { paymentVoucherHtml } from '../electron/afp-payment-voucher';
 
 const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
@@ -172,10 +173,39 @@ test('external letter: any sender name, a bare date, the position and the closin
   assert.equal(before('ทีมสังเคราะห์'), 54);
   assert.equal(before('เรียน'), 6);
   const doc = await word(letter, 'letter');
-  assert.equal(doc.attr(doc.paragraph('หน่วยงานสังเคราะห์'), 'ind', 'left'), '4535');
+  // ที่ and the sender share the first row: ที่ at the margin, the sender from the centre and wrapping there.
+  const head = doc.paragraph('ที่ [รอยืนยัน');
+  assert.equal(doc.text(head), 'ที่ [รอยืนยัน: เลขหนังสือ]หน่วยงานสังเคราะห์๑ ถนนตัวอย่าง');
+  assert.equal(doc.attr(head, 'ind', 'left'), '4535');
+  assert.equal(doc.attr(head, 'ind', 'hanging'), '4535');
+  assert.equal(doc.attr(head, 'tab', 'pos'), '4535');
+  assert.equal(head.getElementsByTagNameNS(W, 'tab').length, 2); // the stop and the tab itself
+  assert.equal(doc.paragraph('หน่วยงานสังเคราะห์'), undefined);
   assert.equal(doc.attr(doc.paragraph('รองผู้อำนวยการ'), 'jc', 'val'), 'center');
   assert.equal(doc.attr(doc.paragraph('ทีมสังเคราะห์'), 'ind', 'firstLine'), undefined);
   assert.equal(doc.attr(doc.paragraph('([รอยืนยัน'), 'spacing', 'before'), '1080');
+});
+
+test('external letter PDF puts ที่ and the sender on one row; an invitation keeps its own header', () => {
+  const html = pdfHtml(markdownDocument(letter), resolveDocumentLayout('letter'), new Map(), resolvePresentation({}, 'letter'));
+  assert.match(html, /<div class="block letter-head"[^>]*><div><p>ที่ \[รอยืนยัน: เลขหนังสือ\]<\/p><\/div><div><p>หน่วยงานสังเคราะห์/);
+  assert.equal((html.match(/<p>หน่วยงานสังเคราะห์/g) || []).length, 1);
+  assert.match(html, /\.letter-head\{break-after:avoid\}/);
+  const memoHtml = pdfHtml(markdownDocument(memo), resolveDocumentLayout('memo'), new Map(), resolvePresentation({}, 'memo'));
+  assert.doesNotMatch(memoHtml, /class="block letter-head"/);
+});
+
+test('export reports what the draft still lacks for its type and the [รอยืนยัน] left to fill', () => {
+  assert.deepEqual(documentChecks(markdownDocument(letter), 'letter'), [{ code: 'placeholders', count: 3 }]);
+  assert.deepEqual(documentChecks(markdownDocument('ที่ ๑/๒๕๖๙\n\nด้วยเรื่องสังเคราะห์'), 'letter'), [
+    { code: 'missing', parts: ['เรื่อง', 'เรียน', 'คำลงท้าย', 'ชื่อผู้ลงนาม'] },
+  ]);
+  assert.deepEqual(documentChecks(markdownDocument(memo), 'memo'), [{ code: 'placeholders', count: 3 }]);
+  assert.deepEqual(
+    documentChecks(markdownDocument(minutes), 'minutes').filter(c => c.code === 'missing'),
+    [],
+  );
+  assert.deepEqual(documentChecks(markdownDocument('ข้อความทั่วไป [รอยืนยัน: ชื่อ]')), []);
 });
 
 test('saraban documents number continuation pages "- ๒ -" at the top and never page 1; TOR and invitations keep theirs', async () => {

@@ -1,5 +1,6 @@
 // Self-contained parts of the workspace state, kept out of use-workspace.tsx so that file holds the task flow itself.
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { DocumentCheck } from './saraban-checks';
 import type { Toast } from './ui';
 import type { OwnPack } from './types';
 import { readSidebarChoice } from './sidebar-rail';
@@ -44,6 +45,7 @@ export type ExportInfo = {
   fieldsNeedUpdate?: boolean;
   garudaHeightCm?: number;
   templateName?: string;
+  checks?: DocumentCheck[];
 };
 
 /** The draft's export choices; font, Garuda and the last export's report reset when another task opens. */

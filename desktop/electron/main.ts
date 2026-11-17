@@ -99,6 +99,8 @@ import {
 import { isolatedRuntimeHome } from './runtime-home';
 import { PDF_MARGINS, exportDocument, exportFormats } from './export';
 import { resolveDocumentLayout, probeDocumentFont } from '../src/document-layout';
+import { documentChecks } from '../src/saraban-checks';
+import { markdownDocument } from '../src/draft';
 import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython, type OcrStatus, readOcrInput } from './ocr';
 import { ReceiptOperations } from './receipt-operations';
@@ -4936,6 +4938,7 @@ async function main() {
               fontStatus,
               ...(exported ? exported : {}),
               ...(template ? { templateName: s.documentTemplate!.name } : { garudaHeightCm: layout.garudaHeightCm }),
+              checks: documentChecks(s.document || markdownDocument(s.draft), layout.id),
             },
           };
         } finally {

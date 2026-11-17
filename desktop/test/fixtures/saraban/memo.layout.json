@@ -1,0 +1,35 @@
+{
+  "word": [
+    "ส่วนงาน ทีมพัฒนาผู | left // 284 40 b 0",
+    "ที่ [รอยืนยัน: เลข | left // 0 40 b 2",
+    "เรื่อง ขออนุมัติจั | left // 120 40 b 0",
+    "เรียน ผู้อำนวยการอ | left // 120 32  0",
+    "ด้วยทีมพัฒนาผู้ประ | left //1418 120 32  0",
+    "ในการนี้ เพื่อให้ก | left //1418 120 32  0",
+    " |  // 0   0",
+    "ทั้งนี้ การจัดซื้อ | left //1418 120 32  0",
+    "จึงเรียนมาเพื่อโปร | left //1418 120 32  0",
+    "(ลงชื่อ) ......... | center 4535// 480 32  0",
+    "([รอยืนยัน: ชื่อเต | center 4535// 0 32  0",
+    "ตำแหน่ง [รอยืนยัน: | center 4535// 0 32  0"
+  ],
+  "furniture": [
+    "word/header garuda",
+    "word/header page"
+  ],
+  "pdf": [
+    "block field | text-align:left;",
+    "block memo-reference | text-align:left;",
+    "block field | text-align:left;margin-top:6pt;",
+    "block field | text-align:left;margin-top:6pt;",
+    "block body | text-align:left;text-indent:2.5cm;text-align:justify;margin-top:6pt;",
+    "block body | text-align:left;text-indent:2.5cm;text-align:justify;margin-top:6pt;",
+    "block body | text-align:left;margin-top:6pt;",
+    "block body | text-align:left;text-indent:2.5cm;text-align:justify;margin-top:6pt;",
+    "block body | text-align:left;text-indent:2.5cm;text-align:justify;margin-top:6pt;",
+    "block signature | text-align:center;margin-left:8cm;margin-top:24pt;",
+    "block signature | text-align:center;margin-left:8cm;",
+    "block signature | text-align:center;margin-left:8cm;"
+  ],
+  "page": true
+}

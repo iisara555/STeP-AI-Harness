@@ -1,0 +1,35 @@
+{
+  "word": [
+    "ที่ [รอยืนยัน: เลข | left 4535/4535/ 284 32  2",
+    "วันที่ [รอยืนยัน:  | center // 0 32  0",
+    "เรื่อง ขอความอนุเค | left // 120 32  0",
+    "เรียน คณบดีคณะวิศว | left // 120 32  0",
+    "สิ่งที่ส่งมาด้วย ก | left // 120 32  0",
+    "ด้วยอุทยานวิทยาศาส | left //1418 120 32  0",
+    "ในการนี้ อุทยานวิท | left //1418 120 32  0",
+    "จึงเรียนมาเพื่อโปร | left //1418 120 32  0",
+    "ขอแสดงความนับถือ | center 4535// 240 32  0",
+    "([รอยืนยัน: ชื่อเต | center 4535// 1080 32  0",
+    "[รอยืนยัน: ตำแหน่ง | center 4535// 0 32  0",
+    "ทีมพัฒนาผู้ประกอบก | left // 1080 32  0"
+  ],
+  "furniture": [
+    "word/header garuda",
+    "word/header page"
+  ],
+  "pdf": [
+    "block letter-head | ",
+    "block date | text-align:center;",
+    "block field | text-align:left;margin-top:6pt;",
+    "block field | text-align:left;margin-top:6pt;",
+    "block field | text-align:left;margin-top:6pt;",
+    "block body | text-align:left;text-indent:2.5cm;text-align:justify;margin-top:6pt;",
+    "block body | text-align:left;text-indent:2.5cm;text-align:justify;margin-top:6pt;",
+    "block body | text-align:left;text-indent:2.5cm;text-align:justify;margin-top:6pt;",
+    "block signature | text-align:center;margin-left:8cm;margin-top:12pt;",
+    "block signature | text-align:center;margin-left:8cm;margin-top:54pt;",
+    "block signature | text-align:center;margin-left:8cm;",
+    "block field | text-align:left;margin-top:54pt;"
+  ],
+  "page": true
+}

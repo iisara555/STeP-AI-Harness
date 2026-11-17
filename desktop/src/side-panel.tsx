@@ -478,6 +478,13 @@ export function SidePanel({ v }: { v: AppView }) {
                     <div className="export-status">
                       {exportInfo && (
                         <div className="document-export-info" role="status">
+                          {exportInfo.checks?.map(check => (
+                            <p className="export-check" key={check.code}>
+                              {check.code === 'missing'
+                                ? t('ยังไม่มี {0}', check.parts.join(' / '))
+                                : t('ยังมี [รอยืนยัน] {0} จุด', check.count)}
+                            </p>
+                          ))}
                           <p>{t('ไฟล์ใช้ฟอนต์ {0}', exportInfo.font)}</p>
                           {exportInfo.templateName ? (
                             <p>{t('รักษารูปแบบและตราจากแม่แบบ {0}', exportInfo.templateName)}</p>

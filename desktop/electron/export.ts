@@ -59,7 +59,27 @@ const CM = 567; // twips per centimetre
 export const PDF_MARGINS = { top: 2.5 / 2.54, bottom: 2 / 2.54, left: 3 / 2.54, right: 2 / 2.54 };
 
 /** Front matter in a TOR is an agency/data block, not a centered title. */
-const centerFrontMatter = (layout: DocumentLayout, role: LayoutRole | 'quote') => role === 'front' && layout.id === 'minutes';
+const centerFrontMatter = (layout: DocumentLayout, role: LayoutRole | 'quote' | 'letter-head') =>
+  role === 'front' && layout.id === 'minutes';
+/**
+ * หนังสือภายนอก: the ที่ line and the first paragraph of ส่วนราชการเจ้าของหนังสือ share one row, ที่ at the left margin
+ * and the sender from the centre of the text column. Returns the index of the ที่ paragraph, or -1.
+ */
+function letterHeadRow(blocks: DraftNode[], roles: LayoutRole[], id: DocumentLayout['id'], invitation: unknown) {
+  if (id !== 'letter' || invitation) return -1;
+  return blocks.findIndex(
+    (node, index) =>
+      node.type === 'paragraph' &&
+      blocks[index + 1]?.type === 'paragraph' &&
+      roles[index] !== 'sender' &&
+      roles[index + 1] === 'sender' &&
+      /^ที่\s/.test(documentText(node).trim()),
+  );
+}
+const letterHeadNode = (number: DraftNode, sender: DraftNode): DraftNode => ({
+  type: 'paragraph',
+  content: [...(number.content || []), { type: 'text', text: '\t' }, ...(sender.content || [])],
+});
 
 export function escapeHtml(text: string) {
   return text.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -239,7 +259,7 @@ export function pdfHtml(
       ? [
           '@page{size:A4;margin:2.5cm 2cm 2cm 3cm}body{line-height:1.15}.block p{margin:0}h1,h2,h3{font-size:16pt;margin:6pt 0 3pt}.block:has(h1,h2,h3){break-after:avoid}',
           '.block.sender,.block.date,.block.front,.block.signature{break-after:avoid}',
-          '.memo-reference-row{display:grid;grid-template-columns:1fr 1fr;break-inside:avoid}.memo-label{font-size:20pt}',
+          '.memo-reference-row,.letter-head{display:grid;grid-template-columns:1fr 1fr;break-inside:avoid}.letter-head{break-after:avoid}.memo-label{font-size:20pt}',
           `.block.title :is(h1,h2,h3){font-size:${layout.id === 'memo' ? 29 : 18}pt}`,
         ]
       : []),
@@ -289,10 +309,13 @@ export function pdfHtml(
   const spacing = sarabanSpacing(document, layout.id);
   const tor = layout.id === 'tor' ? torPdfFurniture(document, layout.font, presentation) : undefined;
   const torStyle = tor ? torPreset(presentation) : undefined;
+  const head = letterHeadRow(blocks, roles, layout.id, presentation.invitation);
   const content = layout.id
     ? blocks
         .map((node, index) => {
-          if (node === title) return '';
+          if (node === title || (head >= 0 && index === head + 1)) return '';
+          if (index === head)
+            return `<div class="block letter-head" style="${spacing[index] ? `margin-top:${spacing[index]}pt;` : ''}"><div>${richHtml(node, images)}</div><div>${richHtml(blocks[index + 1], images)}</div></div>`;
           const role = roles[index];
           const css =
             ['title', 'subject', 'signature', 'date'].includes(role) || centerFrontMatter(layout, role)
@@ -489,7 +512,7 @@ function docxTable(table: DraftNode, layout: WordLayout) {
 function docxBlocks(
   node: DraftNode,
   layout: WordLayout,
-  role: LayoutRole | 'quote' = 'body',
+  role: LayoutRole | 'quote' | 'letter-head' = 'body',
   numbering?: { reference: string; level: number },
   depth = 0,
   firstPageSpace = false,
@@ -584,18 +607,20 @@ function docxBlocks(
                 ? { left: 360 * depth }
                 : ['signature', 'sender'].includes(role)
                   ? { left: band }
-                  : body
-                    ? { firstLine: Math.round(wordPreset(layout).indent * CM) }
-                    : undefined,
+                  : role === 'letter-head'
+                    ? { left: band, hanging: band }
+                    : body
+                      ? { firstLine: Math.round(wordPreset(layout).indent * CM) }
+                      : undefined,
         tabStops: numbered
           ? [{ type: TabStopType.LEFT, position: Math.round((numbered.leftCm + numbered.widthCm) * CM) }]
-          : role === 'memo-reference'
+          : role === 'memo-reference' || role === 'letter-head'
             ? [{ type: TabStopType.LEFT, position: band }]
             : undefined,
         keepNext:
           title ||
           node.type === 'heading' ||
-          ['subject', 'front', 'sender', 'date', 'memo-reference'].includes(role) ||
+          ['subject', 'front', 'sender', 'date', 'memo-reference', 'letter-head'].includes(role) ||
           (role === 'signature' && /^(?:\(|ขอแสดงความนับถือ)/.test(documentText(node))),
         keepLines: title || caption || node.type === 'heading' || role === 'signature',
         widowControl: true,
@@ -958,9 +983,10 @@ function docx(document: DraftNode, layout: WordLayout) {
   const body: (Paragraph | Table | TableOfContents)[] = [];
   let breakBefore = false;
   if (layout.id === 'letter' && appearance.invitation) body.push(...invitationWordBlocks(document, layout));
-  else
+  else {
+    const head = letterHeadRow(blocks, roles, layout.id, appearance.invitation);
     for (const [index, node] of blocks.entries()) {
-      if (node === title) continue;
+      if (node === title || (head >= 0 && index === head + 1)) continue;
       if (node.type === 'pageBreak') {
         if (breakBefore) body.push(...docxBlocks(node, layout));
         breakBefore = true;
@@ -968,9 +994,9 @@ function docx(document: DraftNode, layout: WordLayout) {
       }
       body.push(
         ...docxBlocks(
-          node,
+          index === head ? letterHeadNode(node, blocks[index + 1]) : node,
           layout,
-          roles[index],
+          index === head ? 'letter-head' : roles[index],
           undefined,
           0,
           Boolean(garudaHeader && index === (title ? 1 : 0)),
@@ -980,6 +1006,7 @@ function docx(document: DraftNode, layout: WordLayout) {
       );
       breakBefore = false;
     }
+  }
   if (breakBefore) body.push(...docxBlocks({ type: 'pageBreak' }, layout));
   const tocIndex = !title && blocks[0]?.type === 'title' ? 1 : 0;
   body.splice(tocIndex, 0, ...tocBlocks);

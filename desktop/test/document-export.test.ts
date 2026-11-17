@@ -205,7 +205,10 @@ test('memo fields, letter sender/date and signatures receive distinct layouts wi
   assert.equal(attr(memo.paragraph('(ลงชื่อ)'), 'jc', 'val'), 'center');
   assert.equal(attr(memo.paragraph('(ลงชื่อ)'), 'ind', 'left'), '4535');
   const letter = await word(markdown, { documentTool: 'letter' });
-  assert.equal(attr(letter.paragraph('หน่วยงานและที่อยู่'), 'ind', 'left'), '4535');
+  // ที่ and the sender share one row: the sender starts at the centre and wraps there.
+  assert.ok(letter.text(letter.paragraph('ที่ 0007/๖๙')).includes('หน่วยงานและที่อยู่'));
+  assert.equal(attr(letter.paragraph('ที่ 0007/๖๙'), 'ind', 'left'), '4535');
+  assert.equal(attr(letter.paragraph('ที่ 0007/๖๙'), 'ind', 'hanging'), '4535');
   assert.equal(attr(letter.paragraph('วันที่'), 'jc', 'val'), 'center');
   assert.equal(attr(letter.paragraph('เรียน'), 'ind', 'firstLine'), undefined);
   const expected = documentText(markdownDocument(markdown)).replace(/\s/g, '');

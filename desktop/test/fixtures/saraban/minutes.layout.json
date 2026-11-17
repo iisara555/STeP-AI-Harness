@@ -1,0 +1,53 @@
+{
+  "word": [
+    "รายงานการประชุมคณะ | center // 120 44 b 0",
+    "ชื่อการประชุม คณะท | center // 0 32  0",
+    "ครั้งที่ ๑/๒๕๖๙ | center // 0 32  0",
+    "วัน เวลา สถานที่ ว | center // 0 32  0",
+    "ผู้มาประชุม | left // 0 32  0",
+    "๑. [รอยืนยัน: ชื่อ | left //1418 0 32  0",
+    "๒. [รอยืนยัน: ชื่อ | left //1418 0 32  0",
+    "๓. [รอยืนยัน: ชื่อ | left //1418 0 32  0",
+    "ผู้ไม่มาประชุม [รอ | left // 0 32  0",
+    "เริ่มประชุมเวลา ๑๓ | left // 0 32  0",
+    "ระเบียบวาระที่ ๑ เ | left // 120 36 b 0",
+    "สาระสำคัญ ประธานแจ | left // 0 32  0",
+    "มติ ที่ประชุมรับทร | left // 0 32  0",
+    "ระเบียบวาระที่ ๒ เ | left // 120 36 b 0",
+    "สาระสำคัญ ฝ่ายเลขา | left // 0 32  0",
+    "ข้อเสนอที่ยังไม่ตก | left // 0 32  0",
+    "มติ ที่ประชุมเห็นช | left // 0 32  0",
+    " |  // 0   0",
+    "เลิกประชุมเวลา ๑๕. | left // 0 32  0",
+    "ผู้จดรายงาน [รอยืน | center 4535// 0 32  0",
+    "ผู้ตรวจรายงาน [รอย | center 4535// 0 32  0"
+  ],
+  "furniture": [
+    "word/header ",
+    "word/header page"
+  ],
+  "pdf": [
+    "block title | text-align:center;",
+    "block front | text-align:center;",
+    "block front | text-align:center;",
+    "block front | text-align:center;",
+    "block field | text-align:left;",
+    "block body | text-align:left;text-indent:2.5cm;text-align:justify;",
+    "block body | text-align:left;text-indent:2.5cm;text-align:justify;",
+    "block body | text-align:left;text-indent:2.5cm;text-align:justify;",
+    "block field | text-align:left;",
+    "block field | text-align:left;",
+    "block body | text-align:left;",
+    "block field | text-align:left;",
+    "block field | text-align:left;",
+    "block body | text-align:left;",
+    "block field | text-align:left;",
+    "block field | text-align:left;",
+    "block field | text-align:left;",
+    "block body | text-align:left;",
+    "block field | text-align:left;",
+    "block signature | text-align:center;margin-left:8cm;",
+    "block signature | text-align:center;margin-left:8cm;"
+  ],
+  "page": true
+}
