@@ -563,6 +563,85 @@ function place(workspace, manifest, files, credit) {
     if (existsSync(stage)) rmSync(stage, { recursive: true, force: true });
   }
 }
+// Standard findings the AI can fix by restructuring one SKILL.md. A long file (needs references/) and every safety
+// finding are left to people: the AI must never be the one to "clean up" an injected or unsafe instruction.
+const FIXABLE = new Set([
+  "standard.frontmatter",
+  "standard.version",
+  "standard.headings",
+  "standard.headings3",
+  "standard.updated",
+  "standard.description",
+  "standard.keys",
+  "standard.source",
+  "standard.authority",
+]);
+/** The first Skill file in a pack whose Standard check the AI can fix, or null when there is none to fix. */
+function fixTarget(pack) {
+  if ((pack.manifest.hooks || []).length || (pack.manifest.agents || []).length) return null;
+  if (pack.review.findings.some((f) => f.area === "safety" && f.level === "fail")) return null;
+  const files = new Set(pack.review.findings.filter((f) => FIXABLE.has(f.code) && f.file).map((f) => f.file));
+  return pack.manifest.skills.find((s) => files.has(s.path)) || null;
+}
+/** Pin a Skill text's header name to the given id, after the usual import fixes (no tool grants). */
+export function skillTextNamed(text, id) {
+  let skill = normalizeSkillText(text, { fallbackName: id });
+  if (skill.id !== id) skill = normalizeSkillText(skill.text.replace(/^name\s*:.*$/m, `name: ${id}`), { fallbackName: id });
+  if (skill.id !== id) throw new Error("PACK_SKILL_INVALID");
+  return skill.text;
+}
+/** "ให้ AI แก้ตามมาตรฐาน": the Skill file to rewrite, with its findings and the pack digest it was read at. */
+export function packSkillToFix(workspace, id) {
+  const p = read(workspace, id);
+  const skill = fixTarget(p);
+  if (!skill) throw new Error("PACK_FIX_UNAVAILABLE");
+  return {
+    pack: id,
+    id: skill.id,
+    path: skill.path,
+    digest: p.digest,
+    text: p.files.get(skill.path).toString("utf8"),
+    findings: p.review.findings.filter((f) => f.file === skill.path && f.area === "standard"),
+  };
+}
+/**
+ * Save the reviewed rewrite over one Skill file of an imported pack. The pack keeps its name, credit and other files;
+ * the first original is kept beside the pack (outside its files, so not in the digest) in case the person wants it back.
+ * The new file goes through the same privacy gate and review as an import, and is not turned on here.
+ */
+export function replacePackSkill(workspace, id, { path, text, digest: expected } = {}) {
+  if (typeof text !== "string" || Buffer.byteLength(text) > 200_000) throw new Error("PACK_LIMIT");
+  const p = read(workspace, id);
+  if (p.digest !== expected) throw new Error("PACK_CHANGED");
+  const skill = fixTarget(p);
+  if (!skill || skill.path !== path) throw new Error("PACK_FIX_UNAVAILABLE");
+  const fixed = skillTextNamed(text, skill.id);
+  privateCheck(fixed);
+  const files = new Map(p.files);
+  files.set(path, Buffer.from(fixed, "utf8"));
+  validatePack(p.manifest, files);
+  const original = join(p.folder, "before-ai-fix.md");
+  if (!existsSync(original)) writeFileSync(original, p.files.get(path), { flag: "wx", mode: 0o600 });
+  const target = join(p.assets, path);
+  regular(target);
+  const temp = target + "." + randomUUID() + ".tmp";
+  writeFileSync(temp, fixed, { flag: "wx", mode: 0o600 });
+  renameSync(temp, target);
+  return { id, digest: digest(files), review: reviewPack(p.manifest, files), skills: p.manifest.skills, agents: [], hooks: 0 };
+}
+/** "ลบ Skill": remove an imported pack, its use record and credit from this computer. A broken pack can be removed too. */
+export function removePack(workspace, id) {
+  if (!ID.test(id)) throw new Error("PACK_ID_INVALID");
+  const root = base(workspace);
+  const folder = join(root, id);
+  if (!existsSync(folder)) throw new Error("PACK_NOT_FOUND");
+  regular(folder, true);
+  // Move out of the list first, so a removal cut short never leaves a half-deleted pack that still loads.
+  const trash = join(root, "stage-" + randomUUID());
+  renameSync(folder, trash);
+  rmSync(trash, { recursive: true, force: true });
+  return { id, removed: true };
+}
 export function listPacks(workspace, policy = {}) {
   return readdirSync(base(workspace))
     .filter((id) => ID.test(id) && !id.startsWith("stage-"))
@@ -575,6 +654,7 @@ export function listPacks(workspace, policy = {}) {
           enabled: allowed(p, policy),
           personal: allowed(p, policy) && p.state.personal === true,
           personalAllowed: personalUse(p, policy),
+          fixable: Boolean(fixTarget(p)),
           adminApproved: adminApproved(p, policy),
           review: p.review,
           usage: p.usage,

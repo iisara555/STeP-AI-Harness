@@ -17,3 +17,8 @@ export function enabledPackHooks(workspace:string,policy:any):any[];
 export function exportPack(workspace:string,id:string,destination:string,options?:any):any;
 export function promotionPayload(workspace:string,id:string,options?:{credit?:{name?:string;team?:string}}):{schema:1;pack:{id:string;version:string;digest:string;skills:string[]};review:{status:string;findings:any[]};usage:{count:number;lastUsedAt?:string};contributor:{name:string;team:string;uploadedAt:string};files:{path:string;text:string}[]};
 export function recordPromotion(workspace:string,id:string,options:{digest:string;reference?:string;credit?:{name?:string;team?:string}}):{digest:string;submittedAt:string;reference?:string};
+export function skillTextNamed(text:string,id:string):string;
+export type PackSkillFix={pack:string;id:string;path:string;digest:string;text:string;findings:PackFinding[]};
+export function packSkillToFix(workspace:string,id:string):PackSkillFix;
+export function replacePackSkill(workspace:string,id:string,input:{path:string;text:string;digest:string}):{id:string;digest:string;review:PackReview;skills:{id:string;path:string}[];agents:any[];hooks:number};
+export function removePack(workspace:string,id:string):{id:string;removed:true};

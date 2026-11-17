@@ -129,6 +129,10 @@ import {
   enabledPackHooks,
   promotionPayload,
   recordPromotion,
+  packSkillToFix,
+  replacePackSkill,
+  skillTextNamed,
+  removePack,
 } from '../../src/modules/packs/index.js';
 import { FEEDBACK_CATEGORIES, submitFeedback, submitSkill } from './skill-submit';
 import { buildReceiptAiResolver, resolveReceiptAiResponse } from './receipt-ai';
@@ -159,6 +163,7 @@ import { Learning } from './learning';
 import { MAINTENANCE_EVERY_MS, findMaintenance, mergeBoard, moveItem } from './maintenance';
 import { DRAFT_SYSTEM, draftInput, parseDrafts } from './learning-draft';
 import { SKILL_DRAFT_SYSTEM, parseSkillDraft, skillDraftInput } from './skill-draft';
+import { SKILL_FIX_SYSTEM, skillFixCoverage, skillFixInput } from './skill-fix';
 import { OPEN_EXTERNALLY, PREVIEW_LIMITS, filePreview, previewable } from './office-preview';
 import { Greetings, GREETING_SYSTEM, GREETING_SCHEMA, greetingInput, type GreetingContext } from './greetings';
 import { learningMetrics } from '../src/learning-metrics';
@@ -1479,11 +1484,12 @@ async function main() {
    * "สร้างจากวิธีทำงานของฉัน": the chosen connected AI drafts a Skill from the employee's description (masked input, no
    * tools). Returns a preview with the automated review; nothing is saved until the person chooses to use it.
    */
-  const draftSkill = async (connectionId: string, answers: { task?: unknown; steps?: unknown; example?: unknown }) => {
+  /** One no-tools run of the chosen AI that writes a Skill file: masked input, a two-minute limit, usage counted. */
+  const writeSkill = async (connectionId: string, input: string, system: string, label: string) => {
     const connection = store.get<Connection>('connection', connectionId);
     if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
     if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
-    const review = harness.privacy(skillDraftInput(answers));
+    const review = harness.privacy(input);
     if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 120_000);
@@ -1493,7 +1499,7 @@ async function main() {
       const reply = await current.adapter
         .run(review.redactedText, connection, {
           ...current.context,
-          system: SKILL_DRAFT_SYSTEM,
+          system,
           signal: controller.signal,
           emit: () => {},
           onUsage: count => {
@@ -1505,18 +1511,46 @@ async function main() {
           },
         })
         .finally(() => counted.total && ledger.record(connection, counted));
-      // The model's header gets the same fixes as an imported file: no tool grants, a valid name.
-      const skill = normalizeSkillText(parseSkillDraft(reply), { fallbackName: 'my-skill' });
-      const files = new Map([['SKILL.md', Buffer.from(skill.text, 'utf8')]]);
-      const manifest = { schema_version: 1, name: skill.id, version: '1.0.0', skills: [{ id: skill.id, path: 'SKILL.md' }] };
-      diagnose('skill-draft', { provider: connection.provider });
-      return { id: skill.id, text: skill.text, review: reviewPack(manifest, files) };
+      diagnose(label, { provider: connection.provider });
+      return parseSkillDraft(reply);
     } catch (error) {
       if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
       throw error;
     } finally {
       clearTimeout(timeout);
     }
+  };
+  /**
+   * "สร้างจากวิธีทำงานของฉัน": the chosen connected AI drafts a Skill from the employee's description (masked input, no
+   * tools). Returns a preview with the automated review; nothing is saved until the person chooses to use it.
+   */
+  const draftSkill = async (connectionId: string, answers: { task?: unknown; steps?: unknown; example?: unknown }) => {
+    const reply = await writeSkill(connectionId, skillDraftInput(answers), SKILL_DRAFT_SYSTEM, 'skill-draft');
+    // The model's header gets the same fixes as an imported file: no tool grants, a valid name.
+    const skill = normalizeSkillText(reply, { fallbackName: 'my-skill' });
+    const files = new Map([['SKILL.md', Buffer.from(skill.text, 'utf8')]]);
+    const manifest = { schema_version: 1, name: skill.id, version: '1.0.0', skills: [{ id: skill.id, path: 'SKILL.md' }] };
+    return { id: skill.id, text: skill.text, review: reviewPack(manifest, files) };
+  };
+  /**
+   * "ให้ AI แก้ตามมาตรฐาน": the chosen AI restructures an imported Skill that fails the Standard check. Returns a
+   * preview with the new review and how much of the original it kept; nothing changes until the person saves it.
+   */
+  const fixSkill = async (connectionId: string, packId: string) => {
+    const target = packSkillToFix(store.settings().workspace || data, packId);
+    const reply = await writeSkill(connectionId, skillFixInput(target.text, target.findings), SKILL_FIX_SYSTEM, 'skill-fix');
+    const text = skillTextNamed(reply, target.id);
+    const files = new Map([[target.path, Buffer.from(text, 'utf8')]]);
+    const manifest = { schema_version: 1, name: packId, version: '1.0.0', skills: [{ id: target.id, path: target.path }] };
+    return {
+      pack: packId,
+      path: target.path,
+      digest: target.digest,
+      before: target.text,
+      text,
+      review: reviewPack(manifest, files),
+      coverage: skillFixCoverage(target.text, text),
+    };
   };
   // The background review, after Hermes Agent: every REVIEW_TURNS user turns of a task, at most REVIEW_DAILY times a
   // day, one at a time. It only drafts proposals; it never runs while the task does, in Plan mode, or when not allowed.
@@ -3184,6 +3218,21 @@ async function main() {
         if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
         return draftSkill(inputText(input.connectionId, 120), { task: input.task, steps: input.steps, example: input.example });
       }
+      case 'skillFix': {
+        if (policyState.policy.features.staffSkills === false) throw new Error('PACK_PERSONAL_DISABLED');
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
+        return fixSkill(inputText(input.connectionId, 120), inputText(input.id, 64));
+      }
+      case 'skillFixSave': {
+        // Saves the previewed (and possibly edited) rewrite over the same pack; it is reviewed again, not turned on.
+        if (policyState.policy.features.staffSkills === false) throw new Error('PACK_PERSONAL_DISABLED');
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
+        return replacePackSkill(store.settings().workspace || data, inputText(input.id, 64), {
+          path: inputText(input.path, 512),
+          text: inputText(input.text, 200_000),
+          digest: inputText(input.digest, 64),
+        });
+      }
       case 'skillCreate': {
         // Saves the previewed (and possibly edited) draft like an imported file: privacy gate, review, credit.
         if (policyState.policy.features.staffSkills === false) throw new Error('PACK_PERSONAL_DISABLED');
@@ -3229,6 +3278,20 @@ async function main() {
           disable: input.disable === true,
           personal,
         });
+      }
+      case 'packRemove': {
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
+        const id = inputText(input.id, 64);
+        const consent = await dialog.showMessageBox(window!, {
+          type: 'warning',
+          buttons: [tm('ยกเลิก'), tm('ลบ')],
+          defaultId: 0,
+          cancelId: 0,
+          message: tm('ลบ Skill {0} ออกจากเครื่องนี้', id),
+          detail: tm('กู้คืนไม่ได้ ถ้ายังอยากเก็บไว้ ให้ส่งออกเป็นโฟลเดอร์ Skill ก่อน'),
+        });
+        if (consent.response !== 1) throw new Error('CANCELLED');
+        return removePack(store.settings().workspace || data, id);
       }
       case 'packAsset':
         return packAsset(

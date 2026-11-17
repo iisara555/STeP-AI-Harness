@@ -310,3 +310,20 @@
 .draft-title small {
   font-variant-numeric: tabular-nums;
 }
+/* "ให้ AI แก้ตามมาตรฐาน": original lines the rewrite dropped stand out; the original stays one fold away. */
+.skill-fix-lost {
+  font-size: var(--text-sm);
+  color: var(--danger);
+}
+.skill-fix-lost ul {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+}
+.skill-fix-before {
+  max-height: 240px;
+  overflow: auto;
+  margin: var(--space-1-5) 0 0;
+  font-size: var(--text-xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
