@@ -1747,7 +1747,15 @@ async function main() {
           });
         for (const step of t.steps)
           for (const tool of step.tools || [])
-            diagnose('tool-call', { run: t.id, id: tool.id, tool: tool.tool, ok: tool.ok ? 1 : 0, code: tool.code, ms: tool.ms });
+            diagnose('tool-call', {
+              run: t.id,
+              id: tool.id,
+              tool: tool.tool,
+              ok: tool.ok ? 1 : 0,
+              code: tool.code,
+              ms: tool.ms,
+              ...(tool.repeat ? { repeat: 1 } : {}),
+            });
         // run, provider, model and selection let eval/diagnostics-summary.ts join this line with its provider calls.
         diagnose('run-trace', {
           run: t.id,

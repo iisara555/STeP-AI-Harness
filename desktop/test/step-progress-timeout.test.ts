@@ -12,7 +12,7 @@ const pause = (ms: number, signal: AbortSignal) =>
   });
 
 // A long tool loop (an xhigh model reading Skills and references turn after turn) on synthetic data.
-function fixture(turnMs: number, finishAfter: number, budgetMs: number) {
+function fixture(turnMs: number, finishAfter: number, budgetMs: number, obeysDeadline = false) {
   const store = new Store(':memory:');
   store.put('connection', 'c', { id: 'c', provider: 'openai', mode: 'api', model: 'synthetic', ready: true } as Connection);
   store.put('settings', 'main', { workspace: tmpdir() });
@@ -42,9 +42,10 @@ function fixture(turnMs: number, finishAfter: number, budgetMs: number) {
     async () => ({
       context: { cwd: tmpdir(), env: {} },
       adapter: {
-        run: async (_prompt, _c, context) => {
+        run: async (prompt, _c, context) => {
           await pause(turnMs, context.signal);
           turns++;
+          if (obeysDeadline && prompt.includes('time for this message is nearly used up')) return 'Synthetic answer from what was read';
           return turns >= finishAfter ? 'Synthetic answer' : `\`\`\`step-tool\n{"tool":"reference","input":"synthetic-${turns}"}\n\`\`\``;
         },
       },
@@ -82,6 +83,21 @@ test('a tool loop that never finishes still stops at three step budgets and logs
     assert.ok(elapsed >= 280 && elapsed < 1000, `stopped after ${elapsed} ms`);
     // Diagnostics get the same code the person sees, not the abort's CANCELLED.
     assert.equal(f.failed.at(-1)?.text, 'RUN_TIMEOUT');
+  } finally {
+    f.store.close();
+  }
+});
+
+test('a reading loop that reaches the last step budget is asked to answer, and its answer is delivered', async () => {
+  // The same never-ending reader as above, but a model that follows the final-turn notice: the person gets an answer
+  // written from what was read, not RUN_TIMEOUT and nothing.
+  const f = fixture(70, Infinity, 100, true);
+  try {
+    await f.service.run(f.session.id, 'Synthetic request', '', true, undefined, 'chat');
+    const session = f.store.session(f.session.id);
+    assert.equal(session.status, 'review');
+    assert.equal(session.messages.at(-1)?.text, 'Synthetic answer from what was read');
+    assert.deepEqual(f.failed, []);
   } finally {
     f.store.close();
   }

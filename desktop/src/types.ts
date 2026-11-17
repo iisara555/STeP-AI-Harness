@@ -144,7 +144,7 @@ export type UsageReport = {
 export type WorkMode = 'chat' | 'draft' | 'image';
 export type ImageArtifact = { id: string; name: string; model: string; provider: Provider; mime: string; at: string };
 /** One model step of a run: sizes, references and timing only, never request, source or draft text. */
-export type ToolTrace = { id: string; tool: string; ok: boolean; code?: string; ms: number };
+export type ToolTrace = { id: string; tool: string; ok: boolean; code?: string; ms: number; repeat?: boolean };
 /** A host-confirmed tool event, with no paths, arguments or source content. */
 export type WorkAction = { id: string; tool: string; state: 'running' | 'done' | 'failed'; code?: string };
 export type StepTrace = {
