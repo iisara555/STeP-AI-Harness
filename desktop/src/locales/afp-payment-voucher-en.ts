@@ -55,6 +55,10 @@ export const afpPaymentVoucherEn: Record<string, string> = {
   'ผู้รับเงินหรือยอดรายการต่างจาก FM-AF-014 โปรดตรวจและแจ้ง AFP':
     'The payee or gross total differs from FM-AF-014. Check it and inform AFP',
   รอผู้จัดทำตรวจข้อมูลเทียบกับหลักฐาน: 'Waiting for the preparer to compare with the evidence',
+  'ยอดหัก ณ ที่จ่ายบางรายการไม่ตรงอัตรา 1, 2, 3 หรือ 5% ของยอดรายการ โปรดตรวจอัตรากับ AFP':
+    'Some withholding amounts are not 1, 2, 3 or 5% of the item amount. Check the rate with AFP',
+  'มีภาษีหัก ณ ที่จ่าย: เตรียมหนังสือรับรองการหักภาษี ภ.ง.ด.3 พร้อมใบสำคัญรับเงิน (FM-AF-014) ถ้าจ่ายบุคคลธรรมดา หรือ ภ.ง.ด.53 ถ้าจ่ายนิติบุคคล (QP-AF-004)':
+    'Tax is withheld: prepare the withholding tax certificate, PND 3 with the receipt voucher (FM-AF-014) for a person, or PND 53 for a company (QP-AF-004)',
   'กรุณากรอกและตรวจ FM-AF-014 เทียบหลักฐานให้ครบก่อนนำข้อมูลไปเริ่มร่างใบสำคัญจ่าย':
     'Complete and check FM-AF-014 against the evidence before using it for a disbursement draft',
   เลือกหน้าหลักฐานหรือร่างเอกสารอย่างน้อยหนึ่งรายการก่อนส่งออก: 'Select at least one evidence page or document draft before exporting',
