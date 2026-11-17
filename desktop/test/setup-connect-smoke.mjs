@@ -67,8 +67,8 @@ try {
   await app.evaluate(() => globalThis.finishSetupConnect());
   await expect(wizard.locator('.connection-state')).toHaveText('ทดสอบข้อความผ่าน');
 
-  const capabilities = wizard.locator('.ai-connect-step .ai-capabilities');
-  await capabilities.locator('summary').click();
+  await wizard.getByRole('button', { name: 'โมเดลและการจัดการบัญชี', exact: true }).click();
+  const capabilities = wizard.locator('.connection-card .connection-panel');
   await expect(wizard.locator('.connection-card').locator('[data-capability="web"] .ai-capability-state')).toHaveText('ใช้ได้');
   await expect(capabilities.locator('[data-capability="image"]')).toContainText('OAuth อย่างเดียวใช้ไม่ได้');
   await expect(wizard.locator('.connection-card').locator('[data-capability="vision"] .ai-capability-state')).toHaveText(

@@ -70,4 +70,4 @@
 - [UX audit 2026-10-01](ux-audit-2026-10-01.md), [ผลแก้ UX audit](ux-audit-fixes-2026-10-01.md), [UI review 0.5.31](desktop-ui-review-0.5.31.md), [Runtime structure review](refactor-review.md)
 - [Graphify developer workflow](graphify-development.md), [OpenHarness handoff](openharness-handoff.md), [OpenHarness parity](openharness-parity.md)
 
-**ลิขสิทธิ์ของบุคคลที่สาม:** [ภาพตราครุฑ](third-party-notices/thai-garuda.md), [Claude Thai Skills (MIT)](third-party-notices/claude-thai-skills-MIT.txt)
+**ลิขสิทธิ์ของบุคคลที่สาม:** [ภาพตราครุฑ](third-party-notices/thai-garuda.md), [Claude Thai Skills (MIT)](third-party-notices/claude-thai-skills-MIT.txt), [โลโก้ผู้ให้บริการ AI (Lobe Icons, MIT)](third-party-notices/lobe-icons-MIT.txt)
