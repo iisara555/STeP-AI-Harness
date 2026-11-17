@@ -1,0 +1,255 @@
+/* Settings > เชื่อมต่อ AI, compact: one row per account with the service's logo, icons for what it can do, and
+   everything else folded into its management panel. Loaded after connections/settings so these rules win. */
+.provider-logo {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--text);
+}
+.provider-logo.sm {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+}
+.provider-logo img,
+.provider-logo-mark {
+  width: 18px;
+  height: 18px;
+}
+.provider-logo.sm img,
+.provider-logo.sm .provider-logo-mark {
+  width: 14px;
+  height: 14px;
+}
+/* One-colour marks are painted with the text colour through the logo as a mask. */
+.provider-logo-mark {
+  display: block;
+  background: currentColor;
+  -webkit-mask: var(--logo) center / contain no-repeat;
+  mask: var(--logo) center / contain no-repeat;
+}
+
+/* Picker tiles: logo beside the name, how it connects as an icon and two words under it. */
+.ai-connect-flow .provider-tile,
+.provider-tile {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-2-5);
+}
+.provider-tile > .provider-tile-text {
+  grid-column: 1 / -1;
+}
+.provider-tile.active .provider-logo {
+  border-color: transparent;
+}
+.provider-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Accounts: a tight list of rows rather than tall cards. */
+.ai-connect-flow .connection-list {
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.ai-connect-flow .connection-card {
+  gap: var(--space-2);
+  padding: var(--space-2-5) var(--space-3);
+  border-left-width: 3px;
+}
+.ai-connect-flow .ai-readiness .connection-card:last-child {
+  padding-bottom: var(--space-2-5);
+}
+.ai-connect-flow .connection-head {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: var(--space-2) var(--space-3);
+}
+.connection-title {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.ai-connect-flow .connection-name {
+  font-size: var(--text-md);
+  line-height: 1.35;
+}
+.connection-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-0-5) var(--space-2-5);
+  color: var(--muted);
+}
+.connection-row .connection-meta {
+  margin: var(--space-0-5) 0 0;
+}
+.connection-meta .selected-ai {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.capability-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  cursor: help;
+}
+.capability-icon.available {
+  color: var(--diff-added);
+  background: color-mix(in srgb, var(--diff-added) 10%, transparent);
+}
+.capability-icon.conditional {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+.capability-icon.blocked,
+.capability-icon.unknown {
+  opacity: 0.55;
+}
+.ai-connect-flow .connection-head .connection-actions {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+.ai-connect-flow .connection-head .connection-actions button {
+  padding: var(--pad-control-sm);
+}
+.connection-manage.icon-only {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--muted);
+}
+.connection-manage[aria-expanded='true'] {
+  color: var(--text);
+  background: var(--selected);
+}
+/* The reason an account is not ready reads as the row's subtitle, not as a separate paragraph. */
+.connection-meta .connection-note {
+  margin: 0;
+}
+.ai-connect-flow .connect-progress {
+  margin-left: calc(32px + var(--space-3));
+}
+
+/* The management panel: model, what the account can do, then sign-out and remove. */
+.connection-panel {
+  display: grid;
+  gap: var(--space-2-5);
+  padding-top: var(--space-2-5);
+  border-top: 1px solid var(--line);
+}
+.connection-panel[hidden] {
+  display: none;
+}
+.connection-panel .connection-model {
+  max-width: 360px;
+}
+.connection-models-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.connection-panel .ai-capability-list {
+  margin: 0;
+}
+.connection-panel .ai-capability-list li:last-child {
+  border-bottom: 1px solid var(--line);
+}
+.connection-panel .connection-runtime {
+  margin: 0;
+}
+.connection-panel .connection-account-actions {
+  margin: 0;
+}
+.connection-panel .connection-remove {
+  margin-left: auto;
+}
+
+/* Adding an account: one dashed line until opened. */
+.ai-connect-flow .ai-connect-step.ai-add-account {
+  margin-top: var(--space-2);
+  padding: var(--space-2-5) var(--space-3);
+}
+.ai-connect-flow .ai-add-account .ai-provider-disclosure[open] > summary {
+  margin-bottom: var(--space-1);
+}
+.ai-connect-flow .connection-form > p:last-child {
+  margin: var(--space-1) 0 0;
+}
+.ai-connect-flow .provider-picker > .text-link {
+  margin-top: var(--space-2);
+}
+
+/* Reference links on one quiet line under everything. */
+.ai-connect-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-5);
+  margin-top: var(--space-3);
+}
+.ai-connect-footer > details {
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.ai-connect-footer > details[open] {
+  flex-basis: 100%;
+}
+.ai-connect-footer summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  padding: var(--space-1-5) 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.ai-connect-footer summary:hover {
+  color: var(--text);
+}
+@media (max-width: 720px) {
+  .ai-connect-flow .connection-head .connection-actions {
+    flex-wrap: wrap;
+    margin-left: calc(32px + var(--space-3));
+  }
+}
+
+/* Capabilities in the panel: name and state on the left, the reason beside it, one line each where it fits. */
+.connection-panel .ai-capability-list li {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  gap: var(--space-0-5) var(--space-3);
+  align-items: baseline;
+  padding: var(--space-1-5) 0;
+}
+.connection-panel .ai-capability-list p {
+  margin: 0;
+}
+.connection-panel .connection-models-line {
+  align-items: flex-end;
+}
+.connection-panel .connection-model {
+  flex: 0 1 320px;
+}
+.ai-connect-flow .connection-form .text-link {
+  padding: var(--space-1) 0;
+  min-height: 0;
+}
+@media (max-width: 720px) {
+  .connection-panel .ai-capability-list li {
+    grid-template-columns: 1fr;
+  }
+}

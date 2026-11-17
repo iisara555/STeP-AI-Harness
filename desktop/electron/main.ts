@@ -129,6 +129,10 @@ import {
   enabledPackHooks,
   promotionPayload,
   recordPromotion,
+  packSkillToFix,
+  replacePackSkill,
+  skillTextNamed,
+  removePack,
 } from '../../src/modules/packs/index.js';
 import { FEEDBACK_CATEGORIES, submitFeedback, submitSkill } from './skill-submit';
 import { buildReceiptAiResolver, resolveReceiptAiResponse } from './receipt-ai';
@@ -159,6 +163,7 @@ import { Learning } from './learning';
 import { MAINTENANCE_EVERY_MS, findMaintenance, mergeBoard, moveItem } from './maintenance';
 import { DRAFT_SYSTEM, draftInput, parseDrafts } from './learning-draft';
 import { SKILL_DRAFT_SYSTEM, parseSkillDraft, skillDraftInput } from './skill-draft';
+import { SKILL_FIX_SYSTEM, skillFixCoverage, skillFixInput } from './skill-fix';
 import { OPEN_EXTERNALLY, PREVIEW_LIMITS, filePreview, previewable } from './office-preview';
 import { Greetings, GREETING_SYSTEM, GREETING_SCHEMA, greetingInput, type GreetingContext } from './greetings';
 import { learningMetrics } from '../src/learning-metrics';
@@ -387,6 +392,13 @@ async function main() {
   // A new install has nothing to catch up on: "What's new" starts from the version it was installed with.
   if (!store.settings().onboarding && !store.settings().whatsNewSeen)
     store.put('settings', 'main', { ...store.settings(), whatsNewSeen: app.getVersion() });
+  // Claude's model catalog comes from the Agent SDK bundled with the app (new models such as Fable 5.2 arrive with an
+  // app update), so a list loaded by an older version is marked stale and reloaded the next time the connection is used.
+  for (const c of store.list<Connection>('connection')) {
+    if (c.provider !== 'claude' || !c.modelsAt || c.modelsVersion === app.getVersion()) continue;
+    delete c.modelsAt;
+    store.put('connection', c.id, c);
+  }
   // Before the first-run wizard, start it from the profile set in Setup-STeP-Skills, if there is one.
   if (!store.settings().onboarding) {
     const shared = await readSharedProfile(sharedProfile);
@@ -1472,11 +1484,12 @@ async function main() {
    * "สร้างจากวิธีทำงานของฉัน": the chosen connected AI drafts a Skill from the employee's description (masked input, no
    * tools). Returns a preview with the automated review; nothing is saved until the person chooses to use it.
    */
-  const draftSkill = async (connectionId: string, answers: { task?: unknown; steps?: unknown; example?: unknown }) => {
+  /** One no-tools run of the chosen AI that writes a Skill file: masked input, a two-minute limit, usage counted. */
+  const writeSkill = async (connectionId: string, input: string, system: string, label: string) => {
     const connection = store.get<Connection>('connection', connectionId);
     if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
     if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
-    const review = harness.privacy(skillDraftInput(answers));
+    const review = harness.privacy(input);
     if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 120_000);
@@ -1486,7 +1499,7 @@ async function main() {
       const reply = await current.adapter
         .run(review.redactedText, connection, {
           ...current.context,
-          system: SKILL_DRAFT_SYSTEM,
+          system,
           signal: controller.signal,
           emit: () => {},
           onUsage: count => {
@@ -1498,18 +1511,46 @@ async function main() {
           },
         })
         .finally(() => counted.total && ledger.record(connection, counted));
-      // The model's header gets the same fixes as an imported file: no tool grants, a valid name.
-      const skill = normalizeSkillText(parseSkillDraft(reply), { fallbackName: 'my-skill' });
-      const files = new Map([['SKILL.md', Buffer.from(skill.text, 'utf8')]]);
-      const manifest = { schema_version: 1, name: skill.id, version: '1.0.0', skills: [{ id: skill.id, path: 'SKILL.md' }] };
-      diagnose('skill-draft', { provider: connection.provider });
-      return { id: skill.id, text: skill.text, review: reviewPack(manifest, files) };
+      diagnose(label, { provider: connection.provider });
+      return parseSkillDraft(reply);
     } catch (error) {
       if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
       throw error;
     } finally {
       clearTimeout(timeout);
     }
+  };
+  /**
+   * "สร้างจากวิธีทำงานของฉัน": the chosen connected AI drafts a Skill from the employee's description (masked input, no
+   * tools). Returns a preview with the automated review; nothing is saved until the person chooses to use it.
+   */
+  const draftSkill = async (connectionId: string, answers: { task?: unknown; steps?: unknown; example?: unknown }) => {
+    const reply = await writeSkill(connectionId, skillDraftInput(answers), SKILL_DRAFT_SYSTEM, 'skill-draft');
+    // The model's header gets the same fixes as an imported file: no tool grants, a valid name.
+    const skill = normalizeSkillText(reply, { fallbackName: 'my-skill' });
+    const files = new Map([['SKILL.md', Buffer.from(skill.text, 'utf8')]]);
+    const manifest = { schema_version: 1, name: skill.id, version: '1.0.0', skills: [{ id: skill.id, path: 'SKILL.md' }] };
+    return { id: skill.id, text: skill.text, review: reviewPack(manifest, files) };
+  };
+  /**
+   * "ให้ AI แก้ตามมาตรฐาน": the chosen AI restructures an imported Skill that fails the Standard check. Returns a
+   * preview with the new review and how much of the original it kept; nothing changes until the person saves it.
+   */
+  const fixSkill = async (connectionId: string, packId: string) => {
+    const target = packSkillToFix(store.settings().workspace || data, packId);
+    const reply = await writeSkill(connectionId, skillFixInput(target.text, target.findings), SKILL_FIX_SYSTEM, 'skill-fix');
+    const text = skillTextNamed(reply, target.id);
+    const files = new Map([[target.path, Buffer.from(text, 'utf8')]]);
+    const manifest = { schema_version: 1, name: packId, version: '1.0.0', skills: [{ id: target.id, path: target.path }] };
+    return {
+      pack: packId,
+      path: target.path,
+      digest: target.digest,
+      before: target.text,
+      text,
+      review: reviewPack(manifest, files),
+      coverage: skillFixCoverage(target.text, text),
+    };
   };
   // The background review, after Hermes Agent: every REVIEW_TURNS user turns of a task, at most REVIEW_DAILY times a
   // day, one at a time. It only drafts proposals; it never runs while the task does, in Plan mode, or when not allowed.
@@ -2034,6 +2075,7 @@ async function main() {
     const current = await runtime(connection);
     connection.models = await listModels(connection, current.context);
     connection.modelsAt = new Date().toISOString();
+    connection.modelsVersion = app.getVersion();
   }
   // Empty means the provider default; anything else must come from the provider's own catalog.
   const modelChoice = (connection: Connection, value: unknown) => {
@@ -3176,6 +3218,21 @@ async function main() {
         if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
         return draftSkill(inputText(input.connectionId, 120), { task: input.task, steps: input.steps, example: input.example });
       }
+      case 'skillFix': {
+        if (policyState.policy.features.staffSkills === false) throw new Error('PACK_PERSONAL_DISABLED');
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
+        return fixSkill(inputText(input.connectionId, 120), inputText(input.id, 64));
+      }
+      case 'skillFixSave': {
+        // Saves the previewed (and possibly edited) rewrite over the same pack; it is reviewed again, not turned on.
+        if (policyState.policy.features.staffSkills === false) throw new Error('PACK_PERSONAL_DISABLED');
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
+        return replacePackSkill(store.settings().workspace || data, inputText(input.id, 64), {
+          path: inputText(input.path, 512),
+          text: inputText(input.text, 200_000),
+          digest: inputText(input.digest, 64),
+        });
+      }
       case 'skillCreate': {
         // Saves the previewed (and possibly edited) draft like an imported file: privacy gate, review, credit.
         if (policyState.policy.features.staffSkills === false) throw new Error('PACK_PERSONAL_DISABLED');
@@ -3221,6 +3278,20 @@ async function main() {
           disable: input.disable === true,
           personal,
         });
+      }
+      case 'packRemove': {
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
+        const id = inputText(input.id, 64);
+        const consent = await dialog.showMessageBox(window!, {
+          type: 'warning',
+          buttons: [tm('ยกเลิก'), tm('ลบ')],
+          defaultId: 0,
+          cancelId: 0,
+          message: tm('ลบ Skill {0} ออกจากเครื่องนี้', id),
+          detail: tm('กู้คืนไม่ได้ ถ้ายังอยากเก็บไว้ ให้ส่งออกเป็นโฟลเดอร์ Skill ก่อน'),
+        });
+        if (consent.response !== 1) throw new Error('CANCELLED');
+        return removePack(store.settings().workspace || data, id);
       }
       case 'packAsset':
         return packAsset(
@@ -4159,6 +4230,7 @@ async function main() {
             : tm('ออกจากระบบแล้ว กดเชื่อมต่อและทดสอบเพื่อลงชื่อใหม่');
         delete c.models;
         delete c.modelsAt;
+        delete c.modelsVersion;
         delete c.problem;
         store.put('connection', c.id, c);
         removeKey(c.id);
@@ -4324,16 +4396,16 @@ async function main() {
           /ฉบับใหม่|อีก(?:ฉบับ|เรื่อง|โครงการ)|เรื่องใหม่|(?:tor|โครงการ|เอกสาร|บันทึก|หนังสือ|รายงาน)\s*ใหม่|\bnew\s+(?:document|draft)\b/i.test(
             text,
           );
-        const forkDocument = Boolean(
+        const anotherDocument = Boolean(
           requested &&
           hasDraft &&
           (sending.documentTool !== requested.id || newDocument || (requestedVariant && sending.documentVariant !== requestedVariant)),
         );
         const autoDocument =
-          requested && (!input.skill || ((!hasDraft || forkDocument) && input.skill === requested.skill)) ? requested : undefined;
+          requested && (!input.skill || ((!hasDraft || anotherDocument) && input.skill === requested.skill)) ? requested : undefined;
         const workMode = imageRequest ? 'image' : autoDocument ? 'draft' : workflow ? 'chat' : mode;
         const draftingTool =
-          input.documentTool === undefined ? (!hasDraft || forkDocument ? autoDocument : undefined) : documentTool(input.documentTool);
+          input.documentTool === undefined ? (!hasDraft || anotherDocument ? autoDocument : undefined) : documentTool(input.documentTool);
         if (input.documentTool !== undefined && (!draftingTool || workMode !== 'draft')) throw new Error('INVALID_DOCUMENT_TOOL');
         const variant = documentVariant(
           draftingTool?.id,
@@ -4388,7 +4460,7 @@ async function main() {
         const questionSnapshot = aside ? service.questionSnapshot(id) : undefined;
         const priorDraft =
           autoDocument &&
-          forkDocument &&
+          anotherDocument &&
           /(?:จาก|ตาม|อ้างอิง|อิง|ใช้|based on|from)\s*(?:ร่าง|เอกสาร|ฉบับ|tor\b|บันทึก|หนังสือ|รายงาน|โครงการ)/i.test(text)
             ? sending.proposals.at(-1)?.text || sending.draft
             : '';
@@ -4526,26 +4598,12 @@ async function main() {
           });
           return { started: true, aside: true, mode: 'chat', masked: review.labels, warning };
         }
-        let runId = id;
-        if (autoDocument && forkDocument) {
-          const child = store.forkConversationDocument(id, autoDocument.title);
-          if (allowIds.length) {
-            child.allowedIdentifiers = allowIds;
-            store.save(child);
-          }
-          try {
-            const started = await fireHook({ event: 'session_start', sessionId: child.id });
-            if (started.blocked) throw new Error('HOOK_BLOCKED');
-          } catch (error) {
-            store.remove('session', child.id);
-            throw error;
-          }
-          runId = child.id;
-        }
-        const queued = store.session(runId);
+        // A conversation is one task: a different document starts here, and the earlier draft goes to version history.
+        if (autoDocument && anotherDocument) store.startConversationDocument(id);
+        const queued = store.session(id);
         const templateInfo =
           nativeTemplate && templateDescription && variant !== 'invitation'
-            ? documentTemplates.save(runId, nativeTemplate, draftingTool!.id, selected[0].view.name, templateDescription.font)
+            ? documentTemplates.save(id, nativeTemplate, draftingTool!.id, selected[0].view.name, templateDescription.font)
             : undefined;
         const coordinatorScan = coordinated ? harness.privacy(text, { allowedIdentifiers: queued.allowedIdentifiers || [] }) : undefined;
         if (coordinatorScan?.action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
@@ -4564,12 +4622,12 @@ async function main() {
         ];
         const execution = (
           coordinated
-            ? coordinator.run(runId, text, combinedSource, {
+            ? coordinator.run(id, text, combinedSource, {
                 text: coordinatorScan!.redactedText,
                 files: requestFiles,
                 onAccepted: () => acceptRequest(),
               })
-            : service.run(runId, text, combinedSource, true, skill || undefined, workMode, selectedImageModel, requestFiles, {
+            : service.run(id, text, combinedSource, true, skill || undefined, workMode, selectedImageModel, requestFiles, {
                 retry: input.retry === true,
                 autoContinue: input.autoContinue === true,
                 images: selected.flatMap(a => a.images || []),
@@ -4583,13 +4641,13 @@ async function main() {
               })
         ).catch(error => {
           diagnose('run-rejected', { code: errorCode(error) });
-          const failed = store.session(runId);
+          const failed = store.session(id);
           failed.status = error.message === 'CANCELLED' ? 'interrupted' : 'error';
           if (failed.messages.at(-1)?.text !== errorCode(error))
             failed.messages.push({ role: 'status', text: errorCode(error), at: new Date().toISOString() });
           store.save(failed);
-          emit({ sessionId: runId, type: 'status', text: /^[A-Z_]+$/.test(error.message) ? error.message : 'RUN_FAILED' });
-          emit({ sessionId: runId, type: 'changed' });
+          emit({ sessionId: id, type: 'status', text: /^[A-Z_]+$/.test(error.message) ? error.message : 'RUN_FAILED' });
+          emit({ sessionId: id, type: 'changed' });
           acceptRequest(error);
         });
         // Do not clear the composer's text until its masked message is durable, including coordinated runs.
@@ -4598,7 +4656,13 @@ async function main() {
         if (failure) throw failure;
         for (const a of selected) attachments.delete(a.view.id);
         // Without a dialog, the person still learns what was masked before sending.
-        return { started: true, mode: workMode, masked: review.labels, warning, ...(runId !== id ? { sessionId: runId } : {}) };
+        return {
+          started: true,
+          mode: workMode,
+          masked: review.labels,
+          warning,
+          ...(autoDocument && anotherDocument ? { newDocument: true } : {}),
+        };
       }
       case 'cancel':
         coordinator.cancel(input.id);
@@ -4683,7 +4747,7 @@ async function main() {
         const s = store.session(input.id),
           version = s.versions.find(v => v.revision === input.revision);
         if (!version) throw new Error('VERSION_NOT_FOUND');
-        return store.edit(s.id, version.text, s.revision, version.document, version.presentation || {});
+        return store.restore(s.id, version.revision);
       }
       case 'detach': {
         const sessionId = inputText(input.id, 60),

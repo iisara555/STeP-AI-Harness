@@ -129,21 +129,89 @@ export class Store {
       return forked;
     });
   }
-  /** Start a separate document from the conversation without copying or replacing the existing editable draft. */
-  forkConversationDocument(id: string, title: string) {
-    const source = this.session(id);
-    if (['running', 'queued'].includes(source.status)) throw new Error('RUN_ALREADY_ACTIVE');
-    return this.transaction(() => {
-      const child = this.create(source.connectionId, source.team, source.project);
-      child.parentId = source.id;
-      child.title = `${source.title} · ${title}`;
-      child.messages = structuredClone(source.messages);
-      if (source.files) child.files = structuredClone(source.files);
-      if (source.model !== undefined) child.model = source.model;
-      if (source.effort !== undefined) child.effort = source.effort;
-      this.save(child);
-      return child;
-    });
+  /**
+   * Start a different document from the conversation in the same task: a conversation is one task, so it never splits.
+   * The current draft (and an AI draft still waiting for review) go to the version history with their own document type
+   * and request, so they can be restored; the new document then starts from a blank page with its own Skill and layout.
+   */
+  startConversationDocument(id: string) {
+    const session = this.session(id);
+    if (['running', 'queued'].includes(session.status)) throw new Error('RUN_ALREADY_ACTIVE');
+    this.shelveDocument(session);
+    delete session.documentTool;
+    delete session.documentVariant;
+    this.save(session);
+    return session;
+  }
+  /** Restore a version. One drafted as another document type brings back its own type, layout and request too. */
+  restore(id: string, revision: number) {
+    const session = this.session(id),
+      version = session.versions.find(v => v.revision === revision);
+    if (!version) throw new Error('VERSION_NOT_FOUND');
+    const sameDocument =
+      !version.documentTool || (version.documentTool === session.documentTool && version.documentVariant === session.documentVariant);
+    if (sameDocument) return this.edit(id, version.text, session.revision, version.document, version.presentation || {});
+    if (['running', 'queued'].includes(session.status)) throw new Error('RUN_ALREADY_ACTIVE');
+    if (version.document)
+      for (const key of documentImageIds(validateDocument(version.document))) {
+        if (this.get<{ sessionId: string }>('document-asset', key)?.sessionId !== id) throw new Error('DOCUMENT_IMAGE_NOT_FOUND');
+      }
+    this.shelveDocument(session);
+    session.draft = version.text;
+    if (version.document) session.document = version.document;
+    if (version.presentation) session.presentation = version.presentation;
+    session.documentTool = version.documentTool;
+    if (version.documentVariant) session.documentVariant = version.documentVariant;
+    else delete session.documentVariant;
+    if (version.task) {
+      session.originalQuery = version.task.originalQuery;
+      session.answers = [...version.task.answers];
+      session.followUps = [...version.task.followUps];
+      session.skill = version.task.skill;
+      session.contextStart = version.task.contextStart;
+    }
+    this.save(session);
+    return session;
+  }
+  /** Move the current document, and its latest pending AI draft, into the version history and leave a blank page. */
+  private shelveDocument(session: Session) {
+    const at = new Date().toISOString();
+    const task = session.documentTask || {
+      originalQuery: session.originalQuery,
+      answers: [...session.answers],
+      followUps: [...(session.followUps || [])],
+      ...(session.skill ? { skill: session.skill } : {}),
+      ...(session.contextStart !== undefined ? { contextStart: session.contextStart } : {}),
+    };
+    const kind = {
+      ...(session.documentTool ? { documentTool: session.documentTool } : {}),
+      ...(session.documentVariant ? { documentVariant: session.documentVariant } : {}),
+    };
+    // Versions saved before document types were recorded, or under this type, belong to the document being shelved.
+    if (session.documentTool)
+      for (const version of session.versions)
+        if (
+          !version.documentTool ||
+          (version.documentTool === session.documentTool && version.documentVariant === session.documentVariant && !version.task)
+        )
+          Object.assign(version, kind, { task });
+    const keep = (text: string, document: Session['document']) => {
+      session.versions.push({ revision: session.revision, text, document, presentation: session.presentation, ...kind, task, at });
+      session.revision++;
+    };
+    if (session.draft.trim() || session.document) keep(session.draft, session.document);
+    const pending = session.proposals.at(-1);
+    if (pending?.text.trim()) {
+      const output = session.documentTool ? parseDocumentOutput(pending.text, session.documentTool) : { draft: pending.text };
+      keep(output.draft, pending.document || markdownDocument(output.draft));
+    }
+    session.draft = '';
+    session.proposals = [];
+    delete session.document;
+    delete session.presentation;
+    delete session.documentReview;
+    delete session.documentTemplate;
+    delete session.documentTask;
   }
   resume(id: string) {
     const s = this.session(id);
@@ -258,6 +326,8 @@ export class Store {
         text: session.draft,
         document: session.document,
         presentation: session.presentation,
+        ...(session.documentTool ? { documentTool: session.documentTool } : {}),
+        ...(session.documentVariant ? { documentVariant: session.documentVariant } : {}),
         at: new Date().toISOString(),
       });
       session.draft = text;

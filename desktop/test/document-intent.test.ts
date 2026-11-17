@@ -16,6 +16,9 @@ test('explicit requests select the intended document, even when the source is an
     ['ช่วยร่างหนังสือรับรองให้หน่อย', 'other'],
     ['ช่วยเขียนรายงานความคืบหน้าโครงการจากข้อสรุป', 'other'],
     ['Please draft a TOR based on our discussion', 'tor'],
+    // "ขอ" with a TOR asks for the document itself (the owner's "ผมขอ TOR อีกฉบับ…" was answered as plain chat).
+    ['ผมขอ TOR อีกฉบับสำหรับจ้างผู้จัดนิทรรศการ', 'tor'],
+    ['ขอเอกสาร TOR งานจ้างทำวิดีโอ', 'tor'],
   ] as const;
   for (const [message, expected] of cases) assert.equal(requestedDocumentTool(message), expected, message);
 });
@@ -29,10 +32,14 @@ test('discussion, partial edits and postponed drafting do not silently become a 
     'ช่วยตรวจร่าง TOR นี้',
     'ยังไม่ต้องร่าง TOR',
     'ช่วยร่างเฉพาะหัวข้อวัตถุประสงค์ของ TOR',
+    'ช่วยร่าง TOR เฉพาะ หมวดที่ 3 งานผลิต ติดตั้ง และรื้อถอนชิ้นงาน',
+    'ช่วยร่างหมวด 5 ของ TOR ใหม่',
     'ช่วยเขียนชื่อโครงการให้หน่อย',
     'ช่วยสร้างคำสั่ง SQL',
     'สรุปประเด็นจาก TOR นี้',
     'สรุปประเด็นประชุมทีมให้หน่อย',
+    'ขอบเขตของงานคืออะไร',
+    'ขอรายงานความคืบหน้าโครงการหน่อย',
   ])
     assert.equal(requestedDocumentTool(message), undefined, message);
 });

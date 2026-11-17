@@ -42,6 +42,8 @@ export type Connection = {
   problem?: string;
   models?: ModelOption[];
   modelsAt?: string;
+  /** App version that loaded `models`; Claude's catalog ships inside the app, so an update reloads it once. */
+  modelsVersion?: string;
 };
 export type SkillEntry = {
   name: string;
@@ -226,6 +228,8 @@ export type Message = {
   google?: import('./google-changes').GoogleChange[];
   /** Artifacts the AI saved in this answer's run, opened from the answer (IPC artifactOpen). */
   artifacts?: ArtifactRef[];
+  /** The stages and reasoning on the way to this answer, shown folded above it; never sent to a model. */
+  thinking?: import('./thinking').Thinking;
 };
 /** A file sent in a chat: its checked, masked text stays with the conversation. */
 export type ConversationFile = { name: string; text: string; at: string };
@@ -234,8 +238,14 @@ export type DraftVersion = {
   text: string;
   document?: DraftNode;
   presentation?: import('./document-presentation').DocumentPresentation;
+  /** The document type this version was drafted as, so restoring it brings back its own layout. */
+  documentTool?: DocumentToolId;
+  documentVariant?: string;
+  /** The request this version answered, kept when another document took over the task, so a restore can edit it again. */
+  task?: DocumentTask;
   at: string;
 };
+export type DocumentTask = { originalQuery: string; answers: string[]; followUps: string[]; skill?: string; contextStart?: number };
 export type Proposal = {
   id: string;
   text: string;
@@ -307,7 +317,7 @@ export type Session = {
   /** Index of the first message in the current task boundary inside this Workspace session. */
   contextStart?: number;
   /** A document's own request, set aside while chat turns answer beside it; the next document edit resumes it. */
-  documentTask?: { originalQuery: string; answers: string[]; followUps: string[]; skill?: string; contextStart?: number };
+  documentTask?: DocumentTask;
   model?: string;
   effort?: string;
   pinned?: boolean;
@@ -573,6 +583,8 @@ export type RunEvent = {
   approval?: ApprovalRequest;
   approvalId?: string;
   text?: string;
+  /** For status and activity: a routine wait that is shown but not kept among the answer's thinking stages. */
+  quiet?: boolean;
   /** For discard: how many characters of the streamed answer to take back. */
   count?: number;
   trace?: RunTrace;

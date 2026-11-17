@@ -262,30 +262,57 @@ test('retrying a failed conversation document retains its earlier context and se
   }
 });
 
-test('a separate conversation document keeps model and context without copying the previous draft or permissions', () => {
+test('a different document from the conversation stays in the same task and keeps the earlier draft restorable', () => {
   const { store, session } = fixture();
   try {
-    session.model = '';
-    session.effort = '';
+    const count = store.list('session').length;
     session.draft = 'SYNTHETIC-EXISTING-DRAFT';
     session.documentTool = 'tor';
+    session.documentVariant = 'goods';
+    session.skill = 'tor-government-writing';
+    session.originalQuery = 'SYNTHETIC-TOR-REQUEST';
     session.documentTemplate = { key: 'synthetic', sha256: 'synthetic', name: 'synthetic.docx', font: 'Sarabun' };
-    session.allowedIdentifiers = ['0000000000000'];
+    session.documentReview = { text: 'SYNTHETIC-REVIEW', revision: 0 };
+    session.proposals = [{ id: 'p', text: envelope('SYNTHETIC-PENDING-DRAFT'), baseRevision: 0, sources: [], at: '2026-11-02T00:00:00Z' }];
     session.messages.push({ role: 'user', text: 'SYNTHETIC-CONTEXT', at: '2026-11-02T00:00:00Z' });
-    session.files = [{ name: 'context.txt', text: 'SYNTHETIC-FILE', at: '2026-11-02T00:00:00Z' }];
     store.save(session);
-    const child = store.forkConversationDocument(session.id, 'ร่างบันทึกข้อความ');
-    assert.equal(child.parentId, session.id);
-    assert.equal(child.model, '');
-    assert.equal(child.effort, '');
-    assert.equal(child.draft, '');
-    assert.equal(child.documentTool, undefined);
-    assert.equal(child.documentTemplate, undefined);
-    assert.equal(child.allowedIdentifiers, undefined);
-    assert.deepEqual(child.messages, session.messages);
-    assert.deepEqual(child.files, session.files);
-    assert.equal(store.session(session.id).draft, 'SYNTHETIC-EXISTING-DRAFT');
-    assert.equal(store.session(session.id).documentTool, 'tor');
+    const same = store.startConversationDocument(session.id);
+    assert.equal(same.id, session.id);
+    assert.equal(store.list('session').length, count);
+    assert.equal(same.draft, '');
+    assert.deepEqual(same.proposals, []);
+    assert.equal(same.documentTool, undefined);
+    assert.equal(same.documentTemplate, undefined);
+    assert.equal(same.documentReview, undefined);
+    assert.equal(same.messages.at(-1)?.text, 'SYNTHETIC-CONTEXT');
+    const [kept, pending] = same.versions;
+    assert.equal(kept.text, 'SYNTHETIC-EXISTING-DRAFT');
+    assert.equal(kept.documentTool, 'tor');
+    assert.equal(kept.documentVariant, 'goods');
+    assert.equal(kept.task?.originalQuery, 'SYNTHETIC-TOR-REQUEST');
+    assert.equal(pending.text, 'SYNTHETIC-PENDING-DRAFT');
+    assert.notEqual(pending.revision, kept.revision);
+    assert.equal(same.revision, pending.revision + 1);
+
+    // The new document takes over; restoring the TOR brings back its type and request, and shelves the memo.
+    same.documentTool = 'memo';
+    same.skill = 'memo-skill';
+    same.originalQuery = 'SYNTHETIC-MEMO-REQUEST';
+    store.save(same);
+    store.edit(same.id, 'SYNTHETIC-MEMO', same.revision);
+    const restored = store.restore(same.id, kept.revision);
+    assert.equal(restored.draft, 'SYNTHETIC-EXISTING-DRAFT');
+    assert.equal(restored.documentTool, 'tor');
+    assert.equal(restored.documentVariant, 'goods');
+    assert.equal(restored.skill, 'tor-government-writing');
+    assert.equal(restored.originalQuery, 'SYNTHETIC-TOR-REQUEST');
+    const memo = restored.versions.find(v => v.text === 'SYNTHETIC-MEMO');
+    assert.equal(memo?.documentTool, 'memo');
+    assert.equal(memo?.task?.originalQuery, 'SYNTHETIC-MEMO-REQUEST');
+    // A version of the same type restores as an ordinary edit.
+    const again = store.restore(same.id, pending.revision);
+    assert.equal(again.draft, 'SYNTHETIC-PENDING-DRAFT');
+    assert.equal(again.documentTool, 'tor');
   } finally {
     store.close();
   }
@@ -686,6 +713,11 @@ test('revisions, retries and chat turns beside the document retain the selected 
   assert.equal(store.session(session.id).documentTool, 'project');
   assert.deepEqual(store.session(session.id).documentTemplate, template);
   assert.ok(!seen.at(-1)?.includes('<document_tool_contract>'));
+  // A chat turn with a picked Skill makes no draft either, so the document keeps its type for the next edit.
+  await service.run(session.id, 'ช่วยเกลาประโยคนี้ให้กระชับ', '', true, 'step-writing', 'chat');
+  assert.equal(store.session(session.id).documentTool, 'project');
+  assert.deepEqual(store.session(session.id).documentTemplate, template);
+  assert.equal(store.session(session.id).documentTask?.skill, 'project-plan');
   store.close();
 });
 

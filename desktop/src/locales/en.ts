@@ -11,6 +11,7 @@ import { internalMediaEn } from './internal-media-en';
 import { credentialErrorsEn } from '../credential-copy';
 import { documentLayoutEn } from './document-layout-en';
 import { feedbackEn } from './feedback-en';
+import { thinkingEn } from './thinking-en';
 import { skillSuggestEn } from './skill-suggest-en';
 import { skillImportEn } from './skill-import-en';
 import { filePreviewEn } from './file-preview-en';
@@ -370,6 +371,7 @@ export const en: Record<string, string> = {
   'เลือกไฟล์ OAuth client แบบ Desktop app': 'Choose a Desktop app OAuth client file',
   ...documentLayoutEn,
   ...feedbackEn,
+  ...thinkingEn,
   ...skillSuggestEn,
   ...skillImportEn,
   ...filePreviewEn,
@@ -1030,6 +1032,17 @@ export const en: Record<string, string> = {
     'An attached agency form is checked against the MIS quality register for its code and revision.',
   'ตรวจใบกำกับภาษี (เลขผู้เสียภาษี เลขที่ และ VAT) และเตือนเรื่องหัก ณ ที่จ่ายในใบสำคัญจ่าย':
     'Tax invoices are checked for the tax ID, number and VAT, and payment vouchers flag withholding to review.',
+  'ความคิดของ AI อยู่เหนือคำตอบ กดดูย้อนหลังได้ ไม่หายไปเมื่อตอบเสร็จ':
+    "The AI's thinking stays above its answer and can be opened again after it finishes.",
+  'หน้าเชื่อมต่อ AI กระชับขึ้น มีโลโก้ผู้ให้บริการและไอคอนบอกความสามารถ':
+    'The AI connection page is more compact, with provider logos and capability icons.',
+  'บัญชี Claude เลือก Fable 5.2 และรุ่น 5.5 ได้': 'Claude accounts can choose Fable 5.2 and the 5.5 models.',
+  'ขอเอกสารใหม่ในแชตเดิม งานไม่แตกเป็นงานใหม่ ร่างเดิมอยู่ในประวัติเวอร์ชัน':
+    'Asking for a new document in a chat keeps the same task; the earlier draft stays in version history.',
+  'ร่าง TOR ที่ AI คิดนานไม่ถูกตัดที่ 10 นาที และ "ขอ TOR" ใช้ Skill TOR ทันที':
+    'Long TOR drafts are not cut off at 10 minutes while the AI keeps working, and asking for a TOR uses the TOR Skill.',
+  'Skill ที่นำเข้าแล้วไม่ผ่านมาตรฐาน ให้ AI แก้ให้ได้ และลบ Skill ของฉันได้':
+    'Imported Skills that fail the standard can be fixed by the AI, and your own Skills can be deleted.',
   'ร่าง TOR หรือเอกสารยาวที่ AI ส่งมาผิดรูปแบบ แอปให้ AI จัดใหม่ให้เองหนึ่งครั้งก่อนแจ้งข้อผิดพลาด':
     'When the AI returns a TOR or other long draft in the wrong shape, the app asks it to fix the layout once before showing an error.',
   'แอปเปิดเร็วขึ้น และลื่นขึ้นระหว่างที่ AI พิมพ์คำตอบยาว': 'The app starts faster and stays smooth while the AI writes a long answer.',
@@ -2609,7 +2622,7 @@ export const en: Record<string, string> = {
   '- มี {0} จุดที่ระบบปิดบังข้อมูลส่วนบุคคลไว้ ใส่ข้อมูลจริงเองหลังตรวจร่าง':
     '- {0} pieces of personal data were masked; fill in the real details yourself after review',
   'ตรวจในแผงผลงาน แล้วกด “ใช้ร่างนี้”': 'Review it in the Output panel, then press “Use this draft”',
-  เริ่มเอกสารใหม่โดยเก็บบทสนทนาและร่างเดิมไว้: 'Started a new document while keeping the conversation and previous draft.',
+  'เริ่มเอกสารใหม่ในงานนี้ ร่างเดิมอยู่ในประวัติเวอร์ชัน': 'Started a new document in this task. The earlier draft is in version history.',
   'เทียบโครงกลาง TOR 16 ข้อแล้ว ยังตรวจไม่พบ {0} หัวข้อ ดูรายละเอียดในผลตรวจ':
     'Compared with the 16-section TOR working outline, {0} headings were not detected. See the review for details.',
   '**ตรวจโครงกลาง TOR 16 ข้อ:** ยังตรวจไม่พบหัวข้อต่อไปนี้: {0} ระบบตรวจจากเลขและชื่อหัวข้อ จึงอาจไม่พบรูปแบบบางชนิด หากใช้แบบหน่วยงานอื่น ให้ตรวจเทียบกับแบบที่เลือก':

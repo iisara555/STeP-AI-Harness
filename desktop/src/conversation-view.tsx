@@ -5,7 +5,6 @@ import {
   ArrowUp,
   Blocks,
   BookOpen,
-  Brain,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -36,7 +35,8 @@ import { ThinkingScribble } from './thinking-scribble';
 import { VoiceButton } from './voice';
 import { WORKFLOW_LABELS, WorkPlanCard } from './work-plan';
 import { WelcomeGreeting } from './welcome-greeting';
-import { liveAnswer, useElapsed, useLiveRun } from './live-run';
+import { liveAnswer, liveThinking, useElapsed, useLiveRun } from './live-run';
+import { SavedThinking, ThinkingPanel } from './thinking-panel';
 import { WorkAssistantActivity, WorkAssistantGuide, workActionsFromTrace } from './work-assistant';
 import type { WorkMode, Workflow } from './types';
 import { imageModels } from './image-routing';
@@ -160,9 +160,11 @@ export function ConversationView({ v }: { v: AppView }) {
   } = v;
   // Streamed text and the clock change many times a second, so only this view and the status bar follow them.
   const stream = useLiveRun(run => run.stream);
-  const reasoning = useLiveRun(run => run.reasoning);
+  const thought = useLiveRun(run => run.thought);
   const heartbeatAt = useLiveRun(run => run.heartbeatAt);
   const now = useLiveRun(run => run.now);
+  // Read again whenever a stage or a thought arrives (`thought`) and each second for the running time.
+  const thinking = running && thought >= 0 ? liveThinking(now) : undefined;
   const elapsed = useElapsed(running, startedAt);
   // A refresh can land after main saved the answer but before it reports the run finished; the saved message
   // then already shows the streamed text, so the live copy is hidden instead of appearing twice.
@@ -259,6 +261,7 @@ export function ConversationView({ v }: { v: AppView }) {
                 }`}
               >
                 {message.role === 'status' && <div className="message-author">{t('สถานะงาน')}</div>}
+                {message.role === 'assistant' && <SavedThinking value={message.thinking} />}
                 {message.role === 'assistant' ? (
                   <RichText className="message-body" text={message.text} onLink={openLink} />
                 ) : (
@@ -491,15 +494,7 @@ export function ConversationView({ v }: { v: AppView }) {
                     ))}
                   </ol>
                 )}
-                {reasoning && (
-                  <details className="thinking">
-                    <summary>
-                      <Brain size={14} />
-                      {t('ความคิดของ AI')}
-                    </summary>
-                    <div>{reasoning}</div>
-                  </details>
-                )}
+                {thinking && <ThinkingPanel thinking={thinking} running />}
                 {liveText && !streamSaved && <RichText className="message-body streaming" text={liveText} onLink={openLink} />}
                 {session && <WorkAssistantActivity actions={workActions[session.id] || []} running />}
                 {/* One quiet line while working, as in Claude and Codex: each step replaces the last, nothing stacks up. */}
