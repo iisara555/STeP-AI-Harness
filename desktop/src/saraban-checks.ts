@@ -1,8 +1,9 @@
+import type { FormRevisionCheck } from './qs-register';
 import type { DocumentToolId } from './document-tools';
 import { documentText, type DraftNode } from './draft';
 
 /** What an export still lacks against the saraban parts of its document type; reported, never blocking. */
-export type DocumentCheck = { code: 'placeholders'; count: number } | { code: 'missing'; parts: string[] };
+export type DocumentCheck = { code: 'placeholders'; count: number } | { code: 'missing'; parts: string[] } | FormRevisionCheck;
 
 const lines = (document: DraftNode) =>
   (document.content || []).flatMap(node =>

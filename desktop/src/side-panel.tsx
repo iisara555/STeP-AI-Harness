@@ -498,7 +498,19 @@ export function SidePanel({ v }: { v: AppView }) {
                             <p className="export-check" key={check.code}>
                               {check.code === 'missing'
                                 ? t('ยังไม่มี {0}', check.parts.map(checkPart).join(' / '))
-                                : t('ยังมี [รอยืนยัน] {0} จุด', check.count)}
+                                : check.code === 'placeholders'
+                                  ? t('ยังมี [รอยืนยัน] {0} จุด', check.count)
+                                  : check.status === 'outdated'
+                                    ? t(
+                                        'แบบฟอร์ม {0} ที่แนบเป็น {1} ทะเบียน MIS เป็น {2} (บังคับใช้ {3}) ใช้ฉบับล่าสุดจาก MIS',
+                                        check.form,
+                                        check.used,
+                                        check.current,
+                                        check.effective,
+                                      )
+                                    : check.status === 'cancelled'
+                                      ? t('แบบฟอร์ม {0} ยกเลิกแล้วในทะเบียน MIS', check.form)
+                                      : t('ไม่พบ {0} ในทะเบียน MIS ตรวจใน MIS ก่อนใช้', check.form)}
                             </p>
                           ))}
                           <p>{t('ไฟล์ใช้ฟอนต์ {0}', exportInfo.font)}</p>

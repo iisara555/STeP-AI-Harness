@@ -31,7 +31,7 @@ import { THAI_DOCUMENT_LANGUAGE } from '../src/thai-typography';
 import { ACTIVITY_LABELS, FINANCE_LABELS, blankEvidenceGuidance, evidenceChecklist, inferActivity } from '../src/afp-evidence';
 
 const FONT = 'TH Sarabun New';
-const FOOTER = 'FM-AF-014 V.02 วันที่บังคับใช้เอกสาร 1 มิ.ย. 2568 (อายุการจัดเก็บเอกสาร 15 ปี)';
+export const RECEIPT_VOUCHER_FOOTER = 'FM-AF-014 V.02 วันที่บังคับใช้เอกสาร 1 มิ.ย. 2568 (อายุการจัดเก็บเอกสาร 15 ปี)';
 const DRAFT = 'ร่างสำหรับตรวจทานและลงนาม';
 const blank = (text: string, length = 40) => text.trim() || '.'.repeat(length);
 const html = (value: string) =>
@@ -152,7 +152,9 @@ export async function receiptVoucherDocx(voucher: ReceiptVoucher) {
         },
         footers: {
           default: new Footer({
-            children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [run(`${DRAFT} · ${FOOTER}`, false, 18)] })],
+            children: [
+              new Paragraph({ alignment: AlignmentType.RIGHT, children: [run(`${DRAFT} · ${RECEIPT_VOUCHER_FOOTER}`, false, 18)] }),
+            ],
           }),
         },
         children: [
@@ -207,7 +209,7 @@ export function receiptVoucherHtml(voucher: ReceiptVoucher, fontCss: string) {
     <td class="amount">${total === null ? 'รวมทั้งสิ้น ..........' : formatSatang(total)}</td></tr></tfoot></table>
     <div class="signatures"><p>ลงชื่อ ........................................................ ผู้รับเงิน<br>(${html(blank(voucher.recipient, 45))})</p>
     <p>ลงชื่อ ........................................................ ผู้จ่ายเงิน<br>(${html(blank(voucher.payerSignatory, 45))})</p></div>
-    <p>หมายเหตุ ........................................................................................................................</p><footer>${DRAFT} · ${FOOTER}</footer>`,
+    <p>หมายเหตุ ........................................................................................................................</p><footer>${DRAFT} · ${RECEIPT_VOUCHER_FOOTER}</footer>`,
     fontCss,
   );
 }

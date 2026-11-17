@@ -185,6 +185,10 @@ export const documentToolsEn: Record<string, string> = {
   เลิกประชุม: 'closing time',
   ผู้จดรายงาน: 'minute taker',
   'ยังมี [รอยืนยัน] {0} จุด': '{0} placeholders still to confirm',
+  'แบบฟอร์ม {0} ที่แนบเป็น {1} ทะเบียน MIS เป็น {2} (บังคับใช้ {3}) ใช้ฉบับล่าสุดจาก MIS':
+    'The attached {0} is {1}; the MIS register has {2} (effective {3}). Use the current form from MIS.',
+  'แบบฟอร์ม {0} ยกเลิกแล้วในทะเบียน MIS': '{0} is cancelled in the MIS register.',
+  'ไม่พบ {0} ในทะเบียน MIS ตรวจใน MIS ก่อนใช้': '{0} is not in the MIS register. Check MIS before use.',
   'ตัวเลือกตราครุฑไม่ถูกต้อง กรุณาเลือกจากรายการ': 'Invalid Garuda option. Select one from the list.',
   'ตามแม่แบบร่าง ({0})': 'Working template ({0})',
   'ไฟล์ใช้ฟอนต์ {0}': 'This file uses {0}',
