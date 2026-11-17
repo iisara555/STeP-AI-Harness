@@ -374,6 +374,9 @@
   font-weight: 400;
   overflow-wrap: anywhere;
 }
+.thinking-unsaid {
+  font-size: var(--text-xs);
+}
 .thinking-note {
   margin-top: var(--space-2);
   padding-left: calc(15px + var(--space-2));
