@@ -148,6 +148,8 @@ test('Gemini API dispatch caches only the stable system, reuses across adapter i
     assert.equal(body.systemInstruction, undefined);
     assert.equal(body.tools, undefined);
     assert.equal(body.generationConfig.maxOutputTokens, 1024);
+    // Thought summaries are asked for, so the chat can keep the AI's thinking with the answer.
+    assert.deepEqual(body.generationConfig.thinkingConfig, { includeThoughts: true });
   }
   assert.equal(calls[2].body.contents[0].parts[0].text, 'Request\nTool result', 'stateless API still needs the dynamic prompt');
   assert.deepEqual(counts, Array(2).fill({ input: 100, output: 7, total: 107, cachedInput: 40 }));
