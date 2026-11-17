@@ -1030,6 +1030,8 @@ export const en: Record<string, string> = {
     'An attached agency form is checked against the MIS quality register for its code and revision.',
   'ตรวจใบกำกับภาษี (เลขผู้เสียภาษี เลขที่ และ VAT) และเตือนเรื่องหัก ณ ที่จ่ายในใบสำคัญจ่าย':
     'Tax invoices are checked for the tax ID, number and VAT, and payment vouchers flag withholding to review.',
+  'ร่าง TOR หรือเอกสารยาวที่ AI ส่งมาผิดรูปแบบ แอปให้ AI จัดใหม่ให้เองหนึ่งครั้งก่อนแจ้งข้อผิดพลาด':
+    'When the AI returns a TOR or other long draft in the wrong shape, the app asks it to fix the layout once before showing an error.',
   'แอปเปิดเร็วขึ้น และลื่นขึ้นระหว่างที่ AI พิมพ์คำตอบยาว': 'The app starts faster and stays smooth while the AI writes a long answer.',
   'ภาพที่ส่งให้ AI แสดงเป็นภาพย่อในแชต ย้อนดูได้ว่าถามเรื่องภาพไหน': 'Pictures you send to the AI now show as thumbnails in the chat.',
   'Gemini ผ่าน Antigravity อ่านภาพถ่ายได้อีกครั้งโดยไม่ค้นเว็บเอง':

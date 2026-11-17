@@ -127,3 +127,14 @@ test('HTML break tokens map to safe native line breaks in paragraphs and table c
   assert.equal(documentText(code), '<br/>');
   assert.equal(documentText(markdownDocument('`<br/>`')), '<br/>');
 });
+
+test('an invalid envelope reports only its tag shape and length for diagnostics', () => {
+  try {
+    parseDocumentOutput(`<document_draft>${memo}</document_draft>`, 'memo', { requireEnvelope: true });
+    assert.fail('expected DOCUMENT_OUTPUT_INVALID');
+  } catch (error) {
+    const detail = (error as Error & { detail?: string[] }).detail || [];
+    assert.match(detail[0], /^envelope draft,\/draft chars=\d+$/);
+    assert.ok(!detail.join('').includes('บันทึกข้อความ'), 'no document text in diagnostics');
+  }
+});

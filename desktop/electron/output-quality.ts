@@ -273,7 +273,8 @@ export function buildRepairPrompt(originalOutput: string, findings: QualityFindi
       : ['Return the corrected complete response in Thai, keeping all verified facts intact and fixing only the issues listed above.']),
     '</quality_repair_request>',
     '<previous_response>',
-    originalOutput.slice(0, 24_000),
+    // A whole TOR runs to ~30,000 characters; cutting it would make the repaired draft lose its later sections.
+    originalOutput.slice(0, documentTool ? 80_000 : 24_000),
     '</previous_response>',
   ].join('\n');
 }
