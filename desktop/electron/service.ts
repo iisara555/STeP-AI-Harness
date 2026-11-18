@@ -30,7 +30,7 @@ import { SUBAGENT_MAX_TURNS, SUBAGENT_TOOLS, subagentSystem } from './subagents'
 import type { ToolScope } from './tools';
 import { RETRYABLE_CODES, RETRY_DELAYS_MS, retryDelay } from './retry';
 import { section } from './prompt';
-import { compact, contextBudget, promptTooLong, tokens } from './compact';
+import { compact, contextBudget, LOOP_FOLD_SHARE, promptTooLong, tokens } from './compact';
 import { mainLocale, tm } from './i18n';
 import { internalSystemFor, internalSystemRule } from './internal-systems';
 import { workflowRule } from './workflows';
@@ -68,12 +68,6 @@ export { RETRYABLE_CODES, RETRY_DELAYS_MS } from './retry';
 export const STEP_TIMEOUT_MS = 600_000;
 /** A step whose model turns keep completing may run this many step budgets in all (30 minutes by default). */
 export const STEP_PROGRESS_BUDGETS = 3;
-/**
- * Share of the context budget at which a tool loop folds its earlier results (ToolLoop.fold). Folding well below the
- * budget means compact() rarely runs inside a loop; compacting every turn changed the prompt's start each time, so a kept
- * provider conversation had to resend the whole prompt (115k–165k characters per turn in a real TOR run).
- */
-export const LOOP_FOLD_SHARE = 0.6;
 export const MAX_PARALLEL_RUNS = 3;
 // Failures that usually pass on their own: a dropped connection, a busy service, a runtime that exited.
 const TRACE_LIMIT = 20;
@@ -1915,7 +1909,7 @@ export class WorkService {
             reads: requests => {
               loopReads = requests.length ? { step: index, requests } : undefined;
             },
-            // Fold earlier tool results well before the prompt would need compacting on every turn.
+            // Fold earlier tool results once, just before the prompt would need compacting on every turn.
             tooLarge: text => tokens(system + text) > budget * LOOP_FOLD_SHARE,
             progress: progressed,
             begin: action => {

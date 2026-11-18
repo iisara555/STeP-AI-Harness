@@ -19,7 +19,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { ToolLoop, type LoopHost } from '../electron/tool-loop';
-import { compact, contextBudget, tokens } from '../electron/compact';
+import { compact, contextBudget, LOOP_FOLD_SHARE, tokens } from '../electron/compact';
 import type { LoopRequest } from '../src/tools';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -135,7 +135,7 @@ async function scenario(
     },
     // The same hooks service.ts wires (ignored by a ToolLoop without them).
     deadline: () => now >= STEP_CAP_S - STEP_BUDGET_S,
-    tooLarge: (text: string) => tokens(SYSTEM + text) > budget * 0.6,
+    tooLarge: (text: string) => tokens(SYSTEM + text) > budget * LOOP_FOLD_SHARE,
     reads: (requests: LoopRequest[]) => (reads = requests),
   };
   const loop = new ToolLoop(host);

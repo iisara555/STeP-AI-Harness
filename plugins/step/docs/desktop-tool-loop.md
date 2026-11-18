@@ -173,8 +173,10 @@ only the new part). It stopped at the time limit with nothing delivered. `ToolLo
 - pages `skill`, `reference` and `doc_section` results three times larger than other results (12,000 characters by
   default);
 - folds earlier tool results and long request contents to 600-character previews once the prompt passes
-  `LOOP_FOLD_SHARE` (60%) of the context budget, and keeps the folded history, so later turns append to it. It folds again
-  only after the history has grown by half. Folded rows say which id to page with `read_remaining`;
+  `LOOP_FOLD_SHARE` (90%) of the context budget, just before `compact()` would compact on every turn, and keeps the
+  folded history, so later turns append to it. It folds again only after the history has grown by half. Folded rows say
+  which id to page with `read_remaining`. Not earlier: a live xhigh TOR run that folded at 60% resent the whole prompt six
+  times (30–93 s to first token each) and re-read folded results, twice as slow as a build that never folded;
 - when the step's last time budget starts (`deadline`, the last 10 of 30 minutes), adds a final-turn notice once and stops
   running tools: the model writes the answer from what it has read. A model that still asks gets `TIME_BUDGET_SPENT` rows
   and the step's own time limit still applies. Native bridge calls past the deadline get the same code, and each answered
