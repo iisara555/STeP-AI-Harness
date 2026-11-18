@@ -1,7 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { FileText, LoaderCircle, Paperclip, Sparkles, X } from './icons';
 import type { Attachment, Connection } from './types';
-import { DOCUMENT_TOOLS, documentTool, type DocumentField, type DocumentToolId, type DocumentAttachmentRole } from './document-tools';
+import {
+  DOCUMENT_TOOLS,
+  documentTool,
+  fieldExample,
+  type DocumentField,
+  type DocumentToolId,
+  type DocumentAttachmentRole,
+} from './document-tools';
 import { connectionName, errorText } from './messages';
 import { t } from './i18n';
 import { skillDisplayName } from './skill-display';
@@ -32,23 +39,6 @@ const INVITATION_PLACED = new Set(['rsvpUrl', 'venueUrl', 'sources', ...INVITATI
 const INVITATION_WIDE = new Set(['subject', 'schedule']);
 
 // Form examples are display text only. They never become form values or source evidence.
-const invitationExamples: Readonly<Record<string, string>> = {
-  unit: 'เช่น หน่วยงานตัวอย่าง เลขที่ 99 ถนนตัวอย่าง',
-  subject: 'เช่น ขอเชิญเข้าร่วมกิจกรรมแลกเปลี่ยนผลงาน',
-  number: 'เช่น ศธ 0000/0123',
-  date: 'เช่น 2 ตุลาคม 2569',
-  recipient: 'เช่น คุณกานต์ ตัวอย่าง',
-  signer: 'เช่น คุณพิม ตัวอย่าง — ผู้อำนวยการ',
-  references: 'เช่น สิ่งที่ส่งมาด้วย กำหนดการ 1 ฉบับ',
-  background: 'เช่น จัดเวทีแลกเปลี่ยนแนวทางทำงานระหว่างทีม',
-  content: 'เช่น ขอเชิญเข้าร่วมและแลกเปลี่ยนประสบการณ์',
-  schedule: 'เช่น 20 มกราคม 2570 เวลา 09.00–12.00 น. ณ ห้องประชุมตัวอย่าง',
-  recipientPosition: 'เช่น ผู้จัดการโครงการ หน่วยงานตัวอย่าง',
-  rsvpDeadline: 'เช่น 15 มกราคม 2570',
-  contact: 'เช่น คุณเมย์ ตัวอย่าง · events@example.org',
-  sources: 'เช่น กำหนดการฉบับเจ้าของงานยืนยัน',
-};
-
 export type DocumentAttachment = { sessionId: string; file: Attachment };
 export type DocumentForm = {
   values: Record<string, string>;
@@ -116,6 +106,10 @@ export function DocumentTools({
           ? t('กรอกอย่างน้อยหนึ่งช่อง หรือแนบต้นเรื่อง แล้วจึงให้ AI ร่าง')
           : '';
   const update = (patch: Partial<DocumentForm>) => setForms(old => ({ ...old, [selected]: { ...form, ...patch } }));
+  const placeholder = (f: DocumentField) => {
+    const example = fieldExample(selected, f.key, form.variant);
+    return example ? t('เช่น {0} (เว้นไว้ได้)', t(example)) : t('เว้นได้หากยังไม่มีข้อมูล');
+  };
   const renderField = (f: DocumentField, className = f.multiline ? 'wide' : '') => (
     <label key={f.key} className={className}>
       {t(f.label)}
@@ -126,7 +120,7 @@ export function DocumentTools({
           maxLength={6000}
           value={form.values[f.key] || ''}
           disabled={disabled}
-          placeholder={t((invitation && invitationExamples[f.key]) || 'เว้นได้หากยังไม่มีข้อมูล')}
+          placeholder={placeholder(f)}
           onChange={e => update({ values: { ...form.values, [f.key]: e.target.value } })}
         />
       ) : (
@@ -135,11 +129,11 @@ export function DocumentTools({
           maxLength={6000}
           value={form.values[f.key] || ''}
           disabled={disabled}
-          placeholder={t((invitation && invitationExamples[f.key]) || 'เว้นได้หากยังไม่มีข้อมูล')}
+          placeholder={placeholder(f)}
           onChange={e => update({ values: { ...form.values, [f.key]: e.target.value } })}
         />
       )}
-      {f.missingAction === 'draft-proposal' && <small className="muted">{t('เว้นได้ AI ช่วยเสนอร่างให้พิจารณา')}</small>}
+      {f.missingAction === 'draft-proposal' && <small className="muted">{t('AI ช่วยเสนอร่างให้พิจารณา')}</small>}
       {f.hint && <small className="muted">{t(f.hint)}</small>}
     </label>
   );
