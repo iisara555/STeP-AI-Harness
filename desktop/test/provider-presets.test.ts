@@ -128,3 +128,98 @@ test('OpenRouter sign-in fails clearly on a refused exchange, a timeout and canc
   const pending = openRouterSignIn({ port: 0, signal: controller.signal, openExternal: async () => controller.abort() });
   await assert.rejects(pending, /CANCELLED/);
 });
+
+test('"AI ขององค์กร" goes only to the gateway named in policy, with Google sign-in on, and needs no key', async () => {
+  const { parseOrganizationAiConfig } = await import('../electron/organization-ai-config');
+  assert.deepEqual(parseOrganizationAiConfig({ url: 'https://ik-node-01.tail17add1.ts.net/ai/' }), {
+    url: 'https://ik-node-01.tail17add1.ts.net/ai',
+  });
+  assert.deepEqual(parseOrganizationAiConfig({ url: 'https://ai.step.example' }), { url: 'https://ai.step.example' });
+  for (const url of [
+    'http://ai.step.example',
+    'https://user:pass@ai.step.example',
+    'https://ai.step.example:8443',
+    'https://ai.step.example/?key=x',
+    'https://ai.step.example/#x',
+    'https://ai.step.example/a/../b',
+    'https://127.0.0.1',
+  ])
+    assert.equal(parseOrganizationAiConfig({ url }), undefined, url);
+  assert.equal(parseOrganizationAiConfig({ url: 'https://ai.step.example', key: 'sk-or-x' }), undefined);
+
+  // No gateway in policy: the preset is refused.
+  assert.throws(() => compatibleEndpoint({ preset: 'organization' }, defaultPolicy()), /FEATURE_DISABLED/);
+  const managed = parsePolicy({ organizationAi: { url: 'https://ai.step.example/ai' } });
+  assert.deepEqual(managed.problems, []);
+  assert.equal(compatibleEndpoint({ preset: 'organization' }, managed.policy).href, 'https://ai.step.example/ai/v1/chat/completions');
+  assert.throws(
+    () => compatibleEndpoint({ preset: 'organization', baseUrl: 'https://openrouter.ai/api/v1' }, managed.policy),
+    /PROVIDER_DESTINATION_DENIED/,
+  );
+  // Turning off outside services does not turn off the organization's own gateway; turning off Google sign-in does.
+  const noPresets = parsePolicy({ organizationAi: { url: 'https://ai.step.example' }, features: { providerPresets: false } }).policy;
+  assert.equal(compatibleEndpoint({ preset: 'organization' }, noPresets).href, 'https://ai.step.example/v1/chat/completions');
+  const noGoogle = parsePolicy({ organizationAi: { url: 'https://ai.step.example' }, features: { googleWorkspace: false } }).policy;
+  assert.throws(() => compatibleEndpoint({ preset: 'organization' }, noGoogle), /FEATURE_DISABLED/);
+  assert.equal(parsePolicy({ organizationAi: null }).policy.organizationAi, undefined);
+  const bad = parsePolicy({ organizationAi: { url: 'http://ai.step.example' } });
+  assert.match(bad.problems.join('\n'), /organizationAi/);
+
+  const organization = { ...initialChoice, provider: 'compatible', mode: 'api', preset: 'organization' };
+  assert.equal(presetFor('organization')?.defaultModel, 'step-chat');
+  assert.equal(providerChoiceReady(organization), true);
+  assert.equal(connectLabel(organization), 'ลงชื่อด้วยบัญชี Google ขององค์กร');
+  const input: Record<string, unknown> = connectionInput({ ...organization, key: 'ignored', baseUrl: 'https://evil.example/v1' });
+  assert.equal(input.preset, 'organization');
+  assert.equal('baseUrl' in input, false);
+  assert.equal(
+    PROVIDER_PRESETS.some(p => p.id === 'organization'),
+    false,
+    'never offered without policy',
+  );
+});
+
+test('the organization gateway lists its STeP model names for the model picker', async () => {
+  const { createServer } = await import('node:http');
+  let auth = '';
+  const server = createServer((req, res) => {
+    auth = req.headers.authorization || '';
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(
+      JSON.stringify({
+        data: [
+          { id: 'step-chat', name: 'งานทั่วไป' },
+          { id: 'step-long', name: 'งานยาว เช่น TOR' },
+        ],
+      }),
+    );
+  });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const port = (server.address() as { port: number }).port;
+    const models = await compatibleModels(
+      {
+        id: 'c',
+        provider: 'compatible',
+        mode: 'api',
+        preset: 'organization',
+        baseUrl: `http://127.0.0.1:${port}/v1`,
+        model: '',
+        executable: '',
+        ready: false,
+        note: '',
+      },
+      'google-id-token',
+    );
+    assert.deepEqual(
+      models.map(m => [m.id, m.label]),
+      [
+        ['step-chat', 'งานทั่วไป'],
+        ['step-long', 'งานยาว เช่น TOR'],
+      ],
+    );
+    assert.equal(auth, 'Bearer google-id-token');
+  } finally {
+    server.close();
+  }
+});

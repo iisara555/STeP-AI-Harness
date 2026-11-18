@@ -6,6 +6,10 @@ CHANGELOG instead of growing this file.
 
 _Last updated: 2026-11-18_
 
+## In flight
+
+- **"AI ขององค์กร" (2026-11-18)**: the organization bought OpenRouter credit (4,000 THB to start). Desktop gets an organization preset that signs in with the organization Google account and calls the AI gateway in STeP-AI-Webapp (key on the server only, per-person/department caps, ZDR). Waits on the owner: OpenRouter account setup and key on ik-node-01, gateway deploy behind Tailscale Funnel (owner's choice), setting the repository variable `STEP_ORGANIZATION_AI_URL`, and a quality check of the gateway's models (knowledge-accuracy, eval:golden, eval:selection) before staff use it. Not yet tried against a real Google sign-in and gateway end to end. See [organization-ai.md](organization-ai.md).
+
 ## Latest release
 
 - **Desktop v0.6.37 prepared (2026-11-18, owner requested release)**: ships merged #375 (compact and retry long full-context Antigravity messages) and #376 (document-form filling examples). Harness remains 0.7.7. Publish with the Desktop installer workflow from `main` after this release PR and post-merge CI pass. Verify both update feeds and published installer digests. Live Antigravity reproduction on the employee device remains open.
