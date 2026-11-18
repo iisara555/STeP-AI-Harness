@@ -31,3 +31,22 @@ export function parseOrganizationAiConfig(value: unknown): OrganizationAiConfig 
 
 /** The OpenAI-compatible base URL Desktop's compatible transport appends /chat/completions and /models to. */
 export const organizationAiBaseUrl = (config: OrganizationAiConfig) => config.url + '/v1';
+
+/** The gateway model name for official documents (docs/organization-ai.md); used only when the gateway lists it. */
+export const ORGANIZATION_DOCUMENT_MODEL = 'step-long';
+/** Skills whose output is an official document read outside the team: TOR, government letters, decision memos. */
+const OFFICIAL_DOCUMENT_SKILLS = new Set(['tor-government-writing', 'tor-review', 'thai-official-documents', 'decision-memo']);
+
+/**
+ * On "AI ขององค์กร", official-document work (a document form, or one of the Skills above) runs on the organization's
+ * document model, so staff get the stronger model without picking it. A model the person chose for this task is kept.
+ */
+export function organizationDocumentModel(
+  connection: { preset?: string; model: string; models?: { id: string }[] },
+  task: { chosenModel?: string; drafting: boolean; skill?: string },
+): string | undefined {
+  if (connection.preset !== 'organization' || task.chosenModel) return undefined;
+  if (!task.drafting && !(task.skill && OFFICIAL_DOCUMENT_SKILLS.has(task.skill))) return undefined;
+  if (connection.model === ORGANIZATION_DOCUMENT_MODEL) return undefined;
+  return connection.models?.some(m => m.id === ORGANIZATION_DOCUMENT_MODEL) ? ORGANIZATION_DOCUMENT_MODEL : undefined;
+}
