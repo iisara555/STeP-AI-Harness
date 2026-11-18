@@ -7,6 +7,10 @@
  * For each variant of the `step-draft` agent it reports: whether `agy agents` lists it, whether a one-line text turn
  * with `--agent step-draft` answers, and (for a variant that answers) whether agy's own file tool can read a file
  * outside its workspace (it must not). The adapter's version check is not used, so a refused version can be probed.
+ *
+ * Then a mode matrix: the agent as the app writes it for a plain chat and for a chat with the step_host bridge, each
+ * started as `-p` print and as the app's stream-json (one NDJSON user message on stdin). On 2026-11-18, 1.5.10 answered
+ * the plain agent in print mode but refused it ("unknown agent") through the app's stream-json bridge path.
  * agy is only ever started through an isolated home with a fresh update stamp, as in the app: started with the real
  * home, agy updates itself.
  */
@@ -20,6 +24,7 @@ import { antigravityHome } from '../electron/antigravity';
 
 type Home = Awaited<ReturnType<typeof antigravityHome>>;
 type Variant = { name: string; apply: (home: string, agent: string) => Promise<void> };
+type Mode = 'print' | 'stream-json';
 
 const marker = () => 'STEP-PROBE-' + randomBytes(6).toString('hex').toUpperCase();
 const frontmatter = (text: string) => /^---\n([\s\S]*?)\n---\n/.exec(text)?.[1] || '';
@@ -76,18 +81,26 @@ export const VARIANTS: Variant[] = [
  * One agy process in the isolated home. Unlike the app's runner this keeps the last lines of stderr: the probe is
  * about agy's own refusal text (synthetic prompts only, so nothing private can be in it).
  */
-function agy(executable: string, args: string[], home: Home, timeoutMs: number, signal: AbortSignal) {
+function agy(executable: string, args: string[], home: Home, timeoutMs: number, signal: AbortSignal, input?: string) {
   return new Promise<{ code: number | null; stdout: string; stderr: string }>(done => {
     const script = /\.[cm]?js$/i.test(executable);
     const child = spawn(script ? process.execPath : executable, script ? [executable, ...args] : args, {
       cwd: home.cwd,
       env: home.env,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
       windowsHide: true,
     });
     let stdout = '',
       stderr = '';
-    child.stdout.on('data', chunk => (stdout = (stdout + chunk).slice(-20_000)));
+    // As the app does: the NDJSON user message goes in only after agy's init event, then stdin closes.
+    let sent = false;
+    child.stdout.on('data', chunk => {
+      stdout = (stdout + chunk).slice(-20_000);
+      if (input !== undefined && !sent && /"event"\s*:\s*"init"/.test(stdout)) {
+        sent = true;
+        child.stdin!.end(input);
+      }
+    });
     child.stderr.on('data', chunk => (stderr = (stderr + chunk).slice(-4_000)));
     const stop = () => child.kill();
     const timer = setTimeout(stop, timeoutMs);
@@ -103,7 +116,8 @@ function agy(executable: string, args: string[], home: Home, timeoutMs: number, 
 export async function runVersionProbe(options: { executable: string; model?: string; signal: AbortSignal }) {
   const root = await mkdtemp(join(tmpdir(), 'step-agy-version-probe-'));
   const base = { cwd: root, env: { ...process.env } };
-  const run = (home: Home, args: string[], timeoutMs = 150_000) => agy(options.executable, args, home, timeoutMs, options.signal);
+  const run = (home: Home, args: string[], timeoutMs = 150_000, input?: string) =>
+    agy(options.executable, args, home, timeoutMs, options.signal, input);
   const fresh = async (variant: Variant) => {
     const home = await antigravityHome(base);
     await variant.apply(home.env.HOME!, join(home.env.HOME!, '.gemini', 'config', 'agents', 'step-draft', 'agent.md'));
@@ -166,7 +180,85 @@ export async function runVersionProbe(options: { executable: string; model?: str
   } finally {
     await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }
-  return { version, results };
+  return { version, results, modes: await runModeMatrix(options) };
+}
+
+/** Same one-line turn, as print and as the app's stream-json, with the plain agent and with the bridge agent. */
+async function runModeMatrix(options: { executable: string; model?: string; signal: AbortSignal }) {
+  const root = await mkdtemp(join(tmpdir(), 'step-agy-version-modes-'));
+  const base = { cwd: root, env: { ...process.env } };
+  const model = options.model ? ['--model', options.model] : [];
+  const rows: Record<string, unknown>[] = [];
+  try {
+    for (const agent of ['plain', 'bridge'] as const) {
+      for (const mode of ['print', 'stream-json'] as Mode[]) {
+        // The bridge executor never runs anything: it only has to exist so the home is written as for a bridge chat.
+        const home = await antigravityHome({
+          ...base,
+          signal: options.signal,
+          ...(agent === 'bridge' ? { nativeBridge: async () => ({ ok: false, code: 'PROBE_ONLY' }) } : {}),
+        });
+        try {
+          const listed = await agy(options.executable, ['agents'], home, 30_000, options.signal);
+          const ok = marker();
+          const prompt = `Reply with exactly ${ok} and nothing else.`;
+          const turn =
+            mode === 'print'
+              ? await agy(
+                  options.executable,
+                  ['-p', prompt, '--agent', 'step-draft', '--print-timeout', '2m', ...model],
+                  home,
+                  150_000,
+                  options.signal,
+                )
+              : await agy(
+                  options.executable,
+                  [
+                    '--agent',
+                    'step-draft',
+                    '--disable-slash-commands',
+                    '--input-format',
+                    'stream-json',
+                    '--output-format',
+                    'stream-json',
+                    '--print-timeout',
+                    '2m',
+                    ...model,
+                  ],
+                  home,
+                  150_000,
+                  options.signal,
+                  JSON.stringify({ event: 'user', message: { content: prompt } }) + '\n',
+                );
+          const init = turn.stdout
+            .split(/\r?\n/)
+            .map(line => {
+              try {
+                return JSON.parse(line) as { event?: string; init?: { agent?: string; permission_mode?: string } };
+              } catch {
+                return undefined;
+              }
+            })
+            .find(event => event?.event === 'init');
+          rows.push({
+            agent,
+            mode,
+            listed: /step-draft/.test(listed.stdout),
+            answered: turn.stdout.includes(ok),
+            ...(mode === 'stream-json'
+              ? { init: Boolean(init), initAgent: init?.init?.agent, permission: init?.init?.permission_mode }
+              : {}),
+            ...(turn.stdout.includes(ok) ? {} : { exit: turn.code, stderr: turn.stderr }),
+          });
+        } finally {
+          await home.close();
+        }
+      }
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  }
+  return rows;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
