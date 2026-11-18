@@ -183,21 +183,33 @@ export async function runVersionProbe(options: { executable: string; model?: str
   return { version, results, modes: await runModeMatrix(options) };
 }
 
+/** Tool names from init (names only, never descriptions or schemas). */
+const toolNames = (list: unknown[] | undefined) =>
+  list?.map(tool => (typeof tool === 'string' ? tool : String((tool as { name?: unknown })?.name ?? '?'))).slice(0, 80);
+
 type BridgeEdit = { name: string; edit?: (header: string, config: { step_host: unknown }) => string };
 
 /**
  * Edits of the bridge agent's header. agy 1.5 documents `mcpServers` as `object[]`
  * (https://antigravity.google/docs/subagents.md); STeP writes a list of names (`[step_host]`), which 1.3.2 accepts.
+ * Run 3 (2026-11-18, 1.5.10) with the edits below: with `mcpServers: [step_host]` the agent is unknown; without that
+ * line, or with server objects, it loads but `mcp:step_host:step_host` is "not found in registry". The init event's
+ * tool names show what 1.5 registered.
  */
+const objects = (header: string, config: { step_host: unknown }) =>
+  header.replace(/^mcpServers: .*$/m, `mcpServers: ${JSON.stringify([{ name: 'step_host', ...(config.step_host as object) }])}`);
+const tools = (list: string) => (header: string) => header.replace(/^tools: .*$/m, `tools: [${list}]`);
+
 export const BRIDGE_EDITS: BridgeEdit[] = [
   { name: 'bridge' },
-  { name: 'bridge-no-mcpServers', edit: header => header.replace(/^mcpServers: .*\n/m, '') },
-  { name: 'bridge-no-mcp-tool', edit: header => header.replace(/^tools: .*$/m, 'tools: [finish]') },
+  { name: 'objects+finish', edit: (header, config) => tools('finish')(objects(header, config)) },
+  { name: 'objects+call_mcp_tool', edit: (header, config) => tools('finish, call_mcp_tool')(objects(header, config)) },
   {
-    name: 'bridge-mcpServers-objects',
-    edit: (header, config) =>
-      header.replace(/^mcpServers: .*$/m, `mcpServers: ${JSON.stringify([{ name: 'step_host', ...(config.step_host as object) }])}`),
+    name: 'objects+mcp__step_host__step_host',
+    edit: (header, config) => tools('finish, mcp__step_host__step_host')(objects(header, config)),
   },
+  { name: 'objects+step_host', edit: (header, config) => tools('finish, step_host')(objects(header, config)) },
+  { name: 'no-mcpServers+finish', edit: header => tools('finish')(header.replace(/^mcpServers: .*\n/m, '')) },
 ];
 
 /**
@@ -273,7 +285,7 @@ async function runModeMatrix(options: { executable: string; model?: string; sign
           .split(/\r?\n/)
           .map(line => {
             try {
-              return JSON.parse(line) as { event?: string; init?: { agent?: string; permission_mode?: string } };
+              return JSON.parse(line) as { event?: string; init?: { agent?: string; permission_mode?: string; tools?: unknown[] } };
             } catch {
               return undefined;
             }
@@ -284,7 +296,14 @@ async function runModeMatrix(options: { executable: string; model?: string; sign
           mode,
           listed: /step-draft/.test(listed.stdout),
           answered: turn.stdout.includes(ok),
-          ...(mode === 'stream-json' ? { init: Boolean(init), initAgent: init?.init?.agent, permission: init?.init?.permission_mode } : {}),
+          ...(mode === 'stream-json'
+            ? {
+                init: Boolean(init),
+                initAgent: init?.init?.agent,
+                permission: init?.init?.permission_mode,
+                initTools: toolNames(init?.init?.tools),
+              }
+            : {}),
           ...(bridge ? { hostCalls } : {}),
           ...(turn.stdout.includes(ok) ? {} : { exit: turn.code, stderr: turn.stderr }),
         });
