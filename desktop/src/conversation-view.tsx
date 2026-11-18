@@ -50,7 +50,6 @@ import { vimEdit } from './commands';
 import { CHAT_STARTERS, PERMISSION_SHORT, ScheduledTasks, SkillsHub, checkStillRunning } from './app-shared';
 import type { AppView } from './use-workspace';
 
-/** When the "write the answer now" control appears during a run. */
 /** The chat: welcome, messages, plan and questions, and the composer; or the schedules and Skill pages. */
 export function ConversationView({ v }: { v: AppView }) {
   const {
@@ -63,7 +62,6 @@ export function ConversationView({ v }: { v: AppView }) {
     aiPickerRef,
     aiSummary,
     api,
-    askAside,
     availableImages,
     chooseConnection,
     chooseModel,
@@ -168,11 +166,21 @@ export function ConversationView({ v }: { v: AppView }) {
   const thinking = running && thought >= 0 ? liveThinking(now) : undefined;
   const elapsed = useElapsed(running, startedAt);
   // A long read (a high reasoning level going through Skills and references) can be cut short by the person: the AI then
-  // writes its answer from what it has read (the tool loop's final turn). Offered after two minutes, once per run.
+  // writes its answer from what it has read (the tool loop's final turn). Offered on the stop button after two minutes,
+  // once per run.
   const [writeNowAt, setWriteNowAt] = useState(0);
   // A refresh can land after main saved the answer but before it reports the run finished; the saved message
   // then already shows the streamed text, so the live copy is hidden instead of appearing twice.
   const { liveText, streamSaved } = liveAnswer(stream, session?.messages.at(-1));
+  // While the AI is still reading after two minutes, the stop button first asks it to write from what it has read;
+  // a second press stops the task.
+  const writeNow = Boolean(
+    running &&
+    selected &&
+    startedAt &&
+    writeNowAt !== startedAt &&
+    offerWriteNow({ elapsedMs: now - startedAt, stream, liveText, progress }),
+  );
   const messageCount = session?.messages.length;
   useEffect(() => {
     // An empty task shows the welcome from its greeting; only a conversation follows its latest message.
@@ -509,21 +517,6 @@ export function ConversationView({ v }: { v: AppView }) {
                     {elapsed || t('0 วินาที')}
                     {now - heartbeatAt > 15000 && <> · {t('ยังไม่ได้รับสถานะจากแอป')}</>}
                   </span>
-                  {selected &&
-                    startedAt &&
-                    writeNowAt !== startedAt &&
-                    offerWriteNow({ elapsedMs: now - startedAt, stream, liveText, progress }) && (
-                      <button
-                        className="quiet write-now"
-                        title={t('ให้ AI หยุดอ่านเพิ่ม แล้วเขียนคำตอบจากที่อ่านมา')}
-                        onClick={() => {
-                          setWriteNowAt(startedAt);
-                          void api.call('writeNow', { id: selected });
-                        }}
-                      >
-                        {t('เขียนคำตอบเลย')}
-                      </button>
-                    )}
                 </div>
                 {now - activityAt > 45000 && !liveText && (
                   <p className="small muted">{t('ขั้นตอนนี้ยังไม่ส่งผลกลับมา คุณรอต่อหรือกดหยุดได้')}</p>
@@ -1009,18 +1002,6 @@ export function ConversationView({ v }: { v: AppView }) {
                       {t('เริ่มงานใหม่')}
                     </button>
                   )}
-                  {/* A side question only makes sense while the main run is busy; otherwise Enter just sends. */}
-                  {running && (
-                    <button
-                      className="quiet"
-                      disabled={
-                        !query.trim() || Boolean(files.length || pendingSource) || session.sideQuestions?.some(q => q.status === 'running')
-                      }
-                      onClick={() => void action(() => askAside())}
-                    >
-                      {t('ถามแทรก')}
-                    </button>
-                  )}
                 </div>
               )}
               <Readiness api={api} query={query} connectionId={session?.connectionId || connectionId} model={currentModel} />
@@ -1258,8 +1239,26 @@ export function ConversationView({ v }: { v: AppView }) {
                     </div>
                   )}
                 </div>
-                {running ? (
-                  <button className="send stop" title={t('หยุดงาน')} onClick={() => void api.call('cancel', { id: selected })}>
+                {running && query.trim() ? (
+                  // Typed while the task runs: the send button asks a side question (the task keeps running).
+                  <button
+                    className="send"
+                    title={t('ถามแทรก')}
+                    disabled={Boolean(files.length || pendingSource || session?.sideQuestions?.some(q => q.status === 'running'))}
+                    onClick={() => void action(send)}
+                  >
+                    <ArrowUp size={20} />
+                  </button>
+                ) : running ? (
+                  <button
+                    className="send stop"
+                    title={writeNow ? t('เขียนคำตอบจากที่อ่านมา · กดอีกครั้งเพื่อหยุดงาน') : t('หยุดงาน')}
+                    onClick={() => {
+                      if (!writeNow) return void api.call('cancel', { id: selected });
+                      setWriteNowAt(startedAt);
+                      void api.call('writeNow', { id: selected });
+                    }}
+                  >
                     <Square size={17} />
                   </button>
                 ) : (

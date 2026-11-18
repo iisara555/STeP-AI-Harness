@@ -86,7 +86,7 @@ const WRITING = new Set(['อ่านครบแล้ว กำลังเ�
 export const WRITE_NOW_AFTER_MS = 120_000;
 
 /**
- * Whether to offer "เขียนคำตอบเลย" on a run: after two minutes, while the AI is still reading. A reading turn often
+ * Whether the stop button first asks the AI to write its answer (`writeNow`): after two minutes, while the AI is still reading. A reading turn often
  * streams a line of its own ("กำลังตรวจเอกสาร…") before its tool requests, so streamed text alone does not mean the
  * answer is being written: tool requests in the stream, or a reading/searching status, still count as reading.
  */

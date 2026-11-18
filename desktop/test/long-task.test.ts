@@ -329,7 +329,7 @@ test('a model that keeps asking after the final-turn notice is not given more tu
   assert.deepEqual(await run(''), { error: 'TOOL_TURN_LIMIT', turns: 2 });
 });
 
-test('"เขียนคำตอบเลย" is offered while the AI reads, even when it narrates its reads, and not once it writes', () => {
+test('the stop button writes the answer first while the AI reads, even when it narrates its reads, and not once it writes', () => {
   const minutes = (n: number) => n * 60_000;
   const reading = '```step-tool\n{"tool":"reference","input":"qp-af-002"}\n```';
   assert.equal(offerWriteNow({ elapsedMs: minutes(1), stream: '', liveText: '' }), false, 'not in the first two minutes');

@@ -186,8 +186,8 @@ A task that stops (an error, the time limit, or Stop) keeps the requests of its 
 `session.resumeReads`. The next attempt, "ลองอีกครั้ง" or a typed "ต่อ", passes them back to `ToolLoop.run` as `seed`: they
 run first through the same check, consent and masking as any request, without a model turn, and the prompt says they come
 from the previous attempt. They are re-read through the request parser, given back once and then forgotten. While a task
-has run for two minutes and is still reading the chat offers "เขียนคำตอบเลย" (`writeNow`), which starts the same final
-turn as the deadline. "Still reading" (`offerWriteNow` in `src/live-run.ts`) counts tool requests in the stream or a
+has run for two minutes and is still reading, the first press of the stop button calls `writeNow`, which starts the
+same final turn as the deadline; a second press stops the task. "Still reading" (`offerWriteNow` in `src/live-run.ts`) counts tool requests in the stream or a
 reading status, because a reading turn often streams a line of its own first; it hides once the final turn has begun.
 Each step's trace carries `loop` (folds, repeats, seeded reads, final-turn reason); `run-trace` diagnostics print it, and
 an Antigravity conversation that starts over records why (`resetReason`: `prefix-changed`, `identity-changed`,

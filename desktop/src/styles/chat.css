@@ -47,11 +47,6 @@
   color: var(--muted);
   font-size: var(--text-sm);
 }
-.activity .write-now {
-  margin-left: auto;
-  padding: var(--pad-tag);
-  font-size: var(--text-xs);
-}
 .streaming {
   margin-bottom: var(--space-2-5);
 }

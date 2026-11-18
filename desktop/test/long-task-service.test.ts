@@ -94,7 +94,7 @@ test('a finished task keeps nothing to resume', async () => {
   }
 });
 
-test('"เขียนคำตอบเลย" makes a reading task write its answer from what it has read', async () => {
+test('the first press of stop while reading (writeNow) makes a reading task write its answer from what it has read', async () => {
   let f: ReturnType<typeof fixture>;
   f = fixture(async (prompt, turn) => {
     if (prompt.includes('time for this message is nearly used up')) return 'Synthetic answer from what was read';
