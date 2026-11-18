@@ -3,13 +3,20 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { AntigravityAdapter, prewarmAntigravity, antigravitySpareCount, closeAntigravitySpares } from '../electron/antigravity';
+import {
+  AntigravityAdapter,
+  ANTIGRAVITY_FIRST_MESSAGE_TOKENS,
+  prewarmAntigravity,
+  antigravitySpareCount,
+  closeAntigravitySpares,
+} from '../electron/antigravity';
 import { AntigravityMcpBridge } from '../electron/antigravity-mcp-bridge';
 import { ToolLoop } from '../electron/tool-loop';
 import { ProviderSession, type TokenCount } from '../electron/providers';
 import { strictJsonSchema } from '../electron/json-schema';
 import { runBridgeProbe } from '../scripts/probe-antigravity-bridge';
 import type { Connection } from '../src/types';
+import { promptTooLong, tokens } from '../electron/compact';
 
 // A stand-in for agy in stream-json mode: one turn per stdin line on one conversation, until stdin closes.
 // `kind` picks how it misbehaves; usage is reported as conversation totals with num_turns counting turns.
@@ -186,6 +193,35 @@ test('the tool turns of a run continue on one agy process and send only the new 
     calls = await f.calls();
     assert.ok(calls.some(c => c.closed));
     assert.deepEqual((await readdir(f.root)).sort(), ['agy.mjs', 'calls.jsonl']);
+  } finally {
+    await f.close();
+  }
+});
+
+test('a first message agy would cut is refused before agy starts; a long later turn still goes as a delta', async () => {
+  const f = await fixture();
+  try {
+    const adapter = new AntigravityAdapter();
+    // agy keeps only part of a long first message, so the newest request at its end would be lost without an error.
+    const long = 'ประวัติงาน '.repeat(9000);
+    assert.ok(tokens(f.context.system + long) > ANTIGRAVITY_FIRST_MESSAGE_TOKENS);
+    // The host answers this error by compacting the prompt once and sending it again.
+    await assert.rejects(adapter.run(long + '\nRequest', f.connection, f.context), error => promptTooLong(error));
+    assert.equal((await f.calls()).filter(c => c.start).length, 0);
+    // A structured or picture request runs alone with its whole prompt too.
+    await assert.rejects(
+      adapter.run(long, f.connection, { ...f.context, session: undefined, jsonSchema: { type: 'object', properties: {} } }),
+      /CONTEXT_LIMIT/,
+    );
+    assert.equal((await f.calls()).filter(c => c.start).length, 0);
+    // Later turns of a kept conversation are not cut, so a long tool result still goes as a delta.
+    assert.equal(await adapter.run('Request', f.connection, f.context), 'answer 1');
+    assert.equal(await adapter.run('Request\n<tool_results>' + long + '</tool_results>', f.connection, f.context), 'answer 2');
+    assert.deepEqual(
+      f.transports.map(t => t.mode),
+      ['full', 'delta'],
+    );
+    await f.session.closeAndWait();
   } finally {
     await f.close();
   }

@@ -4,7 +4,7 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-17_
+_Last updated: 2026-11-18_
 
 ## Latest release
 
@@ -90,6 +90,8 @@ Release validation reproduced the sidebar's outdated expectation after explicit 
 - Follow-up decisions: measure staff latency with `eval:diagnostics`, public-holiday/MIS-signing search gaps, Thai-capable search replacement, remaining AI Harness guide phases and a team-shared Learning Inbox.
 
 ## In progress
+
+- **Antigravity first-message cap (2026-11-18)**: the owner's "Happy Model" chat (DESKTOP-ITSARA) stopped working: both answers said the message arrived cut off. `diagnostics.jsonl` shows that on a `full` send (the first message of an agy conversation, or a resend after a reset or fold) the provider-reported `input` stops at about 44–47k tokens once the prompt passes about 70–80k characters (135k–147k characters all gave exactly 47,319), so the request at the end never reached Gemini; `delta` turns are not cut (loops reached 113k). `contextBudget` gave Gemini 160k estimated tokens, so nothing compacted. Fix: `AntigravityAdapter` refuses a whole-prompt send over `ANTIGRAVITY_FIRST_MESSAGE_TOKENS` (56k estimated, about 35–43k Gemini tokens) with `CONTEXT_LIMIT` before agy starts, and the host's existing reactive compaction summarizes older turns and retries once. Not checked here: a live run on the owner's PC with the Happy Model chat. The exact agy limit (tokens or characters) is inferred from logs, not documented. Waits on the owner: review and merge.
 
 - **Desktop v0.6.36 prepared (2026-11-17)**: the owner asked to merge all ready pull requests and release. One integration PR combines #364 (Fable 5.2 / 5.5 models), #365 (one task per conversation), #366 (AI thinking kept), #367 (long tool loops and "ขอ TOR"), #368 (compact AI connection settings) and #369 (AI fix for imported Skills, delete a Skill), with the version bump.
 
