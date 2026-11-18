@@ -845,11 +845,6 @@ export function useWorkspace() {
       else setUsageOpen(true);
       return;
     }
-    // While the task runs, the send button (and Enter) asks a side question; the task itself is not interrupted.
-    if (running && session && query.trim() && !files.length && !pendingSource) {
-      await askAside();
-      return;
-    }
     const request = composerRequest(query, files);
     if (!request) return;
     const blocker = sendBlocker({

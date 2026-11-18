@@ -62,6 +62,7 @@ export function ConversationView({ v }: { v: AppView }) {
     aiPickerRef,
     aiSummary,
     api,
+    askAside,
     availableImages,
     chooseConnection,
     chooseModel,
@@ -1240,12 +1241,13 @@ export function ConversationView({ v }: { v: AppView }) {
                   )}
                 </div>
                 {running && query.trim() ? (
-                  // Typed while the task runs: the send button asks a side question (the task keeps running).
+                  // Typed while the task runs: the send button asks a side question (the task keeps running). Enter still
+                  // keeps the text for the next turn, so a follow-up is never answered as a side question by accident.
                   <button
                     className="send"
                     title={t('ถามแทรก')}
                     disabled={Boolean(files.length || pendingSource || session?.sideQuestions?.some(q => q.status === 'running'))}
-                    onClick={() => void action(send)}
+                    onClick={() => void action(() => askAside())}
                   >
                     <ArrowUp size={20} />
                   </button>
