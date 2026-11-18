@@ -183,76 +183,113 @@ export async function runVersionProbe(options: { executable: string; model?: str
   return { version, results, modes: await runModeMatrix(options) };
 }
 
-/** Same one-line turn, as print and as the app's stream-json, with the plain agent and with the bridge agent. */
+type BridgeEdit = { name: string; edit?: (header: string, config: { step_host: unknown }) => string };
+
+/**
+ * Edits of the bridge agent's header. agy 1.5 documents `mcpServers` as `object[]`
+ * (https://antigravity.google/docs/subagents.md); STeP writes a list of names (`[step_host]`), which 1.3.2 accepts.
+ */
+export const BRIDGE_EDITS: BridgeEdit[] = [
+  { name: 'bridge' },
+  { name: 'bridge-no-mcpServers', edit: header => header.replace(/^mcpServers: .*\n/m, '') },
+  { name: 'bridge-no-mcp-tool', edit: header => header.replace(/^tools: .*$/m, 'tools: [finish]') },
+  {
+    name: 'bridge-mcpServers-objects',
+    edit: (header, config) =>
+      header.replace(/^mcpServers: .*$/m, `mcpServers: ${JSON.stringify([{ name: 'step_host', ...(config.step_host as object) }])}`),
+  },
+];
+
+/**
+ * The one-line turn as print and as the app's stream-json with the plain agent, then the bridge agent (as the app
+ * writes it, and edited) as stream-json, asked to call step_host once. The bridge executor only counts calls.
+ */
 async function runModeMatrix(options: { executable: string; model?: string; signal: AbortSignal }) {
   const root = await mkdtemp(join(tmpdir(), 'step-agy-version-modes-'));
   const base = { cwd: root, env: { ...process.env } };
   const model = options.model ? ['--model', options.model] : [];
   const rows: Record<string, unknown>[] = [];
+  const cases: { agent: string; mode: Mode; bridge?: BridgeEdit }[] = [
+    { agent: 'plain', mode: 'print' },
+    { agent: 'plain', mode: 'stream-json' },
+    ...BRIDGE_EDITS.map(bridge => ({ agent: bridge.name, mode: 'stream-json' as Mode, bridge })),
+  ];
   try {
-    for (const agent of ['plain', 'bridge'] as const) {
-      for (const mode of ['print', 'stream-json'] as Mode[]) {
-        // The bridge executor never runs anything: it only has to exist so the home is written as for a bridge chat.
-        const home = await antigravityHome({
-          ...base,
-          signal: options.signal,
-          ...(agent === 'bridge' ? { nativeBridge: async () => ({ ok: false, code: 'PROBE_ONLY' }) } : {}),
-        });
-        try {
-          const listed = await agy(options.executable, ['agents'], home, 30_000, options.signal);
-          const ok = marker();
-          const prompt = `Reply with exactly ${ok} and nothing else.`;
-          const turn =
-            mode === 'print'
-              ? await agy(
-                  options.executable,
-                  ['-p', prompt, '--agent', 'step-draft', '--print-timeout', '2m', ...model],
-                  home,
-                  150_000,
-                  options.signal,
-                )
-              : await agy(
-                  options.executable,
-                  [
-                    '--agent',
-                    'step-draft',
-                    '--disable-slash-commands',
-                    '--input-format',
-                    'stream-json',
-                    '--output-format',
-                    'stream-json',
-                    '--print-timeout',
-                    '2m',
-                    ...model,
-                  ],
-                  home,
-                  150_000,
-                  options.signal,
-                  JSON.stringify({ event: 'user', message: { content: prompt } }) + '\n',
-                );
-          const init = turn.stdout
-            .split(/\r?\n/)
-            .map(line => {
-              try {
-                return JSON.parse(line) as { event?: string; init?: { agent?: string; permission_mode?: string } };
-              } catch {
-                return undefined;
-              }
-            })
-            .find(event => event?.event === 'init');
-          rows.push({
-            agent,
-            mode,
-            listed: /step-draft/.test(listed.stdout),
-            answered: turn.stdout.includes(ok),
-            ...(mode === 'stream-json'
-              ? { init: Boolean(init), initAgent: init?.init?.agent, permission: init?.init?.permission_mode }
-              : {}),
-            ...(turn.stdout.includes(ok) ? {} : { exit: turn.code, stderr: turn.stderr }),
-          });
-        } finally {
-          await home.close();
+    for (const { agent, mode, bridge } of cases) {
+      let hostCalls = 0;
+      const home = await antigravityHome({
+        ...base,
+        signal: options.signal,
+        ...(bridge
+          ? {
+              nativeBridge: async () => {
+                hostCalls++;
+                return { ok: false, code: 'PROBE_ONLY' };
+              },
+            }
+          : {}),
+      });
+      try {
+        if (bridge?.edit) {
+          const file = join(home.env.HOME!, '.gemini', 'config', 'agents', 'step-draft', 'agent.md');
+          const config = JSON.parse(await readFile(join(home.env.HOME!, '.gemini', 'config', 'mcp_config.json'), 'utf8')).mcpServers;
+          const text = await readFile(file, 'utf8');
+          await writeFile(file, `---\n${bridge.edit(frontmatter(text) + '\n', config).replace(/\n$/, '')}\n---\n${body(text)}`);
         }
+        const listed = await agy(options.executable, ['agents'], home, 30_000, options.signal);
+        const ok = marker();
+        const prompt = bridge
+          ? `Call the MCP tool step_host (server step_host, tool step_host) once with the arguments {"tool":"files","input":"."}. Whatever it returns, then reply with exactly ${ok} and nothing else.`
+          : `Reply with exactly ${ok} and nothing else.`;
+        const turn =
+          mode === 'print'
+            ? await agy(
+                options.executable,
+                ['-p', prompt, '--agent', 'step-draft', '--print-timeout', '2m', ...model],
+                home,
+                150_000,
+                options.signal,
+              )
+            : await agy(
+                options.executable,
+                [
+                  '--agent',
+                  'step-draft',
+                  '--disable-slash-commands',
+                  '--input-format',
+                  'stream-json',
+                  '--output-format',
+                  'stream-json',
+                  '--print-timeout',
+                  '2m',
+                  ...model,
+                ],
+                home,
+                150_000,
+                options.signal,
+                JSON.stringify({ event: 'user', message: { content: prompt } }) + '\n',
+              );
+        const init = turn.stdout
+          .split(/\r?\n/)
+          .map(line => {
+            try {
+              return JSON.parse(line) as { event?: string; init?: { agent?: string; permission_mode?: string } };
+            } catch {
+              return undefined;
+            }
+          })
+          .find(event => event?.event === 'init');
+        rows.push({
+          agent,
+          mode,
+          listed: /step-draft/.test(listed.stdout),
+          answered: turn.stdout.includes(ok),
+          ...(mode === 'stream-json' ? { init: Boolean(init), initAgent: init?.init?.agent, permission: init?.init?.permission_mode } : {}),
+          ...(bridge ? { hostCalls } : {}),
+          ...(turn.stdout.includes(ok) ? {} : { exit: turn.code, stderr: turn.stderr }),
+        });
+      } finally {
+        await home.close();
       }
     }
   } finally {
