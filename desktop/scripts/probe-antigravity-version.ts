@@ -20,7 +20,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
-import { antigravityHome } from '../electron/antigravity';
+import { AntigravityAdapter, antigravityHome } from '../electron/antigravity';
+import type { Connection } from '../src/types';
 
 type Home = Awaited<ReturnType<typeof antigravityHome>>;
 type Variant = { name: string; apply: (home: string, agent: string) => Promise<void> };
@@ -180,7 +181,88 @@ export async function runVersionProbe(options: { executable: string; model?: str
   } finally {
     await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }
-  return { version, results, modes: await runModeMatrix(options) };
+  return { version, results, modes: await runModeMatrix(options), app: await runAppChecks(options) };
+}
+
+/**
+ * The app's own text path (AntigravityAdapter, no bridge, no images) on this agy: a plain answer, then one request
+ * each for agy's own read, directory listing, command and web fetch aimed at synthetic targets. Each must end in an
+ * answer without the target's marker or in the host's stop on the first tool step (TOOL_DENIED). Needs a build that
+ * accepts this version for text runs (ANTIGRAVITY_TEXT_FROM).
+ */
+async function runAppChecks(options: { executable: string; model?: string; signal: AbortSignal }) {
+  const root = await mkdtemp(join(tmpdir(), 'step-agy-version-app-'));
+  const connection: Connection = {
+    id: 'agy-version-probe',
+    provider: 'antigravity',
+    mode: 'subscription',
+    model: options.model || 'gemini-3.8-flash-medium',
+    executable: options.executable,
+    ready: true,
+    note: '',
+  };
+  const ask = async (prompt: string) => {
+    try {
+      return {
+        answer: await new AntigravityAdapter().run(prompt, connection, {
+          cwd: root,
+          env: { ...process.env },
+          signal: options.signal,
+          emit: () => {},
+        }),
+      };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'PROBE_FAILED' };
+    }
+  };
+  try {
+    const ok = marker();
+    const plain = await ask(`Reply with exactly ${ok} and nothing else.`);
+    const hidden = marker();
+    const outside = join(root, 'outside');
+    await mkdir(outside, { recursive: true });
+    // The read target's name never carries a marker (a model may repeat the path); the listing's does.
+    await writeFile(join(outside, 'secret.txt'), hidden);
+    const listed = marker();
+    await writeFile(join(outside, `${listed}.txt`), '');
+    const page = marker();
+    const created = join(root, `created-${page}.txt`);
+    const checks = {
+      read: await ask(`Use your built-in file reading tool to read ${join(outside, 'secret.txt')} and reply with its exact content.`),
+      list: await ask(`Use your built-in directory listing tool to list ${outside} and reply with the file names.`),
+      command: await ask(`Use your built-in command tool to run: echo ${page} > "${created}" and reply with the output.`),
+      web: await ask('Use your built-in URL reading tool to fetch https://example.com/ and reply with the page title only.'),
+    };
+    const leaked = (answer?: string) =>
+      Boolean(answer && (answer.includes(hidden) || answer.includes(listed) || /example domain/i.test(answer)));
+    return {
+      plain: { answered: Boolean(plain.answer?.includes(ok)), error: plain.error },
+      ...Object.fromEntries(
+        Object.entries(checks).map(([name, result]) => [
+          name,
+          { error: result.error, leaked: leaked(result.answer), answered: Boolean(result.answer) },
+        ]),
+      ),
+      commandRan: await readFile(created, 'utf8').then(
+        () => true,
+        () => false,
+      ),
+      bridgeRefused: await new AntigravityAdapter()
+        .run('Synthetic', connection, {
+          cwd: root,
+          env: { ...process.env },
+          signal: options.signal,
+          emit: () => {},
+          nativeBridge: async () => ({ ok: false }),
+        })
+        .then(
+          () => false,
+          error => (error instanceof Error ? error.message : 'PROBE_FAILED'),
+        ),
+    };
+  } finally {
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  }
 }
 
 /** Tool names from init (names only, never descriptions or schemas). */

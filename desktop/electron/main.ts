@@ -88,7 +88,7 @@ import { checkRuntime, resolveRuntime } from './runtimes';
 import {
   agyComponentPath,
   agyComponentSpec,
-  antigravityCurrent,
+  antigravitySupport,
   antigravitySignIn,
   installAntigravityCli,
   repairManagedAgy,
@@ -657,8 +657,14 @@ async function main() {
     } catch {
       /* Not installed anywhere STeP looks. */
     }
-    if (found && (await antigravityCurrent(found, join(data, 'runtimes', 'agy-check'), signal))) return;
-    if (!agyComponentSpec()) throw new Error(found ? 'ANTIGRAVITY_UPDATE_REQUIRED' : 'ANTIGRAVITY_RUNTIME_REQUIRED');
+    const support = found ? await antigravitySupport(found, join(data, 'runtimes', 'agy-check'), signal) : 'none';
+    if (support === 'full') return;
+    // A newer agy (1.5+) answers text but not images or the step_host bridge: STeP's pinned copy is preferred, and the
+    // newer one is kept for text when no copy can be installed.
+    if (!agyComponentSpec()) {
+      if (support === 'text') return;
+      throw new Error(found ? 'ANTIGRAVITY_UPDATE_REQUIRED' : 'ANTIGRAVITY_RUNTIME_REQUIRED');
+    }
     if (installingAgy) throw new Error('INSTALL_BUSY');
     installingAgy = true;
     try {
@@ -666,6 +672,7 @@ async function main() {
       diagnose('agy-installed');
     } catch (error) {
       diagnose('agy-install-failed', { code: errorCode(error) });
+      if (support === 'text' && errorCode(error) !== 'CANCELLED') return;
       throw error;
     } finally {
       installingAgy = false;

@@ -485,19 +485,26 @@ export async function openAntigravitySignIn(executable: string, cwd: string) {
   return () => {};
 }
 
-/** True when `executable` answers as an Antigravity version STeP works with, 1.2.14 up to 1.4 (checked in an isolated home so nothing else starts). */
-export async function antigravityCurrent(executable: string, cwd: string, signal?: AbortSignal) {
+/**
+ * How far STeP can use `executable` (checked in an isolated home so nothing else starts): `full` for 1.2.14 up to 1.4,
+ * `text` for 1.5+ (plain text runs only, no step_host bridge or images), `none` otherwise.
+ */
+export async function antigravitySupport(executable: string, cwd: string, signal?: AbortSignal): Promise<'full' | 'text' | 'none'> {
   await mkdir(cwd, { recursive: true });
   const home = await antigravityHome({ cwd, env: process.env });
   try {
-    await checkAntigravity(executable, home, signal);
-    return true;
+    return await checkAntigravity(executable, home, signal);
   } catch (error) {
     if (errorCodeOf(error) === 'CANCELLED') throw error;
-    return false;
+    return 'none';
   } finally {
     await home.close().catch(() => {});
   }
+}
+
+/** True when `executable` is an Antigravity version STeP fully works with, 1.2.14 up to 1.4. */
+export async function antigravityCurrent(executable: string, cwd: string, signal?: AbortSignal) {
+  return (await antigravitySupport(executable, cwd, signal)) === 'full';
 }
 
 /**
