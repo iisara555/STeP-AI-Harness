@@ -4,7 +4,7 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-17_
+_Last updated: 2026-11-18_
 
 ## Latest release
 
@@ -90,6 +90,8 @@ Release validation reproduced the sidebar's outdated expectation after explicit 
 - Follow-up decisions: measure staff latency with `eval:diagnostics`, public-holiday/MIS-signing search gaps, Thai-capable search replacement, remaining AI Harness guide phases and a team-shared Learning Inbox.
 
 ## In progress
+
+- **Antigravity first-message cap (2026-11-18)**: the owner's "Happy Model" chat (DESKTOP-ITSARA) stopped working: both answers said the message arrived cut off. `diagnostics.jsonl` shows that on a `full` send (the first message of an agy conversation, or a resend after a reset or fold) the provider-reported `input` stops at about 44–47k tokens once the prompt passes about 70–80k characters (135k–147k characters all gave exactly 47,319), so the request at the end never reached Gemini; `delta` turns are not cut (loops reached 113k). `contextBudget` gave Gemini 160k estimated tokens, so nothing compacted. Fix: `AntigravityAdapter` refuses a whole-prompt send over `ANTIGRAVITY_FIRST_MESSAGE_TOKENS` (56k estimated, about 35–43k Gemini tokens) with `CONTEXT_LIMIT` before agy starts, and the host's existing reactive compaction summarizes older turns and retries once. Not checked here: a live run on the owner's PC with the Happy Model chat. The exact agy limit (tokens or characters) is inferred from logs, not documented. Waits on the owner: review and merge.
 
 - **Long tasks finish with an answer (2026-11-17, awaiting review)**: audit of long-running work (scored report in Thai: project file `long-task-audit/long-task-audit-2026-11-17.md`). `ToolLoop` answers repeated Skill/document reads with the earlier result id, pages knowledge reads 3× larger, folds old tool results once at 90% of the context budget, just before compaction (compacting every turn had forced a whole-prompt resend per turn; folding at 60% made a live xhigh TOR run resend six times and run twice as slow as main, 2026-11-18), and gives the model a final no-tools turn in the step's last 10 minutes or after two turns of only re-reads. `npm run eval:long-task` replays the real TOR run's reading pattern: before, 3 of 4 scenarios ended in RUN_TIMEOUT and scenario 1 processed ~1.6M input tokens; after, all 4 deliver a draft and scenario 1 uses ~0.48M. Round 2 (owner asked for above 9): a stopped step's reads come back on "ลองอีกครั้ง"/"ต่อ" (`resumeReads`, requests only), after two minutes of reading the first press of stop writes the answer from what was read (second press stops; the side-question button merged into send while running), final-turn status line, loop stats in `run-trace`, Antigravity `resetReason`, plan_update batched, `eval:long-task:live`. Live on DESKTOP-OGES4JE (`gemini-3.8-flash-medium`, branch vs main): no regression, but both requests finish in one round without opening a document, so the loop is not exercised there. Left: a `gemini-4-hydrogen-xhigh` TOR comparison on the device; keeping a partly written answer across a stop; Antigravity thinking text (#371). Seen while testing: a fresh "ผมขอ TOR อีกฉบับ …" is offered the TOR review Skill first, not TOR writing (Skill selection, separate task).
 
