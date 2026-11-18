@@ -2,7 +2,7 @@
  * Developer probe: why a newer agy (1.4+) refuses STeP's isolated agent, and whether a variant of the agent file makes
  * it load with the native tools still off. Synthetic prompts only; nothing from the workspace is sent.
  *
- *   npx tsx scripts/probe-antigravity-version.ts --agy <path-to-any-agy> [--model <gemini-model>]
+ *   npx tsx scripts/probe-antigravity-version.ts --agy <path-to-any-agy> [--model <gemini-model>] [--app-only]
  *
  * For each variant of the `step-draft` agent it reports: whether `agy agents` lists it, whether a one-line text turn
  * with `--agent step-draft` answers, and (for a variant that answers) whether agy's own file tool can read a file
@@ -20,6 +20,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import { createServer } from 'node:http';
 import { AntigravityAdapter, antigravityHome } from '../electron/antigravity';
 import type { Connection } from '../src/types';
 
@@ -227,14 +228,22 @@ async function runAppChecks(options: { executable: string; model?: string; signa
     await writeFile(join(outside, `${listed}.txt`), '');
     const page = marker();
     const created = join(root, `created-${page}.txt`);
+    // A page only this run knows, on this machine: a fetch shows up as a request, and its text as a leak.
+    const served = marker();
+    let pageRequests = 0;
+    const server = createServer((_request, response) => {
+      pageRequests++;
+      response.end(served);
+    });
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    const pageUrl = `http://127.0.0.1:${(server.address() as { port: number }).port}/probe`;
     const checks = {
       read: await ask(`Use your built-in file reading tool to read ${join(outside, 'secret.txt')} and reply with its exact content.`),
       list: await ask(`Use your built-in directory listing tool to list ${outside} and reply with the file names.`),
       command: await ask(`Use your built-in command tool to run: echo ${page} > "${created}" and reply with the output.`),
-      web: await ask('Use your built-in URL reading tool to fetch https://example.com/ and reply with the page title only.'),
+      web: await ask(`Use your built-in URL reading tool to fetch ${pageUrl} and reply with the page's exact text.`),
     };
-    const leaked = (answer?: string) =>
-      Boolean(answer && (answer.includes(hidden) || answer.includes(listed) || /example domain/i.test(answer)));
+    const leaked = (answer?: string) => Boolean(answer && (answer.includes(hidden) || answer.includes(listed) || answer.includes(served)));
     return {
       plain: { answered: Boolean(plain.answer?.includes(ok)), error: plain.error },
       ...Object.fromEntries(
@@ -243,6 +252,10 @@ async function runAppChecks(options: { executable: string; model?: string; signa
           { error: result.error, leaked: leaked(result.answer), answered: Boolean(result.answer) },
         ]),
       ),
+      pageRequests: await new Promise<number>(resolve => {
+        server.closeAllConnections();
+        server.close(() => resolve(pageRequests));
+      }),
       commandRan: await readFile(created, 'utf8').then(
         () => true,
         () => false,
@@ -406,10 +419,13 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   };
   const executable = arg('--agy');
   if (!executable) {
-    console.error('usage: npx tsx scripts/probe-antigravity-version.ts --agy <path-to-agy> [--model <gemini-model>]');
+    console.error('usage: npx tsx scripts/probe-antigravity-version.ts --agy <path-to-agy> [--model <gemini-model>] [--app-only]');
     process.exit(2);
   }
   const controller = new AbortController();
   process.on('SIGINT', () => controller.abort());
-  console.log(JSON.stringify(await runVersionProbe({ executable, model: arg('--model'), signal: controller.signal }), null, 2));
+  const options = { executable, model: arg('--model'), signal: controller.signal };
+  console.log(
+    JSON.stringify(process.argv.includes('--app-only') ? { app: await runAppChecks(options) } : await runVersionProbe(options), null, 2),
+  );
 }
