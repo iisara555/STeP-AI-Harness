@@ -249,7 +249,7 @@ async function runAppChecks(options: { executable: string; model?: string; signa
       ...Object.fromEntries(
         Object.entries(checks).map(([name, result]) => [
           name,
-          { error: result.error, leaked: leaked(result.answer), answered: Boolean(result.answer) },
+          { error: result.error, leaked: leaked(result.answer), answered: Boolean(result.answer), reply: result.answer?.slice(0, 160) },
         ]),
       ),
       pageRequests: await new Promise<number>(resolve => {
