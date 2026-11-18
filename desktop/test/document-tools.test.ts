@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DOCUMENT_TOOLS, documentTool, documentRequest } from '../src/document-tools';
+import { DOCUMENT_TOOLS, documentTool, documentRequest, fieldExample } from '../src/document-tools';
+import { en } from '../src/locales/en';
 
 test('TOR captures intended outcomes, exclusions and presentation preferences as task data', () => {
   const values = {
@@ -156,4 +157,23 @@ test('an attached example form supplies structure only; its sample values are no
   assert.match(torTemplate.text, /ไม่ใช้ชื่อบุคคล เลขหนังสือ วันที่ รหัสโครงการ งบ/);
   assert.equal(JSON.parse(documentRequest('memo', {}).sourceText).attachmentRole, 'source');
   assert.throws(() => documentRequest('memo', {}, 'approval', 'unverified' as any), /INVALID_DOCUMENT_SOURCE_ROLE/);
+});
+
+test('every form field shows a short example before "(เว้นไว้ได้)", in Thai and English', () => {
+  // The invitation's QR links have their own URL placeholders.
+  const ownPlaceholder = new Set(['rsvpUrl', 'venueUrl']);
+  for (const tool of DOCUMENT_TOOLS) {
+    for (const variant of tool.variants) {
+      for (const f of tool.fields.filter(f => !ownPlaceholder.has(f.key) && (!f.invitationOnly || variant.id === 'invitation'))) {
+        const example = fieldExample(tool.id, f.key, variant.id);
+        assert.ok(example, `${tool.id}/${variant.id}/${f.key} has no example`);
+        assert.ok(example.length <= 60, `${tool.id}/${f.key} example is too long for a placeholder`);
+        assert.doesNotMatch(example, /^เช่น|เว้น/, `${tool.id}/${f.key}: the placeholder adds "เช่น" and "(เว้นไว้ได้)"`);
+        assert.ok(en[example], `${tool.id}/${f.key}: add "${example}" to locales/document-tools-en.ts`);
+        assert.doesNotMatch(f.hint || '', /เช่น|เว้นได้|เว้นไว้หาก/, `${tool.id}/${f.key}: the hint repeats the placeholder`);
+      }
+    }
+  }
+  assert.equal(fieldExample('letter', 'subject', 'invitation'), 'ขอเชิญเข้าร่วมกิจกรรมแลกเปลี่ยนผลงาน');
+  assert.equal(fieldExample('letter', 'subject', 'external'), 'ขอความอนุเคราะห์ข้อมูลสถิติผู้ใช้บริการ');
 });
