@@ -1032,6 +1032,9 @@ export const en: Record<string, string> = {
     'An attached agency form is checked against the MIS quality register for its code and revision.',
   'ตรวจใบกำกับภาษี (เลขผู้เสียภาษี เลขที่ และ VAT) และเตือนเรื่องหัก ณ ที่จ่ายในใบสำคัญจ่าย':
     'Tax invoices are checked for the tax ID, number and VAT, and payment vouchers flag withholding to review.',
+  ช่องในฟอร์มร่างเอกสารมีตัวอย่างการกรอกให้ดู: 'Document drafting fields now show examples of what to enter.',
+  'แชตยาวที่ใช้ Gemini ผ่าน Antigravity จะย่อบทสนทนาเก่าให้เมื่อข้อความยาวเกินขีดจำกัด':
+    'Long Gemini chats through Antigravity compact older turns when a full message exceeds the limit.',
   'ความคิดของ AI อยู่เหนือคำตอบ กดดูย้อนหลังได้ ไม่หายไปเมื่อตอบเสร็จ':
     "The AI's thinking stays above its answer and can be opened again after it finishes.",
   'หน้าเชื่อมต่อ AI กระชับขึ้น มีโลโก้ผู้ให้บริการและไอคอนบอกความสามารถ':

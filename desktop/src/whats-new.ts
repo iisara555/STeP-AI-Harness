@@ -6,6 +6,13 @@ export type ReleaseNote = { version: string; items: () => string[] };
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '0.6.37',
+    items: () => [
+      t('ช่องในฟอร์มร่างเอกสารมีตัวอย่างการกรอกให้ดู'),
+      t('แชตยาวที่ใช้ Gemini ผ่าน Antigravity จะย่อบทสนทนาเก่าให้เมื่อข้อความยาวเกินขีดจำกัด'),
+    ],
+  },
+  {
     version: '0.6.36',
     items: () => [
       t('ความคิดของ AI อยู่เหนือคำตอบ กดดูย้อนหลังได้ ไม่หายไปเมื่อตอบเสร็จ'),
