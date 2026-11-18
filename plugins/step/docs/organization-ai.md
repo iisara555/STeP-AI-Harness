@@ -9,6 +9,8 @@ key ของ OpenRouter อยู่บน server เท่านั้น ไ�
   (bundled ตอน build จากตัวแปร `STEP_ORGANIZATION_AI_URL` หรือ managed policy) และเปิด Google sign-in อยู่
 - กดเชื่อมต่อ: ถ้ายังไม่มีบัญชี Google ขององค์กรในแอป จะเปิดหน้าลงชื่อที่ขอแค่ `openid email` (ไม่ขอ Drive, Mail หรือ Calendar)
   แล้วโหลดรายชื่อโมเดลจาก gateway (`step-chat`, `step-long` ฯลฯ) และทดสอบส่งข้อความหนึ่งครั้ง
+- งานเอกสารทางการ (ฟอร์มร่างเอกสาร หรือ Skill `tor-government-writing`, `tor-review`, `thai-official-documents`,
+  `decision-memo`) ใช้โมเดล `step-long` ให้เอง เมื่อ gateway มีโมเดลชื่อนี้ ถ้าพนักงานเลือกโมเดลเองในงานนั้นจะใช้ตามที่เลือก
 - ทุกคำขอส่ง Google ID token ของบัญชีนั้นแทน API key (`Authorization: Bearer …`) token ต่ออายุเองจาก refresh token ที่เก็บใน Vault
   เหมือนบริการ OCR ใบเสร็จขององค์กร ถ้าออกจากระบบ Google หรือถูกถอนสิทธิ์ แชตจะขอให้ลงชื่อใหม่
 - ใช้ transport แบบ OpenAI-compatible ตัวเดียวกับ preset อื่น จึงร่างข้อความได้ ยังไม่รองรับการค้นเว็บผ่านผู้ให้บริการ
