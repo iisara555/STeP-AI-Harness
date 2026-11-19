@@ -69,8 +69,6 @@ export const afpEvidenceEn: Record<string, string> = {
   ตรวจเมื่อจำเป็นต้องใช้ใบรับรองแทนใบเสร็จตามกรณี: 'Review when a receipt replacement is needed for this case',
   แนะนำเอกสารตามกิจกรรม: 'Evidence guidance for this activity',
   วิเคราะห์บนเครื่อง: 'Analyzed on this device',
-  'ระบบดูชื่อเรื่องและวัตถุประสงค์ แล้วเทียบกับประเภทหน้าที่เลือก คุณเปลี่ยนข้อเสนอได้':
-    'Suggests an activity from the title and purpose, then compares selected page types. You can change the suggestions.',
   ลักษณะกิจกรรม: 'Activity type',
   'ระบบคาดว่า: {0} · โปรดตรวจหรือเปลี่ยนได้': 'Suggested: {0} · review or change it',
   'พบหลายลักษณะกิจกรรม · โปรดเลือกประเภทที่ตรง': 'Several activity types match · choose the right one',
@@ -80,8 +78,6 @@ export const afpEvidenceEn: Record<string, string> = {
   ดูจากบริบท: 'Suggest from context',
   มี: 'Yes',
   'ไม่มี / ไม่เกี่ยวข้อง': 'No / not relevant',
-  'กรณีการเงินต้องเลือกเอง ระบบไม่เดาหมวดค่าใช้จ่ายจากชื่อกิจกรรม':
-    'Choose the finance scenario yourself; the activity name does not determine its finance category.',
   พบหน้าที่ตรวจเทียบแล้ว: 'Reviewed pages found',
   'พบในชุด · รอตรวจเทียบ': 'In packet · review pending',
   'ชื่อไฟล์คล้ายกัน · รอยืนยันประเภท': 'Similar filename · type not confirmed',
@@ -91,8 +87,6 @@ export const afpEvidenceEn: Record<string, string> = {
   'ข้อเสนอให้ตรวจเพิ่ม · ยังไม่มีแหล่งยืนยันว่าต้องแนบ': 'Suggested for review · no source confirms it is required',
   'ในชุด: {0} · หน้า {1}': 'In packet: {0} · page(s) {1}',
   เลือกกิจกรรมหรือกรณีการเงินเพื่อดูรายการที่เกี่ยวข้อง: 'Choose an activity or finance scenario to see relevant items',
-  'รายการเป็นเครื่องช่วยตรวจตามบริบท ไม่ยืนยันว่าเอกสารครบหรืออนุมัติเบิกได้ โปรดเทียบข้อกำหนดล่าสุดกับ AFP':
-    'These contextual prompts do not establish completeness or payment approval. Check current requirements with AFP.',
   'รายการอื่นที่ต้องการตรวจ ({0})': 'Other items to review ({0})',
   'เพิ่มรายการเองและเชื่อมไฟล์ในชุดได้ รายการเหล่านี้ไม่ส่งให้ AI':
     'Add your own items and link packet files. These items are not sent to AI.',

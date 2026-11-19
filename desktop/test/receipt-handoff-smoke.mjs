@@ -89,7 +89,7 @@ try {
   const sourcePane = page.getByRole('region', { name: 'ใบเสร็จต้นฉบับ' });
   const reviewPane = page.getByRole('region', { name: 'ข้อมูลที่ต้องตรวจ' });
   await expect(reviewPane.getByRole('heading', { level: 2 })).toHaveText([
-    'ต้องแก้หรือเติมข้อมูลก่อนใช้ประกอบการเบิก',
+    'ต้องเตรียมเอกสารหรือยืนยันเงื่อนไขเพิ่มเติม',
     'ทำอะไรต่อ',
     'ดูองค์ประกอบพื้นฐานใบเสร็จ',
   ]);
