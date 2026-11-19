@@ -48,6 +48,15 @@ export type Outcome = {
   ms: number;
   code?: string;
   answer: string;
+  /** Provider turns that sent the whole prompt, after the first one of each step (a kept conversation sends only the new part). */
+  resends?: number;
+  /** Tool calls made, and how many of them were repeats answered from the run's cache. */
+  tools?: number;
+  repeats?: number;
+  /** Long-task loop events per step (folds, reads given back, final-turn reason). */
+  loop?: { folds: number; repeats: number; seeded: number; final?: string }[];
+  /** Each AI call of the turn, for comparing builds: how long, first token, and whether the whole prompt was sent. */
+  calls?: { kind: string; outcome: string; ms: number; ttftMs?: number; transport?: string; sentChars?: number; resetReason?: string }[];
 };
 
 /** Right document reached: in the search excerpts or opened by the AI. A general question must reach none. */
@@ -207,6 +216,32 @@ export async function runKnowledge(options: {
           ...(code === 'CLARIFY' ? { reached: false } : {}),
           ...(asked ? { asked } : {}),
           rounds: turns.flatMap(run => run.steps || []).reduce((n, step) => n + (step.providerCalls || []).length, 0),
+          resends: turns
+            .flatMap(run => run.steps || [])
+            .reduce(
+              (n, step) =>
+                n + Math.max(0, (step.providerCalls || []).filter(c => c.kind === 'answer' && c.transport?.mode === 'full').length - 1),
+              0,
+            ),
+          tools: turns.flatMap(run => run.steps || []).reduce((n, step) => n + (step.tools || []).length, 0),
+          repeats: turns
+            .flatMap(run => run.steps || [])
+            .reduce((n, step) => n + (step.tools || []).filter(t => (t as { repeat?: boolean }).repeat).length, 0),
+          loop: turns
+            .flatMap(run => run.steps || [])
+            .flatMap(step => ((step as { loop?: any }).loop ? [(step as { loop?: any }).loop] : [])),
+          calls: turns
+            .flatMap(run => run.steps || [])
+            .flatMap(step => step.providerCalls || [])
+            .map(c => ({
+              kind: c.kind,
+              outcome: c.outcome,
+              ms: c.ms,
+              ttftMs: c.ttftMs,
+              transport: c.transport?.mode,
+              sentChars: c.transport?.sentChars,
+              resetReason: c.transport?.resetReason,
+            })),
           ms: Date.now() - turnStarted,
           ...(code ? { code } : {}),
           answer: done.messages.filter(m => m.role === 'assistant').at(-1)?.text || '',

@@ -1754,7 +1754,15 @@ async function main() {
           });
         for (const step of t.steps)
           for (const tool of step.tools || [])
-            diagnose('tool-call', { run: t.id, id: tool.id, tool: tool.tool, ok: tool.ok ? 1 : 0, code: tool.code, ms: tool.ms });
+            diagnose('tool-call', {
+              run: t.id,
+              id: tool.id,
+              tool: tool.tool,
+              ok: tool.ok ? 1 : 0,
+              code: tool.code,
+              ms: tool.ms,
+              ...(tool.repeat ? { repeat: 1 } : {}),
+            });
         // run, provider, model and selection let eval/diagnostics-summary.ts join this line with its provider calls.
         diagnose('run-trace', {
           run: t.id,
@@ -1769,7 +1777,10 @@ async function main() {
           steps: t.steps
             .map(
               s =>
-                `${s.attempts}x ${s.ms}ms sys=${s.systemChars} msg=${s.promptChars} refs=${s.references.length} tok=${s.usage?.total ?? '?'} scope=${s.contextScope || 'full'} tools=${s.toolMs || 0}ms`,
+                `${s.attempts}x ${s.ms}ms sys=${s.systemChars} msg=${s.promptChars} refs=${s.references.length} tok=${s.usage?.total ?? '?'} scope=${s.contextScope || 'full'} tools=${s.toolMs || 0}ms` +
+                (s.loop
+                  ? ` folds=${s.loop.folds} repeats=${s.loop.repeats} seeded=${s.loop.seeded}${s.loop.final ? ` final=${s.loop.final}` : ''}`
+                  : ''),
             )
             .join(' | ')
             .slice(0, 1200),
@@ -4675,6 +4686,8 @@ async function main() {
         coordinator.cancel(input.id);
         service.cancel(input.id);
         return true;
+      case 'writeNow':
+        return service.writeNow(inputText(input.id, 60));
       case 'cancelSideQuestion':
         service.cancelSideQuestion(inputText(input.id, 60));
         return true;

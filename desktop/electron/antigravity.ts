@@ -898,6 +898,9 @@ export class AntigravityAdapter implements ProviderAdapter {
     const reuse = Boolean(
       held && !held.exited && held.identity === identity && held.sent && (prompt.startsWith(held.sent) || Boolean(context.followUpDelta)),
     );
+    // Why a kept conversation starts over and resends the whole prompt, for diagnostics (`resetReason`).
+    const resetReason =
+      held && !reuse ? (held.exited ? 'runtime-exited' : held.identity !== identity ? 'identity-changed' : 'prefix-changed') : undefined;
     // A new conversation gets the whole prompt in one message, which agy cuts when it is too long.
     if (!reuse) checkFirstMessage(context.system, prompt);
     if (held && !reuse) await session.closeAndWait();
@@ -943,7 +946,7 @@ export class AntigravityAdapter implements ProviderAdapter {
     const started = Date.now();
     const claimed = takeAntigravitySpare(connection.id, identity);
     const active = claimed ? this.bindConversation(session, claimed) : await this.open(session, identity, connection, context);
-    return this.turn(active, prompt, connection, context, deadline, claimed ? Date.now() : started);
+    return this.turn(active, prompt, connection, context, deadline, claimed ? Date.now() : started, resetReason);
   }
 
   private bindConversation(session: ProviderSession, held: AgyConversation) {

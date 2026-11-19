@@ -303,7 +303,7 @@ export const errorText: Record<string, string> = localized({
   RUNTIME_EXITED: 'การเชื่อมต่อ AI หยุดกลางคัน ลองเชื่อมต่ออีกครั้ง',
   CLAUDE_CODE_NOT_FOUND: 'ไม่พบ Claude Code ในเครื่องนี้ ติดตั้งและลงชื่อเข้าใช้ Claude Code ก่อน',
   SKILL_NOT_FOUND: 'ไม่พบไฟล์ Skill นี้',
-  RUN_TIMEOUT: 'AI ใช้เวลานานเกินกำหนดในขั้นตอนนี้ ลองใหม่หรือลดระดับการคิด',
+  RUN_TIMEOUT: 'AI ใช้เวลานานเกินกำหนดในขั้นตอนนี้ กด “ลองอีกครั้ง” แล้ว AI จะใช้เอกสารที่อ่านไปแล้วทำต่อ หรือลดระดับการคิด',
   PROVIDER_TIMEOUT: 'บริการ AI ตอบช้าเกินกำหนด ลองใหม่อีกครั้ง',
   PYTHON_REQUIRED: 'ไม่พบ Python ที่รองรับ',
   OCR_COMPONENT_DOWNLOAD_FAILED: 'ดาวน์โหลดส่วนเสริม OCR ไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองใหม่',

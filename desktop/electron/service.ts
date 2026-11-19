@@ -23,14 +23,14 @@ import { Store } from './store';
 import { ProviderSession, type ProviderAdapter, type ProviderContext, type TokenCount } from './providers';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
 import { usedWebSources, webSources } from '../src/web';
-import { brokenRequests, loopRequests } from '../src/tools';
+import { brokenRequests, loopRequests, type LoopRequest } from '../src/tools';
 import { speakingStyleRules } from '../src/speaking-styles';
 import { ToolLoop, TOOL_RULES, BROWSER_RULES, type LoopHost } from './tool-loop';
 import { SUBAGENT_MAX_TURNS, SUBAGENT_TOOLS, subagentSystem } from './subagents';
 import type { ToolScope } from './tools';
 import { RETRYABLE_CODES, RETRY_DELAYS_MS, retryDelay } from './retry';
 import { section } from './prompt';
-import { compact, contextBudget, promptTooLong, tokens } from './compact';
+import { compact, contextBudget, LOOP_FOLD_SHARE, promptTooLong, tokens } from './compact';
 import { mainLocale, tm } from './i18n';
 import { internalSystemFor, internalSystemRule } from './internal-systems';
 import { workflowRule } from './workflows';
@@ -411,6 +411,14 @@ export class WorkService {
     ) => Promise<ImageArtifact>,
     private retryDelays = RETRY_DELAYS_MS,
   ) {}
+  /** Ids of running tasks whose person pressed "เขียนคำตอบเลย": their tool loop takes its final turn now. */
+  private writeNowRequests = new Set<string>();
+  /** Ask a running task to stop reading and write its answer from what it has (ToolLoop's final turn). */
+  writeNow(id: string) {
+    if (!this.active.has(id)) return false;
+    this.writeNowRequests.add(id);
+    return true;
+  }
   cancel(id: string) {
     this.active.get(id)?.abort();
     this.cancelSideQuestion(id);
@@ -719,6 +727,15 @@ export class WorkService {
     const hadTask = Boolean(session.originalQuery);
     const clarification = session.clarification;
     const stopped = ['error', 'interrupted', 'cancelled'].includes(session.status);
+    // What a stopped step had read is given back to this attempt once (ToolLoop seed), then forgotten.
+    const resume = stopped ? session.resumeReads : undefined;
+    delete session.resumeReads;
+    // Stored data is re-read through the request parser, so only well-formed requests for known tools come back.
+    const resumeSeed = resume
+      ? loopRequests(
+          (Array.isArray(resume.requests) ? resume.requests : []).map(r => '```step-tool\n' + JSON.stringify(r) + '\n```').join('\n'),
+        )
+      : [];
     // "Try again", or "ต่อ" after a run stopped mid-Playbook, repeats the stopped task instead of starting a new one.
     const retrying =
       hadTask && Boolean(session.lastRun) && stopped && (Boolean(options.retry) || (policy.resume && Boolean(session.checkpoint)));
@@ -917,6 +934,7 @@ export class WorkService {
     // Each model step gets its own budget; high reasoning levels can take several minutes per step.
     // A model turn that completes is progress, so a long tool loop (an xhigh model reading Skills and references
     // turn after turn) restarts the budget for its next turn, up to STEP_PROGRESS_BUDGETS budgets per step.
+    let loopReads: { step: number; requests: LoopRequest[] } | undefined;
     let timedOut = false,
       timeout = setTimeout(() => {}, 0),
       stepLimit = Date.now() + STEP_PROGRESS_BUDGETS * this.stepTimeoutMs;
@@ -1884,6 +1902,16 @@ export class WorkService {
           });
           bridgeLoop = new ToolLoop({
             ...host,
+            // The last step budget is for writing: past it, tools stop and the model answers from what it has read.
+            deadline: () => this.writeNowRequests.has(id) || Date.now() >= stepLimit - this.stepTimeoutMs,
+            finalTurn: reason =>
+              activity(reason === 'deadline' ? tm('ใกล้หมดเวลา กำลังเขียนคำตอบจากที่อ่านมา') : tm('อ่านครบแล้ว กำลังเขียนคำตอบ')),
+            reads: requests => {
+              loopReads = requests.length ? { step: index, requests } : undefined;
+            },
+            // Fold earlier tool results once, just before the prompt would need compacting on every turn.
+            tooLarge: text => tokens(system + text) > budget * LOOP_FOLD_SHARE,
+            progress: progressed,
             begin: action => {
               host.begin?.(action);
               if (options.workflow === 'assistant')
@@ -1933,8 +1961,12 @@ export class WorkService {
             },
           });
           result = await bridgeLoop
-            .run(prompt, next => callProvider(next), controller.signal)
-            .finally(() => providerSession.closeAndWait());
+            .run(prompt, next => callProvider(next), controller.signal, resume?.step === index ? resumeSeed : [])
+            .finally(() => {
+              stepTrace.loop = { ...bridgeLoop!.stats };
+              return providerSession.closeAndWait();
+            });
+          loopReads = undefined;
         } else result = await callProvider(prompt).finally(() => providerSession.closeAndWait());
         stepTrace.ms = Date.now() - stepStarted;
         if (stepUsage.total) stepTrace.usage = stepUsage;
@@ -2158,6 +2190,7 @@ export class WorkService {
     } catch (error) {
       session = this.store.session(id);
       session.status = controller.signal.aborted && !timedOut ? 'cancelled' : 'error';
+      if (loopReads) session.resumeReads = { ...loopReads, at: new Date().toISOString() };
       const code = codeOf(error);
       const shown = timedOut ? 'RUN_TIMEOUT' : controller.signal.aborted ? 'CANCELLED' : code;
       const done = session.checkpoint?.done || 0;
@@ -2183,6 +2216,7 @@ export class WorkService {
     } finally {
       clearTimeout(timeout);
       clearInterval(heartbeat);
+      this.writeNowRequests.delete(id);
     }
   }
 }

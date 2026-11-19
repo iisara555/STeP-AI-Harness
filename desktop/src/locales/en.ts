@@ -1206,6 +1206,9 @@ export const en: Record<string, string> = {
   ยังไม่ได้รับสถานะจากแอป: 'No status from the app yet',
   แอปยังทำงานอยู่: 'The app is still working',
   'ขั้นตอนนี้ยังไม่ส่งผลกลับมา คุณรอต่อหรือกดหยุดได้': "This step hasn't reported back yet. Keep waiting, or press Stop",
+  'เขียนคำตอบจากที่อ่านมา · กดอีกครั้งเพื่อหยุดงาน': 'Write the answer from what was read · press again to stop',
+  'ใกล้หมดเวลา กำลังเขียนคำตอบจากที่อ่านมา': 'Time is nearly up; writing the answer from what was read',
+  'อ่านครบแล้ว กำลังเขียนคำตอบ': 'Finished reading; writing the answer',
   ขั้นตอนของงาน: 'Task steps',
   '· ต้องทำโดยผู้มีอำนาจ': '· Requires an authorised person',
   'ความคิดของ AI': 'AI reasoning',
@@ -1752,8 +1755,8 @@ export const en: Record<string, string> = {
   'ไม่พบ Claude Code ในเครื่องนี้ ติดตั้งและลงชื่อเข้าใช้ Claude Code ก่อน':
     "Claude Code wasn't found on this computer. Install it and sign in to Claude Code first",
   'ไม่พบไฟล์ Skill นี้': "This Skill file wasn't found",
-  'AI ใช้เวลานานเกินกำหนดในขั้นตอนนี้ ลองใหม่หรือลดระดับการคิด':
-    'The AI took too long on this step. Try again or lower the reasoning level',
+  'AI ใช้เวลานานเกินกำหนดในขั้นตอนนี้ กด “ลองอีกครั้ง” แล้ว AI จะใช้เอกสารที่อ่านไปแล้วทำต่อ หรือลดระดับการคิด':
+    'The AI took too long on this step. Press “Try again” to continue with what it has already read, or lower the thinking level',
   'บริการ AI ตอบช้าเกินกำหนด ลองใหม่อีกครั้ง': 'The AI service took too long to respond. Please try again',
   'ไม่พบ Python ที่รองรับ': 'No supported Python found',
   'ดาวน์โหลดส่วนเสริม OCR ไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองใหม่': "Couldn't download the OCR add-on. Check your internet and try again",

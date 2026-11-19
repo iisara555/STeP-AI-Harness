@@ -144,7 +144,7 @@ export type UsageReport = {
 export type WorkMode = 'chat' | 'draft' | 'image';
 export type ImageArtifact = { id: string; name: string; model: string; provider: Provider; mime: string; at: string };
 /** One model step of a run: sizes, references and timing only, never request, source or draft text. */
-export type ToolTrace = { id: string; tool: string; ok: boolean; code?: string; ms: number };
+export type ToolTrace = { id: string; tool: string; ok: boolean; code?: string; ms: number; repeat?: boolean };
 /** A host-confirmed tool event, with no paths, arguments or source content. */
 export type WorkAction = { id: string; tool: string; state: 'running' | 'done' | 'failed'; code?: string };
 export type StepTrace = {
@@ -156,6 +156,8 @@ export type StepTrace = {
   ms: number;
   usage?: { input: number; output: number; total: number };
   contextScope?: 'text' | 'full';
+  /** Long-task loop events: earlier results folded, reads answered from the run's cache, reads given back, final turn. */
+  loop?: { folds: number; repeats: number; seeded: number; final?: 'deadline' | 'reread' };
   discovery?: { skills: 'top3' | 'full'; documents: 'top3' | 'full'; skillCount: number; documentCount: number };
   toolMs?: number;
   tools?: ToolTrace[];
@@ -334,6 +336,11 @@ export type Session = {
   checkpoint?: Checkpoint;
   /** How the run in progress (or the one that stopped) treated earlier context, so a retry repeats it exactly. */
   lastRun?: { revising: boolean; carries: boolean; continuing?: boolean; latest?: string; fromConversation?: boolean };
+  /**
+   * The Skill and document reads of a step that stopped (requests only, never their text). The next attempt
+   * ("ลองอีกครั้ง" or "ต่อ") gets them back without spending model turns reading them again.
+   */
+  resumeReads?: { step: number; requests: { tool: string; input: string; args?: Record<string, unknown> }[]; at: string };
   runs?: RunTrace[];
 };
 export type Settings = {
