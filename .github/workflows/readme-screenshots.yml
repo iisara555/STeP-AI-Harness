@@ -28,6 +28,10 @@ jobs:
           cache-dependency-path: desktop/package-lock.json
       - run: npm ci
       - run: npm run build
+      # Electron downloads its binary on first use, inside Playwright's 45 s launch timeout; a slow mirror then fails
+      # the capture (2026-11-19: three runs timed out after 3–33 minutes of download). Fetch it first, as validate.yml does.
+      - name: Download the Electron binary
+        run: node -e "require('electron')"
       - name: Capture actual Electron GUI
         run: xvfb-run -a node test/readme-screenshots.mjs
       - uses: actions/upload-artifact@v4
