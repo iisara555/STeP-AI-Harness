@@ -220,6 +220,38 @@
 .evidence-state-checked {
   color: var(--accent-ink);
 }
+.evidence-conflict {
+  margin: var(--space-1) 0;
+  color: var(--danger);
+}
+.evidence-totals {
+  margin-top: var(--space-4);
+}
+.evidence-totals h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+.evidence-totals ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+.evidence-totals li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-sm);
+}
+.evidence-totals li .small {
+  flex-basis: 100%;
+}
+.evidence-total-warn .small {
+  color: var(--danger);
+}
 .evidence-empty {
   color: var(--muted);
   font-size: var(--text-sm);

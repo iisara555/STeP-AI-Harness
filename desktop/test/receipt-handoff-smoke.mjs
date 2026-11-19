@@ -157,7 +157,7 @@ try {
   await page.getByLabel('โครงการหรือหน่วยงาน', { exact: true }).fill('SECRET_PROJECT');
   await page.getByLabel('วัตถุประสงค์ของชุดเอกสาร', { exact: true }).fill('SECRET_PURPOSE');
   await page.getByRole('button', { name: 'หลักฐาน', exact: true }).click();
-  await page.getByText('ปรับกิจกรรมและกรณีการเงิน', { exact: true }).click();
+  await page.getByText('ปรับหมวด กิจกรรม และกรณีการเงิน', { exact: true }).click();
   await page.getByRole('combobox', { name: 'กรณีการเงินที่ทราบ', exact: true }).selectOption('b_clearance');
   const guidance = page.getByRole('region', { name: 'แนะนำเอกสารตามกิจกรรม' });
   await guidance.getByText('รายการอื่นที่ต้องการตรวจ (0)', { exact: true }).click();

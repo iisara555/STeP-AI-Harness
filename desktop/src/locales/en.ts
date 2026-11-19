@@ -2932,8 +2932,8 @@ export const en: Record<string, string> = {
     'A cash bill from a shop not registered for VAT shows no separate tax. Whether it is accepted as proof of payment here has no confirmed source in the app yet; ask AFP',
   'ยอด {0} บาท เกินเพดานหมวด BV (ไม่เกิน 10,000 บาท/คนขับรถ/กิจกรรม)': '{0} baht is over the BV cap (10,000 baht per driver per activity)',
   'ยอด {0} บาท เกินวงเงินหมวดฉุกเฉิน (ไม่เกิน 10,000 บาท)': '{0} baht is over the emergency limit (10,000 baht)',
-  'ยอด {0} บาท เกินเพดานหมวด B (ไม่เกิน 10,000 บาทต่อหมวดย่อย) งานที่เกิน 10,000 บาทต้องผ่านพัสดุ (หมวด C)':
-    '{0} baht is over the category B cap (10,000 baht per sub-category); work over 10,000 baht goes through procurement (category C)',
+  'ยอด {0} บาท เกินเพดานหมวด B (รวมทุกรายการในหมวดย่อยเดียวกันไม่เกิน 10,000 บาท) งานจ้างหรือบริการนอกตารางหมวด B ที่เกิน 10,000 บาท แนวปฏิบัติ AFP ให้ดำเนินการผ่านงานพัสดุเท่านั้น ห้ามใช้เงินยืม โปรดปรึกษา AFP ก่อนจ่าย':
+    '{0} baht is over the category B cap (all items in one sub-category together, up to 10,000 baht). AFP guidance: hiring or services outside the category B table over 10,000 baht go through procurement only, never an advance. Ask AFP before paying',
   'เลยกำหนดรายงานขอความเห็นชอบแล้ว (ภายใน {0} วันทำการนับถัดจากวันที่ในใบเสร็จ ครบ {1}) AFP แจ้งว่าค่าใช้จ่ายส่วนเกินจะเบิกไม่ได้ โปรดติดต่อ AFP':
     'The approval report is overdue ({0} working days after the receipt date, due {1}). AFP says the excess cannot be claimed; contact AFP',
   'ทำรายงานขอความเห็นชอบใน STeP MIS ภายใน {0} วันทำการนับถัดจากวันที่ในใบเสร็จ: ภายใน {1} (ไม่นับวันหยุดนักขัตฤกษ์ โปรดดูปฏิทินด้วย)':
@@ -2944,6 +2944,8 @@ export const en: Record<string, string> = {
     'The emergency category needs the team lead’s or team executive’s agreement first, and all 3 conditions (urgent, unforeseen, not possible in the normal time)',
   'ชุดเคลียร์เงิน: ใบขอเบิกค่าใช้จ่าย (FM-AF-002) + ใบเสร็จรับเงินหรือใบสำคัญรับเงิน (FM-AF-014) + สำเนาบัตรประชาชนผู้รับเงินหรือใบรับรองแทนใบเสร็จ (FM-AF-035/036) + รายงานขอความเห็นชอบ':
     'Clearing set: expense claim (FM-AF-002) + receipt or receipt voucher (FM-AF-014) + copy of the payee’s ID card or a receipt substitute certificate (FM-AF-035/036) + approval report',
+  'ถ้าจ่ายเงินตัวเองไปก่อน (สำรองเงินจ่ายล่วงหน้า): ไม่ต้องแนบสัญญายืมเงิน (FM-AF-001) แต่แนบใบขออนุมัติสำรองจ่าย (FM-AF-002) และข้อเสนอโครงการ (FM-AF-003) ที่อนุมัติแล้วแทน ตาม QP-AF-003 ข้อ 4.3':
+    'If you paid with your own money first (advance payment): no loan agreement (FM-AF-001); attach the approved advance-payment request (FM-AF-002) and project proposal (FM-AF-003) instead, per QP-AF-003 section 4.3',
   'กฎของหมวดนี้ยังไม่มีในระบบ ชุดเอกสารและกำหนดเวลาโปรดถาม AFP':
     'This category’s rules are not in the app yet; ask AFP for the documents and deadlines',
   'ครบแล้ว {0} ข้อ: {1}': '{0} complete: {1}',

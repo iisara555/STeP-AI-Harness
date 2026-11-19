@@ -5,14 +5,16 @@ import { explainError } from './messages';
 import {
   ACTIVITY_LABELS,
   FINANCE_LABELS,
-  blankEvidenceGuidance,
+  storedEvidenceGuidance,
   evidenceAiPrompt,
   evidenceChecklist,
   inferActivity,
   type EvidenceGuidance,
   type EvidenceStatus,
 } from './afp-evidence';
-import type { ReceiptPacket } from './receipt-packet';
+import { CLAIM_CATEGORY_LABELS, type ClaimCategory } from './receipt-compliance';
+import { formatSatang, packetCategoryConflicts, packetCategoryTotals, type CategoryTotal, type ReceiptPacket } from './receipt-packet';
+import { expenseCodeLabel } from './receipt-workflow';
 
 const statusLabels: Record<EvidenceStatus, string> = {
   checked: 'พบหน้าที่ตรวจเทียบแล้ว',
@@ -20,8 +22,20 @@ const statusLabels: Record<EvidenceStatus, string> = {
   suggested: 'ชื่อไฟล์คล้ายกัน · รอยืนยันประเภท',
   missing: 'ยังไม่พบหน้าที่ระบุประเภท',
 };
+const totalNotes: Record<CategoryTotal['status'], string> = {
+  within: 'ไม่เกิน 10,000 บาท',
+  over: 'เกินเพดาน 10,000 บาท · ปรึกษา AFP ก่อนส่ง',
+  check: 'รวมเกิน 10,000 บาท · ตรวจว่าแยกกันถูกต้อง',
+};
+const totalName = (total: CategoryTotal) =>
+  total.key === 'B?'
+    ? t('หมวด B ยังไม่ระบุหมวดย่อย')
+    : total.category === 'B'
+      ? expenseCodeLabel(total.code)
+      : t(CLAIM_CATEGORY_LABELS[total.category]);
 const sourceLabels = {
   'qp-af-003': 'QP-AF-003 ข้อ 4.2 · ใช้เมื่อเกี่ยวข้อง',
+  'qp-af-003-reserve': 'QP-AF-003 ข้อ 4.3 · สำรองเงินจ่ายล่วงหน้า',
   'afp-circular': 'แนวปฏิบัติ AFP หมวด B · ตามกรณีที่เลือก',
   'need-source': 'ข้อเสนอให้ตรวจเพิ่ม · ยังไม่มีแหล่งยืนยันว่าต้องแนบ',
 };
@@ -43,9 +57,11 @@ export function AfpEvidencePanel({
   const [checkingContext, setCheckingContext] = useState(false);
   const [contextError, setContextError] = useState('');
   const contextReviewVersion = useRef(0);
-  const guidance = packet.guidance || blankEvidenceGuidance();
+  const guidance = storedEvidenceGuidance(packet.guidance);
   const context = inferActivity(packet);
   const checklist = evidenceChecklist(packet);
+  const totals = packetCategoryTotals(packet);
+  const conflicts = packetCategoryConflicts(packet);
   const change = (patch: Partial<EvidenceGuidance>) => onChange({ ...guidance, ...patch });
   const editExtra = (id: string, patch: Partial<EvidenceGuidance['extra'][number]>) =>
     change({ extra: guidance.extra.map(item => (item.id === id ? { ...item, ...patch } : item)) });
@@ -65,9 +81,26 @@ export function AfpEvidencePanel({
             ? t('พบหลายลักษณะกิจกรรม · โปรดเลือกประเภทที่ตรง')
             : t('ยังระบุกิจกรรมไม่ได้ · เพิ่มบริบทหรือเลือกเอง')}
       </p>
-      <p className="small muted">{t('กรณีการเงิน: {0}', t(FINANCE_LABELS[guidance.finance]))}</p>
+      <p className="small muted">
+        {t('หมวด: {0} · กรณีการเงิน: {1}', t(CLAIM_CATEGORY_LABELS[guidance.category]), t(FINANCE_LABELS[guidance.finance]))}
+      </p>
+      {conflicts.map(conflict => (
+        <p className="small evidence-conflict" role="status" key={conflict.id}>
+          {t('{0} ตรวจไว้เป็น{1} ไม่ตรงกับหมวดของชุดนี้', conflict.name, t(CLAIM_CATEGORY_LABELS[conflict.category]))}
+        </p>
+      ))}
       <details className="evidence-options">
-        <summary>{t('ปรับกิจกรรมและกรณีการเงิน')}</summary>
+        <summary>{t('ปรับหมวด กิจกรรม และกรณีการเงิน')}</summary>
+        <label>
+          {t('หมวดค่าใช้จ่าย')}
+          <select value={guidance.category} onChange={event => change({ category: event.target.value as ClaimCategory })}>
+            {Object.entries(CLAIM_CATEGORY_LABELS).map(([id, label]) => (
+              <option key={id} value={id}>
+                {t(label)}
+              </option>
+            ))}
+          </select>
+        </label>
         <label>
           {t('ลักษณะกิจกรรม')}
           <select value={guidance.activity} onChange={event => change({ activity: event.target.value as EvidenceGuidance['activity'] })}>
@@ -100,6 +133,24 @@ export function AfpEvidencePanel({
         </div>
         <p className="small muted">{t('กรณีการเงินต้องเลือกเอง ระบบไม่เดาหมวดค่าใช้จ่ายจากชื่อกิจกรรม')}</p>
       </details>
+      {totals.length > 0 && (
+        <div className="evidence-totals">
+          <h3>{t('ยอดรวมตามหมวดย่อย')}</h3>
+          <ul>
+            {totals.map(total => (
+              <li key={total.key} className={total.status === 'within' ? undefined : 'evidence-total-warn'}>
+                <span>{totalName(total)}</span>
+                <span>{t('{0} ใบ · {1} บาท', total.receipts, formatSatang(total.total))}</span>
+                <span className="small muted">
+                  {t(totalNotes[total.status])}
+                  {total.unreadable ? ` · ${t('อ่านยอดไม่ได้ {0} ใบ', total.unreadable)}` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="small muted">{t('รวมเฉพาะใบเสร็จที่เพิ่มจากหน้าตรวจใบเสร็จ ใบแจ้งหนี้และสลิปไม่นับซ้ำ')}</p>
+        </div>
+      )}
       {checklist.length ? (
         <ul className="evidence-list">
           {checklist.map(item => (

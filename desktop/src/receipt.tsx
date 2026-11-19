@@ -4,6 +4,7 @@ import {
   DOCUMENT_TYPES,
   DOCUMENT_TYPE_LABELS,
   classifyFromText,
+  CLAIM_CATEGORY_LABELS as CATEGORY_LABELS,
   complianceChecklist,
   receiptCompleteness,
   type ClaimCategory,
@@ -121,13 +122,6 @@ type OcrStatus = {
   cloud?: { model: string; accounts: { id: string; label: string }[] };
 };
 type Vision = ReceiptVisionResult & { model: string; pagePreviews?: string[] };
-const CATEGORY_LABELS: Record<ClaimCategory, string> = {
-  unsure: 'ยังไม่แน่ใจ',
-  B: 'หมวด B (B1–B12)',
-  BV: 'หมวด BV ค่าพาหนะ',
-  emergency: 'หมวดฉุกเฉิน',
-  other: 'หมวดอื่น',
-};
 const SOURCE_LABELS: Record<ComplianceItem['source'], string> = {
   afp: 'AFP แจ้งเวียน',
   general: 'หลักทั่วไป · ยืนยันกับ AFP',
@@ -751,6 +745,9 @@ export function ReceiptApp({
                 description: expenseDescription,
                 total: values.total || '',
                 kind: docType,
+                category,
+                // The suggested sub-category only travels when it belongs to the category the person kept.
+                code: categorySuggestion.category === category ? categorySuggestion.code : '',
               }
             : undefined
         }

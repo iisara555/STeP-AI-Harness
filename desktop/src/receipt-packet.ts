@@ -1,4 +1,11 @@
-import { DOCUMENT_TYPE_LABELS, parseDocumentType, parseReceiptDate, type DocumentType } from './receipt-compliance';
+import {
+  DOCUMENT_TYPE_LABELS,
+  parseClaimCategory,
+  parseDocumentType,
+  parseReceiptDate,
+  type ClaimCategory,
+  type DocumentType,
+} from './receipt-compliance';
 import {
   blankPaymentVoucher,
   editPaymentVoucher,
@@ -11,6 +18,7 @@ import {
   FINANCE_LABELS,
   EVIDENCE_DOCUMENT_LABELS,
   blankEvidenceGuidance,
+  storedEvidenceGuidance,
   type EvidenceGuidance,
   type EvidenceDocumentKind,
 } from './afp-evidence';
@@ -40,7 +48,13 @@ export type PacketSource = {
   extension: 'pdf' | 'png' | 'jpg';
   sha256: string;
   bytes: number;
-  reviewedReceipt?: { comparedAt: string; values: Pick<ReviewedReceipt, 'recipient' | 'date' | 'description' | 'total'> };
+  reviewedReceipt?: {
+    comparedAt: string;
+    values: Pick<ReviewedReceipt, 'recipient' | 'date' | 'description' | 'total'>;
+    /** The category the person kept on the receipt check, and the sub-category code when the suggestion matched it. */
+    category?: ClaimCategory;
+    code?: string;
+  };
   pages: { number: number; kind: PacketDocumentKind; included: boolean; checked: boolean }[];
 };
 export type ReceiptPacket = {
@@ -70,7 +84,13 @@ export type ReviewedReceipt = {
   description: string;
   total: string;
   kind: DocumentType | '';
+  category?: ClaimCategory;
+  code?: string;
 };
+
+/** Sub-category codes the receipt check can suggest (docs/knowledge/afp-operational-circulars.md section 3). */
+export const parseExpenseCode = (value: unknown): string =>
+  typeof value === 'string' && /^(?:B(?:[1-9]|1[0-2])(?:\.[1-9])?|BV[12]?)$/.test(value) ? value : '';
 
 export const blankReceiptVoucher = (): ReceiptVoucher => ({
   date: '',
@@ -121,7 +141,9 @@ function editGuidance(raw: unknown, current: EvidenceGuidance, documents: Packet
   if (raw === undefined) return current;
   if (!raw || typeof raw !== 'object') throw new Error('INVALID_INPUT');
   const input = raw as EvidenceGuidance;
+  const category = input.category === undefined ? current.category : parseClaimCategory(input.category);
   if (
+    !category ||
     !Object.hasOwn(ACTIVITY_LABELS, input.activity) ||
     !Object.hasOwn(FINANCE_LABELS, input.finance) ||
     !['auto', 'yes', 'no'].includes(input.speaker) ||
@@ -137,7 +159,7 @@ function editGuidance(raw: unknown, current: EvidenceGuidance, documents: Packet
     if (sourceId && !documents.some(doc => doc.id === sourceId)) throw new Error('INVALID_INPUT');
     return { id: item.id, label: packetText(item.label, 180), sourceId };
   });
-  return { activity: input.activity, finance: input.finance, speaker: input.speaker, extra };
+  return { activity: input.activity, category, finance: input.finance, speaker: input.speaker, extra };
 }
 
 /** Edits never turn an earlier source comparison into a confirmation of new content. */
@@ -188,7 +210,7 @@ export function editReceiptPacket(current: ReceiptPacket, raw: unknown, now: str
     current.disbursement || blankPaymentVoucher(),
     input.disbursement || current.disbursement || blankPaymentVoucher(),
   );
-  const previousGuidance = current.guidance || blankEvidenceGuidance();
+  const previousGuidance = storedEvidenceGuidance(current.guidance);
   const guidance = editGuidance(input.guidance, previousGuidance, documents);
   if (
     ['title', 'project', 'purpose', 'mode'].some(key => input[key as keyof ReceiptPacket] !== current[key as keyof ReceiptPacket]) ||
@@ -293,4 +315,67 @@ export function packetAssessment(packet: ReceiptPacket) {
     policyVerified: false as const,
     includedPages: pages.length,
   };
+}
+
+// Pages that prove a payment. An invoice, quotation, transfer slip or payment voucher for the same purchase is not
+// counted, so one purchase is never added twice.
+const PAYMENT_PROOF_KINDS: PacketDocumentKind[] = ['tax_invoice', 'abbreviated_tax_invoice', 'receipt', 'cash_bill', 'receipt_voucher'];
+const CAP_SATANG = 1_000_000;
+export type CategoryTotal = {
+  key: string;
+  category: Extract<ClaimCategory, 'B' | 'BV' | 'emergency'>;
+  code: string;
+  receipts: number;
+  unreadable: number;
+  total: number;
+  status: 'within' | 'over' | 'check';
+};
+
+/**
+ * AFP caps category B at 10,000 baht per sub-category summed over every item (circular section 3.1), BV per driver per
+ * activity and the emergency category at 10,000 baht. Only receipts compared on the receipt check carry a category and
+ * amount, so this sums those; a receipt without a sub-category is grouped apart and never called over the cap.
+ */
+export function packetCategoryTotals(packet: ReceiptPacket): CategoryTotal[] {
+  const packetCategory = parseClaimCategory(packet.guidance?.category);
+  const groups = new Map<string, CategoryTotal>();
+  for (const doc of packet.documents) {
+    const reviewed = doc.reviewedReceipt;
+    if (!reviewed || !doc.pages.some(page => page.included && PAYMENT_PROOF_KINDS.includes(page.kind))) continue;
+    const kept = parseClaimCategory(reviewed.category);
+    const category = kept && kept !== 'unsure' ? kept : packetCategory;
+    if (category !== 'B' && category !== 'BV' && category !== 'emergency') continue;
+    const code = parseExpenseCode(reviewed.code);
+    // B9.2 and B9.1 share the B9 cap; BV1 and BV2 are both BV.
+    const top = category === 'B' ? code.match(/^B\d+/)?.[0] || '' : '';
+    const key = category === 'B' ? top || 'B?' : category;
+    const group = groups.get(key) || { key, category, code: top, receipts: 0, unreadable: 0, total: 0, status: 'within' as const };
+    const amount = moneySatang(reviewed.values.total);
+    if (amount === null) group.unreadable++;
+    else {
+      group.receipts++;
+      group.total += amount;
+    }
+    groups.set(key, group);
+  }
+  return [...groups.values()]
+    .map(group => ({
+      ...group,
+      status: (group.total > CAP_SATANG
+        ? group.key === 'B?' || group.category === 'BV'
+          ? 'check'
+          : 'over'
+        : 'within') as CategoryTotal['status'],
+    }))
+    .sort((a, b) => a.key.localeCompare(b.key, 'en', { numeric: true }));
+}
+
+/** Receipts whose category on the receipt check differs from the packet's; shown so the person decides, never merged. */
+export function packetCategoryConflicts(packet: ReceiptPacket) {
+  const packetCategory = parseClaimCategory(packet.guidance?.category);
+  if (!packetCategory || packetCategory === 'unsure') return [];
+  return packet.documents.flatMap(doc => {
+    const kept = parseClaimCategory(doc.reviewedReceipt?.category);
+    return kept && kept !== 'unsure' && kept !== packetCategory ? [{ id: doc.id, name: doc.name, category: kept }] : [];
+  });
 }
