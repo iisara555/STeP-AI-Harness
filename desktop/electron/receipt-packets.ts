@@ -8,13 +8,15 @@ import {
   PACKET_LIMITS,
   packetText,
   packetKind,
+  parseExpenseCode,
   type ReceiptPacket,
   type PacketListItem,
   type ReviewedReceipt,
   type PacketSource,
 } from '../src/receipt-packet';
 import { blankPaymentVoucher, paymentVoucherFromReceipt } from '../src/afp-payment-voucher';
-import { blankEvidenceGuidance } from '../src/afp-evidence';
+import { storedEvidenceGuidance } from '../src/afp-evidence';
+import { parseClaimCategory } from '../src/receipt-compliance';
 
 type Records = {
   get<T>(kind: string, id: string): T | undefined;
@@ -80,7 +82,7 @@ export class ReceiptPackets {
       ...packet,
       disbursement: packet.disbursement || blankPaymentVoucher(),
       includeDisbursement: Boolean(packet.includeDisbursement),
-      guidance: packet.guidance || blankEvidenceGuidance(),
+      guidance: storedEvidenceGuidance(packet.guidance),
     };
   }
   save(raw: ReceiptPacket) {
@@ -170,6 +172,8 @@ export class ReceiptPackets {
           description: packetText(reviewed.description, 1200),
           total: packetText(reviewed.total, 40),
         },
+        category: parseClaimCategory(reviewed.category) || 'unsure',
+        code: parseExpenseCode(reviewed.code),
       };
     }
     const written: string[] = [];
@@ -191,6 +195,9 @@ export class ReceiptPackets {
         paymentApproved: false,
       };
       if (reviewed) {
+        // The category kept on the receipt check fills an unset packet category; a different one is shown, not overwritten.
+        const kept = documents[0].reviewedReceipt?.category;
+        if (kept && kept !== 'unsure' && current.guidance.category === 'unsure') next.guidance = { ...current.guidance, category: kept };
         next.voucher = { ...current.voucher, checked: false };
         if (!next.voucher.recipient) next.voucher.recipient = reviewed.recipient;
         if (!next.voucher.date) next.voucher.date = reviewed.date;

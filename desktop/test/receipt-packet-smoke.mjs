@@ -238,12 +238,20 @@ try {
   await page.getByRole('button', { name: 'ตรวจใบเสร็จ', exact: true }).click();
   await pick([receipt]);
   await page.getByRole('button', { name: 'เลือกใบเสร็จ', exact: true }).click();
+  // The category kept on the receipt check becomes the new packet's category and its amount joins the sub-category total.
+  await page.getByText('เพิ่มวัตถุประสงค์หรือแก้หมวด (ถ้าจำเป็น)', { exact: true }).click();
+  await page.getByLabel('หมวดที่จะเบิก', { exact: true }).selectOption('B');
   await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
   await page.getByRole('button', { name: 'ชุดเอกสารเบิกจ่าย', exact: true }).click();
   await page.getByRole('button', { name: 'สร้างชุดใหม่', exact: true }).click();
   await page.getByRole('button', { name: 'หลักฐาน', exact: true }).click();
   await page.getByRole('button', { name: 'เพิ่มใบเสร็จที่ตรวจแล้ว', exact: true }).click();
   await expect(page.getByText('มีข้อมูลจากใบเสร็จที่คนตรวจเทียบแล้ว เก็บแหล่งที่มาคู่กับไฟล์นี้', { exact: true })).toBeVisible();
+  const evidence = page.getByRole('region', { name: 'แนะนำเอกสารตามกิจกรรม' });
+  await expect(evidence).toContainText('หมวด: หมวด B (B1–B12)');
+  await expect(evidence.locator('.evidence-totals')).toContainText('1 ใบ · 107.00 บาท');
+  await evidence.locator('.evidence-totals').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: join(output, 'packet-category-totals.png') });
   await page.getByRole('button', { name: 'ร่างและส่งออก', exact: true }).click();
   await expect(page.getByLabel('จำนวนเงินรายการ 1', { exact: true })).toHaveValue('107.00');
   await expect(page.getByLabel('ตรวจข้อมูลร่างใบสำคัญรับเงินเทียบกับหลักฐานแล้ว', { exact: true })).not.toBeChecked();
