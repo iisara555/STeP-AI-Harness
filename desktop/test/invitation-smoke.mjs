@@ -100,9 +100,9 @@ try {
   const form = page.locator('.document-form');
   await form.getByLabel('ชนิด / เรื่อง', { exact: true }).selectOption('invitation');
   const number = form.getByLabel('เลขหนังสือ', { exact: true });
-  await expect(number).toHaveAttribute('placeholder', 'เช่น ศธ 0000/0123');
+  await expect(number).toHaveAttribute('placeholder', 'เช่น ศธ 0000/0123 (เว้นไว้ได้)');
   await expect(number).toHaveValue('');
-  await expect(form.getByLabel('วันปิดตอบรับ', { exact: true })).toHaveAttribute('placeholder', 'เช่น 15 มกราคม 2570');
+  await expect(form.getByLabel('วันปิดตอบรับ', { exact: true })).toHaveAttribute('placeholder', 'เช่น 15 มกราคม 2570 (เว้นไว้ได้)');
   await expect(form.getByLabel('ลิงก์ตอบรับเข้าร่วมงาน')).toHaveAttribute('placeholder', 'https://example.org/rsvp');
   await expect(form.getByRole('button', { name: 'ให้ AI ร่างเอกสาร' })).toBeDisabled();
   await form.getByLabel('เรื่อง', { exact: true }).fill('กิจกรรมสังเคราะห์');

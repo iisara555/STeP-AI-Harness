@@ -8,6 +8,7 @@ import { scrub, explainRuntimeFailure } from './diagnostics';
 import type { Connection, ModelOption, VisionInput } from '../src/types';
 import { providerSessionKey, type ProviderAdapter, type ProviderContext, type ProviderSession, type TokenCount } from './providers';
 import { combineUsage } from './usage';
+import { tokens } from './compact';
 import { effortInModel } from './effort';
 import { jsonSchemaInstruction, strictJsonSchema } from './json-schema';
 import { AntigravityMcpBridge, isGovernedBridgeTool, type GovernedBridgeExecutor } from './antigravity-mcp-bridge';
@@ -710,6 +711,19 @@ export async function prewarmAntigravity(connection: Connection, context: Provid
   return true;
 }
 
+/**
+ * Largest first message of an agy conversation, in estimated tokens of system + prompt. On 2026-11-18 the owner's
+ * diagnostics showed agy keeping only about 45–47k Gemini tokens of a longer first message, without an error: the
+ * newest request at its end never reached the model. Later turns of a kept conversation are not cut. The host estimate
+ * runs 1.3–2× above Gemini's own count, so this stays under that cut; a longer first message is compacted first.
+ */
+export const ANTIGRAVITY_FIRST_MESSAGE_TOKENS = 56_000;
+
+/** Refuses a whole-prompt send agy would cut; the host's CONTEXT_LIMIT handling compacts the prompt and retries. */
+function checkFirstMessage(system: string | undefined, prompt: string) {
+  if (tokens((system || '') + prompt) > ANTIGRAVITY_FIRST_MESSAGE_TOKENS) throw new Error('CONTEXT_LIMIT');
+}
+
 export class AntigravityAdapter implements ProviderAdapter {
   private conversations = new WeakMap<ProviderSession, AgyConversation>();
   /** Sessions in which a governed bridge call reached the host: their effects live only in that agy conversation. */
@@ -825,6 +839,7 @@ export class AntigravityAdapter implements ProviderAdapter {
   /** One process, one message, stdin closed after it; success needs a validated result and exit 0. */
   private async runOnce(prompt: string, connection: Connection, context: ProviderContext, deadline: number, useSchema: boolean) {
     this.check(connection, context);
+    checkFirstMessage(context.system, prompt);
     const home = await antigravityHome(context);
     let clean = true;
     let conversation = '';
@@ -883,6 +898,8 @@ export class AntigravityAdapter implements ProviderAdapter {
     const reuse = Boolean(
       held && !held.exited && held.identity === identity && held.sent && (prompt.startsWith(held.sent) || Boolean(context.followUpDelta)),
     );
+    // A new conversation gets the whole prompt in one message, which agy cuts when it is too long.
+    if (!reuse) checkFirstMessage(context.system, prompt);
     if (held && !reuse) await session.closeAndWait();
     if (reuse) {
       let shown = 0;
@@ -907,6 +924,7 @@ export class AntigravityAdapter implements ProviderAdapter {
         if (context.signal.aborted || !resettable(error) || this.bridged.has(session)) throw error;
         if (shown) context.discard?.(shown);
         await session.closeAndWait();
+        checkFirstMessage(context.system, prompt);
         return this.turn(
           await this.open(session, identity, connection, context),
           prompt,

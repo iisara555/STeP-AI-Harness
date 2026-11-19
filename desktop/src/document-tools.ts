@@ -35,8 +35,8 @@ const draftingChecks = 'skills/common/thai-official-documents/references/draftin
 const thaiLayout = 'skills/common/thai-official-documents/references/thai-layout.md';
 const sarabanGuide = 'skills/common/thai-official-documents/references/saraban-writing-guide.md';
 const official = [
-  field('number', 'เลขหนังสือ', false, 'เว้นไว้หากยังไม่ได้ออกเลข'),
-  field('date', 'วันที่', false, 'ระบุปีเต็ม เช่น 2 ตุลาคม 2569'),
+  field('number', 'เลขหนังสือ'),
+  field('date', 'วันที่', false, 'ระบุปีเต็ม'),
   field('recipient', 'เรียน / ผู้รับ'),
   field('signer', 'ผู้ลงนามและตำแหน่ง', false, 'ระบุเฉพาะผู้ที่เจ้าของเรื่องเลือกแล้ว'),
   field('references', 'อ้างถึง / สิ่งที่ส่งมาด้วย', true),
@@ -70,25 +70,15 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     fields: [
       ...common,
       {
-        ...field('intendedUse', 'การใช้งานและผลสำเร็จที่ต้องการ', true, 'เว้นได้ ระบุว่าใครใช้ ใช้ทำอะไร และต้องส่งมอบอะไรจึงใช้งานได้'),
+        ...field('intendedUse', 'การใช้งานและผลสำเร็จที่ต้องการ', true, 'ระบุว่าใครใช้ ใช้ทำอะไร และต้องส่งมอบอะไรจึงใช้งานได้'),
         missingAction: 'omit',
       },
       {
-        ...field(
-          'constraints',
-          'ข้อจำกัด / งานที่ไม่รวม',
-          true,
-          'เว้นได้ ระบุสิ่งที่ต้องใช้ร่วมกัน สิ่งที่หน่วยงานเตรียมให้ และงานที่ไม่ต้องการ',
-        ),
+        ...field('constraints', 'ข้อจำกัด / งานที่ไม่รวม', true, 'ระบุสิ่งที่ต้องใช้ร่วมกัน สิ่งที่หน่วยงานเตรียมให้ และงานที่ไม่ต้องการ'),
         missingAction: 'omit',
       },
       {
-        ...field(
-          'preferences',
-          'รูปแบบเอกสารที่ต้องการ',
-          true,
-          'เว้นได้ ระบุแบบหน่วยงาน ลำดับหัวข้อ ความละเอียด หรือรูปแบบตารางที่ต้องการ',
-        ),
+        ...field('preferences', 'รูปแบบเอกสารที่ต้องการ', true, 'ระบุแบบหน่วยงาน ลำดับหัวข้อ ความละเอียด หรือรูปแบบตารางที่ต้องการ'),
         missingAction: 'omit',
       },
       draftable('background', 'ความเป็นมา', true),
@@ -175,18 +165,8 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     ],
     fields: [
       ...common,
-      draftable(
-        'rationale',
-        'หลักการและเหตุผล',
-        true,
-        'เว้นได้ AI ช่วยขึ้นร่าง 3 ย่อหน้า (ที่มา/ปัญหา → แนวทางแก้ไข → จุดมุ่งหมายโครงการ)',
-      ),
-      draftable(
-        'objectives',
-        'วัตถุประสงค์',
-        true,
-        'ใช้คำกริยาเชิงพฤติกรรมที่วัดผลได้ เช่น เพื่อพัฒนาศักยภาพ เพื่อประเมิน เพื่อสร้างเสริม',
-      ),
+      draftable('rationale', 'หลักการและเหตุผล', true, '3 ย่อหน้า: ที่มา/ปัญหา → แนวทางแก้ไข → จุดมุ่งหมายโครงการ'),
+      draftable('objectives', 'วัตถุประสงค์', true, 'ใช้คำกริยาเชิงพฤติกรรมที่วัดผลได้'),
       field('target', 'กลุ่มเป้าหมาย / จำนวนที่มีหลักฐาน', false, 'แยกผู้เข้าร่วม (ภายใน/ภายนอก) และคณะผู้ดำเนินงาน'),
       draftable('activities', 'กิจกรรม / วิธีดำเนินงาน', true, 'แบ่ง 4 ระยะ (PDCA: เตรียมการ → ดำเนินการ → ติดตามประเมินผล → สรุปผล)'),
       field('timeline', 'ระยะเวลา / สถานที่'),
@@ -242,7 +222,7 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     fields: [
       ...common,
       {
-        ...field('kind', 'ประเภทหรือชื่อแบบที่ต้องการ', false, 'กรอกเมื่อเลือก “ระบุประเภทเอง” เช่น รายงานสรุปผลหรือแบบเสนองาน'),
+        ...field('kind', 'ประเภทหรือชื่อแบบที่ต้องการ', false, 'กรอกเมื่อเลือก “ระบุประเภทเอง”'),
         missingAction: 'omit',
       },
       field('purpose', 'เอกสารนี้ใช้ทำอะไร / ใครเป็นผู้อ่าน', true),
@@ -254,6 +234,115 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     ],
   },
 ];
+/**
+ * Synthetic form-filling examples, shown in each empty field as "เช่น … (เว้นไว้ได้)". UI only: they are never sent to
+ * the AI and never stand in for a fact the owner has not given.
+ */
+const officialExamples: Readonly<Record<string, string>> = {
+  number: 'ศธ 0000/0123',
+  date: '2 ตุลาคม 2569',
+  recipient: 'ผู้อำนวยการสำนักงานตัวอย่าง',
+  signer: 'คุณพิม ตัวอย่าง ผู้อำนวยการ',
+  references: 'สิ่งที่ส่งมาด้วย กำหนดการ 1 ฉบับ',
+};
+const fieldExamples: Readonly<Record<DocumentToolId, Readonly<Record<string, string>>>> = {
+  tor: {
+    title: 'จ้างพัฒนาระบบจองห้องประชุม',
+    unit: 'ฝ่ายบริหารงานทั่วไป',
+    owner: 'คุณกานต์ ตัวอย่าง',
+    intendedUse: 'เจ้าหน้าที่ 50 คนจองห้องผ่านเว็บ ส่งมอบพร้อมคู่มือ',
+    constraints: 'ใช้เซิร์ฟเวอร์ของหน่วยงาน ไม่รวมค่าโดเมน',
+    preferences: 'ใช้แบบ TOR ของหน่วยงาน มีตารางงวดงาน',
+    background: 'ห้องประชุมถูกจองซ้ำบ่อยเพราะใช้สมุดจอง',
+    objectives: 'เพื่อให้จองห้องประชุมได้ทันทีและไม่ซ้ำกัน',
+    scope: 'ออกแบบ พัฒนา ติดตั้ง และอบรมผู้ใช้',
+    deliverables: 'ระบบที่ใช้งานได้ ซอร์สโค้ด และคู่มือผู้ใช้',
+    qualifications: 'มีผลงานพัฒนาระบบให้หน่วยงานรัฐ',
+    acceptance: 'ทดสอบจองพร้อมกัน 20 คนโดยไม่มีข้อผิดพลาด',
+    timeline: '120 วัน แบ่ง 2 งวด',
+    budget: '450,000 บาท จากงบดำเนินงานปี 2570',
+    sources: 'แบบ TOR ของหน่วยงาน',
+  },
+  memo: {
+    ...officialExamples,
+    unit: 'งานพัสดุ ฝ่ายบริหาร โทร. 1234',
+    subject: 'ขออนุมัติจัดอบรมการใช้ AI ในงานเอกสาร',
+    recipient: 'ผู้อำนวยการ',
+    signer: 'คุณพิม ตัวอย่าง หัวหน้างานพัสดุ',
+    reviewer: 'หัวหน้าฝ่ายบริหาร',
+    decisionSigner: 'ผู้อำนวยการ',
+    background: 'หน่วยงานมีแผนพัฒนาทักษะดิจิทัลของบุคลากร',
+    facts: 'มีผู้สมัครเข้าอบรมแล้ว 30 คน',
+    considerations: 'สอดคล้องกับแผนพัฒนาบุคลากรและมีงบรองรับ',
+    request: 'อนุมัติจัดอบรมวันที่ 20 มกราคม 2570',
+    budget: '15,000 บาท จากงบพัฒนาบุคลากร',
+    sources: 'ระเบียบว่าด้วยค่าใช้จ่ายในการฝึกอบรม',
+  },
+  letter: {
+    ...officialExamples,
+    unit: 'หน่วยงานตัวอย่าง เลขที่ 99 ถนนตัวอย่าง',
+    subject: 'ขอความอนุเคราะห์ข้อมูลสถิติผู้ใช้บริการ',
+    background: 'หน่วยงานกำลังจัดทำรายงานประจำปี 2569',
+    content: 'ขอข้อมูลจำนวนผู้ใช้บริการรายเดือน',
+    schedule: '20 มกราคม 2570 เวลา 09.00 น. ณ ห้องประชุมตัวอย่าง',
+    contact: 'คุณเมย์ ตัวอย่าง โทร. 1234',
+    sources: 'แบบหนังสือภายนอกของหน่วยงาน',
+  },
+  project: {
+    title: 'โครงการอบรมการใช้ AI ในงานเอกสาร',
+    unit: 'ฝ่ายพัฒนาบุคลากร',
+    owner: 'คุณกานต์ ตัวอย่าง',
+    rationale: 'งานเอกสารใช้เวลามาก บุคลากรยังใช้เครื่องมือไม่คล่อง',
+    objectives: 'เพื่อพัฒนาทักษะการร่างเอกสารด้วย AI ของบุคลากร',
+    target: 'บุคลากร 30 คน คณะทำงาน 5 คน',
+    activities: 'เตรียมหลักสูตร → อบรม 1 วัน → ติดตามผล 1 เดือน',
+    timeline: 'มกราคม–มีนาคม 2570 ณ ห้องประชุมตัวอย่าง',
+    budget: 'ค่าตอบแทนวิทยากร 3,600 บาท ค่าอาหารว่าง 1,500 บาท',
+    indicators: 'ผู้เข้าอบรมร้อยละ 80 ร่างเอกสารได้เอง',
+    outcomes: 'บุคลากรร่างเอกสารได้เร็วขึ้นและถูกแบบ',
+    sources: 'แบบเสนอโครงการของหน่วยงาน',
+  },
+  minutes: {
+    title: 'ประชุมคณะทำงานพัฒนาระบบ',
+    number: '1/2570',
+    date: '20 มกราคม 2570 เวลา 13.30 น. ณ ห้องประชุมตัวอย่าง',
+    attendees: 'มาประชุม 8 คน ไม่มาประชุม 1 คน (ลาป่วย)',
+    agendas: 'วาระที่ 1 เรื่องแจ้งเพื่อทราบ',
+    notes: 'ที่ประชุมทบทวนแผนงานไตรมาสที่ 1',
+    decisions: 'เห็นชอบแผนงานตามที่เสนอ',
+    owners: 'คุณกานต์ สรุปผลภายใน 31 มกราคม 2570',
+    recorder: 'คุณเมย์ ตัวอย่าง',
+    sources: 'แบบรายงานการประชุมของหน่วยงาน',
+  },
+  other: {
+    ...officialExamples,
+    title: 'รายงานสรุปผลการอบรมประจำปี 2569',
+    unit: 'ฝ่ายพัฒนาบุคลากร',
+    owner: 'คุณกานต์ ตัวอย่าง',
+    kind: 'รายงานสรุปผลการอบรม',
+    purpose: 'รายงานผู้บริหารเพื่อวางแผนปีถัดไป',
+    facts: 'อบรม 3 รุ่น ผู้เข้าร่วม 90 คน',
+    content: 'สรุปผล ปัญหาที่พบ และข้อเสนอแนะ',
+    requirements: 'ไม่เกิน 2 หน้า มีตารางสรุป',
+    sources: 'แบบรายงานของหน่วยงาน',
+  },
+};
+const invitationExamples: Readonly<Record<string, string>> = {
+  subject: 'ขอเชิญเข้าร่วมกิจกรรมแลกเปลี่ยนผลงาน',
+  recipient: 'คุณกานต์ ตัวอย่าง',
+  signer: 'คุณพิม ตัวอย่าง — ผู้อำนวยการ',
+  background: 'จัดเวทีแลกเปลี่ยนแนวทางทำงานระหว่างทีม',
+  content: 'ขอเชิญเข้าร่วมและแลกเปลี่ยนประสบการณ์',
+  schedule: '20 มกราคม 2570 เวลา 09.00–12.00 น. ณ ห้องประชุมตัวอย่าง',
+  recipientPosition: 'ผู้จัดการโครงการ หน่วยงานตัวอย่าง',
+  rsvpDeadline: '15 มกราคม 2570',
+  contact: 'คุณเมย์ ตัวอย่าง · events@example.org',
+  sources: 'กำหนดการฉบับเจ้าของงานยืนยัน',
+};
+/** The example for one field of a document form, or undefined if none is written yet. */
+export function fieldExample(id: DocumentToolId, key: string, variant?: string): string | undefined {
+  return (id === 'letter' && variant === 'invitation' && invitationExamples[key]) || fieldExamples[id]?.[key];
+}
 export const documentTool = (id: unknown) => DOCUMENT_TOOLS.find(p => p.id === id);
 export function documentVariant(id: unknown, variant: unknown): string | undefined {
   if (variant === undefined) return undefined;
