@@ -26,13 +26,16 @@ const totalNotes: Record<CategoryTotal['status'], string> = {
   within: 'ไม่เกิน 10,000 บาท',
   over: 'เกินเพดาน 10,000 บาท · ปรึกษา AFP ก่อนส่ง',
   check: 'รวมเกิน 10,000 บาท · ตรวจว่าแยกกันถูกต้อง',
+  unset: 'เลือกหมวดเพื่อเทียบเพดาน',
 };
 const totalName = (total: CategoryTotal) =>
-  total.key === 'B?'
-    ? t('หมวด B ยังไม่ระบุหมวดย่อย')
-    : total.category === 'B'
-      ? expenseCodeLabel(total.code)
-      : t(CLAIM_CATEGORY_LABELS[total.category]);
+  total.category === 'unsure'
+    ? t('ยังไม่ระบุหมวด')
+    : total.key === 'B?'
+      ? t('หมวด B ยังไม่ระบุหมวดย่อย')
+      : total.category === 'B'
+        ? expenseCodeLabel(total.code)
+        : t(CLAIM_CATEGORY_LABELS[total.category]);
 const sourceLabels = {
   'qp-af-003': 'QP-AF-003 ข้อ 4.2 · ใช้เมื่อเกี่ยวข้อง',
   'qp-af-003-reserve': 'QP-AF-003 ข้อ 4.3 · สำรองเงินจ่ายล่วงหน้า',

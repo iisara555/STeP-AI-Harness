@@ -153,6 +153,58 @@ test('checked OCR reuse binds to snapshot content and preserves manual voucher d
     assert.equal(packet.documents[0].sha256, token);
   }));
 
+test('a receipt checked after its file was added links to that file, and duplicates in a batch are skipped', async () =>
+  fixture(async packets => {
+    const receipt = await pdfBytes([401]),
+      attendance = await pdfBytes([402, 403]),
+      token = receiptSourceToken(receipt);
+    let packet = packets.create();
+    let added = await packets.addNew(packet.id, packet.revision, [
+      { name: 'ใบเสร็จน้ำดื่ม.pdf', extension: 'pdf', bytes: receipt },
+      { name: 'FM-AF-015.pdf', extension: 'pdf', bytes: attendance },
+      { name: 'ใบเสร็จน้ำดื่ม สำเนา.pdf', extension: 'pdf', bytes: receipt },
+    ]);
+    assert.deepEqual(added.skipped, ['ใบเสร็จน้ำดื่ม สำเนา.pdf']);
+    assert.equal(added.packet.documents.length, 2);
+    await assert.rejects(
+      packets.addNew(added.packet.id, added.packet.revision, [{ name: 'again.pdf', extension: 'pdf', bytes: attendance }]),
+      /PACKET_DUPLICATE_SOURCE/,
+    );
+    packet = added.packet;
+    const review = {
+      sourceToken: token,
+      checked: true,
+      recipient: 'Synthetic shop',
+      date: '20/11/2569',
+      description: 'ค่าน้ำดื่ม',
+      total: '107.00',
+      kind: 'receipt' as const,
+      category: 'B' as const,
+      code: 'B10',
+    };
+    await assert.rejects(
+      packets.add(packet.id, packet.revision, [{ name: 'x.pdf', extension: 'pdf', bytes: receipt }], {
+        ...review,
+        checked: false as never,
+      }),
+      /PACKET_REVIEW_STALE/,
+    );
+    const linked = await packets.add(packet.id, packet.revision, [{ name: 'checked.pdf', extension: 'pdf', bytes: receipt }], review);
+    assert.equal(linked.documents.length, 2, 'no second copy of the same file');
+    assert.equal(linked.documents[0].name, 'ใบเสร็จน้ำดื่ม.pdf');
+    assert.equal(linked.documents[0].reviewedReceipt?.values.total, '107.00');
+    assert.equal(linked.documents[0].reviewedReceipt?.code, 'B10');
+    assert.equal(linked.documents[0].pages[0].kind, 'receipt');
+    assert.equal(linked.guidance.category, 'B');
+    assert.equal(linked.voucher.items[0].amount, '107.00');
+    assert.equal(linked.revision, packet.revision + 1);
+    assert.deepEqual(packets.get(packet.id).documents[0].reviewedReceipt?.values.total, '107.00');
+    assert.deepEqual(
+      packetCategoryTotals(linked).map(total => [total.key, total.total]),
+      [['B10', 10_700]],
+    );
+  }));
+
 test('failed batch imports and concurrent edits leave no half-imported source set', async () =>
   fixture(async (packets, root) => {
     const packet = packets.create(),
@@ -307,6 +359,15 @@ test('the 10,000 baht cap sums every receipt in one sub-category, not each recei
   packet.guidance.category = 'other';
   packet.documents = [source(1, '20,000', '')];
   assert.deepEqual(packetCategoryTotals(packet), []);
+  // With no category on the receipts or the packet the sum still shows, marked as not yet compared with a cap.
+  packet.guidance.category = 'unsure';
+  packet.documents = [source(1, '107.00', '', 'receipt', 'unsure'), source(2, '9,950.00', '', 'receipt', 'unsure')];
+  const unset = packetCategoryTotals(packet);
+  assert.deepEqual(
+    unset.map(total => [total.key, total.receipts, total.total, total.status]),
+    [['unsure', 2, 1_005_700, 'unset']],
+  );
+  assert.match(receiptPacketCoverHtml(packet, 1, 0, ''), /ยังไม่ระบุหมวด — 2 ใบ 10,057.00 บาท \(ยังไม่ได้เทียบเพดาน\)/);
   assert.match(
     receiptPacketCoverHtml({ ...packet, documents: [source(1, '20,000', 'B10', 'receipt', 'B')] }, 1, 0, ''),
     /เกินเพดาน 10,000/,

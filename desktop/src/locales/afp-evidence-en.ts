@@ -43,6 +43,8 @@ export const afpEvidenceEn: Record<string, string> = {
   'เกินเพดาน 10,000 บาท · ปรึกษา AFP ก่อนส่ง': 'Over the 10,000 baht cap · ask AFP before sending',
   'รวมเกิน 10,000 บาท · ตรวจว่าแยกกันถูกต้อง': 'Over 10,000 baht together · check they are split correctly',
   'หมวด B ยังไม่ระบุหมวดย่อย': 'Category B, sub-category not set',
+  ยังไม่ระบุหมวด: 'Category not set',
+  เลือกหมวดเพื่อเทียบเพดาน: 'Choose a category to compare with the cap',
   'หมวด: {0} · กรณีการเงิน: {1}': 'Category: {0} · finance scenario: {1}',
   '{0} ตรวจไว้เป็น{1} ไม่ตรงกับหมวดของชุดนี้': '{0} was checked as {1}, which differs from this packet’s category',
   'ปรับหมวด กิจกรรม และกรณีการเงิน': 'Adjust category, activity and finance scenario',
