@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 const allowed = new Set([
   'welcomeGreeting',
   'welcomeGreetingLeave',
@@ -146,6 +146,7 @@ const allowed = new Set([
   'receiptPacketAddReview',
   'receiptPacketRemoveSource',
   'receiptPacketOpenSource',
+  'receiptPacketRead',
   'receiptPacketExport',
   'ocrTrialSave',
   'send',
@@ -192,6 +193,14 @@ contextBridge.exposeInMainWorld('step', {
   call: (method: string, input: unknown) => {
     if (!allowed.has(method)) throw new Error('UNKNOWN_OPERATION');
     return ipcRenderer.invoke('step:call', method, input);
+  },
+  // The original's place on disk for a dropped file, kept only so an export never overwrites it; '' when there is none.
+  filePath: (file: File) => {
+    try {
+      return webUtils.getPathForFile(file) || '';
+    } catch {
+      return '';
+    }
   },
   onEvent: (callback: (event: unknown) => void) => {
     const handler = (_: unknown, event: unknown) => callback(event);

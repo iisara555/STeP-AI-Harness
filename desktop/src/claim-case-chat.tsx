@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUp, Check, Square, X } from './icons';
+import { ArrowUp, Check, LoaderCircle, Paperclip, Square, X } from './icons';
 import { t } from './i18n';
 import { RichText } from './ui';
 import { errorText } from './messages';
@@ -8,6 +8,7 @@ import { ClaimInterview, type InterviewHandle } from './claim-interview-panel';
 import { applyClaimSummary, type ClaimSummary } from './claim-interview';
 import { applyClaimUpdate, claimUpdateRows, pendingClaimUpdate, splitClaimReply, type ClaimUpdate } from './claim-case';
 import type { ReceiptPacket } from './receipt-packet';
+import { pendingReadings, readingLine, type ReadingBatch } from './evidence-reading';
 import type { Session } from './types';
 
 /** How the case chat reaches the AI; supplied by the workspace so the run stays out of the main chat. */
@@ -32,12 +33,30 @@ type Props = {
   /** True while a proposal or a finished interview waits for the person, so the page keeps one primary action. */
   onDecision: (waiting: boolean) => void;
   notify: (text: string, tone?: 'info' | 'success' | 'error') => void;
+  /** Files added to this case and what reading each one found. */
+  readings: ReadingBatch[];
+  busy: boolean;
+  onAttach: () => void;
+  onSettleReading: (batchId: string, settled: 'applied' | 'dismissed') => void;
 };
 
 const HINT = { amount: 'เช่น 3,500', date: 'เช่น 18 พ.ย. 2569', text: 'ตอบ หรือถามว่าทำไม' } as const;
 
 /** One chat per disbursement case: the interview, then questions to the AI, answered and filled in here. */
-export function ClaimCaseChat({ packet, chat, ask: askCase, call, onEvent, onChange, onDecision, notify }: Props) {
+export function ClaimCaseChat({
+  packet,
+  chat,
+  ask: askCase,
+  call,
+  onEvent,
+  onChange,
+  onDecision,
+  notify,
+  readings,
+  busy,
+  onAttach,
+  onSettleReading,
+}: Props) {
   const session = chat.sessions.find(s => s.claimPacketId === packet.id);
   const interview = useRef<InterviewHandle>(null);
   const end = useRef<HTMLDivElement | null>(null);
@@ -69,12 +88,14 @@ export function ClaimCaseChat({ packet, chat, ask: askCase, call, onEvent, onCha
     if (lastAnswer < 0 || running || dismissed[`${id}:${lastAnswer}`]) return null;
     return pendingClaimUpdate(packet, splitClaimReply(messages[lastAnswer].text).update);
   })();
+  const readingWaiting = readings.some(batch => !batch.settled && readingDone(batch) && pendingReadings(packet, batch.items).length);
   useEffect(() => {
-    onDecision(interviewWaiting || Boolean(proposal));
-  }, [interviewWaiting, Boolean(proposal)]);
+    onDecision(interviewWaiting || Boolean(proposal) || readingWaiting);
+  }, [interviewWaiting, Boolean(proposal), readingWaiting]);
+  const readingState = readings.map(batch => batch.items.map(item => item.state).join()).join();
   useEffect(() => {
     end.current?.scrollIntoView?.({ block: 'nearest' });
-  }, [messages.length, stream, Boolean(proposal)]);
+  }, [messages.length, stream, Boolean(proposal), readingState]);
   const ask = async (value: string) => {
     setSending(true);
     try {
@@ -145,6 +166,9 @@ export function ClaimCaseChat({ packet, chat, ask: askCase, call, onEvent, onCha
             </article>
           );
         })}
+        {readings.map(batch => (
+          <ReadingCard key={batch.id} batch={batch} packet={packet} onSettle={settled => onSettleReading(batch.id, settled)} />
+        ))}
         {running && (
           <article className="message assistant" aria-label={t('ผู้ช่วยเบิกจ่าย')}>
             {stream.trim() ? (
@@ -164,7 +188,7 @@ export function ClaimCaseChat({ packet, chat, ask: askCase, call, onEvent, onCha
             )}
           </p>
         )}
-        <div ref={end} />
+        <div ref={end} className="case-chat-end" />
       </div>
       <form
         className="case-composer"
@@ -173,6 +197,9 @@ export function ClaimCaseChat({ packet, chat, ask: askCase, call, onEvent, onCha
           void submit();
         }}
       >
+        <button type="button" className="icon case-attach" aria-label={t('แนบหลักฐานหลายไฟล์')} disabled={busy} onClick={onAttach}>
+          <Paperclip size={16} />
+        </button>
         <textarea
           aria-label={t('พิมพ์ในแชตเรื่องนี้')}
           rows={1}
@@ -200,6 +227,63 @@ export function ClaimCaseChat({ packet, chat, ask: askCase, call, onEvent, onCha
         <span className="case-composer-ai small muted">{chat.aiName || t('ยังไม่ได้เลือก AI · ตอบจากกฎในเครื่อง')}</span>
       </form>
     </section>
+  );
+}
+
+const readingDone = (batch: ReadingBatch) => batch.items.every(item => item.state === 'done' || item.state === 'failed');
+
+/** What reading the added files found, one line per file; the kinds reach the case only when the person says so. */
+function ReadingCard({
+  batch,
+  packet,
+  onSettle,
+}: {
+  batch: ReadingBatch;
+  packet: ReceiptPacket;
+  onSettle: (settled: 'applied' | 'dismissed') => void;
+}) {
+  const done = batch.items.filter(item => item.state === 'done' || item.state === 'failed').length;
+  const finished = readingDone(batch);
+  const pending = finished && !batch.settled ? pendingReadings(packet, batch.items) : [];
+  return (
+    <div className="case-reading" role="group" aria-label={t('อ่านไฟล์ที่เพิ่ม')}>
+      <strong>
+        {finished ? t('อ่านไฟล์ที่เพิ่มแล้ว {0} ไฟล์', batch.items.length) : t('กำลังอ่านไฟล์ที่เพิ่ม {0}/{1}', done, batch.items.length)}
+      </strong>
+      <ul>
+        {batch.items.map(item => (
+          <li key={item.sourceId} data-state={item.state}>
+            {item.state === 'reading' ? (
+              <LoaderCircle size={13} className="spin" aria-hidden="true" />
+            ) : item.state === 'done' && item.result?.kind ? (
+              <Check size={13} aria-hidden="true" />
+            ) : (
+              <span className="case-reading-dot" aria-hidden="true" />
+            )}
+            <span className="case-reading-name">{item.name}</span>
+            <span className="small muted">{readingLine(item, t)}</span>
+          </li>
+        ))}
+      </ul>
+      {pending.length > 0 && (
+        <div className="case-proposal-actions">
+          <button type="button" className="primary" onClick={() => onSettle('applied')}>
+            {t('ใช้ประเภทที่อ่านได้ ({0} ไฟล์)', pending.length)}
+          </button>
+          <button type="button" className="text-link" onClick={() => onSettle('dismissed')}>
+            <X size={13} />
+            {t('ไม่ใช้')}
+          </button>
+        </div>
+      )}
+      {batch.settled === 'applied' && (
+        <p className="case-applied small muted">
+          <Check size={13} />
+          {t('ใช้ประเภทแล้ว · ตรวจเทียบต้นฉบับทีละหน้าในแผงหลักฐาน')}
+        </p>
+      )}
+      {finished && <p className="small muted">{t('อ่านในเครื่องนี้ ไม่ได้ส่งไฟล์ให้ AI')}</p>}
+    </div>
   );
 }
 
