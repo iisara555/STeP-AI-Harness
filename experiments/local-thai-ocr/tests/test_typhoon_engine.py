@@ -97,6 +97,20 @@ class NumberCheckTests(unittest.TestCase):
         self.assertTrue(checked[1]["needs_review"])
         self.assertEqual(checked[1]["crosscheck_status"], "missing_in_typhoon")
 
+    def test_neighbouring_numbers_stay_separate(self):
+        # From the 2026-11-20 run on the synthetic benchmark: merged tokens added false review lines.
+        self.assertEqual(typhoon_engine.number_tokens("น้ำดื่มตราสายธาร 600 มล. x6 54.00"), {"600", "54.00"})
+        self.assertEqual(typhoon_engine.number_tokens("1 ถ่ายเอกสารขาวดำ A4 1,200 0.50 600.00"), {"1200", "0.50", "600.00"})
+        self.assertEqual(typhoon_engine.number_tokens("ภาษีมูลค่าเพิ่ม 7% 6,017.90"), {"6017.90"})
+        lines = [{"text": "1 ถ่ายเอกสารขาวดำ A4 1,200 0.50 600.00", "box": None, "needs_review": False},
+                 {"text": "น้ำดื่มตราสายธาร 600 มล. x6 54.00", "box": None, "needs_review": False}]
+        paddle = [paddle_line("1", None), paddle_line("ถ่ายเอกสารขาวดำ A4", None), paddle_line("1,200", None),
+                  paddle_line("0.50", None), paddle_line("600.00", None),
+                  paddle_line("น้ำดื่มตราสายธาร 600 มล. x6", None), paddle_line("54.00", None)]
+        checked = typhoon_engine.check_numbers(lines, paddle)
+        self.assertEqual([line["crosscheck_status"] for line in checked], ["agree", "agree"])
+        self.assertEqual(len(checked), 2, "no Paddle amount is added when Typhoon read it")
+
     def test_short_quantities_and_text_lines_are_not_flagged(self):
         lines = [{"text": "กาแฟ 2 แก้ว", "box": None, "needs_review": False}, {"text": "ขอบคุณ", "box": None, "needs_review": False}]
         checked = typhoon_engine.check_numbers(lines, [])

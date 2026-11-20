@@ -326,12 +326,14 @@ def blocks_to_lines(blocks: list[dict[str, Any]], page_size: tuple[int, int]) ->
 
 
 def number_tokens(text: str) -> set[str]:
+    """Numbers word by word: comparable_text drops spaces, so a whole line would merge "x6 54.00" into "654.00"."""
     tokens = set()
-    for token in NUMBER.findall(comparable_text(text)):
-        token = token.strip(".,/-")
-        digits = sum(c.isdigit() for c in token)
-        if digits >= 3 or re.fullmatch(r"\d+\.\d{2}", token):
-            tokens.add(token)
+    for word in text.split():
+        for token in NUMBER.findall(comparable_text(word)):
+            token = token.strip(".,/-")
+            digits = sum(c.isdigit() for c in token)
+            if digits >= 3 or re.fullmatch(r"\d+\.\d{2}", token):
+                tokens.add(token)
     return tokens
 
 
@@ -352,6 +354,9 @@ def check_numbers(lines: list[dict[str, Any]], paddle_lines: list[dict[str, Any]
     """Flag every Typhoon line whose numbers PaddleOCR did not also read, and add amounts only PaddleOCR saw."""
     paddle_readings = [comparable_text(str(line.get("text") or "")) for line in paddle_lines]
     joined = "".join(paddle_readings)
+    paddle_tokens: set[str] = set()
+    for paddle in paddle_lines:
+        paddle_tokens |= number_tokens(str(paddle.get("text") or ""))
     seen: set[str] = set()
     for line in lines:
         tokens = number_tokens(line["text"])
@@ -359,7 +364,14 @@ def check_numbers(lines: list[dict[str, Any]], paddle_lines: list[dict[str, Any]
         if not tokens:
             continue
         line["crosscheck_engine"] = "paddle"
-        missing = [token for token in tokens if not _confirmed(token, paddle_readings) and not _confirmed(token, [joined])]
+        # Word-level tokens first; the joined readings catch a number PaddleOCR split across two boxes.
+        missing = [
+            token
+            for token in tokens
+            if token not in paddle_tokens
+            and not _confirmed(token, paddle_readings)
+            and not _confirmed(token, [joined])
+        ]
         if not missing:
             line["crosscheck_status"] = "agree"
             continue
