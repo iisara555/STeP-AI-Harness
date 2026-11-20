@@ -23,7 +23,7 @@ async function launch(first = false) {
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1500, height: 1050 });
   if (first) await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
-  await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
+  await page.getByRole('button', { name: /ผู้ช่วยเบิกจ่าย/ }).click();
   await page.getByRole('button', { name: 'ชุดเอกสารเบิกจ่าย', exact: true }).click();
   return page;
 }
@@ -32,7 +32,7 @@ try {
   await page.addStyleTag({ content: '*,*::before,*::after{animation:none!important;transition:none!important}' });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
-  await page.getByRole('button', { name: 'สร้างชุดใหม่', exact: true }).click();
+  await page.getByRole('button', { name: 'เรื่องใหม่', exact: true }).click();
   await page.getByLabel('ชื่อเรื่องเบิก', { exact: true }).fill('อบรมวิทยากร ข้อมูลสมมติ');
   await page.getByLabel('วัตถุประสงค์ของชุดเอกสาร', { exact: true }).fill('กิจกรรมทดสอบระบบเท่านั้น');
   assert.equal(await page.locator('.packet-steps').evaluate(element => getComputedStyle(element).flexDirection), 'row');

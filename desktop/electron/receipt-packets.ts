@@ -66,6 +66,7 @@ export class ReceiptPackets {
         revision: packet.revision,
         updatedAt: packet.updatedAt,
         documentCount: packet.documents.length,
+        category: storedEvidenceGuidance(packet.guidance).category,
       }))
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }

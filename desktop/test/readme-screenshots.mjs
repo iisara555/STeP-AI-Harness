@@ -153,8 +153,8 @@ try {
   await page.getByPlaceholder('ค้นหา Skill ทีม หรือคำที่ใช้เรียก').waitFor();
   await capture('03-skill-hub.png');
 
-  await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
-  await page.getByRole('heading', { name: 'ตรวจใบเสร็จ AFP', level: 1 }).waitFor();
+  await page.getByRole('button', { name: /ผู้ช่วยเบิกจ่าย/ }).click();
+  await page.getByRole('heading', { name: 'ผู้ช่วยเบิกจ่าย', level: 1 }).waitFor();
   await capture('04-receipt-afp.png');
 
   await page.getByRole('button', { name: /การตั้งค่า/ }).click();

@@ -181,6 +181,8 @@ export function useWorkspace() {
   const [reportAsk, setReportAsk] = useState<ReportAsk | null>(null);
   const [chatMenu, setChatMenu] = useState(false);
   const [consentAsk, setConsentAsk] = useState<ConsentAsk | null>(null);
+  // Chats inside a disbursement case live in the claims assistant, so they are kept out of the chat list and search.
+  const [caseSessions, setCaseSessions] = useState<Session[]>([]);
   // The first send (or the first after the terms change) needs the usage terms ticked; a new ask starts unticked.
   const [termsAccepted, setTermsAccepted] = useState(false);
   // Claude Pro/Max works only inside Anthropic's own apps, so that choice hands the request to the employee's Claude Code.
@@ -337,9 +339,14 @@ export function useWorkspace() {
   const refresh = useCallback(async () => {
     if (api) {
       const version = ++snapshotVersion.current;
-      const data = await api.call('snapshot');
-      if (version === snapshotVersion.current) setSnapshot(data);
-      return data as Snapshot;
+      const raw: Snapshot = await api.call('snapshot');
+      const cases = raw.sessions.filter(s => s.claimPacketId);
+      const data = cases.length ? { ...raw, sessions: raw.sessions.filter(s => !s.claimPacketId) } : raw;
+      if (version === snapshotVersion.current) {
+        setSnapshot(data);
+        setCaseSessions(current => (!cases.length && !current.length ? current : cases));
+      }
+      return data;
     }
   }, [api]);
   const {
@@ -688,11 +695,36 @@ export function useWorkspace() {
       throw new Error('CONNECTION_NOT_READY');
     }
     await save();
-    const s = await api!.call('create', { connectionId, project: t('ตรวจใบเสร็จ AFP') });
+    const s = await api!.call('create', { connectionId, project: t('ผู้ช่วยเบิกจ่าย') });
     await start(s.id, text, { allowIds, sourceText, mode: 'chat', imageModel, coordinator: false, isolated: true });
     setView('chat');
     setWorkMode('chat');
     setSelected(s.id);
+  }
+  /** The chat of one disbursement case, made on first use; it runs beside the main chat and never opens it. */
+  async function openCaseChat(packetId: string, title: string) {
+    if (connectionId === CLAUDE_CODE || !snapshot?.connections.some(c => c.id === connectionId && c.ready)) return null;
+    const s: Session = await api!.call('create', { connectionId, project: t('ผู้ช่วยเบิกจ่าย'), claimPacketId: packetId, title });
+    await refresh();
+    return s.id;
+  }
+  /** Sends in a case chat. The consent dialog, when it is needed, sends the same request again with its token. */
+  async function caseSend(id: string, text: string, sourceText: string, consent?: string) {
+    const run = resolveRun(
+      { mode: 'chat', sourceText, imageModel: '', retry: false, coordinator: false, isolated: true, consent },
+      { mode: 'chat', imageModel: '', coordinated: false },
+    );
+    const result = await api!.call('send', runPayload(id, text, run, ''));
+    if (result.consent) {
+      setTermsAccepted(false);
+      const { consent: _token, ...ask } = run;
+      setConsentAsk({ ...ask, sessionId: id, text, caseChat: true, ...result.consent });
+      return false;
+    }
+    if (result.started && result.warning) notify(t('ส่งแล้ว ข้อความนี้มีคำที่อาจเป็นข้อมูลอ่อนไหว อย่าใส่ชื่อหรือรหัสของบุคคลในงานนี้'));
+    else if (result.started && result.masked?.length) notify(t('ระบบปิดบังก่อนส่งให้ AI: {0}', result.masked.join(', ')));
+    await refresh();
+    return true;
   }
   async function createDocumentTask(tool: DocumentToolId) {
     if (!snapshot?.connections.some(c => c.id === connectionId && c.ready)) {
@@ -1399,6 +1431,9 @@ export function useWorkspace() {
     setChatMenu,
     consentAsk,
     setConsentAsk,
+    caseSessions,
+    openCaseChat,
+    caseSend,
     termsAccepted,
     setTermsAccepted,
     handoffAsk,

@@ -98,7 +98,7 @@ try {
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
-  await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
+  await page.getByRole('button', { name: /ผู้ช่วยเบิกจ่าย/ }).click();
   await page.getByText('OCR ในเครื่องพร้อมใช้').waitFor();
   await expect(page.getByText('อ่านและตรวจใบเสร็จในเครื่อง ไม่มีค่าบริการ OCR หรือ API และไม่ต้องลงชื่อเข้าใช้ Google')).toBeVisible();
   await expect(page.getByLabel('Google AI สำหรับอ่านใบเสร็จ')).toHaveCount(0);

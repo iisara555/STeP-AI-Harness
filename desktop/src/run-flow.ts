@@ -47,6 +47,8 @@ export type ConsentAsk = Omit<Resolved, 'consent'> & {
   labels: string[];
   attachment: boolean;
   vision?: boolean;
+  /** Sent from a disbursement case's own chat, which is answered there instead of in the main chat. */
+  caseChat?: boolean;
 };
 
 /** Fills what a run left out from the composer: its mode and image model, and the coordinator for plain drafts. */
