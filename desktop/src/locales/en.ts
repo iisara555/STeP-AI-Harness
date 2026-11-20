@@ -1034,6 +1034,13 @@ export const en: Record<string, string> = {
     'An attached agency form is checked against the MIS quality register for its code and revision.',
   'ตรวจใบกำกับภาษี (เลขผู้เสียภาษี เลขที่ และ VAT) และเตือนเรื่องหัก ณ ที่จ่ายในใบสำคัญจ่าย':
     'Tax invoices are checked for the tax ID, number and VAT, and payment vouchers flag withholding to review.',
+  '"ตรวจใบเสร็จ AFP" เปลี่ยนเป็น "ผู้ช่วยเบิกจ่าย" แต่ละเรื่องเบิกมีแชตของตัวเอง ถามทีละข้อและตอบจากเอกสาร AFP':
+    '"AFP receipt check" is now the Claims assistant: each claim case has its own chat that asks one question at a time and answers from AFP documents.',
+  'ลากหลายไฟล์มาวางในแชตของเรื่องเบิก ระบบอ่านในเครื่องและบอกว่าแต่ละไฟล์เป็นเอกสารอะไร':
+    'Drop several files into a claim case chat; they are read on this computer and each one is typed.',
+  'อ่านใบเสร็จภาษาไทยแม่นขึ้นด้วย Typhoon OCR (ติดตั้งเพิ่มได้ ~1 GB)':
+    'Read Thai receipts more accurately with Typhoon OCR (optional ~1 GB download).',
+  'งานยาวอย่างร่าง TOR จบเป็นคำตอบแทนการหมดเวลา': 'Long tasks such as TOR drafts finish with an answer instead of timing out.',
   ช่องในฟอร์มร่างเอกสารมีตัวอย่างการกรอกให้ดู: 'Document drafting fields now show examples of what to enter.',
   'แชตยาวที่ใช้ Gemini ผ่าน Antigravity จะย่อบทสนทนาเก่าให้เมื่อข้อความยาวเกินขีดจำกัด':
     'Long Gemini chats through Antigravity compact older turns when a full message exceeds the limit.',
