@@ -119,6 +119,7 @@ const allowed = new Set([
   'authCode',
   'skills',
   'ocrInstall',
+  'ocrTyphoonInstall',
   'cancelConnect',
   'claudeCode',
   'anthropicCli',

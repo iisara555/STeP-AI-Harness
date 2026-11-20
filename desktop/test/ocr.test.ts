@@ -27,6 +27,7 @@ test('only the STeP OCR service counts as running', async () => {
       crosscheck: false,
       handwriting: false,
       tesseract: false,
+      typhoon: false,
     });
   } finally {
     await other.close();
@@ -46,6 +47,7 @@ test('receipts are posted as raw bytes to the local service and its result is re
           crosscheck_installed: true,
           handwriting_installed: true,
           tesseract_installed: true,
+          typhoon_installed: true,
         }),
       );
     const chunks: Buffer[] = [];
@@ -65,6 +67,7 @@ test('receipts are posted as raw bytes to the local service and its result is re
       crosscheck: true,
       handwriting: true,
       tesseract: true,
+      typhoon: true,
     });
     const read = await service.recognize(file, true, true, true);
     assert.equal(read.result.text, 'ยอดสุทธิ 107.00');
@@ -181,7 +184,7 @@ async function startupFixture(t: TestContext) {
     () => process.env,
     launch,
   );
-  const health = (value: boolean) => ({ running: value, crosscheck: false, handwriting: false, tesseract: false });
+  const health = (value: boolean) => ({ running: value, crosscheck: false, handwriting: false, tesseract: false, typhoon: false });
   service.health = async () => health(running);
   t.after(() => service.stop());
   return { service, children, health };

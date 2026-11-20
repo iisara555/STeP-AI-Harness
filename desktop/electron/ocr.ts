@@ -14,6 +14,8 @@ export type OcrStatus = {
   crosscheck: boolean;
   handwriting: boolean;
   tesseract: boolean;
+  /** Typhoon OCR V2 reads pages, with PaddleOCR checking its numbers. */
+  typhoon: boolean;
   installed: boolean;
   folder: string;
 };
@@ -72,10 +74,11 @@ export class OcrService {
             crosscheck: body.crosscheck_installed === true,
             handwriting: body.handwriting_installed === true,
             tesseract: body.tesseract_installed === true,
+            typhoon: body.typhoon_installed === true,
           }
-        : { running: false, crosscheck: false, handwriting: false, tesseract: false };
+        : { running: false, crosscheck: false, handwriting: false, tesseract: false, typhoon: false };
     } catch {
-      return { running: false, crosscheck: false, handwriting: false, tesseract: false };
+      return { running: false, crosscheck: false, handwriting: false, tesseract: false, typhoon: false };
     }
   }
 
@@ -148,7 +151,8 @@ export class OcrService {
         method: 'POST',
         body: bytes,
         headers: { 'Content-Type': 'application/octet-stream' },
-        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(600_000)]) : AbortSignal.timeout(600_000),
+        // Typhoon reads about a minute a page on a laptop CPU; the service gives up at 15 minutes.
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(960_000)]) : AbortSignal.timeout(960_000),
       });
     } catch {
       if (signal?.aborted) throw new Error('CANCELLED');
