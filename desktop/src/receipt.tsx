@@ -111,6 +111,9 @@ type OcrStatus = {
   crosscheck: boolean;
   handwriting: boolean;
   tesseract: boolean;
+  /** Typhoon OCR V2 reads the page and PaddleOCR checks its numbers. */
+  typhoon?: boolean;
+  typhoonSupported?: boolean;
   installed: boolean;
   folder: string;
   installing?: boolean;
@@ -882,7 +885,11 @@ export function ReceiptApp({
             onClick={() => void run('read', read)}
           >
             {busy === 'read' ? <LoaderCircle size={16} className="spin" /> : <FileSearch size={16} />}
-            {busy === 'read' ? t('กำลังอ่านใบเสร็จ… ครั้งแรกอาจใช้ 1–2 นาที') : t('เลือกใบเสร็จ')}
+            {busy === 'read'
+              ? status?.typhoon
+                ? t('กำลังอ่านใบเสร็จ… ราว 1 นาทีต่อหน้า')
+                : t('กำลังอ่านใบเสร็จ… ครั้งแรกอาจใช้ 1–2 นาที')
+              : t('เลือกใบเสร็จ')}
           </button>
           {pickReason && (
             <p id="receipt-pick-reason" className="small receipt-pick-reason">
@@ -968,7 +975,9 @@ export function ReceiptApp({
                     : status.geminiApi
                       ? t('นโยบายยังไม่อนุญาตให้ส่งภาพใบเสร็จ')
                       : ready
-                        ? t('OCR ในเครื่องพร้อมใช้')
+                        ? status.typhoon
+                          ? t('OCR ในเครื่องพร้อมใช้ · Typhoon')
+                          : t('OCR ในเครื่องพร้อมใช้')
                         : status.installed
                           ? t('บริการ OCR ในเครื่องยังไม่เปิด')
                           : t('ยังไม่ได้ติดตั้ง OCR ในเครื่องนี้')}
@@ -977,6 +986,33 @@ export function ReceiptApp({
               <RefreshCw size={15} />
             </button>
           </div>
+          {/* Typhoon OCR is a further, optional download: offered once the local OCR runs, gone once it is in place. */}
+          {ready && !status?.typhoon && status?.typhoonSupported && !status.geminiApi && !status.cloud && (
+            <>
+              <button
+                className="quiet"
+                disabled={Boolean(busy)}
+                onClick={() =>
+                  void run('typhoon', async () => {
+                    setInstallProgress(t('กำลังเตรียม Typhoon OCR'));
+                    try {
+                      setStatus(await call('ocrTyphoonInstall', { connectionId: readingConnectionId }));
+                    } finally {
+                      setInstallProgress('');
+                    }
+                  })
+                }
+              >
+                {busy === 'typhoon' ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />}
+                {t('อ่านภาษาไทยแม่นขึ้นด้วย Typhoon OCR · ~1 GB')}
+              </button>
+              {busy === 'typhoon' && (
+                <p role="status" className="small muted">
+                  {installProgress.replace(/^STEP\s*/, '')}
+                </p>
+              )}
+            </>
+          )}
           {/* One quiet paragraph for every note that applies, instead of a stack of small lines. */}
           {(() => {
             const notes: ReactNode[] = [];

@@ -104,6 +104,7 @@ import { formRevisionCheck, parseRegister, type RegisterEntry } from '../src/qs-
 import { markdownDocument } from '../src/draft';
 import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython, type OcrStatus, readOcrInput } from './ocr';
+import { installTyphoon, typhoonBuild } from './typhoon';
 import { ReceiptOperations } from './receipt-operations';
 import { receiptVisionImages } from './receipt-image-input';
 import { readReceiptVision } from './receipt-vision-recheck';
@@ -1898,6 +1899,8 @@ async function main() {
   const defaultOcrFolder = app.isPackaged ? join(process.resourcesPath, 'ocr') : join(root, 'experiments', 'local-thai-ocr');
   const ocrFolder = () => store.settings().ocrDir || defaultOcrFolder;
   const ocrHome = join(data, 'components', 'ocr');
+  // Typhoon OCR is a further optional download; the service uses it as soon as its files are complete.
+  const typhoonHome = join(ocrHome, 'typhoon');
   const ocr = new OcrService(
     ocrFolder,
     undefined,
@@ -1908,6 +1911,7 @@ async function main() {
       PYTHONDONTWRITEBYTECODE: '1',
       PADDLE_PDX_CACHE_HOME: join(ocrHome, 'paddlex'),
       PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK: 'True',
+      STEP_TYPHOON_DIR: typhoonHome,
     }),
   );
   let installing = false;
@@ -1936,7 +1940,7 @@ async function main() {
     const status =
       rawStatus ||
       (geminiApi || cloud
-        ? { running: false, installed: false, crosscheck: false, handwriting: false, tesseract: false, folder: ocrHome }
+        ? { running: false, installed: false, crosscheck: false, handwriting: false, tesseract: false, typhoon: false, folder: ocrHome }
         : await ocr.status());
     const managed = existsSync(ocrPython(ocrHome));
     const current = !managed || (await ocrComponentCurrent(defaultOcrFolder, ocrHome));
@@ -1948,6 +1952,7 @@ async function main() {
       running: status.running && current,
       installed: status.installed && current,
       updateAvailable: managed && status.installed && !current,
+      typhoonSupported: Boolean(typhoonBuild()),
       installing,
       ...(localOnly ? { vision: false, textOnly: false } : receiptReadingMode(policyState.policy, cloud ? 'gemini' : connection?.provider)),
     };
@@ -3775,6 +3780,19 @@ async function main() {
       case 'ocrStatus': {
         return receiptOcrStatus(input);
       }
+      case 'ocrTyphoonInstall': {
+        if (installing) throw new Error('INSTALL_BUSY');
+        installing = true;
+        try {
+          await installTyphoon(typhoonHome, line => emit({ sessionId: '', type: 'install', text: line }));
+        } catch (error) {
+          diagnose('ocr-typhoon-install-failed', { code: errorCode(error) });
+          throw error;
+        } finally {
+          installing = false;
+        }
+        return receiptOcrStatus(input);
+      }
       case 'ocrFolder': {
         const picked = await dialog.showOpenDialog(window, { title: tm('เลือกโฟลเดอร์ local-thai-ocr'), properties: ['openDirectory'] });
         if (picked.canceled) return receiptOcrStatus(input);
@@ -3797,7 +3815,9 @@ async function main() {
           const useGeminiApi = !localOnly && (Boolean(cloud) || isReceiptGeminiApi(connection));
           if (useGeminiApi && !receiptVisionAllowed(cloud ? ({ provider: 'gemini' } as Connection) : connection))
             throw new Error('VISION_DISABLED');
-          const health = useGeminiApi ? { running: false, crosscheck: false, tesseract: false, handwriting: false } : await ocr.health();
+          const health = useGeminiApi
+            ? { running: false, crosscheck: false, tesseract: false, handwriting: false, typhoon: false }
+            : await ocr.health();
           check();
           if (!health.running && (localOnly || !receiptVisionAllowed(cloud ? ({ provider: 'gemini' } as Connection) : connection)))
             throw new Error('OCR_UNAVAILABLE');

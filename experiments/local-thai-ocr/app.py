@@ -6,6 +6,7 @@ import importlib.util
 import json
 import mimetypes
 import os
+import signal
 import socket
 import subprocess
 import sys
@@ -29,6 +30,9 @@ WEB_FILES = {
 }
 WORKER = ROOT / "ocr_worker.py"
 WORKER_TIMEOUT_SECONDS = 300
+# Typhoon reads a page in about a minute on a laptop CPU; it stops itself after its own budget and keeps PaddleOCR's
+# reading for the pages left, so this limit is only a backstop.
+TYPHOON_WORKER_TIMEOUT_SECONDS = 900
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
 
@@ -42,7 +46,9 @@ def run_ocr_worker(
     handwriting: bool,
     crosscheck: bool,
     tesseract: bool,
+    engine: str = "paddle",
 ) -> dict:
+    timeout = TYPHOON_WORKER_TIMEOUT_SECONDS if engine == "typhoon" else WORKER_TIMEOUT_SECONDS
     command = [
         sys.executable,
         str(WORKER),
@@ -52,6 +58,7 @@ def run_ocr_worker(
         "1" if handwriting else "0",
         "1" if crosscheck else "0",
         "1" if tesseract else "0",
+        engine,
     ]
     worker = subprocess.Popen(
         command,
@@ -59,9 +66,11 @@ def run_ocr_worker(
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        # Its own process group, so a timeout also stops the llama-server it started for Typhoon.
+        start_new_session=os.name != "nt",
     )
     try:
-        exit_code = worker.wait(timeout=WORKER_TIMEOUT_SECONDS)
+        exit_code = worker.wait(timeout=timeout)
     except subprocess.TimeoutExpired as exc:
         if os.name == "nt":
             subprocess.run(
@@ -71,9 +80,12 @@ def run_ocr_worker(
                 check=False,
             )
         else:
-            worker.kill()
+            try:
+                os.killpg(worker.pid, signal.SIGKILL)
+            except OSError:
+                worker.kill()
         worker.wait()
-        raise TimeoutError("OCR processing exceeded five minutes.") from exc
+        raise TimeoutError(f"OCR processing exceeded {timeout // 60} minutes.") from exc
     if exit_code != 0:
         raise RuntimeError(f"OCR engine stopped unexpectedly (exit code {exit_code}).")
     return json.loads(output_path.read_text(encoding="utf-8"))
@@ -146,6 +158,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send_file(WEB_FILES[parsed.path])
         if parsed.path == "/api/health":
             from tesseract_check import is_ready as tesseract_ready
+            from typhoon_setup import typhoon_installed
 
             handwriting_installed = (
                 importlib.util.find_spec("torch") is not None
@@ -159,6 +172,7 @@ class Handler(BaseHTTPRequestHandler):
                 "crosscheck_installed": importlib.util.find_spec("easyocr") is not None,
                 "handwriting_installed": handwriting_installed,
                 "tesseract_installed": tesseract_ready(),
+                "typhoon_installed": typhoon_installed(),
             })
         self.send_error(HTTPStatus.NOT_FOUND)
 
@@ -204,6 +218,11 @@ class Handler(BaseHTTPRequestHandler):
         handwriting = query.get("handwriting", ["off"])[0] in {"1", "true", "on", "fallback"}
         crosscheck = query.get("crosscheck", ["off"])[0] in {"1", "true", "on"}
         tesseract = query.get("tesseract", ["off"])[0] in {"1", "true", "on"}
+        requested_engine = query.get("engine", ["auto"])[0]
+        from typhoon_setup import typhoon_installed
+
+        # "auto" uses Typhoon when it is installed; "paddle" keeps the earlier engine; "typhoon" falls back if missing.
+        engine = "typhoon" if requested_engine in {"auto", "typhoon"} and typhoon_installed() else "paddle"
 
         # Do not accumulate documents and waiting threads while the single OCR worker is busy.
         if not _process_lock.acquire(blocking=False):
@@ -211,7 +230,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"ok": False, "error": "ocr_busy"}, 503)
             return self._discard_unread_upload(length)
         try:
-            payload, status = self._process_upload(length, suffix, original_name, threshold, handwriting, crosscheck, tesseract)
+            payload, status = self._process_upload(
+                length, suffix, original_name, threshold, handwriting, crosscheck, tesseract, engine
+            )
         finally:
             _process_lock.release()
         # Release after cleanup but before the response: a sequential next request must not see a completed job as busy.
@@ -237,7 +258,7 @@ class Handler(BaseHTTPRequestHandler):
         except OSError:
             pass
 
-    def _process_upload(self, length, suffix, original_name, threshold, handwriting, crosscheck, tesseract):
+    def _process_upload(self, length, suffix, original_name, threshold, handwriting, crosscheck, tesseract, engine="paddle"):
         self.connection.settimeout(30)
         try:
             raw = self.rfile.read(length)
@@ -252,7 +273,7 @@ class Handler(BaseHTTPRequestHandler):
             output_path = Path(tmp) / "result.json"
             input_path.write_bytes(raw)
             try:
-                result = run_ocr_worker(input_path, output_path, threshold, handwriting, crosscheck, tesseract)
+                result = run_ocr_worker(input_path, output_path, threshold, handwriting, crosscheck, tesseract, engine)
                 result["filename"] = original_name
                 return {"ok": True, "result": result}, 200
             except Exception as exc:

@@ -4,7 +4,7 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-19_
+_Last updated: 2026-11-20_
 
 ## Latest release
 
@@ -92,6 +92,8 @@ Release validation reproduced the sidebar's outdated expectation after explicit 
 - Follow-up decisions: measure staff latency with `eval:diagnostics`, public-holiday/MIS-signing search gaps, Thai-capable search replacement, remaining AI Harness guide phases and a team-shared Learning Inbox.
 
 ## In progress
+
+- **Typhoon OCR V2 0.8B in Desktop (2026-11-20, awaiting review)**: the owner chose it after the 2026-11-20 Thai OCR benchmark. The local OCR service reads each scanned page with Typhoon OCR V2 0.8B through llama.cpp `llama-server` (loopback, one-time key, no log) once its files are in `STEP_TYPHOON_DIR`, and PaddleOCR still reads the page to check every number (unconfirmed numbers need review; amounts only Paddle read are added for review). A cut-off or unreadable answer, a failed start or the 780 s budget falls back to PaddleOCR with a warning (`experiments/local-thai-ocr/typhoon_engine.py`, README). The receipt page offers a ~1 GB download once local OCR runs; files are pinned by Hugging Face revision `d4ef040`, llama.cpp `b12464` and SHA-256 (`desktop/electron/typhoon.ts`). Chat attachment OCR uses it too. Not done: a run on a Windows staff laptop (speed there is unmeasured; ~1 min a page is the estimate), the Windows Vulkan build for GPUs, the Webapp side (a separate pull request in STeP-AI-Webapp). Waits on the owner: review, a real-app trial on Windows and merge.
 
 - **ผู้ช่วยเบิกจ่าย: a chat inside each claim case (2026-11-20, awaiting review)**: the owner's redirect after phase 2: the claim chat should look like the main chat, stay inside each case and never jump to the main chat (mockup approved 2026-11-20). "ตรวจใบเสร็จ AFP" is renamed "ผู้ช่วยเบิกจ่าย" (sidebar, title bar, commands, tour, English "Claims assistant"). The packet tab is now case list | case chat | case panel. Each case has one chat (a task with `claimPacketId`, hidden from the chat list, search and palette); the interview runs in it, and other questions go to the chosen AI with the case's fixed-label context, the normal consent and privacy path, and `CLAIM_CASE_RULE`. The AI proposes case fields in a `claim-update` block; the app checks them against the form's lists and shows a card the person accepts (`docs/receipt-document-packets.md`, Case chat). Not done: PR 3 (several files and drag-and-drop in the case chat, reading each file and classifying by content); the case list shows category and evidence count, not deadlines; knowledge search for broad claim questions may still pick an unrelated document (seen in the synthetic run). Waits on the owner: review, real-app trial and merge.
 
