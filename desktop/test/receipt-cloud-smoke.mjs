@@ -132,7 +132,7 @@ try {
   await app.evaluate(({ dialog }, path) => {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
   }, file);
-  await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
+  await page.getByRole('button', { name: /ผู้ช่วยเบิกจ่าย/ }).click();
   await expect(page.getByText('บริการ OCR ของ STeP พร้อมใช้', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'ติดตั้ง OCR', exact: true })).toHaveCount(0);
   await expect(page.getByLabel('บัญชี Google สำหรับ OCR ของ STeP')).toHaveValue('ocr-account');

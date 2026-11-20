@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowUp, MessageCircleQuestion, Pencil } from './icons';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { ArrowLeft, MessageCircleQuestion, Pencil } from './icons';
 import { t } from './i18n';
 import {
   answerLabel,
@@ -20,26 +20,39 @@ import {
 import type { ReceiptPacket } from './receipt-packet';
 
 const WHY = /ทำไม|เพราะอะไร|why|\?\s*$/i;
+const WHY_WORD = /ทำไม|เพราะอะไร|why/i;
+/** A longer question typed while the interview waits is the person's own question, for the AI, not an answer. */
+const QUESTION = /ไหม|มั้ย|หรือเปล่า|หรือไม่|อย่างไร|ยังไง|เท่าไร|เท่าไหร่|อะไรบ้าง|\?/;
+
+/** What the case chat's composer asks of the interview: it takes typed text while a question is open. */
+export type InterviewHandle = {
+  /** The question waiting for an answer, so the composer can show the right hint; null when none is open. */
+  pending: () => { input: 'text' | 'amount' | 'date' } | null;
+  /**
+   * Reads typed text as an answer or a "why". `unread` means it was not an answer; with `fallback` the caller sends it on
+   * (to the AI) and the interview shows no hint.
+   */
+  take: (text: string, fallback: boolean) => 'answered' | 'why' | 'unread' | 'closed';
+};
 
 /** The claim interview: one question per turn with quick answers, local "why" answers and one apply action. */
-export function ClaimInterview({
-  packet,
-  onApply,
-  onAskAi,
-  onDecision,
-}: {
-  packet: ReceiptPacket;
-  onApply: (summary: ClaimSummary) => void;
-  onAskAi: (text: string) => void;
-  /** True while a finished summary waits to be applied, so the page keeps one primary action. */
-  onDecision: (waiting: boolean) => void;
-}) {
+export const ClaimInterview = forwardRef<
+  InterviewHandle,
+  {
+    packet: ReceiptPacket;
+    onApply: (summary: ClaimSummary) => void;
+    onAskAi?: (text: string) => void;
+    /** True while a finished summary waits to be applied, so the page keeps one primary action. */
+    onDecision: (waiting: boolean) => void;
+    /** Tells the composer that the open question changed, so its hint follows. */
+    onQuestion?: (input: 'text' | 'amount' | 'date' | null) => void;
+  }
+>(function ClaimInterview({ packet, onApply, onAskAi, onDecision, onQuestion }, ref) {
   const blank = packet.guidance.category === 'unsure' && packet.guidance.finance === 'unknown';
   const [open, setOpen] = useState(blank);
   const [answers, setAnswers] = useState<ClaimAnswers>({});
   const [why, setWhy] = useState<Note | null>(null);
   const [hint, setHint] = useState(false);
-  const [text, setText] = useState('');
   const [applied, setApplied] = useState('');
   const end = useRef<HTMLDivElement | null>(null);
   const pending = nextQuestion(answers);
@@ -50,30 +63,48 @@ export function ClaimInterview({
     setAnswers({});
     setApplied('');
   }, [packet.id]);
+  // Filled another way (a proposal from the case chat, or the form) before any answer here: the interview steps aside.
+  useEffect(() => {
+    if (!blank && !answeredQuestions(answers).length) setOpen(false);
+  }, [blank]);
   useEffect(() => {
     end.current?.scrollIntoView?.({ block: 'nearest' });
   }, [answers, why, hint]);
   useEffect(() => {
     onDecision(open && Boolean(summary));
   }, [open, Boolean(summary)]);
+  const openInput = open && question ? question.input : null;
+  useEffect(() => {
+    onQuestion?.(openInput);
+  }, [openInput]);
   const answer = (value: string) => {
     if (!pending) return;
     setAnswers(current => applyAnswer(current, pending, value));
     setWhy(null);
     setHint(false);
-    setText('');
   };
-  const submit = () => {
-    if (!pending || !text.trim()) return;
-    if (WHY.test(text)) {
-      setWhy(question!.why);
-      setText('');
-      return;
-    }
-    const value = parseAnswer(pending, text);
-    if (value === null) setHint(true);
-    else answer(value);
-  };
+  useImperativeHandle(ref, () => ({
+    pending: () => (open && question ? { input: question.input } : null),
+    take: (text, fallback) => {
+      if (!open || !pending || !question) return 'closed';
+      setHint(false);
+      // A "why" with nothing else in it is answered here from the rule's source; a longer question goes to the AI.
+      const long = text.trim().length > 24;
+      // With an AI to ask, only an explicit short "why" stays here; any other question goes to the AI.
+      if (fallback ? WHY_WORD.test(text) && !long : WHY.test(text)) {
+        setWhy(question.why);
+        return 'why';
+      }
+      if (fallback && long && QUESTION.test(text)) return 'unread';
+      const value = parseAnswer(pending, text);
+      if (value !== null) {
+        answer(value);
+        return 'answered';
+      }
+      if (!fallback) setHint(true);
+      return 'unread';
+    },
+  }));
   if (!open)
     return (
       <div className="claim-closed">
@@ -135,30 +166,6 @@ export function ClaimInterview({
               </button>
             )}
           </div>
-          <form
-            className="claim-input"
-            onSubmit={event => {
-              event.preventDefault();
-              submit();
-            }}
-          >
-            <input
-              aria-label={t('พิมพ์คำตอบ')}
-              value={text}
-              maxLength={200}
-              inputMode={question.input === 'amount' ? 'decimal' : undefined}
-              placeholder={t(
-                question.input === 'amount' ? 'เช่น 3,500' : question.input === 'date' ? 'เช่น 18 พ.ย. 2569' : 'พิมพ์คำตอบ หรือถามว่าทำไม',
-              )}
-              onChange={event => {
-                setText(event.target.value);
-                setHint(false);
-              }}
-            />
-            <button type="submit" className="icon" aria-label={t('ส่งคำตอบ')} disabled={!text.trim()}>
-              <ArrowUp size={16} />
-            </button>
-          </form>
         </>
       )}
       {summary && <SummaryCard summary={summary} />}
@@ -169,7 +176,7 @@ export function ClaimInterview({
             {t('ย้อนข้อก่อน')}
           </button>
         )}
-        {summary && (
+        {summary && onAskAi && (
           <button type="button" className="quiet" onClick={() => onAskAi(claimAiPrompt(answers, summary, t))}>
             {t('ถาม AI ต่อ')}
           </button>
@@ -196,7 +203,7 @@ export function ClaimInterview({
       </div>
     </section>
   );
-}
+});
 
 /** Beside the expense title the code is enough: "B10", not "B10 · ค่าน้ำดื่ม" again. */
 const categoryCode = (summary: ClaimSummary) => summary.code || claimCategoryText(summary, t);

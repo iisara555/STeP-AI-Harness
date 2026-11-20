@@ -195,8 +195,8 @@ try {
   await expect(sidebar.getByRole('button', { name: /ศูนย์รวม Skill/ })).toHaveClass(/nav-active/);
   const count = Number(await sidebar.locator('nav .count').innerText());
   assert.ok(count > 0, 'the Skill hub shows how many Skills and tools there are');
-  await sidebar.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
-  await expect(page.locator('.topbar-heading strong')).toHaveText('ตรวจใบเสร็จ AFP');
+  await sidebar.getByRole('button', { name: /ผู้ช่วยเบิกจ่าย/ }).click();
+  await expect(page.locator('.topbar-heading strong')).toHaveText('ผู้ช่วยเบิกจ่าย');
   await sidebar.getByRole('button', { name: 'การตั้งค่า' }).click();
   await expect(page.locator('.topbar-heading strong')).toHaveText('การตั้งค่า');
   await expect(page.getByRole('tab', { name: 'ทั่วไป' })).toHaveAttribute('aria-selected', 'true');

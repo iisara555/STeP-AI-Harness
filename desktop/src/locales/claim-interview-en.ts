@@ -102,7 +102,6 @@ export const claimInterviewEn: Record<string, string> = {
   ทำไมต้องถาม: 'Why ask?',
   'เช่น 3,500': 'e.g. 3,500',
   'เช่น 18 พ.ย. 2569': 'e.g. 18 Nov 2026',
-  'พิมพ์คำตอบ หรือถามว่าทำไม': 'Type an answer, or ask why',
   ย้อนข้อก่อน: 'Back one question',
   ใช้กับชุดเอกสารนี้: 'Use for this packet',
   หมวด: 'Category',

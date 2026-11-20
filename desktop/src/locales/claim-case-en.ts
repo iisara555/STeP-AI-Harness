@@ -1,0 +1,21 @@
+// The chat inside each disbursement case (ผู้ช่วยเบิกจ่าย).
+export const claimCaseEn: Record<string, string> = {
+  เรื่องเบิกจ่าย: 'Claim cases',
+  เรื่องใหม่: 'New case',
+  '{0} · หลักฐาน {1} ไฟล์': '{0} · {1} evidence files',
+  '{0} · ยังไม่มีหลักฐาน': '{0} · no evidence yet',
+  แชตในเรื่องนี้: 'Chat in this case',
+  พิมพ์ในแชตเรื่องนี้: 'Message in this case',
+  'ตอบ หรือถามว่าทำไม': 'Answer, or ask why',
+  ถามหรือพิมพ์ข้อมูลเรื่องนี้: 'Ask or type details for this case',
+  'เลือก AI ก่อนถามเรื่องอื่น': 'Choose an AI to ask other questions',
+  'ยังไม่ได้เลือก AI · ตอบจากกฎในเครื่อง': 'No AI chosen · answers from the rules on this computer',
+  'ถามเรื่องอื่นในเรื่องนี้ได้เมื่อเลือก AI แล้ว': 'Once you choose an AI you can ask anything else about this case',
+  'กำลังหาคำตอบจากเอกสาร STeP…': 'Looking for the answer in STeP documents…',
+  เสนอกรอกในเรื่องนี้: 'Suggested details for this case',
+  ใช้ข้อมูลนี้: 'Use these details',
+  ใช้ข้อมูลกับเรื่องนี้แล้ว: 'Details added to this case',
+  ข้อมูลที่เสนออยู่ในเรื่องนี้แล้ว: 'These details are already in this case',
+  หยุดตอบ: 'Stop answering',
+  ส่ง: 'Send',
+};

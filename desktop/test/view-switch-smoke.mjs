@@ -31,7 +31,7 @@ try {
   await page.locator('.draft-editor').waitFor();
   const away = async where => {
     if (where === 'skills') await page.getByRole('button', { name: /ศูนย์รวม Skill/ }).click();
-    if (where === 'receipt') await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
+    if (where === 'receipt') await page.getByRole('button', { name: /ผู้ช่วยเบิกจ่าย/ }).click();
     if (where === 'settings') await page.getByRole('button', { name: 'การตั้งค่า', exact: true }).click();
     await page.waitForTimeout(300);
     await page.screenshot({

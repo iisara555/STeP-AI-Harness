@@ -75,7 +75,10 @@ export type ReceiptPacket = {
   updatedAt: string;
   paymentApproved: false;
 };
-export type PacketListItem = Pick<ReceiptPacket, 'id' | 'title' | 'updatedAt' | 'revision'> & { documentCount: number };
+export type PacketListItem = Pick<ReceiptPacket, 'id' | 'title' | 'updatedAt' | 'revision'> & {
+  documentCount: number;
+  category?: ClaimCategory;
+};
 export type ReviewedReceipt = {
   sourceToken: string;
   checked: boolean;

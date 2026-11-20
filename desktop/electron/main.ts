@@ -4304,7 +4304,28 @@ async function main() {
       case 'create': {
         const connection = store.get<Connection>('connection', input.connectionId);
         if (!connection) throw new Error('CONNECTION_NOT_FOUND');
+        // A disbursement case has one chat of its own: asking again returns it, on the AI chosen now when it is idle.
+        const claimPacketId = input.claimPacketId === undefined ? '' : receiptPackets.get(input.claimPacketId).id;
+        const existing = claimPacketId ? store.list<Session>('session').find(s => s.claimPacketId === claimPacketId) : undefined;
+        if (existing) {
+          if (
+            existing.connectionId !== connection.id &&
+            !service.isActive(existing.id) &&
+            !['running', 'queued'].includes(existing.status)
+          ) {
+            existing.connectionId = connection.id;
+            delete existing.model;
+            delete existing.effort;
+            store.put('session', existing.id, existing);
+          }
+          return existing;
+        }
         const session = store.create(connection.id, store.settings().team, inputText(input.project || '', 80));
+        if (claimPacketId) {
+          session.claimPacketId = claimPacketId;
+          session.title = inputText(input.title || '', 80) || session.title;
+          store.save(session);
+        }
         const started = await fireHook({ event: 'session_start', sessionId: session.id });
         if (started.blocked) {
           store.remove('session', session.id);
@@ -4346,6 +4367,21 @@ async function main() {
         const id = inputText(input.id, 60),
           text = inputText(input.text);
         const sending = store.session(id);
+        // A disbursement-case chat answers and proposes case fields only: no document drafting, images, Skills picked
+        // by hand, workflows, coordinator or attachments (those belong to the case's own evidence list).
+        const claimCase = Boolean(sending.claimPacketId);
+        if (
+          claimCase &&
+          (method === 'sideQuestion' ||
+            input.skill ||
+            input.documentTool ||
+            input.workflow ||
+            input.coordinator ||
+            input.autoContinue ||
+            input.attachments?.length ||
+            input.mode !== 'chat')
+        )
+          throw new Error('INVALID_INPUT');
         const requestedId = requestedDocumentTool(
           text,
           sending.messages.filter(m => m.role === 'user').map(m => m.text),
@@ -4382,8 +4418,9 @@ async function main() {
           if (unavailable) throw new Error(unavailable);
         }
         if (input.autoContinue && workflow !== 'execute') throw new Error('INVALID_INPUT');
-        const imageRequest = !workflow && mode === 'chat' && input.autoImage !== false && isImageRequest(text);
+        const imageRequest = !claimCase && !workflow && mode === 'chat' && input.autoImage !== false && isImageRequest(text);
         const requested =
+          !claimCase &&
           !aside &&
           (!workflow || workflow === 'assistant') &&
           !imageRequest &&

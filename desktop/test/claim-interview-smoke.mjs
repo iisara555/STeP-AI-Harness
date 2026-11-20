@@ -1,4 +1,5 @@
-// The claim interview in the real renderer: quick answers, typed answers, "why", summary and apply.
+// The claim interview inside a case's chat (ผู้ช่วยเบิกจ่าย): quick answers, answers typed in the chat composer,
+// "why", summary and apply, with no AI connected.
 // All packet details are synthetic. Pass an output folder to keep the screenshots.
 import { _electron as electron, expect } from '@playwright/test';
 import { mkdtemp, mkdir, rm } from 'node:fs/promises';
@@ -20,9 +21,9 @@ try {
   page.on('pageerror', error => errors.push(error.message));
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
   await page.addStyleTag({ content: '*,*::before,*::after{animation:none!important;transition:none!important}' });
-  await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
+  await page.getByRole('button', { name: /ผู้ช่วยเบิกจ่าย/ }).click();
   await page.getByRole('button', { name: 'ชุดเอกสารเบิกจ่าย', exact: true }).click();
-  await page.getByRole('button', { name: 'สร้างชุดใหม่', exact: true }).click();
+  await page.getByRole('button', { name: 'เรื่องใหม่', exact: true }).click();
   await page.getByLabel('ชื่อเรื่องเบิก', { exact: true }).fill('ประชุมคณะทำงาน ข้อมูลสมมติ');
 
   // A blank packet opens the interview; the title already suggests the activity.
@@ -31,10 +32,11 @@ try {
   await expect(page.getByRole('button', { name: 'ใช้กับชุดเอกสารนี้' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'ต่อ: เพิ่มหลักฐาน', exact: true })).toHaveClass(/primary/);
 
-  // Typed answer, read locally.
-  const input = chat.getByLabel('พิมพ์คำตอบ', { exact: true });
+  // Typed in the case chat's composer, read locally.
+  const input = page.getByLabel('พิมพ์ในแชตเรื่องนี้', { exact: true });
+  await expect(page.locator('.case-composer-ai')).toHaveText('ยังไม่ได้เลือก AI · ตอบจากกฎในเครื่อง');
   await input.fill('ค่าน้ำดื่มสำหรับประชุม');
-  await chat.getByRole('button', { name: 'ส่งคำตอบ', exact: true }).click();
+  await page.getByRole('button', { name: 'ส่ง', exact: true }).click();
   await expect(chat.locator('.claim-reply').first()).toHaveText('ค่าน้ำดื่ม');
   await expect(chat.locator('.claim-recommend')).toContainText('แนะนำ: ประชุม');
   await expect(chat.locator('.claim-option.recommended')).toHaveText('ประชุม');

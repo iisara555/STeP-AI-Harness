@@ -22,6 +22,7 @@ import { afpPaymentVoucherEn } from './afp-payment-voucher-en';
 import { workAssistantEn } from './work-assistant-en';
 import { afpEvidenceEn } from './afp-evidence-en';
 import { claimInterviewEn } from './claim-interview-en';
+import { claimCaseEn } from './claim-case-en';
 import { planCommentsEn } from './plan-comments-en';
 import { taskAlertsEn } from './task-alerts-en';
 import { uxToolsEn } from './ux-tools-en';
@@ -1083,7 +1084,7 @@ export const en: Record<string, string> = {
   'ยังไม่ได้เลือก AI เลือกในกล่องพิมพ์ หรือเพิ่มการเชื่อมต่อ AI ก่อน':
     'No AI selected yet. Choose one in the message box, or add an AI connection first',
   'ไปที่การเชื่อมต่อ AI': 'Go to AI connections',
-  'ตรวจใบเสร็จ AFP': 'AFP receipt check',
+  ผู้ช่วยเบิกจ่าย: 'Claims assistant',
   'ส่งไฟล์ “{0}” ให้ AI ไม่ได้: {1} · นำไฟล์ออกหรือแนบไฟล์อื่นก่อนส่ง':
     "Can't send “{0}” to the AI: {1}. Remove it or attach another file before sending",
   กำลังส่งข้อความ: 'Sending message',
@@ -1129,7 +1130,8 @@ export const en: Record<string, string> = {
   'ตรวจใบเสร็จก่อนส่ง AFP': 'Check receipts before sending to AFP',
   เริ่มต้นงานที่อยากทำ: 'What would you like to work on?',
   'บัญชี AI และข้อมูลอยู่ในเครื่องนี้': 'Your AI account and data stay on this computer',
-  'ทดลอง · อ่านใบเสร็จด้วย OCR ในเครื่อง แล้วให้คุณตรวจก่อนส่ง': 'Beta · Reads receipts with on-device OCR, then you check before sending',
+  'ทดลอง · ถามและกรอกเรื่องเบิกในแชต ตรวจใบเสร็จ แล้วให้คุณตรวจก่อนส่ง':
+    'Beta · Ask and fill in claims in chat, check receipts, then you review before sending',
   'Skill ในพื้นที่ทำงานนี้ พร้อมสถานะ Manifest และ Routing': 'Skills in this workspace, with their Manifest and Routing status',
   'จากคำขอ สู่ผลงานที่ใช้ต่อได้': 'From request to ready-to-use work',
   ซ่อนร่าง: 'Hide draft',
@@ -3390,6 +3392,7 @@ export const en: Record<string, string> = {
   ...googleChangesEn,
   ...afpEvidenceEn,
   ...claimInterviewEn,
+  ...claimCaseEn,
   'Google Workspace เชื่อมแยกในแท็บบัญชีและบริการ': 'Google Workspace connects separately under Accounts and services',
   'แนบได้ 1 ไฟล์ หรือวางข้อมูลด้านล่าง · ส่งให้ AI ตามการตั้งค่าความเป็นส่วนตัว':
     'Attach 1 file or paste below · sent to the AI under your privacy settings',

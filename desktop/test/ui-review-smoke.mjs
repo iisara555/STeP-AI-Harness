@@ -64,7 +64,7 @@ try {
   for (const [view, title, selector] of [
     ['skills', 'ศูนย์รวม Skill', '.skills-hub'],
     ['documents', 'เครื่องมือร่างเอกสาร', '.document-tools'],
-    ['receipt', 'ตรวจใบเสร็จ AFP', '.receipt-app'],
+    ['receipt', 'ผู้ช่วยเบิกจ่าย', '.receipt-app'],
   ]) {
     await page.locator(`[data-tour="${view}"]`).click();
     await expect(page.locator(selector)).toBeVisible();

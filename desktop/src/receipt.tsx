@@ -34,6 +34,7 @@ import { isReceiptGeminiApi, receiptGeminiConnection } from '../electron/receipt
 import { explainError, connectionName } from './messages';
 import type { Connection } from './types';
 import { ReceiptPacketApp } from './receipt-packet-app';
+import type { CaseChatApi } from './claim-case-chat';
 
 type MappingCandidate = {
   value: string;
@@ -195,18 +196,21 @@ export function ReceiptApp({
   connections = [],
   chooseConnection,
   openAiSettings,
+  caseChat,
 }: {
   call: (method: string, input?: unknown) => Promise<any>;
   onError: (error: unknown) => void;
   notify: (text: string, tone?: 'info' | 'success' | 'error', action?: { label: string; run: () => unknown }) => void;
   handoff: (text: string, sourceText: string, allowIds?: string[]) => Promise<void>;
-  onEvent: (callback: (event: { type: string; text?: string }) => void) => () => void;
+  onEvent: (callback: (event: { type: string; text?: string; sessionId?: string; count?: number }) => void) => () => void;
   connectionId?: string;
   /** Whether a read or check is running, so the sidebar can show it while another page is open. */
   onBusy?: (busy: boolean) => void;
   connections?: Connection[];
   chooseConnection?: (id: string) => void;
   openAiSettings?: () => void;
+  /** The chat inside each disbursement case; it answers there and never opens the main chat. */
+  caseChat?: Omit<CaseChatApi, 'aiName' | 'openAiSettings'>;
 }) {
   const [preferredOcrId, setPreferredOcrId] = useState('');
   const [receiptMode, setReceiptMode] = useState<'review' | 'packet'>('review');
@@ -678,6 +682,8 @@ export function ReceiptApp({
   const cloudReady = Boolean(status?.cloud && status.vision && cloudAccountId);
   const apiReady = status?.geminiApi && status.vision && Boolean(geminiOcr);
   const usableConnectionId = connections.find(c => c.id === connectionId && c.ready)?.id;
+  const caseConnection = connections.find(c => c.id === usableConnectionId);
+  const caseAiName = caseConnection ? [connectionName(caseConnection), caseConnection.model].filter(Boolean).join(' · ') : '';
   const canPick = Boolean(ready || apiReady || cloudReady || (!status?.cloud && status?.vision && usableConnectionId));
   // Why "เลือกใบเสร็จ" is grey, said right under it instead of only further down the page.
   const pickReason =
@@ -720,7 +726,7 @@ export function ReceiptApp({
   return (
     <div className="receipt-app">
       <header className="receipt-heading">
-        <h1 className="sr-only">{t('ตรวจใบเสร็จ AFP')}</h1>
+        <h1 className="sr-only">{t('ผู้ช่วยเบิกจ่าย')}</h1>
         <nav className="receipt-modes" aria-label={t('งานใบเสร็จและชุดเอกสาร')}>
           <button aria-pressed={receiptMode === 'review'} onClick={() => setReceiptMode('review')}>
             {t('ตรวจใบเสร็จ')}
@@ -734,7 +740,14 @@ export function ReceiptApp({
         active={receiptMode === 'packet'}
         call={call}
         notify={notify}
-        onAskAi={text => handoff(text, '')}
+        onEvent={onEvent}
+        chat={{
+          sessions: caseChat?.sessions || [],
+          open: caseChat?.open || (async () => null),
+          send: caseChat?.send || (async () => false),
+          aiName: caseChat ? caseAiName : '',
+          openAiSettings,
+        }}
         review={
           doc?.sourceToken
             ? {

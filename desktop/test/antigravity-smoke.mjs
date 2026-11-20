@@ -235,7 +235,7 @@ try {
   }, receipt);
   warming = true;
   await page.reload();
-  await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
+  await page.getByRole('button', { name: /ผู้ช่วยเบิกจ่าย/ }).click();
   await page
     .getByText('ตอนนี้ AI ไม่ได้อ่านภาพใบเสร็จ (นโยบายองค์กรหรือ AI ที่เลือกยังไม่รองรับ) AI ช่วยจัดข้อความจาก OCR เข้าฟอร์มเท่านั้น')
     .waitFor();

@@ -204,7 +204,7 @@ try {
     globalThis.receiptConsents = 0;
     dialog.showMessageBox = async () => (globalThis.receiptConsents++, { response: 1 });
   }, receipt);
-  await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
+  await page.getByRole('button', { name: /ผู้ช่วยเบิกจ่าย/ }).click();
   await expect(page.getByText('AI อ่านภาพได้เมื่อคุณยินยอม ส่งต่อในแชตจะส่งเฉพาะข้อความที่ตรวจแล้ว')).toBeVisible();
   await expect(page.getByRole('button', { name: 'เลือกใบเสร็จ' })).toBeEnabled();
   const beforeReceipt = prompts.length;
@@ -234,7 +234,7 @@ try {
   await page.getByText('receipt.png', { exact: true }).waitFor();
   await page.getByRole('button', { name: /ศูนย์รวม Skill/ }).click();
   await page.getByLabel('กำลังตรวจใบเสร็จอยู่').waitFor();
-  await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
+  await page.getByRole('button', { name: /ผู้ช่วยเบิกจ่าย/ }).click();
   await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
   await expect(page.getByLabel('ยอดรวมที่ชำระ')).toHaveValue('107.00', { timeout: 60000 });
   assert.equal(await page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า').inputValue(), 'ร้านตัวอย่าง จำกัด');
@@ -306,7 +306,7 @@ try {
     .getByRole('button', { name: /ตั้งค่า/ })
     .first()
     .click();
-  await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
+  await page.getByRole('button', { name: /ผู้ช่วยเบิกจ่าย/ }).click();
   assert.equal(await confirmAll.isChecked(), true);
   assert.equal(await page.getByLabel('ยอดรวมที่ชำระ').inputValue(), '107.00');
   const ocrUsage = (await savedReview()).vision_check.ocr_usage;
