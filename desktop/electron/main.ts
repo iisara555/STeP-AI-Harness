@@ -7,6 +7,7 @@ import { paymentVoucherDocx, paymentVoucherHtml } from './afp-payment-voucher';
 import { blankPaymentVoucher } from '../src/afp-payment-voucher';
 import { documentPrintFontCss } from './document-fonts';
 import { PACKET_LIMITS, blankReceiptVoucher, packetText, type ReviewedReceipt } from '../src/receipt-packet';
+import { classifyEvidenceText, type SourceReading } from '../src/evidence-reading';
 import { takesImages } from '../src/vision-transport';
 import {
   app,
@@ -27,7 +28,7 @@ import { mkdir, mkdtemp, rmdir, writeFile, appendFile, rm, readFile, open, stat,
 import { ExportWorkspace } from './export-workspace';
 import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
-import { join, resolve, basename, dirname, extname } from 'node:path';
+import { join, resolve, basename, dirname, extname, isAbsolute } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { Store } from './store';
@@ -4066,17 +4067,38 @@ async function main() {
             review,
           );
         }
-        const picked = await dialog.showOpenDialog(window, {
-          title: tm('เพิ่มเอกสารเข้าชุด'),
-          properties: ['openFile', 'multiSelections'],
-          filters: [{ name: 'PDF / PNG / JPG', extensions: ['pdf', 'png', 'jpg', 'jpeg'] }],
-        });
-        if (picked.canceled) return null;
-        if (picked.filePaths.length > PACKET_LIMITS.documents) throw new Error('PACKET_DOCUMENT_LIMIT');
+        // Files dropped on the case chat arrive as their bytes; the path, when the system gives one, only marks the
+        // original so an export never overwrites it. Nothing is read from disk on the window's say-so.
+        const dropped = method === 'receiptPacketAdd' && Array.isArray(input.files);
+        let chosen: { name: string; extension: string; bytes: Buffer; originalPath?: string }[] = [];
+        if (dropped) {
+          if (!input.files.length) throw new Error('INVALID_INPUT');
+          if (input.files.length > PACKET_LIMITS.documents) throw new Error('PACKET_DOCUMENT_LIMIT');
+          chosen = input.files.map((file: any) => {
+            const name = basename(inputText(file?.name, 240).replace(/\\/g, '/'));
+            const extension = extname(name).slice(1).toLowerCase();
+            if (!['pdf', 'png', 'jpg', 'jpeg'].includes(extension)) throw new Error('PACKET_SOURCE_LIMIT');
+            if (!(file.bytes instanceof Uint8Array) || !file.bytes.byteLength || file.bytes.byteLength > PACKET_LIMITS.sourceBytes)
+              throw new Error('PACKET_SOURCE_LIMIT');
+            const origin = typeof file.path === 'string' && file.path.length <= 4096 && isAbsolute(file.path) ? file.path : undefined;
+            return { name, extension, bytes: Buffer.from(file.bytes), originalPath: origin };
+          });
+        } else {
+          const picked = await dialog.showOpenDialog(window, {
+            title: tm('เพิ่มเอกสารเข้าชุด'),
+            properties: ['openFile', 'multiSelections'],
+            filters: [{ name: 'PDF / PNG / JPG', extensions: ['pdf', 'png', 'jpg', 'jpeg'] }],
+          });
+          if (picked.canceled) return null;
+          if (picked.filePaths.length > PACKET_LIMITS.documents) throw new Error('PACKET_DOCUMENT_LIMIT');
+          for (const path of picked.filePaths) {
+            const source = await readOcrInput(path);
+            chosen.push({ name: basename(path), extension: source.extension, bytes: source.bytes, originalPath: path });
+          }
+        }
         const sources = [];
         let bytes = 0;
-        for (const path of picked.filePaths) {
-          const source = await readOcrInput(path);
+        for (const source of chosen) {
           bytes += source.bytes.length;
           if (bytes > PACKET_LIMITS.totalBytes) throw new Error('PACKET_SOURCE_LIMIT');
           if (source.extension !== 'pdf') {
@@ -4084,14 +4106,41 @@ async function main() {
               size = image.getSize();
             if (image.isEmpty() || size.width * size.height > 40_000_000) throw new Error('PACKET_SOURCE_LIMIT');
           }
-          sources.push({
-            name: basename(path),
-            extension: source.extension === 'jpeg' ? 'jpg' : source.extension,
-            bytes: source.bytes,
-            originalPath: path,
-          });
+          sources.push({ ...source, extension: source.extension === 'jpeg' ? 'jpg' : source.extension });
         }
         return receiptPackets.addNew(input.id, input.revision, sources);
+      }
+      case 'receiptPacketRead': {
+        // Which kind of evidence one file is, from the words on it, read on this computer: the PDF's own text first,
+        // then the local OCR when it is running. No AI is asked and the text never leaves the main process.
+        const packet = receiptPackets.get(input.id);
+        const source = packet.documents.find(doc => doc.id === inputText(input.sourceId, 80));
+        if (!source) throw new Error('PACKET_SOURCE_NOT_FOUND');
+        await receiptPackets.sourceBytes(packet, source);
+        const path = receiptPackets.path(packet.id, source.id);
+        let text = '',
+          via: SourceReading['via'] = 'none';
+        if (source.extension === 'pdf') {
+          const report: any = await harness.documentPrivacy(path, { includeRedacted: true });
+          if (typeof report?.redactedText === 'string' && report.redactedText.trim()) {
+            text = report.redactedText;
+            via = 'text';
+          }
+        }
+        if (!text) {
+          const health = installing ? { running: false } : await ocr.health();
+          if (!health.running)
+            return { kind: null, via, reason: source.extension === 'pdf' ? 'no-text' : 'ocr-off' } satisfies SourceReading;
+          const read = await ocr.recognize(path, false);
+          if (typeof read.result?.text === 'string' && read.result.text.trim()) {
+            text = read.result.text;
+            via = 'ocr';
+          }
+        }
+        if (!text) return { kind: null, via, reason: 'no-text' } satisfies SourceReading;
+        const found = classifyEvidenceText(text);
+        diagnose('packet-read', { via, found: found ? found.kind : 'none' });
+        return (found ? { kind: found.kind, cue: found.cue, via } : { kind: null, via }) satisfies SourceReading;
       }
       case 'receiptPacketExport': {
         const packet = receiptPackets.get(input.id, input.revision);

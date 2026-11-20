@@ -607,6 +607,7 @@ export type RunEvent = {
 export interface DesktopAPI {
   call(method: string, input?: unknown): Promise<any>;
   onEvent(callback: (event: RunEvent) => void): () => void;
+  filePath?(file: File): string;
 }
 declare global {
   interface Window {
