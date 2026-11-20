@@ -150,6 +150,10 @@ class EngineTests(unittest.TestCase):
         command = server.command()
         self.assertEqual(command[command.index("--host") + 1], "127.0.0.1")
         self.assertEqual(command[command.index("--api-key") + 1], "k")
+        self.assertNotIn("-t", command)
+        with patch.object(typhoon_engine, "THREADS", "8"):
+            command = server.command()
+        self.assertEqual(command[command.index("-t") + 1], "8")
 
 
 class ServiceEngineChoiceTests(unittest.TestCase):

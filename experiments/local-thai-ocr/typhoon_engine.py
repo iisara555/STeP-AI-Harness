@@ -58,6 +58,8 @@ MAX_TOKENS = 8192
 CONTEXT_TOKENS = 40960
 IMAGE_MAX_TOKENS = 16384
 SERVER_START_SECONDS = 180
+_threads = os.environ.get("STEP_TYPHOON_THREADS", "").strip()
+THREADS = _threads if _threads.isdigit() else ""
 # A request (all pages) gets this long for Typhoon; later pages keep PaddleOCR's reading. app.py waits longer.
 REQUEST_BUDGET_SECONDS = int(os.environ.get("STEP_TYPHOON_BUDGET_SECONDS", "780"))
 SKIPPED_CATEGORIES = {"figure"}
@@ -98,6 +100,8 @@ class LlamaServer:
             "-c", str(CONTEXT_TOKENS),
             "--image-max-tokens", str(IMAGE_MAX_TOKENS),
             "-np", "1",
+            # A server container limited to N CPUs sets this; on a laptop llama.cpp picks its own thread count.
+            *(["-t", THREADS, "-tb", THREADS] if THREADS else []),
         ]
 
     def start(self) -> None:
