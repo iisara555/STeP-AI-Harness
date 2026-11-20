@@ -273,7 +273,7 @@ export function receiptPacketCoverHtml(
     ? `<h2>ยอดรวมตามหมวดย่อย</h2><ul>${totals
         .map(
           total =>
-            `<li>${html(total.key === 'B?' ? 'หมวด B ยังไม่ระบุหมวดย่อย' : total.category === 'B' ? expenseCodeLabel(total.code) : CLAIM_CATEGORY_LABELS[total.category])} — ${total.receipts} ใบ ${formatSatang(total.total)} บาท${total.status === 'over' ? ' (เกินเพดาน 10,000 บาท)' : total.status === 'check' ? ' (รวมเกิน 10,000 บาท โปรดตรวจการแยก)' : ''}${total.unreadable ? ` · อ่านยอดไม่ได้ ${total.unreadable} ใบ` : ''}</li>`,
+            `<li>${html(total.category === 'unsure' ? 'ยังไม่ระบุหมวด' : total.key === 'B?' ? 'หมวด B ยังไม่ระบุหมวดย่อย' : total.category === 'B' ? expenseCodeLabel(total.code) : CLAIM_CATEGORY_LABELS[total.category])} — ${total.receipts} ใบ ${formatSatang(total.total)} บาท${total.status === 'over' ? ' (เกินเพดาน 10,000 บาท)' : total.status === 'check' ? ' (รวมเกิน 10,000 บาท โปรดตรวจการแยก)' : total.status === 'unset' ? ' (ยังไม่ได้เทียบเพดาน)' : ''}${total.unreadable ? ` · อ่านยอดไม่ได้ ${total.unreadable} ใบ` : ''}</li>`,
         )
         .join('')}</ul>`
     : '';

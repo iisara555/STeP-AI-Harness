@@ -323,18 +323,20 @@ const PAYMENT_PROOF_KINDS: PacketDocumentKind[] = ['tax_invoice', 'abbreviated_t
 const CAP_SATANG = 1_000_000;
 export type CategoryTotal = {
   key: string;
-  category: Extract<ClaimCategory, 'B' | 'BV' | 'emergency'>;
+  category: Extract<ClaimCategory, 'B' | 'BV' | 'emergency' | 'unsure'>;
   code: string;
   receipts: number;
   unreadable: number;
   total: number;
-  status: 'within' | 'over' | 'check';
+  /** `unset`: receipts with no category yet, so their sum cannot be compared with a cap. */
+  status: 'within' | 'over' | 'check' | 'unset';
 };
 
 /**
  * AFP caps category B at 10,000 baht per sub-category summed over every item (circular section 3.1), BV per driver per
  * activity and the emergency category at 10,000 baht. Only receipts compared on the receipt check carry a category and
  * amount, so this sums those; a receipt without a sub-category is grouped apart and never called over the cap.
+ * Receipts with no category on the receipt or the packet are still summed, so the total never disappears.
  */
 export function packetCategoryTotals(packet: ReceiptPacket): CategoryTotal[] {
   const packetCategory = parseClaimCategory(packet.guidance?.category);
@@ -343,8 +345,8 @@ export function packetCategoryTotals(packet: ReceiptPacket): CategoryTotal[] {
     const reviewed = doc.reviewedReceipt;
     if (!reviewed || !doc.pages.some(page => page.included && PAYMENT_PROOF_KINDS.includes(page.kind))) continue;
     const kept = parseClaimCategory(reviewed.category);
-    const category = kept && kept !== 'unsure' ? kept : packetCategory;
-    if (category !== 'B' && category !== 'BV' && category !== 'emergency') continue;
+    const category = kept && kept !== 'unsure' ? kept : packetCategory || 'unsure';
+    if (category !== 'B' && category !== 'BV' && category !== 'emergency' && category !== 'unsure') continue;
     const code = parseExpenseCode(reviewed.code);
     // B9.2 and B9.1 share the B9 cap; BV1 and BV2 are both BV.
     const top = category === 'B' ? code.match(/^B\d+/)?.[0] || '' : '';
@@ -361,11 +363,13 @@ export function packetCategoryTotals(packet: ReceiptPacket): CategoryTotal[] {
   return [...groups.values()]
     .map(group => ({
       ...group,
-      status: (group.total > CAP_SATANG
-        ? group.key === 'B?' || group.category === 'BV'
-          ? 'check'
-          : 'over'
-        : 'within') as CategoryTotal['status'],
+      status: (group.category === 'unsure'
+        ? 'unset'
+        : group.total > CAP_SATANG
+          ? group.key === 'B?' || group.category === 'BV'
+            ? 'check'
+            : 'over'
+          : 'within') as CategoryTotal['status'],
     }))
     .sort((a, b) => a.key.localeCompare(b.key, 'en', { numeric: true }));
 }

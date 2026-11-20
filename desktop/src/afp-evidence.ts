@@ -1,4 +1,4 @@
-import type { ReceiptPacket, PacketSource } from './receipt-packet';
+import type { ReceiptPacket, PacketSource, PacketDocumentKind } from './receipt-packet';
 import { CLAIM_CATEGORY_LABELS, parseClaimCategory, type ClaimCategory } from './receipt-compliance';
 
 // These are page classifications, not findings about the contents of a document.
@@ -91,6 +91,26 @@ export function suggestEvidenceKind(name: string): EvidenceDocumentKind | null {
   ];
   const matched = checks.filter(([, pattern]) => pattern.test(name)).map(([kind]) => kind);
   return matched.length === 1 ? matched[0] : null;
+}
+
+/**
+ * A type the file name suggests for unclassified pages, payment documents included. A receipt name is only a hint:
+ * its amount still comes from the receipt check. Two kinds in one name suggest nothing.
+ */
+export function suggestPacketKind(name: string): PacketDocumentKind | null {
+  const payment: [PacketDocumentKind, RegExp][] = [
+    ['tax_invoice', /ใบกำกับภาษี|tax[ _-]?invoice/i],
+    ['receipt', /ใบเสร็จ|receipt/i],
+    ['cash_bill', /บิลเงินสด|cash[ _-]?bill/i],
+    ['invoice_or_quotation', /ใบแจ้งหนี้|ใบเสนอราคา|ใบส่งของ|invoice|quotation/i],
+    ['transfer_slip', /สลิป|slip/i],
+  ];
+  // "ใบเสร็จรับเงิน/ใบกำกับภาษี" is one combined document, read as the tax invoice.
+  const paid = payment.filter(([, pattern]) => pattern.test(name)).map(([kind]) => kind);
+  const pay = paid.length === 2 && paid.includes('tax_invoice') && paid.includes('receipt') ? ['tax_invoice' as const] : paid;
+  const evidence = suggestEvidenceKind(name);
+  const all = [...pay, ...(evidence ? [evidence] : [])];
+  return all.length === 1 ? all[0] : null;
 }
 
 type MatchKind = EvidenceDocumentKind | 'receipt' | 'receipt_voucher';
@@ -275,7 +295,7 @@ export function evidenceChecklist(packet: ReceiptPacket): EvidenceResult[] {
     const sources = matchSources(packet.documents, item.kinds);
     const hinted = packet.documents.some(
       doc =>
-        doc.pages.some(page => page.included && page.kind === 'other') && item.kinds.includes(suggestEvidenceKind(doc.name) as MatchKind),
+        doc.pages.some(page => page.included && page.kind === 'other') && item.kinds.includes(suggestPacketKind(doc.name) as MatchKind),
     );
     const status: EvidenceStatus = sources.length
       ? sources.every(source => source.checked)

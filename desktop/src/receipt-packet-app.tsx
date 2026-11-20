@@ -19,7 +19,7 @@ import {
 import './receipt-packet.css';
 import { PaymentVoucherForm } from './afp-payment-voucher-form';
 import { AfpEvidencePanel } from './afp-evidence-panel';
-import { EVIDENCE_DOCUMENT_LABELS, suggestEvidenceKind } from './afp-evidence';
+import { suggestPacketKind } from './afp-evidence';
 import { ClaimInterview } from './claim-interview-panel';
 import { applyClaimSummary } from './claim-interview';
 
@@ -182,8 +182,11 @@ export function ReceiptPacketApp({ active, call, review, notify, onAskAi }: Prop
   const documentAction = (method: string, sourceId?: string) =>
     void run(async () => {
       const value = draft.current!;
-      const next = await call(method, { id: value.id, revision: value.revision, sourceId, review });
+      const result = await call(method, { id: value.id, revision: value.revision, sourceId, review });
+      // Adding files answers with the packet and the names skipped because the packet already has them.
+      const next = result?.packet ?? result;
       if (next && next.schema === 'step-receipt-packet/v1') current(next);
+      if (result?.skipped?.length) notify(t('ข้ามไฟล์ที่มีในชุดแล้ว: {0}', result.skipped.join(', ')), 'info');
     });
   const total = packet ? voucherTotal(packet.voucher) : null;
   const assessment = packet ? packetAssessment(packet) : null;
@@ -452,19 +455,19 @@ export function ReceiptPacketApp({ active, call, review, notify, onAskAi }: Prop
                         />
                         {t('ตรวจเทียบหน้าที่เลือกของ {0} แล้ว', source.name)}
                       </label>
-                      {suggestEvidenceKind(source.name) && source.pages.some(page => page.kind === 'other') && (
+                      {suggestPacketKind(source.name) && source.pages.some(page => page.kind === 'other') && (
                         <div className="evidence-file-hint">
                           <p className="small muted">
                             {t(
                               'ชื่อไฟล์ชวนให้ตรวจว่าเป็น {0} แต่ยังไม่ยืนยันเนื้อหา',
-                              t(EVIDENCE_DOCUMENT_LABELS[suggestEvidenceKind(source.name)!]),
+                              t(PACKET_DOCUMENT_LABELS[suggestPacketKind(source.name)!]),
                             )}
                           </p>
                           <button
                             type="button"
                             className="text-link"
                             onClick={() => {
-                              const kind = suggestEvidenceKind(source.name);
+                              const kind = suggestPacketKind(source.name);
                               if (!kind) return;
                               mutate(value => ({
                                 ...value,

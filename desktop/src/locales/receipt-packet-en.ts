@@ -103,4 +103,5 @@ export const receiptPacketEn: Record<string, string> = {
   'จัดเลขหน้าสรุปชุดไม่ได้ โปรดลดความยาวหน้าสรุปแล้วลองส่งออกใหม่':
     'Could not resolve summary page references. Shorten the summary and export again',
   'ยังไม่มีหน้าหลักฐานหรือร่าง FM-AF-014 ที่เลือกไว้สำหรับส่งออก': 'Select evidence pages or the FM-AF-014 draft before exporting',
+  'ข้ามไฟล์ที่มีในชุดแล้ว: {0}': 'Skipped files already in the packet: {0}',
 };

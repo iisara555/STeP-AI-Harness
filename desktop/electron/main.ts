@@ -4091,7 +4091,7 @@ async function main() {
             originalPath: path,
           });
         }
-        return receiptPackets.add(input.id, input.revision, sources);
+        return receiptPackets.addNew(input.id, input.revision, sources);
       }
       case 'receiptPacketExport': {
         const packet = receiptPackets.get(input.id, input.revision);

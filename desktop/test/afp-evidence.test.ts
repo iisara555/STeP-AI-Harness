@@ -14,6 +14,7 @@ import {
   inferActivity,
   storedEvidenceGuidance,
   suggestEvidenceKind,
+  suggestPacketKind,
 } from '../src/afp-evidence';
 import { createReceiptPacket, editReceiptPacket, packetAssessment } from '../src/receipt-packet';
 import { setLanguage, t, loadEnglish } from '../src/i18n';
@@ -90,6 +91,14 @@ test('a filename is only a hint; classification, selected pages and human review
   const status = () => evidenceChecklist(packet).find(item => item.id === 'attendance')?.status;
   assert.equal(status(), 'suggested');
   assert.equal(suggestEvidenceKind('FM-AF-015-FM-AF-035.pdf'), null);
+  // Payment documents are suggested from the name too; a mixed name suggests nothing.
+  assert.equal(suggestPacketKind('ใบเสร็จน้ำดื่ม-1.pdf'), 'receipt');
+  assert.equal(suggestPacketKind('ใบเสร็จรับเงิน/ใบกำกับภาษี ร้านป้าย.pdf'), 'tax_invoice');
+  assert.equal(suggestPacketKind('ใบแจ้งหนี้ร้านป้าย.pdf'), 'invoice_or_quotation');
+  assert.equal(suggestPacketKind('สลิปโอนเงิน.jpg'), 'transfer_slip');
+  assert.equal(suggestPacketKind('FM-AF-015 ใบเซ็นชื่อประชุม.pdf'), 'attendance');
+  assert.equal(suggestPacketKind('ใบเสร็จและใบเซ็นชื่อ.pdf'), null);
+  assert.equal(suggestPacketKind('scan001.pdf'), null);
   packet.documents[0].pages[0].kind = 'attendance';
   assert.equal(status(), 'unchecked');
   packet.documents[0].pages[0].checked = true;
