@@ -75,21 +75,23 @@ export function inferActivity(packet: Pick<ReceiptPacket, 'title' | 'purpose' | 
 }
 
 // A file name can suggest a classification, but never proves a page's contents.
+/** The words that name each evidence form, in a file name or on the document itself. */
+export const EVIDENCE_PATTERNS: [EvidenceDocumentKind, RegExp][] = [
+  ['attendance', /FM[ _-]?AF[ _-]?015|ใบเซ็นชื่อ|ใบลงชื่อ|รายชื่อผู้เข้าร่วม|attendance/i],
+  ['hospitality_list', /FM[ _-]?AF[ _-]?019|รายชื่อ.*เลี้ยงรับรอง/i],
+  ['id_copy', /สำเนาบัตร|บัตรประชาชน|identity[ _-]?card|id[ _-]?copy/i],
+  ['cv', /ประวัติการทำงาน|ประวัติวิทยากร|curriculum[ _-]?vitae|(?:^|[ _-])cv(?:[ _.\-]|$)/i],
+  ['employee_certificate', /FM[ _-]?AF[ _-]?035/i],
+  ['executive_certificate', /FM[ _-]?AF[ _-]?036/i],
+  ['privacy_notice', /privacy[ _-]?(?:notice|policy)|นโยบายความเป็นส่วนตัว|ประกาศความเป็นส่วนตัว/i],
+  ['loan_agreement', /FM[ _-]?AF[ _-]?001|สัญญายืมเงิน/i],
+  ['expense_request', /FM[ _-]?AF[ _-]?002/i],
+  ['project_proposal', /FM[ _-]?AF[ _-]?003|ข้อเสนอโครงการ/i],
+  ['approval_report', /รายงานขอความเห็นชอบ/i],
+];
+
 export function suggestEvidenceKind(name: string): EvidenceDocumentKind | null {
-  const checks: [EvidenceDocumentKind, RegExp][] = [
-    ['attendance', /FM[ _-]?AF[ _-]?015|ใบเซ็นชื่อ|ใบลงชื่อ|รายชื่อผู้เข้าร่วม|attendance/i],
-    ['hospitality_list', /FM[ _-]?AF[ _-]?019|รายชื่อ.*เลี้ยงรับรอง/i],
-    ['id_copy', /สำเนาบัตร|บัตรประชาชน|identity[ _-]?card|id[ _-]?copy/i],
-    ['cv', /ประวัติการทำงาน|ประวัติวิทยากร|curriculum[ _-]?vitae|(?:^|[ _-])cv(?:[ _.\-]|$)/i],
-    ['employee_certificate', /FM[ _-]?AF[ _-]?035/i],
-    ['executive_certificate', /FM[ _-]?AF[ _-]?036/i],
-    ['privacy_notice', /privacy[ _-]?(?:notice|policy)|นโยบายความเป็นส่วนตัว|ประกาศความเป็นส่วนตัว/i],
-    ['loan_agreement', /FM[ _-]?AF[ _-]?001|สัญญายืมเงิน/i],
-    ['expense_request', /FM[ _-]?AF[ _-]?002/i],
-    ['project_proposal', /FM[ _-]?AF[ _-]?003|ข้อเสนอโครงการ/i],
-    ['approval_report', /รายงานขอความเห็นชอบ/i],
-  ];
-  const matched = checks.filter(([, pattern]) => pattern.test(name)).map(([kind]) => kind);
+  const matched = EVIDENCE_PATTERNS.filter(([, pattern]) => pattern.test(name)).map(([kind]) => kind);
   return matched.length === 1 ? matched[0] : null;
 }
 

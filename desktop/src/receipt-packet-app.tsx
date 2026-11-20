@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Download, FileText, FolderOpen, Plus, Trash2 } from './icons';
+import { ChevronDown, ChevronUp, Download, FileText, FolderOpen, Paperclip, Plus, Trash2 } from './icons';
 import { t } from './i18n';
 import { explainError } from './messages';
 import {
@@ -10,6 +10,7 @@ import {
   thaiBahtWords,
   packetAssessment,
   editReceiptPacket,
+  PACKET_LIMITS,
   type ReceiptPacket,
   type PacketListItem,
   type PacketDocumentKind,
@@ -22,6 +23,9 @@ import { AfpEvidencePanel } from './afp-evidence-panel';
 import { suggestPacketKind } from './afp-evidence';
 import { ClaimCaseChat, type CaseChatApi } from './claim-case-chat';
 import { caseContext, caseListStatus } from './claim-case';
+import { applyReadings, type ReadingBatch, type ReadingItem, type SourceReading } from './evidence-reading';
+const DROPPABLE = /\.(pdf|png|jpe?g)$/i;
+const hasFiles = (event: React.DragEvent) => Array.from(event.dataTransfer?.types || []).includes('Files');
 
 type PacketStep = 'details' | 'evidence' | 'draft';
 
@@ -57,6 +61,10 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
     savedVersion = useRef(0),
     action = useRef(false);
   const chain = useRef<Promise<unknown>>(Promise.resolve());
+  const [readings, setReadings] = useState<Record<string, ReadingBatch[]>>({});
+  const readingQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const [dragging, setDragging] = useState(false);
+  const dragDepth = useRef(0);
   const current = (next: ReceiptPacket) => {
     draft.current = next;
     saved.current = next;
@@ -204,11 +212,90 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
     void run(async () => {
       const value = draft.current!;
       const result = await call(method, { id: value.id, revision: value.revision, sourceId, review });
-      // Adding files answers with the packet and the names skipped because the packet already has them.
+      // A checked receipt answers with the packet itself, or inside { packet } beside any skipped names.
       const next = result?.packet ?? result;
       if (next && next.schema === 'step-receipt-packet/v1') current(next);
-      if (result?.skipped?.length) notify(t('ข้ามไฟล์ที่มีในชุดแล้ว: {0}', result.skipped.join(', ')), 'info');
     });
+  const updateItem = (packetId: string, batchId: string, sourceId: string, change: Partial<ReadingItem>) =>
+    setReadings(all => ({
+      ...all,
+      [packetId]: (all[packetId] || []).map(batch =>
+        batch.id === batchId
+          ? { ...batch, items: batch.items.map(item => (item.sourceId === sourceId ? { ...item, ...change } : item)) }
+          : batch,
+      ),
+    }));
+  // New files are read on this computer one at a time: the local OCR takes one file at a time, and each line updates as it is read.
+  const readFiles = (packetId: string, sources: { id: string; name: string }[]) => {
+    if (!sources.length) return;
+    const batch: ReadingBatch = {
+      id: sources[0].id,
+      items: sources.map(source => ({ sourceId: source.id, name: source.name, state: 'waiting' })),
+    };
+    setReadings(all => ({ ...all, [packetId]: [...(all[packetId] || []), batch] }));
+    readingQueue.current = readingQueue.current
+      .catch(() => undefined)
+      .then(async () => {
+        for (const source of sources) {
+          updateItem(packetId, batch.id, source.id, { state: 'reading' });
+          try {
+            const result: SourceReading = await call('receiptPacketRead', { id: packetId, sourceId: source.id });
+            updateItem(packetId, batch.id, source.id, { state: 'done', result });
+          } catch (failure) {
+            updateItem(packetId, batch.id, source.id, { state: 'failed', error: explainError(failure) });
+          }
+        }
+      });
+  };
+  /** Adds picked or dropped files, then reads the ones that are new to the case. */
+  const addFiles = (files?: { name: string; bytes: Uint8Array; path: string }[]) =>
+    void run(async () => {
+      const value = draft.current!;
+      const before = new Set(value.documents.map(doc => doc.id));
+      const result = await call('receiptPacketAdd', { id: value.id, revision: value.revision, ...(files ? { files } : {}) });
+      const next: ReceiptPacket | undefined = result?.packet;
+      if (!next) return;
+      current(next);
+      if (result.skipped?.length) notify(t('ข้ามไฟล์ที่มีในชุดแล้ว: {0}', result.skipped.join(', ')), 'info');
+      readFiles(
+        next.id,
+        next.documents.filter(doc => !before.has(doc.id)),
+      );
+    });
+  const dropFiles = async (list: File[]) => {
+    const usable = list.filter(file => DROPPABLE.test(file.name) && file.size > 0 && file.size <= PACKET_LIMITS.sourceBytes);
+    const left = list.filter(file => !usable.includes(file)).map(file => file.name);
+    if (left.length) notify(t('ข้ามไฟล์ที่ไม่ใช่ PDF, PNG หรือ JPG หรือใหญ่เกิน 25 MB: {0}', left.join(', ')), 'info');
+    if (!usable.length || !draft.current) return;
+    if (usable.length > PACKET_LIMITS.documents) {
+      notify(explainError(new Error('PACKET_DOCUMENT_LIMIT')), 'error');
+      return;
+    }
+    try {
+      const files = await Promise.all(
+        usable.map(async file => ({
+          name: file.name,
+          bytes: new Uint8Array(await file.arrayBuffer()),
+          path: window.step?.filePath?.(file) || '',
+        })),
+      );
+      addFiles(files);
+    } catch (failure) {
+      notify(explainError(failure), 'error');
+    }
+  };
+  const caseReadings = packet ? readings[packet.id] || [] : [];
+  const settleReading = (batchId: string, settled: ReadingBatch['settled']) => {
+    const value = draft.current;
+    if (!value) return;
+    const batch = (readings[value.id] || []).find(item => item.id === batchId);
+    if (!batch) return;
+    if (settled === 'applied') mutate(packet => applyReadings(packet, batch.items));
+    setReadings(all => ({
+      ...all,
+      [value.id]: (all[value.id] || []).map(item => (item.id === batchId ? { ...item, settled } : item)),
+    }));
+  };
   // "ถาม AI" anywhere in a case asks in that case's own chat; the main chat never opens.
   const askInCase = async (text: string) => {
     const value = draft.current;
@@ -322,7 +409,40 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
         </div>
       ) : (
         <>
-          <div className="case-main">
+          <div
+            className="case-main"
+            onDragEnter={event => {
+              if (!hasFiles(event)) return;
+              event.preventDefault();
+              dragDepth.current++;
+              setDragging(true);
+            }}
+            onDragOver={event => {
+              if (!hasFiles(event)) return;
+              event.preventDefault();
+              event.dataTransfer.dropEffect = busy ? 'none' : 'copy';
+            }}
+            onDragLeave={event => {
+              if (!hasFiles(event)) return;
+              dragDepth.current = Math.max(0, dragDepth.current - 1);
+              if (!dragDepth.current) setDragging(false);
+            }}
+            onDrop={event => {
+              if (!hasFiles(event)) return;
+              event.preventDefault();
+              dragDepth.current = 0;
+              setDragging(false);
+              if (busy) notify(t('รอให้งานก่อนหน้าเสร็จ แล้ววางไฟล์อีกครั้ง'), 'info');
+              else void dropFiles(Array.from(event.dataTransfer.files));
+            }}
+          >
+            {dragging && (
+              <div className="case-drop" aria-hidden="true">
+                <Paperclip size={22} />
+                <strong>{t('วางไฟล์เพื่อเพิ่มเป็นหลักฐานในเรื่องนี้')}</strong>
+                <span className="small muted">{t('PDF, PNG หรือ JPG หลายไฟล์ได้ · อ่านในเครื่องทีละไฟล์')}</span>
+              </div>
+            )}
             <header className="case-head">
               <h2>{packet.title}</h2>
               <span className="small muted" role="status">
@@ -339,6 +459,10 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
               onChange={mutate}
               onDecision={setClaimWaiting}
               notify={notify}
+              readings={caseReadings}
+              busy={busy}
+              onAttach={() => addFiles()}
+              onSettleReading={settleReading}
             />
           </div>
           <div className="case-panel">
@@ -404,7 +528,7 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
                     </span>
                   </div>
                   <div className="packet-actions">
-                    <button className="primary" onClick={() => documentAction('receiptPacketAdd')}>
+                    <button className={claimWaiting ? 'quiet' : 'primary'} onClick={() => addFiles()}>
                       <Plus size={14} />
                       {t('เพิ่มเอกสาร')}
                     </button>
