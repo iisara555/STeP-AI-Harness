@@ -1004,16 +1004,14 @@ export function ReceiptApp({
               </p>
             )}
             <section className="receipt-review-section" aria-labelledby="receipt-fixes-title">
-              <h2 id="receipt-fixes-title">{t('ต้องแก้หรือเติมข้อมูลก่อนใช้ประกอบการเบิก')}</h2>
+              {/* The heading is the receipt's state, so no second line repeats it. */}
+              <h2 id="receipt-fixes-title" aria-live="polite">
+                {doc ? assessmentTitles[assessment.status] : t('ต้องแก้หรือเติมข้อมูลก่อนใช้ประกอบการเบิก')}
+              </h2>
               {!doc ? (
                 <p className="muted">{t('เลือกใบเสร็จด้านซ้าย แล้วระบบจะแสดงจุดที่ต้องตรวจ')}</p>
               ) : (
                 <>
-                  {assessment.status !== 'needs-correction' && (
-                    <p className="receipt-assessment" role="status">
-                      {assessmentTitles[assessment.status]}
-                    </p>
-                  )}
                   {corrections.length > 0 && (
                     <ul className="receipt-corrections">
                       {corrections.map(text => (

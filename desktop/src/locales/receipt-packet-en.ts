@@ -11,16 +11,11 @@ export const receiptPacketEn: Record<string, string> = {
   บันทึกในเครื่องแล้ว: 'Saved locally',
   โหลดชุดที่บันทึกล่าสุด: 'Load the latest saved packet',
   เริ่มจากหนึ่งเรื่องเบิก: 'Start with one expense case',
-  'สร้างชุดงาน เพิ่มหลักฐาน แล้วใช้ข้อมูลที่ตรวจแล้วเตรียมใบสำคัญรับเงินและหน้าสรุปส่ง AFP':
-    'Create a case, add evidence, and reuse checked information for a receipt voucher and an AFP summary',
-  'เก็บในเครื่อง ส่งออก PDF รวมและ Word ได้ โดยไม่ต้องเชื่อม AI':
-    'Keep files locally and export a combined PDF or Word form without connecting AI',
   ข้อมูลเรื่องเบิก: 'Expense case details',
   ขั้นตอนจัดชุดเอกสาร: 'Document packet steps',
   ข้อมูลเรื่อง: 'Case details',
   หลักฐาน: 'Evidence',
   ร่างและส่งออก: 'Draft and export',
-  ชื่อเรื่องและวัตถุประสงค์ช่วยแนะนำหลักฐานที่เกี่ยวข้อง: 'The title and purpose help suggest relevant evidence',
   'ต่อ: เพิ่มหลักฐาน': 'Next: add evidence',
   'กลับ: ข้อมูลเรื่อง': 'Back: case details',
   'ต่อ: ร่างและส่งออก': 'Next: draft and export',

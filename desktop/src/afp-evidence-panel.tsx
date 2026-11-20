@@ -71,7 +71,6 @@ export function AfpEvidencePanel({
         <h2>{t('แนะนำเอกสารตามกิจกรรม')}</h2>
         <span className="evidence-local">{t('วิเคราะห์บนเครื่อง')}</span>
       </div>
-      <p className="small muted">{t('ระบบดูชื่อเรื่องและวัตถุประสงค์ แล้วเทียบกับประเภทหน้าที่เลือก คุณเปลี่ยนข้อเสนอได้')}</p>
       <p className="evidence-context" role="status">
         {context.activity
           ? context.automatic
@@ -131,7 +130,6 @@ export function AfpEvidencePanel({
             </select>
           </label>
         </div>
-        <p className="small muted">{t('กรณีการเงินต้องเลือกเอง ระบบไม่เดาหมวดค่าใช้จ่ายจากชื่อกิจกรรม')}</p>
       </details>
       {totals.length > 0 && (
         <div className="evidence-totals">
@@ -185,9 +183,7 @@ export function AfpEvidencePanel({
           </ul>
         </details>
       )}
-      <p className="small muted">
-        {t('รายการเป็นเครื่องช่วยตรวจตามบริบท ไม่ยืนยันว่าเอกสารครบหรืออนุมัติเบิกได้ โปรดเทียบข้อกำหนดล่าสุดกับ AFP')}
-      </p>
+      <p className="small muted">{t('เป็นเครื่องช่วยตรวจ ไม่ยืนยันว่าเอกสารครบหรือเบิกได้ โปรดยืนยันกับ AFP')}</p>
       <details className="evidence-extra">
         <summary>{t('รายการอื่นที่ต้องการตรวจ ({0})', guidance.extra.length)}</summary>
         <p className="small muted">{t('เพิ่มรายการเองและเชื่อมไฟล์ในชุดได้ รายการเหล่านี้ไม่ส่งให้ AI')}</p>

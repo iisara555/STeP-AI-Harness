@@ -20,6 +20,8 @@ import './receipt-packet.css';
 import { PaymentVoucherForm } from './afp-payment-voucher-form';
 import { AfpEvidencePanel } from './afp-evidence-panel';
 import { EVIDENCE_DOCUMENT_LABELS, suggestEvidenceKind } from './afp-evidence';
+import { ClaimInterview } from './claim-interview-panel';
+import { applyClaimSummary } from './claim-interview';
 
 type PacketStep = 'details' | 'evidence' | 'draft';
 
@@ -34,6 +36,7 @@ type Props = {
 export function ReceiptPacketApp({ active, call, review, notify, onAskAi }: Props) {
   const [formMode, setFormMode] = useState<'receipt' | 'disbursement'>('receipt');
   const [packetStep, setPacketStep] = useState<PacketStep>('details');
+  const [claimWaiting, setClaimWaiting] = useState(false);
   const stepHeadings = useRef<Record<PacketStep, HTMLHeadingElement | null>>({ details: null, evidence: null, draft: null });
   const goToStep = (step: PacketStep) => {
     setPacketStep(step);
@@ -232,6 +235,7 @@ export function ReceiptPacketApp({ active, call, review, notify, onAskAi }: Prop
           </select>
         </label>
         <button
+          className="quiet"
           disabled={busy || !loaded}
           onClick={() =>
             void run(async () => {
@@ -270,8 +274,7 @@ export function ReceiptPacketApp({ active, call, review, notify, onAskAi }: Prop
         <div className="packet-empty">
           <FileText size={28} aria-hidden="true" />
           <h2>{t('เริ่มจากหนึ่งเรื่องเบิก')}</h2>
-          <p>{t('สร้างชุดงาน เพิ่มหลักฐาน แล้วใช้ข้อมูลที่ตรวจแล้วเตรียมใบสำคัญรับเงินและหน้าสรุปส่ง AFP')}</p>
-          <p className="small muted">{t('เก็บในเครื่อง ส่งออก PDF รวมและ Word ได้ โดยไม่ต้องเชื่อม AI')}</p>
+          <p>{t('ระบบถามทีละข้อว่าเบิกอะไร แล้วบอกหมวดและเอกสารที่ต้องเตรียม เก็บในเครื่องและส่งออก PDF หรือ Word ได้')}</p>
         </div>
       ) : (
         <>
@@ -293,6 +296,7 @@ export function ReceiptPacketApp({ active, call, review, notify, onAskAi }: Prop
             <div hidden={packetStep !== 'details'}>
               <section className="packet-section">
                 <h2
+                  className="sr-only"
                   tabIndex={-1}
                   ref={element => {
                     stepHeadings.current.details = element;
@@ -300,7 +304,12 @@ export function ReceiptPacketApp({ active, call, review, notify, onAskAi }: Prop
                 >
                   {t('ข้อมูลเรื่องเบิก')}
                 </h2>
-                <p className="small muted">{t('ชื่อเรื่องและวัตถุประสงค์ช่วยแนะนำหลักฐานที่เกี่ยวข้อง')}</p>
+                <ClaimInterview
+                  packet={packet}
+                  onDecision={setClaimWaiting}
+                  onApply={summary => mutate(value => applyClaimSummary(value, summary))}
+                  onAskAi={text => void run(async () => onAskAi(text))}
+                />
                 {field('ชื่อเรื่องเบิก', 'title')}
                 {field('โครงการหรือหน่วยงาน', 'project')}
                 {field('วัตถุประสงค์ของชุดเอกสาร', 'purpose')}
@@ -316,7 +325,7 @@ export function ReceiptPacketApp({ active, call, review, notify, onAskAi }: Prop
                 </label>
               </section>
               <div className="packet-step-actions">
-                <button type="button" className="primary" onClick={() => goToStep('evidence')}>
+                <button type="button" className={claimWaiting ? 'quiet' : 'primary'} onClick={() => goToStep('evidence')}>
                   {t('ต่อ: เพิ่มหลักฐาน')}
                 </button>
               </div>
@@ -548,6 +557,7 @@ export function ReceiptPacketApp({ active, call, review, notify, onAskAi }: Prop
             <div hidden={packetStep !== 'draft'}>
               <div className="packet-drafts">
                 <h2
+                  className="sr-only"
                   tabIndex={-1}
                   ref={element => {
                     stepHeadings.current.draft = element;

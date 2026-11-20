@@ -21,6 +21,7 @@ import { receiptPacketEn } from './receipt-packet-en';
 import { afpPaymentVoucherEn } from './afp-payment-voucher-en';
 import { workAssistantEn } from './work-assistant-en';
 import { afpEvidenceEn } from './afp-evidence-en';
+import { claimInterviewEn } from './claim-interview-en';
 import { planCommentsEn } from './plan-comments-en';
 import { taskAlertsEn } from './task-alerts-en';
 import { uxToolsEn } from './ux-tools-en';
@@ -3388,6 +3389,7 @@ export const en: Record<string, string> = {
   ...workAssistantEn,
   ...googleChangesEn,
   ...afpEvidenceEn,
+  ...claimInterviewEn,
   'Google Workspace เชื่อมแยกในแท็บบัญชีและบริการ': 'Google Workspace connects separately under Accounts and services',
   'แนบได้ 1 ไฟล์ หรือวางข้อมูลด้านล่าง · ส่งให้ AI ตามการตั้งค่าความเป็นส่วนตัว':
     'Attach 1 file or paste below · sent to the AI under your privacy settings',
