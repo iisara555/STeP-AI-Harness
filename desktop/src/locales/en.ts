@@ -999,6 +999,12 @@ export const en: Record<string, string> = {
   'เลือกบริการ AI': 'Choose an AI service',
   กลับไปเลือกบริการ: 'Back to services',
   'กดปุ่มด้านล่างแล้วลงชื่อในเบราว์เซอร์ ไม่ต้องใช้ API key': 'Press the button below and sign in in your browser. No API key needed',
+  'ลงชื่อด้วยบัญชี Google ขององค์กร': 'Sign in with your organization Google account',
+  'AI ขององค์กร': 'Organization AI',
+  'ลงชื่อด้วยบัญชี Google ขององค์กรในหน้าที่เปิดขึ้น': 'Sign in with your organization Google account on the page that opened',
+  'องค์กรเป็นผู้จ่าย · ใช้ได้ตามโควตาที่องค์กรกำหนด': 'Paid by your organization · within the quota it sets',
+  'องค์กรเป็นผู้จ่าย ลงชื่อด้วยบัญชี Google ขององค์กร ไม่ต้องใช้ API key':
+    'Paid by your organization. Sign in with your organization Google account, no API key needed',
   'กดลงชื่อแล้วอนุญาตในหน้า {0} ระบบจะได้คีย์ของแอปนี้มาเก็บเข้ารหัสเอง หรือวางคีย์ที่มีอยู่แล้วด้านล่าง':
     'Sign in and approve on the {0} page; the app receives its own key and stores it encrypted. Or paste a key you already have below',
   'ติดตั้งและเปิด {0} ในเครื่องนี้ก่อน แล้วดาวน์โหลดโมเดลอย่างน้อยหนึ่งตัว':

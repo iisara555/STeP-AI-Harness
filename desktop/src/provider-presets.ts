@@ -11,8 +11,11 @@ export type ProviderPreset = {
   protocol: 'openai' | 'anthropic';
   /** 'none' for a service on this computer (Ollama, LM Studio), which needs no key. */
   key: 'required' | 'none';
-  /** The service can issue a key through its own sign-in page (OAuth PKCE), so the employee need not copy one. */
-  signIn?: 'openrouter';
+  /**
+   * openrouter: the service issues a key through its own sign-in page (OAuth PKCE), so the employee need not copy one.
+   * organization: no key at all; each request carries the employee's organization Google sign-in.
+   */
+  signIn?: 'openrouter' | 'organization';
   /** Used when it is in the service's model list and the employee chose no model. */
   defaultModel: string;
   /** Where the employee creates a key. */
@@ -136,7 +139,23 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   },
 ];
 
-export const presetFor = (id: unknown) => (typeof id === 'string' ? PROVIDER_PRESETS.find(p => p.id === id) : undefined);
+/**
+ * "AI ขององค์กร": the organization's AI gateway, which pays for the AI and keeps the key on its own server. Its address
+ * comes from policy (organizationAi), so it is not in the fixed list above and appears only where policy sets it.
+ */
+export const ORGANIZATION_PRESET: ProviderPreset = {
+  id: 'organization',
+  label: 'AI ขององค์กร',
+  description: 'องค์กรเป็นผู้จ่าย ลงชื่อด้วยบัญชี Google ขององค์กร ไม่ต้องใช้ API key',
+  baseUrl: '',
+  protocol: 'openai',
+  key: 'required',
+  signIn: 'organization',
+  defaultModel: 'step-chat',
+};
+
+export const presetFor = (id: unknown) =>
+  typeof id !== 'string' ? undefined : id === ORGANIZATION_PRESET.id ? ORGANIZATION_PRESET : PROVIDER_PRESETS.find(p => p.id === id);
 
 /** The model to use: the employee's choice, else the preset's default when the service lists it, else its first model. */
 export function pickModel(chosen: string, preset: ProviderPreset, available: string[]) {

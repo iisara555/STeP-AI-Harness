@@ -49,6 +49,7 @@ import { highConfidenceSkill, prepareSkillSelection, shouldRunModelSkillSelectio
 import { parseDocumentOutput } from '../src/document-output';
 import { ThinkingLog } from '../src/thinking';
 import { missingTorSections } from './tor-coverage';
+import { organizationDocumentModel } from './organization-ai-config';
 import { GOOGLE_CHANGE_LIMIT, type GoogleChange } from '../src/google-changes';
 import { markdownDocument, documentText } from '../src/draft';
 import { documentTarget, patchContract, applyDocumentPatch } from './document-patch';
@@ -875,7 +876,14 @@ export class WorkService {
 
     // The model picked for this task overrides the connection default; empty means the provider default.
     const selectedConnection: Connection = { ...stored, model: session.model ?? stored.model };
-    const connection: Connection = { ...selectedConnection, ...(await this.harness.modelLimits?.(selectedConnection)) };
+    let connection: Connection = { ...selectedConnection, ...(await this.harness.modelLimits?.(selectedConnection)) };
+    // "AI ขององค์กร" moves official-document work to the organization's document model once the task is known.
+    const useDocumentModel = async (drafting: boolean, skill: string | undefined) => {
+      const model = organizationDocumentModel(connection, { chosenModel: session.model, drafting, skill });
+      if (!model) return;
+      const switched = { ...stored, model };
+      connection = { ...switched, ...(await this.harness.modelLimits?.(switched)) };
+    };
     const recordUsage = (count: TokenCount) => {
       if (options.longBudget) options.longBudget.tokens += count.total;
       this.harness.recordUsage?.(connection, count);
@@ -1057,6 +1065,7 @@ export class WorkService {
       const draftingTool = mode === 'draft' ? documentTool(session.documentTool) : undefined;
       // A fixed form never falls back to a generic prompt or a neighboring Skill.
       if (draftingTool && (contract.mode !== 'SKILL' || contract.skill !== draftingTool.skill)) throw new Error('CONTEXT_UNAVAILABLE');
+      await useDocumentModel(Boolean(draftingTool), contract.mode === 'SKILL' ? contract.skill : undefined);
       let retrieved = '';
       // What the AI's own web_search calls returned in this run, for the sources shown under the answer.
       const searched: string[] = [];
@@ -1204,6 +1213,7 @@ export class WorkService {
           contract = checked.routingContract;
           trace.mode = String(contract.mode || '');
           trace.route = routeKey(contract);
+          await useDocumentModel(false, chosen);
         }
       }
       const searchPublic =

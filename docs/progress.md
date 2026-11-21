@@ -6,6 +6,10 @@ CHANGELOG instead of growing this file.
 
 _Last updated: 2026-11-20_
 
+## In flight
+
+- **"AI ขององค์กร" (2026-11-18)**: the organization bought OpenRouter credit (4,000 THB to start). Desktop gets an organization preset that signs in with the organization Google account and calls the AI gateway in STeP-AI-Webapp (key on the server only, per-person/department caps, ZDR). Waits on the owner: OpenRouter account setup and key on ik-node-01, gateway deploy behind Tailscale Funnel (owner's choice), setting the repository variable `STEP_ORGANIZATION_AI_URL`, and a quality check of the gateway's models (knowledge-accuracy, eval:golden, eval:selection) before staff use it. Not yet tried against a real Google sign-in and gateway end to end. Official-document work (document forms and the TOR/official-letter/decision-memo Skills) switches to the gateway's `step-long` model by itself; owner agreed (2026-11-18) to pilot with Claude Haiku 5.5 for general work and receipts and Sonnet 5.5 for official documents, trying DeepSeek V4.1 Flash and Gemini Flash only after ZDR and quality checks. See [organization-ai.md](organization-ai.md).
+
 ## Latest release
 
 - **Desktop v0.6.38 prepared (2026-11-20, owner asked to merge #384 and release)**: ships merged #372 (long-task reliability), #379–#383 (receipt finance phase 1, claim interview, packet attach fixes, ผู้ช่วยเบิกจ่าย case chat, several files read and typed in the case chat) and #384 (optional Typhoon OCR V2 0.8B for Thai scans, numbers checked by PaddleOCR). Harness remains 0.7.7. Publish with `desktop-release.yml` on `main` with `publish=true` after this PR and post-merge CI pass; verify both update feeds and installer digests. Open after release: the ~1 GB Typhoon install and speed on a real Windows staff PC.
