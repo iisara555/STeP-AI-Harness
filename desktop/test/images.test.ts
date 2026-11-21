@@ -111,3 +111,79 @@ test('provider errors and malformed image data do not become artifacts', async (
     await rm(root, { recursive: true, force: true });
   }
 });
+
+for (const preset of ['openrouter', 'organization'] as const)
+  test(`${preset} pictures go to the checked base address through the Images API`, async () => {
+    const root = await mkdtemp(join(tmpdir(), 'step-image-' + preset + '-'));
+    const base = preset === 'openrouter' ? 'https://openrouter.ai/api/v1' : 'https://gateway.example.test/ai/v1';
+    const listed =
+      preset === 'openrouter'
+        ? [{ id: 'openai/gpt-image-2' }, { id: 'openai/gpt-image-2.5-sunburst' }, { id: 'someone/unknown-image' }]
+        : [{ id: 'step-image' }, { id: '../bad' }];
+    const calls: { url: string; body: any; headers: any }[] = [];
+    const request = (async (url: any, options: any) => {
+      calls.push({ url: String(url), body: options.body ? JSON.parse(options.body) : null, headers: options.headers });
+      return new Response(
+        JSON.stringify(
+          String(url).endsWith('/images/models')
+            ? { data: listed }
+            : { created: 1, data: [{ b64_json: png.toString('base64'), media_type: 'image/png' }], usage: { cost: 0.04 } },
+        ),
+      );
+    }) as typeof fetch;
+    try {
+      const target = {
+        id: 'synthetic',
+        provider: 'compatible',
+        preset,
+        mode: 'api',
+        ready: true,
+        baseUrl: 'https://elsewhere.test',
+      } as Connection;
+      const images = new Images(
+        root,
+        async () => 'synthetic-token',
+        request,
+        () => base + '/',
+      );
+      const models = await images.models(target);
+      // A personal OpenRouter key gets only known image models, best first; the gateway's own list is trusted as is.
+      assert.deepEqual(models, preset === 'openrouter' ? ['openai/gpt-image-2.5-sunburst', 'openai/gpt-image-2'] : ['step-image']);
+      const artifact = await images.generate(target, 'synthetic tree', undefined, new AbortController().signal);
+      assert.equal(artifact.model, models[0]);
+      assert.deepEqual(await readFile(images.path(artifact)), png);
+      const post = calls.find(c => c.body)!;
+      assert.equal(post.url, base + '/images');
+      assert.deepEqual(post.body, { model: models[0], prompt: 'synthetic tree', n: 1, response_format: 'b64_json' });
+      assert.equal(post.headers.Authorization, 'Bearer synthetic-token');
+      assert.ok(
+        calls.every(c => c.url.startsWith(base + '/')),
+        'never the stored baseUrl',
+      );
+      assert.doesNotMatch(JSON.stringify(artifact), /synthetic-token/);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+test('other compatible services and connections without a checked address cannot create pictures', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'step-image-compatible-'));
+  try {
+    const request = (async () => {
+      throw new Error('no request expected');
+    }) as typeof fetch;
+    const deepseek = { id: 'd', provider: 'compatible', preset: 'deepseek', mode: 'api', ready: true } as Connection;
+    await assert.rejects(
+      new Images(
+        root,
+        async () => 'k',
+        request,
+        () => 'https://api.deepseek.com/v1',
+      ).models(deepseek),
+      /IMAGE_API_REQUIRED/,
+    );
+    const openrouter = { id: 'o', provider: 'compatible', preset: 'openrouter', mode: 'api', ready: true } as Connection;
+    await assert.rejects(new Images(root, async () => 'k', request).models(openrouter), /IMAGE_API_REQUIRED/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
