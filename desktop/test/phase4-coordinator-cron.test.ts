@@ -295,6 +295,27 @@ test('automations persist CRUD/history, serialize background runs, cancel queued
   await queue.closeAndWait();
   store.close();
 });
+test('a picture task is kept only on an account that can create images, and editing keeps its output', () => {
+  const { store, policy } = fixture();
+  store.put('connection', 'or', { id: 'or', provider: 'compatible', preset: 'openrouter', mode: 'api', model: 'm', ready: true });
+  const queue = new Automations(
+    store,
+    () => policy,
+    evaluatePrivacyGate,
+    async () => 'session',
+    () => {},
+  );
+  const base = { name: 'Poster', query: 'Create a public poster of a tree', schedule: '0 1 * * 1', enabled: false };
+  const picture = queue.save({ ...base, connectionId: 'or', output: 'image' });
+  assert.equal(picture.output, 'image');
+  assert.equal(queue.save({ ...picture }).output, 'image');
+  assert.equal(queue.save({ ...picture, output: 'draft' }).output, undefined);
+  assert.equal(queue.save({ ...base, connectionId: 'or' }).output, undefined);
+  // The fixture's OpenAI connection has no API mode recorded, so it cannot take a picture task.
+  assert.throws(() => queue.save({ ...base, connectionId: 'c', output: 'image' }), /IMAGE_API_REQUIRED/);
+  assert.throws(() => queue.save({ ...base, connectionId: 'or', output: 'video' }), /INVALID_INPUT/);
+  store.close();
+});
 test('restart interrupts stale runs, advances overdue schedules and never replays them', () => {
   const { store, policy } = fixture(),
     now = Date.now();

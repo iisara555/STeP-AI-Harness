@@ -3,6 +3,7 @@ import type { Connection } from '../src/types';
 import { Store } from './store';
 import type { Policy } from './policy';
 import { nextCron } from './cron-schedule';
+import { canGenerateImages } from '../src/image-routing';
 export { nextCron } from './cron-schedule';
 
 export type Automation = {
@@ -14,6 +15,8 @@ export type Automation = {
   connectionId: string;
   connectionBinding: string;
   model: string;
+  /** image: each run creates a picture with the account's image model; absent: a written draft. */
+  output?: 'image';
   team: string;
   workspace: string;
   at: string;
@@ -92,6 +95,9 @@ export class Automations {
     const settings = this.store.settings(),
       connection = this.store.connections().find(c => c.id === raw.connectionId && c.ready);
     if (!connection) throw new Error('CONNECTION_NOT_READY');
+    if (raw.output !== undefined && raw.output !== 'image' && raw.output !== 'draft') throw new Error('INVALID_INPUT');
+    const image = raw.output === 'image';
+    if (image && !canGenerateImages(connection)) throw new Error('IMAGE_API_REQUIRED');
     const existing = raw.id ? this.store.get<Automation>('automation', raw.id) : undefined;
     if (raw.id && !existing) throw new Error('AUTOMATION_NOT_FOUND');
     if (existing?.running) throw new Error('RUN_ALREADY_ACTIVE');
@@ -105,6 +111,7 @@ export class Automations {
       connectionId: connection.id,
       connectionBinding: connectionBinding(connection),
       model: connection.model,
+      ...(image ? { output: 'image' as const } : {}),
       team: settings.team,
       workspace: settings.workspace,
       at: new Date(this.now()).toISOString(),

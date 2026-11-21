@@ -557,8 +557,8 @@ export const en: Record<string, string> = {
   'ยังไม่ทราบนโยบายการส่งภาพ ติดต่อ IT': 'Image transmission policy is unknown; contact IT',
   'เลือกโมเดลที่รองรับภาพ และยินยอมส่งภาพก่อนใช้ ผลทดสอบแชตยังไม่ยืนยันการอ่านภาพ':
     'Choose an image-capable model and approve sending the image; a chat test does not verify image reading',
-  'ใช้ OpenAI หรือ Gemini API และโมเดลภาพที่บัญชีมีสิทธิ์ OAuth อย่างเดียวใช้ไม่ได้':
-    'Use OpenAI or Gemini API with an image model your account can access; OAuth alone is insufficient',
+  'ใช้ OpenAI, Gemini API, OpenRouter หรือ AI ขององค์กร และโมเดลภาพที่บัญชีมีสิทธิ์ OAuth อย่างเดียวใช้ไม่ได้':
+    'Use OpenAI, Gemini API, OpenRouter or Organization AI with an image model your account can access; OAuth alone is insufficient',
   'ยังไม่ทราบโหมดการทำงาน ติดต่อ IT': 'Permission mode is unknown; contact IT',
   ออกจากโหมดอ่านอย่างเดียวก่อนสร้างภาพ: 'Leave Read only mode before generating images',
   'เลือกโมเดลภาพที่บัญชีมีสิทธิ์ การสร้างภาพอาจมีค่าใช้จ่าย API': 'Choose an image model your account can access; API charges may apply',
@@ -1686,8 +1686,8 @@ export const en: Record<string, string> = {
   'อ่าน Git diff ไม่ได้ โฟลเดอร์นี้อาจไม่มี Git repository': "Couldn't read the Git diff. This folder may not be a Git repository",
   'มีงานหรือหน้าต่าง Browser ครบ 4 รายการแล้ว กรุณาหยุดหรือปิดบางรายการ':
     'You already have 4 tasks or browser windows open. Stop or close some first',
-  'การสร้างรูปต้องใช้ OpenAI หรือ Google ที่เชื่อมด้วย API key กรุณาเลือกบัญชีที่รองรับ':
-    'Image creation needs OpenAI or Google connected with an API key. Please choose a supported account',
+  'การสร้างรูปต้องใช้ OpenAI, Google, OpenRouter หรือ AI ขององค์กร กรุณาเลือกบัญชีที่รองรับ':
+    'Image creation needs OpenAI, Google, OpenRouter or Organization AI. Please choose a supported account',
   'บัญชีนี้ยังไม่มีสิทธิ์ใช้โมเดลสร้างรูปที่เลือก กรุณาตรวจรายชื่อโมเดล':
     "This account doesn't have access to the selected image model. Check the model list",
   'ผู้ให้บริการไม่อนุญาต Image API กรุณาตรวจ API key และสิทธิ์บัญชี':
@@ -2546,6 +2546,12 @@ export const en: Record<string, string> = {
   'อนุมัติงานตั้งเวลา?': 'Approve this scheduled task?',
   '{0}\nเวลา: {1}\nใช้บัญชี {2} และพื้นที่งานปัจจุบัน ทำเมื่อแอปเปิดอยู่ ถ้าแอปปิดตอนถึงเวลา จะทำเมื่อเปิดแอปภายใน 12 ชั่วโมง ผลเป็นร่างรอตรวจ':
     '{0}\nWhen: {1}\nUses account {2} and the current workspace while the app is open. If the app is closed at that time, it runs when the app opens within 12 hours. Results are drafts for review',
+  '{0}\nเวลา: {1}\nใช้บัญชี {2} และพื้นที่งานปัจจุบัน ทำเมื่อแอปเปิดอยู่ ถ้าแอปปิดตอนถึงเวลา จะทำเมื่อเปิดแอปภายใน 12 ชั่วโมง ทุกรอบสร้างรูป 1 รูปรอตรวจ และอาจมีค่าใช้จ่าย':
+    '{0}\nWhen: {1}\nUses account {2} and the current workspace while the app is open. If the app is closed at that time, it runs when the app opens within 12 hours. Each run creates one image for review and may cost money',
+  ผลลัพธ์ของงาน: 'Task result',
+  ร่างข้อความ: 'Written draft',
+  'รูปภาพ 1 รูป': 'One image',
+  'ทุกรอบสร้างรูปด้วยโมเดลภาพของบัญชีนี้ อาจมีค่าใช้จ่าย': "Each run creates an image with this account's image model and may cost money",
   'เริ่มงานตั้งเวลา?': 'Start the scheduled task?',
   'ค้นหา MCP?': 'Search MCP?',
   'เรียก MCP?': 'Call MCP?',
@@ -3330,8 +3336,8 @@ export const en: Record<string, string> = {
   'Skill หลัก:': 'Main Skill:',
   สร้างรูปภาพ: 'Create an image',
   โมเดลสำหรับสร้างรูปภาพ: 'AI model for images',
-  'หากต้องการสร้างรูปภาพ เลือก OpenAI หรือ Google ที่เชื่อมด้วย API key การลงชื่อแบบนี้ยังสร้างรูปไม่ได้':
-    'To create images, choose OpenAI or Google connected with an API key. This sign-in method does not support image creation.',
+  'หากต้องการสร้างรูปภาพ เลือก OpenAI, Google, OpenRouter หรือ AI ขององค์กร การลงชื่อแบบนี้ยังสร้างรูปไม่ได้':
+    'To create images, choose OpenAI, Google, OpenRouter or Organization AI. This sign-in method does not support image creation.',
   'เสนอปรับปรุง Skill': 'Suggest a Skill improvement',
   'หากบทเรียนนี้น่าจะช่วยผู้ใช้อื่น เลือก Skill แล้วสร้างไฟล์ข้อเสนอให้ผู้ดูแลตรวจ ไฟล์มีบทเรียน หลักฐาน รายการแก้ไข และกรณีทดสอบ แอปยังไม่แก้ Skill ขององค์กร':
     'If this lesson could help others, choose a Skill and create a proposal for its maintainer. The file includes the lesson, evidence, proposed changes and test cases. Organization Skills are not changed yet.',

@@ -61,7 +61,7 @@ import { appBundlePath, canReplace, downloadVerified, macUpdateAsset, startSwap 
 import { isAvatarId } from '../src/avatar-ids';
 import { interactionStyleId, languageStyleId } from '../src/speaking-styles';
 import { Images } from './images';
-import { isImageRequest } from '../src/image-routing';
+import { canGenerateImages, isImageRequest } from '../src/image-routing';
 import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
 import { searchPublicWeb } from './public-search';
 import { Splash } from './splash';
@@ -726,7 +726,13 @@ async function main() {
       authExecutable,
     };
   }
-  const images = new Images(join(data, 'images'), key);
+  // OpenRouter and "AI ขององค์กร" pictures go to the same checked address as the connection's chat requests.
+  const images = new Images(join(data, 'images'), key, fetch, connection => {
+    const endpoint = compatibleEndpoint(connection, policyState.policy, testPresetBaseUrl());
+    if (connection.protocol === 'anthropic' || !endpoint.pathname.endsWith('/chat/completions')) throw new Error('IMAGE_API_REQUIRED');
+    endpoint.pathname = endpoint.pathname.slice(0, -'/chat/completions'.length);
+    return endpoint.href;
+  });
   // The organization's policy (admin-only file). Re-read when it changes; a bad file keeps safe defaults.
   const testPolicy = !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME ? join(data, 'desktop-policy.json') : undefined;
   const readPolicy = () => (testPolicy ? loadPolicy(testPolicy, () => true) : loadPolicy());
@@ -1206,8 +1212,7 @@ async function main() {
     }
     if (request.tool === 'image_generate') {
       if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
-      if (scope.connection.mode !== 'api' || !['openai', 'gemini'].includes(scope.connection.provider) || !scope.generate)
-        throw new Error('IMAGE_API_REQUIRED');
+      if (!canGenerateImages(scope.connection) || !scope.generate) throw new Error('IMAGE_API_REQUIRED');
       if (harness.privacy(request.input).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
       const prompt = await tools.outgoing(request.input, scope);
       await check();
@@ -1860,12 +1865,14 @@ async function main() {
           event: 'user_prompt_submit',
           sessionId: session.id,
           promptChars: job.query.length,
-          mode: 'draft',
+          mode: job.output === 'image' ? 'image' : 'draft',
           files: 0,
         });
         if (submitted.blocked) throw new Error('HOOK_BLOCKED');
         check();
-        await service.run(session.id, job.query, '', true, undefined, 'draft', undefined, [], { draftOnly: true });
+        // A picture task runs as an image request with the account's image model; everything else drafts text only.
+        if (job.output === 'image') await service.run(session.id, job.query, '', true, undefined, 'image');
+        else await service.run(session.id, job.query, '', true, undefined, 'draft', undefined, [], { draftOnly: true });
         check();
         if (store.session(session.id).status !== 'review') throw new Error('AUTOMATION_NEEDS_REVIEW');
         return session.id;
@@ -3075,23 +3082,31 @@ async function main() {
         const contract = routed.routingContract;
         if (contract?.authority?.status !== 'ALLOW' || ['BLOCK', 'ESCALATE', 'CLARIFY', 'UNAVAILABLE'].includes(contract?.mode))
           throw new Error('AUTHORITY_REVIEW_REQUIRED');
+        const consentArgs = [
+          query,
+          // The page sends the time in words; the stored UTC schedule is the fallback.
+          inputText(input.label || input.schedule, 160),
+          store.connections().find(c => c.id === input.connectionId)?.label || input.connectionId,
+        ];
         if (
           input.enabled &&
           !(await phase4Consent(
             tm('อนุมัติงานตั้งเวลา?'),
-            tm(
-              '{0}\nเวลา: {1}\nใช้บัญชี {2} และพื้นที่งานปัจจุบัน ทำเมื่อแอปเปิดอยู่ ถ้าแอปปิดตอนถึงเวลา จะทำเมื่อเปิดแอปภายใน 12 ชั่วโมง ผลเป็นร่างรอตรวจ',
-              query,
-              // The page sends the time in words; the stored UTC schedule is the fallback.
-              inputText(input.label || input.schedule, 160),
-              store.connections().find(c => c.id === input.connectionId)?.label || input.connectionId,
-            ),
+            preview.output === 'image'
+              ? tm(
+                  '{0}\nเวลา: {1}\nใช้บัญชี {2} และพื้นที่งานปัจจุบัน ทำเมื่อแอปเปิดอยู่ ถ้าแอปปิดตอนถึงเวลา จะทำเมื่อเปิดแอปภายใน 12 ชั่วโมง ทุกรอบสร้างรูป 1 รูปรอตรวจ และอาจมีค่าใช้จ่าย',
+                  ...consentArgs,
+                )
+              : tm(
+                  '{0}\nเวลา: {1}\nใช้บัญชี {2} และพื้นที่งานปัจจุบัน ทำเมื่อแอปเปิดอยู่ ถ้าแอปปิดตอนถึงเวลา จะทำเมื่อเปิดแอปภายใน 12 ชั่วโมง ผลเป็นร่างรอตรวจ',
+                  ...consentArgs,
+                ),
           ))
         )
           throw new Error('CANCELLED');
         if (identity !== phase4Identity() || policy !== policyState.policy) throw new Error('POLICY_CHANGED');
         const current = automations.preview(input);
-        if (preview.model !== current.model || preview.connectionBinding !== current.connectionBinding)
+        if (preview.model !== current.model || preview.connectionBinding !== current.connectionBinding || preview.output !== current.output)
           throw new Error('AUTOMATION_CONTEXT_CHANGED');
         return automations.save(input);
       }

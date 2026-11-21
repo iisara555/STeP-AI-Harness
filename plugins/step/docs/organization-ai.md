@@ -24,3 +24,7 @@ key ของ OpenRouter อยู่บน server เท่านั้น ไ�
 3. วัดคุณภาพโมเดลของ gateway ด้วยเกณฑ์เดิม (`desktop/test/knowledge-accuracy.test.ts`, `npm run eval:golden`,
    `npm run eval:selection`) ต้องไม่ต่ำกว่าที่ใช้อยู่ ([กติกาคุมคุณภาพ](../rules/learning-and-verification.md))
 4. ตั้งตัวแปร repository `STEP_ORGANIZATION_AI_URL` แล้วออก Desktop รุ่นใหม่ตามขั้นตอน release ปกติ
+
+## รูปภาพ
+
+เมื่อ gateway เปิด `imageModels` Desktop จะสร้างรูปผ่าน `POST /v1/images` ของ gateway (Images API ของ OpenRouter) ด้วยโมเดลภาพที่ gateway ระบุ ครั้งละ 1 รูป gateway นับเงินและจำนวนรูปต่อคนต่อเดือน งานตั้งเวลาที่ตั้งผลลัพธ์เป็น "รูปภาพ 1 รูป" ใช้ทางเดียวกัน
