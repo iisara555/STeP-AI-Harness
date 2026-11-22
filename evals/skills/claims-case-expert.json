@@ -1,0 +1,63 @@
+{
+  "skill": "claims-case-expert",
+  "version": 1,
+  "source": "synthetic-2026-11-22",
+  "note": "Routing expectations run in test/skill-evals.test.js. In STeP Desktop the case chat selects this Skill itself; the prompts here exercise the CLI router. outputAssertions are graded on model output (with Skill vs without Skill); they are not run in CI.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "ตอบรายการเอกสารเบิกแบบทั่วไปทีเดียวหลายข้อ ไม่แยกยืมเงิน เคลียร์เงินยืม และสำรองจ่ายตาม QP-AF-003 ลืมกำหนดรายงานขอความเห็นชอบ 3 วันทำการ และเขียนเหตุผลการเดินทาง BV สั้นแบบที่ AFP ส่งกลับแก้",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-bv-travel-reason",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยเขียนเหตุผลการเดินทางให้หน่อย จ้างรถตู้รับวิทยากรจากสนามบินเชียงใหม่ไปโรงแรม ข้อมูลสมมติ",
+      "expect": { "mode": "SKILL", "skill": "claims-case-expert" },
+      "outputAssertions": [
+        "ตรวจครบ 5 ส่วนของ AFP (ใคร ทำอะไร เมื่อไร จากไหนไปไหน เพื่อกิจกรรมอะไร) และถามทีละข้อสำหรับส่วนที่ขาด คือวันที่และชื่อกิจกรรม",
+        "ร่างตามโครงประโยค 'เพื่อ[รับ/ส่ง...] ... วันที่ ... จาก ... ไปยัง ... เพื่อ ...' โดยเว้นวันที่และชื่อกิจกรรมเป็น [ ] ไม่เดา",
+        "อ้างเอกสาร afp-bv-travel-reason และไม่บอกว่าการจ้างหรือการเบิกได้รับอนุมัติ"
+      ]
+    },
+    {
+      "id": "positive-approval-report-deadline",
+      "dimension": "positive",
+      "team": "mi",
+      "prompt": "รายงานขอความเห็นชอบของเรื่องเบิกจ่ายนี้ต้องทำภายในกี่วัน ใบเสร็จค่าน้ำดื่มลงวันที่ 3 ข้อมูลสมมติ",
+      "expect": { "mode": "SKILL", "skill": "claims-case-expert" },
+      "outputAssertions": [
+        "ตอบว่าหมวด B (ค่าน้ำดื่มคือ B10) ต้องทำรายงานขอความเห็นชอบใน STeP MIS ภายใน 3 วันทำการนับถัดจากวันที่ในใบเสร็จ อ้างแนวปฏิบัติงาน AFP ข้อ 3.1",
+        "บอกว่าเป็นวันทำการ ไม่ใช่วันปฏิทิน และไม่ใช้ตัวเลข 5 วันของเอกสารรุ่นเก่า",
+        "ถามต่อไม่เกินหนึ่งคำถาม เช่น ใช้เงินยืมหรือสำรองจ่าย"
+      ]
+    },
+    {
+      "id": "anti-receipt-arithmetic",
+      "dimension": "antiTrigger",
+      "team": "afp",
+      "prompt": "ช่วยตรวจใบเสร็จค่าอาหารจัดประชุมก่อนส่งเบิก ยอดก่อนภาษี 100.00 ภาษี 7.00 ยอดรวม 108.00 ข้อมูลสังเคราะห์",
+      "expect": { "mode": "SKILL", "skill": "receipt-audit", "notSkill": "claims-case-expert" },
+      "why": "การตรวจยอดและภาษีของใบเสร็จรายฉบับเป็นงาน receipt-audit"
+    },
+    {
+      "id": "collision-lead-time",
+      "dimension": "collision",
+      "team": "afp",
+      "prompt": "งานการเงินเคลียร์เงินยืมใช้เวลากี่วันทำการ",
+      "expect": { "mode": "SKILL", "skill": "afp-operations-lookup", "notSkill": "claims-case-expert" },
+      "why": "Lead Time ทั่วไปที่ไม่ผูกกับเรื่องเบิกเรื่องใดเป็นงาน afp-operations-lookup"
+    },
+    {
+      "id": "missing-snack-rate",
+      "dimension": "missingSource",
+      "team": "cc",
+      "prompt": "ผู้ช่วยเบิกจ่าย ค่าอาหารว่างประชุมเบิกได้หัวละเท่าไหร่",
+      "expect": { "mode": "SKILL", "skill": "claims-case-expert" },
+      "outputAssertions": [
+        "บอกว่าอัตราค่าอาหารว่างต่อหัวไม่มีในเอกสารที่ลงทะเบียน และไม่ระบุตัวเลขจากความจำหรือระเบียบทั่วไป",
+        "แนะนำให้ถามงานการเงิน AFP และยังช่วยต่อได้ด้วยการถามหมวดหรือกรณีการเงินของเรื่องหนึ่งข้อ"
+      ]
+    }
+  ]
+}

@@ -73,6 +73,6 @@ test('team Skill scoping follows Router eligibility rather than namespace folder
     // genuinely binds every team - organization-wide announcements, shared
     // document discipline, or paperwork every team files with a central team -
     // and never to make a team-specific Skill reachable from everywhere.
-    assert.ok(wildcardBlocks.length <= 12, `wildcard consumers should remain exceptional; got ${wildcardBlocks.length}`);
+    assert.ok(wildcardBlocks.length <= 13, `wildcard consumers should remain exceptional; got ${wildcardBlocks.length}`);
   });
 });
