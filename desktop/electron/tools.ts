@@ -14,7 +14,7 @@ import { REPL_WORKER } from './stateful-repl';
 import { Approvals } from './approvals';
 import { Questions } from './questions';
 import type { Policy, PermissionMode } from './policy';
-import type { LoopHost } from './tool-loop';
+import { BROWSER_RULES, type LoopHost } from './tool-loop';
 import { fetchPublic, publicUrl } from './web-fetch';
 import { extractWeb } from './web-extract';
 import { searchUrl } from './public-search';
@@ -784,7 +784,10 @@ export class DesktopTools {
                 transport: 'step-tool-text',
               };
             }
-            return discoverTools(r, this.policy(), this.mode(), Boolean(this.external));
+            // Browser rules travel with the tool that needs them (BROWSER_RULES_ON_REQUEST in the system prompt).
+            return ['browser_control', 'browser_vault'].includes(r.input) && r.tool === 'tool_describe'
+              ? { ...discoverTools(r, this.policy(), this.mode(), Boolean(this.external)), guide: BROWSER_RULES }
+              : discoverTools(r, this.policy(), this.mode(), Boolean(this.external));
           case 'mcp_search':
           case 'mcp_call':
           case 'sandbox':

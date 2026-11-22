@@ -29,7 +29,7 @@ test('malformed discovery fields and recursive wrappers are inert in parser and 
     { tool: 'tool_describe', input: 'files', args: { arguments: { tool: 'terminal' } } },
     { tool: 'tool_describe', input: 'constructor' },
     { tool: 'files', input: null },
-    { tool: 'files', input: 'a', args: { offset: '0' } },
+    { tool: 'files', input: 'a', args: { offset: '1.5' } },
     { tool: 'tasks', input: 'a', args: { timeoutMs: 30001 } },
   ];
   for (const value of invalid) {

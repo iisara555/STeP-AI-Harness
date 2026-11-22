@@ -25,7 +25,16 @@ import { needsPublicWebSearch } from '../../src/modules/router/public-informatio
 import { usedWebSources, webSources } from '../src/web';
 import { brokenRequests, loopRequests, type LoopRequest } from '../src/tools';
 import { speakingStyleRules } from '../src/speaking-styles';
-import { ToolLoop, TOOL_RULES, BROWSER_RULES, type LoopHost } from './tool-loop';
+import {
+  ToolLoop,
+  TOOL_RULES,
+  BROWSER_RULES,
+  BROWSER_RULES_ON_REQUEST,
+  SMALL_MODEL_TOOL_RULE,
+  needsBrowserRules,
+  smallModel,
+  type LoopHost,
+} from './tool-loop';
 import { SUBAGENT_MAX_TURNS, SUBAGENT_TOOLS, subagentSystem } from './subagents';
 import type { ToolScope } from './tools';
 import { RETRYABLE_CODES, RETRY_DELAYS_MS, retryDelay } from './retry';
@@ -1474,6 +1483,13 @@ export class WorkService {
           !target && !options.isolatedQuestion && !textOnly && !options.draftOnly && this.harness.tools && this.harness.toolLoop?.(),
         );
         const scopedToolInstructions = toolsEnabled ? this.harness.toolInstructions?.() : undefined;
+        // The Web tab's rules go only to conversations that show web-page work; others get a pointer to tool_describe.
+        const browserRules =
+          toolsEnabled && scopedToolInstructions === undefined
+            ? needsBrowserRules([session.originalQuery, latest, ...session.messages.filter(m => m.role === 'user').map(m => m.text)])
+              ? BROWSER_RULES
+              : BROWSER_RULES_ON_REQUEST
+            : '';
         const baseRules = textOnly ? TEXT_RULES : chat ? CHAT_RULES : DRAFTING_RULES;
         // A weak keyword match is often the wrong document ("อยากตรวจคุณภาพอาหาร" matched the quality manual), so the
         // index narrows to the matched documents only when the match is strong; otherwise the answer sees every document
@@ -1511,7 +1527,8 @@ export class WorkService {
           this.harness.permissionMode?.() === 'plan' &&
             'Current permission mode is plan. Provide a plan and references for review; do not draft the final document, propose file mutations, or request command execution.',
           toolsEnabled && (scopedToolInstructions ?? TOOL_RULES),
-          toolsEnabled && scopedToolInstructions === undefined && BROWSER_RULES,
+          browserRules,
+          toolsEnabled && smallModel(connection.model) && SMALL_MODEL_TOOL_RULE,
           !toolsEnabled &&
             !textOnly &&
             'Host tool execution is disabled for this turn. The Desktop draft export UI supports DOCX, PDF, Markdown, XLSX and PPTX where policy permits. For Excel provide the requested table in the draft and direct the user to XLSX export; do not claim a file was created or substitute CSV without their choice. Direct Google Sheets access requires an available authorized connector.',
@@ -1730,7 +1747,7 @@ export class WorkService {
                       registry: [documentIndex, skillIndex].filter(Boolean).join('\n'),
                       governance: governance.join('\n\n'),
                       selectedInstructions: selectedInstructions.join('\n\n'),
-                      toolRules: toolsEnabled ? (scopedToolInstructions ?? TOOL_RULES + '\n\n' + BROWSER_RULES) : '',
+                      toolRules: toolsEnabled ? (scopedToolInstructions ?? TOOL_RULES + '\n\n' + browserRules) : '',
                     },
               ),
               kind: search ? 'web-search' : analysisImage ? 'vision' : 'answer',

@@ -1,4 +1,5 @@
 import { validateToolRequest } from './tool-registry';
+import { repairNotes, repairToolRequest } from './tool-repair';
 
 export type ToolTab = 'output' | 'browser' | 'terminal' | 'tasks' | 'files' | 'changes';
 export type ToolRequest = { tool: 'browser' | 'terminal' | 'files' | 'changes'; input: string; content?: string };
@@ -112,7 +113,7 @@ export function loopRequests(text: string): LoopRequest[] {
   for (const body of fenced.length ? fenced : looseRequest(text)) {
     if (body.length > 210_000) continue;
     try {
-      const r = JSON.parse(body);
+      const { value: r, notes } = repairToolRequest(JSON.parse(body)) as { value: any; notes: string[] };
       if (!r || !LOOP_TOOLS.includes(r.tool) || typeof r.input !== 'string' || r.input.length > 2000 || r.input.includes('\0')) continue;
       if (r.content !== undefined && (typeof r.content !== 'string' || r.content.length > 200_000)) continue;
       if (
@@ -122,12 +123,14 @@ export function loopRequests(text: string): LoopRequest[] {
         continue;
       validateToolRequest(r);
       if (r.tool === 'tasks') taskAction(r.input, r.args);
-      requests.push({
+      const request: LoopRequest = {
         tool: r.tool as LoopRequest['tool'],
         input: r.input,
         ...(r.content !== undefined ? { content: r.content } : {}),
         ...(r.args ? { args: r.args } : {}),
-      });
+      };
+      if (notes.length) repairNotes.set(request, notes);
+      requests.push(request);
     } catch {
       /* Malformed proposals are inert. */
     }
@@ -146,7 +149,7 @@ export function brokenRequests(text: string): string[] {
     const body = match[1].trim();
     if (loopRequests('```step-tool\n' + body + '\n```').length) continue;
     try {
-      const r = JSON.parse(body);
+      const r = repairToolRequest(JSON.parse(body)).value as any;
       let field = '';
       try {
         if (r && LOOP_TOOLS.includes(r.tool)) validateToolRequest(r);
