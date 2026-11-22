@@ -199,6 +199,23 @@ try {
   assert.ok(JSON.stringify(withFile).includes('SYNTHETIC-ATTACHED-NOTE'), 'the attached file went with it');
   assert.equal(withFile.model, 'm2');
 
+  // A case is deleted from its row after a confirm in the same row; its chat goes with it.
+  const rows = page.locator('.case-list li');
+  const count = await rows.count();
+  const doomed = rows.filter({ hasText: 'ประชุมคณะทำงาน ข้อมูลสมมติ' });
+  await doomed.hover();
+  await doomed.getByRole('button', { name: 'ลบเรื่อง “ประชุมคณะทำงาน ข้อมูลสมมติ”', exact: true }).click();
+  const confirm = page.getByRole('group', { name: 'ยืนยันการลบ' });
+  await confirm.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
+  await expect(rows).toHaveCount(count);
+  await doomed.hover();
+  await doomed.getByRole('button', { name: 'ลบเรื่อง “ประชุมคณะทำงาน ข้อมูลสมมติ”', exact: true }).click();
+  await confirm.getByRole('button', { name: 'ลบ', exact: true }).click();
+  await expect(rows).toHaveCount(count - 1);
+  await expect(rows.filter({ hasText: 'ประชุมคณะทำงาน ข้อมูลสมมติ' })).toHaveCount(0);
+  await expect.poll(async () => (await snapshot()).sessions.filter(s => s.claimPacketId).length).toBe(0);
+  await shot('7-case-deleted');
+
   // Dark and narrow.
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
   await shot('3-case-chat-dark');

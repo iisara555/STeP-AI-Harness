@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Download, FileText, FolderOpen, Paperclip, Plus, Trash2 } from './icons';
+import { Check, ChevronDown, ChevronUp, Download, FileText, FolderOpen, Paperclip, Plus, Trash2 } from './icons';
 import { t } from './i18n';
 import { explainError } from './messages';
 import {
@@ -23,7 +23,7 @@ import { AfpEvidencePanel } from './afp-evidence-panel';
 import { suggestPacketKind } from './afp-evidence';
 import { ClaimCaseChat, type CaseChatApi } from './claim-case-chat';
 import { caseAi } from './case-ai-picker';
-import { caseContext, caseListStatus } from './claim-case';
+import { caseContext, caseListMarks, caseListStatus } from './claim-case';
 import { applyReadings, type ReadingBatch, type ReadingItem, type SourceReading } from './evidence-reading';
 const DROPPABLE = /\.(pdf|png|jpe?g)$/i;
 const hasFiles = (event: React.DragEvent) => Array.from(event.dataTransfer?.types || []).includes('Files');
@@ -320,6 +320,27 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
       return false;
     }
   };
+  // Deleting asks once, in place on the case's own row, so nothing jumps and no window opens.
+  const [confirmDelete, setConfirmDelete] = useState('');
+  const deleteCase = (id: string) =>
+    void run(async () => {
+      await call('receiptPacketDelete', { id });
+      setConfirmDelete('');
+      setReadings(({ [id]: _gone, ...rest }) => rest);
+      const rest = list.filter(item => item.id !== id);
+      setList(rest);
+      if (draft.current?.id === id) {
+        if (rest.length) current(await call('receiptPacketGet', { id: rest[0].id }));
+        else {
+          draft.current = saved.current = null;
+          setPacket(null);
+          setDirty(false);
+        }
+        setPacketStep('details');
+      }
+      await chat.refresh?.();
+      notify(t('ลบเรื่องแล้ว'), 'success');
+    }, draft.current?.id !== id);
   const openCase = (id: string) =>
     void run(async () => {
       current(await call('receiptPacketGet', { id }));
@@ -351,7 +372,7 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
       {t(label)}
     </option>
   ));
-  const field = (label: string, key: 'title' | 'project' | 'purpose') => (
+  const field = (label: string, key: 'project' | 'purpose') => (
     <label>
       {t(label)}
       {key === 'purpose' ? (
@@ -386,24 +407,65 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
           </button>
         </div>
         <ul>
-          {list.map(item => (
-            <li key={item.id}>
-              <button
-                type="button"
-                aria-current={item.id === packet?.id ? 'true' : undefined}
-                disabled={busy}
-                onClick={() => item.id !== packet?.id && openCase(item.id)}
-              >
-                <strong>{item.id === packet?.id ? packet.title : item.title}</strong>
-                <span className="small muted">
-                  {caseListStatus(
-                    item.id === packet?.id ? { ...item, category: packet.guidance.category, documentCount: packet.documents.length } : item,
-                    t,
+          {list.map(item => {
+            const open = item.id === packet?.id;
+            const shown = open
+              ? { ...item, title: packet.title, category: packet.guidance.category, documentCount: packet.documents.length }
+              : item;
+            const marks = caseListMarks(shown);
+            const status = caseListStatus(shown, t);
+            const title = shown.title || t('เรื่องใหม่');
+            if (confirmDelete === item.id)
+              return (
+                <li key={item.id} className="case-confirm" role="group" aria-label={t('ยืนยันการลบ')}>
+                  <span>{t('ลบ “{0}”?', title)}</span>
+                  <div>
+                    <button type="button" className="danger" disabled={busy} onClick={() => deleteCase(item.id)}>
+                      {t('ลบ')}
+                    </button>
+                    <button type="button" className="quiet" disabled={busy} autoFocus onClick={() => setConfirmDelete('')}>
+                      {t('ยกเลิก')}
+                    </button>
+                  </div>
+                </li>
+              );
+            return (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  className="case-open"
+                  aria-current={open ? 'true' : undefined}
+                  title={status}
+                  disabled={busy}
+                  onClick={() => !open && openCase(item.id)}
+                >
+                  <strong>{title}</strong>
+                  <span className="sr-only">{status}</span>
+                  {(marks.category || marks.files > 0) && (
+                    <span className="case-marks" aria-hidden="true">
+                      {marks.category && <span className="case-mark">{marks.category}</span>}
+                      {marks.files > 0 && (
+                        <span className="case-mark quiet">
+                          <Paperclip size={11} />
+                          {marks.files}
+                        </span>
+                      )}
+                    </span>
                   )}
-                </span>
-              </button>
-            </li>
-          ))}
+                </button>
+                <button
+                  type="button"
+                  className="icon case-delete"
+                  aria-label={t('ลบเรื่อง “{0}”', title)}
+                  title={t('ลบเรื่อง')}
+                  disabled={busy}
+                  onClick={() => setConfirmDelete(item.id)}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </aside>
       {!packet ? (
@@ -449,10 +511,27 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
                 <span className="small muted">{t('PDF, PNG หรือ JPG หลายไฟล์ได้ · อ่านในเครื่องทีละไฟล์')}</span>
               </div>
             )}
+            {/* The case's name is edited where it is shown; saving is a quiet mark, words only while it is not yet saved. */}
             <header className="case-head">
-              <h2>{packet.title}</h2>
-              <span className="small muted" role="status">
-                {saving ? t('กำลังบันทึกชุด…') : dirty ? t('มีข้อมูลรอบันทึก') : t('บันทึกในเครื่องแล้ว')}
+              <input
+                className="case-title"
+                aria-label={t('ชื่อเรื่องเบิก')}
+                value={packet.title}
+                maxLength={200}
+                placeholder={t('ตั้งชื่อเรื่อง')}
+                onChange={event => mutate(value => ({ ...value, title: event.target.value }))}
+              />
+              <span className="case-saved small muted" role="status" data-state={saving ? 'saving' : dirty ? 'dirty' : 'saved'}>
+                {saving ? (
+                  t('กำลังบันทึก…')
+                ) : dirty ? (
+                  t('รอบันทึก')
+                ) : (
+                  <>
+                    <Check size={14} aria-hidden="true" />
+                    <span className="sr-only">{t('บันทึกในเครื่องแล้ว')}</span>
+                  </>
+                )}
               </span>
             </header>
             {error && <ErrorNotice />}
@@ -498,7 +577,6 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
                   >
                     {t('ข้อมูลเรื่องเบิก')}
                   </h2>
-                  {field('ชื่อเรื่องเบิก', 'title')}
                   {field('โครงการหรือหน่วยงาน', 'project')}
                   {field('วัตถุประสงค์ของชุดเอกสาร', 'purpose')}
                   <label>
@@ -529,12 +607,18 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
                     >
                       {t('หลักฐานในชุด')}
                     </h2>
-                    <span className="small muted">
-                      {t('{0} ไฟล์ · เลือก {1} หน้า', packet.documents.length, assessment!.includedPages)}
-                    </span>
+                    {packet.documents.length > 0 && (
+                      <span className="small muted">
+                        {t('{0} ไฟล์ · เลือก {1} หน้า', packet.documents.length, assessment!.includedPages)}
+                      </span>
+                    )}
                   </div>
                   <div className="packet-actions">
-                    <button className={claimWaiting ? 'quiet' : 'primary'} onClick={() => addFiles()}>
+                    <button
+                      className={claimWaiting ? 'quiet' : 'primary'}
+                      title={t('เลือก PDF, PNG หรือ JPG จัดประเภทแต่ละหน้า และเปิดต้นฉบับเทียบก่อนยืนยัน')}
+                      onClick={() => addFiles()}
+                    >
                       <Plus size={14} />
                       {t('เพิ่มเอกสาร')}
                     </button>
@@ -544,8 +628,9 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
                       </button>
                     )}
                   </div>
-                  <p className="small muted">{t('เลือก PDF, PNG หรือ JPG จัดประเภทแต่ละหน้า และเปิดต้นฉบับเทียบก่อนยืนยัน')}</p>
-                  {!packet.documents.length && <p className="packet-source-empty">{t('ยังไม่มีหลักฐานในชุดนี้')}</p>}
+                  {!packet.documents.length && (
+                    <p className="packet-source-empty small muted">{t('ยังไม่มีหลักฐาน · ลากไฟล์มาวางในแชตได้')}</p>
+                  )}
                   <ol className="packet-sources">
                     {packet.documents.map((source, sourceIndex) => (
                       <li key={source.id}>

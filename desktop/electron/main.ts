@@ -4115,6 +4115,18 @@ async function main() {
       }
       case 'receiptPacketRemoveSource':
         return receiptPackets.remove(input.id, input.revision, input.sourceId);
+      case 'receiptPacketDelete': {
+        // The case's own chat goes with it; a case whose chat is still answering is not deleted under it.
+        const packetId = receiptPackets.get(input.id).id;
+        const chats = store.list<Session>('session').filter(s => s.claimPacketId === packetId);
+        if (chats.some(s => service.isActive(s.id) || coordinator.has(s.id))) throw new Error('RUN_ALREADY_ACTIVE');
+        await receiptPackets.delete(packetId);
+        for (const s of chats) {
+          store.remove('session', s.id);
+          for (const [aid, a] of attachments) if (a.sessionId === s.id) attachments.delete(aid);
+        }
+        return true;
+      }
       case 'receiptPacketOpenSource': {
         const path = receiptPackets.path(input.id, input.sourceId);
         const message = await shell.openPath(path);

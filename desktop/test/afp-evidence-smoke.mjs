@@ -102,8 +102,10 @@ try {
   await page.evaluate(() => {
     document.documentElement.dataset.theme = 'dark';
   });
-  await expect(page.getByRole('button', { name: 'หลักฐาน', exact: true })).toHaveCSS('background-color', 'rgb(58, 50, 25)');
-  await expect(page.getByRole('button', { name: 'หลักฐาน', exact: true })).toHaveCSS('color', 'rgb(244, 241, 234)');
+  // The current step reads as an underlined tab: full-contrast text and a visible underline in dark mode too.
+  const current = page.getByRole('button', { name: 'หลักฐาน', exact: true });
+  await expect(current).toHaveCSS('color', 'rgb(244, 241, 234)');
+  await expect(current).not.toHaveCSS('border-bottom-color', 'rgba(0, 0, 0, 0)');
   await page.screenshot({ path: join(out, 'step-evidence-dark.png') });
   await expect
     .poll(

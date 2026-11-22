@@ -22,6 +22,7 @@ type Records = {
   get<T>(kind: string, id: string): T | undefined;
   put(kind: string, id: string, value: unknown): void;
   list<T>(kind: string): T[];
+  remove?(kind: string, id: string): void;
   transaction?<T>(action: () => T): T;
 };
 type SelectedSource = { name: string; extension: string; bytes: Buffer; originalPath?: string };
@@ -274,6 +275,14 @@ export class ReceiptPackets {
     this.applyReview(current, next, reviewed, values);
     this.records.put(KIND, next.id, next);
     return next;
+  }
+  /** Deletes a case and the app-owned copies of its files; the originals the person picked are never touched. */
+  async delete(id: unknown) {
+    const packet = this.get(id);
+    if (!this.records.remove) throw new Error('INVALID_INPUT');
+    this.records.remove(KIND, packet.id);
+    await rm(join(this.root, packet.id), { recursive: true, force: true });
+    return true;
   }
   async remove(id: unknown, revision: unknown, sourceId: unknown) {
     const current = this.get(id, revision);

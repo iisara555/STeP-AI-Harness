@@ -164,6 +164,12 @@ export function claimUpdateRows(update: ClaimUpdate, translate: Translate = plai
   return rows;
 }
 
+/** The short marks a case shows in the list: its category code (none while unsure) and how many files it holds. */
+export function caseListMarks(item: PacketListItem) {
+  const short: Record<string, string> = { B: 'B', BV: 'BV', emergency: 'ฉุกเฉิน', other: 'อื่น' };
+  return { category: (item.category && short[item.category]) || '', files: item.documentCount };
+}
+
 /** The one line under a case in the list: its category and how much evidence it holds. */
 export function caseListStatus(item: PacketListItem, translate: Translate = plain) {
   const category =
