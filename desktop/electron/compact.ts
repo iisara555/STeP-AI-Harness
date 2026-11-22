@@ -7,6 +7,14 @@ import type { SummaryCheckpoint } from '../src/types';
 export const CONTEXT_TOKENS = 48_000;
 /** Cap host context even on a 1M-token model; retained sessions may still bill the full conversation. */
 export const MAX_CONTEXT_TOKENS = 160_000;
+/**
+ * Share of the context budget at which a tool loop folds its earlier results (ToolLoop.fold), just before compact()
+ * would start compacting on every turn (which changes the prompt's start each time, so a kept provider conversation
+ * resends the whole prompt). Not lower: a real xhigh TOR run on 2026-11-18 folded six times at 0.6, each fold a
+ * whole-prompt resend (30–93 s to first token) and the model re-read what had been folded; the same request on a build
+ * without folding never needed to compact. Below this share nothing is folded and the model sees every result whole.
+ */
+export const LOOP_FOLD_SHARE = 0.9;
 /** Smallest window an administrator can set: governance alone is about 3k tokens and a chat turn with tools about 9k. */
 export const MIN_CONTEXT_WINDOW = 16_384;
 

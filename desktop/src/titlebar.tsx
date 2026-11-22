@@ -99,7 +99,7 @@ export function TitleBar({
   const groups: Group[] = [
     {
       label: t('งาน'),
-      items: [command('new', t('เริ่มงานใหม่')), command('palette', t('ค้นหางานและคำสั่ง')), command('receipt', t('ตรวจใบเสร็จ AFP'))],
+      items: [command('new', t('เริ่มงานใหม่')), command('palette', t('ค้นหางานและคำสั่ง')), command('receipt', t('ผู้ช่วยเบิกจ่าย'))],
     },
     {
       label: t('มุมมอง'),

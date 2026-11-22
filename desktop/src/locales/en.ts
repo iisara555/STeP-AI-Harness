@@ -21,6 +21,8 @@ import { receiptPacketEn } from './receipt-packet-en';
 import { afpPaymentVoucherEn } from './afp-payment-voucher-en';
 import { workAssistantEn } from './work-assistant-en';
 import { afpEvidenceEn } from './afp-evidence-en';
+import { claimInterviewEn } from './claim-interview-en';
+import { claimCaseEn } from './claim-case-en';
 import { planCommentsEn } from './plan-comments-en';
 import { taskAlertsEn } from './task-alerts-en';
 import { uxToolsEn } from './ux-tools-en';
@@ -1038,6 +1040,13 @@ export const en: Record<string, string> = {
     'An attached agency form is checked against the MIS quality register for its code and revision.',
   'ตรวจใบกำกับภาษี (เลขผู้เสียภาษี เลขที่ และ VAT) และเตือนเรื่องหัก ณ ที่จ่ายในใบสำคัญจ่าย':
     'Tax invoices are checked for the tax ID, number and VAT, and payment vouchers flag withholding to review.',
+  '"ตรวจใบเสร็จ AFP" เปลี่ยนเป็น "ผู้ช่วยเบิกจ่าย" แต่ละเรื่องเบิกมีแชตของตัวเอง ถามทีละข้อและตอบจากเอกสาร AFP':
+    '"AFP receipt check" is now the Claims assistant: each claim case has its own chat that asks one question at a time and answers from AFP documents.',
+  'ลากหลายไฟล์มาวางในแชตของเรื่องเบิก ระบบอ่านในเครื่องและบอกว่าแต่ละไฟล์เป็นเอกสารอะไร':
+    'Drop several files into a claim case chat; they are read on this computer and each one is typed.',
+  'อ่านใบเสร็จภาษาไทยแม่นขึ้นด้วย Typhoon OCR (ติดตั้งเพิ่มได้ ~1 GB)':
+    'Read Thai receipts more accurately with Typhoon OCR (optional ~1 GB download).',
+  'งานยาวอย่างร่าง TOR จบเป็นคำตอบแทนการหมดเวลา': 'Long tasks such as TOR drafts finish with an answer instead of timing out.',
   ช่องในฟอร์มร่างเอกสารมีตัวอย่างการกรอกให้ดู: 'Document drafting fields now show examples of what to enter.',
   'แชตยาวที่ใช้ Gemini ผ่าน Antigravity จะย่อบทสนทนาเก่าให้เมื่อข้อความยาวเกินขีดจำกัด':
     'Long Gemini chats through Antigravity compact older turns when a full message exceeds the limit.',
@@ -1088,7 +1097,7 @@ export const en: Record<string, string> = {
   'ยังไม่ได้เลือก AI เลือกในกล่องพิมพ์ หรือเพิ่มการเชื่อมต่อ AI ก่อน':
     'No AI selected yet. Choose one in the message box, or add an AI connection first',
   'ไปที่การเชื่อมต่อ AI': 'Go to AI connections',
-  'ตรวจใบเสร็จ AFP': 'AFP receipt check',
+  ผู้ช่วยเบิกจ่าย: 'Claims assistant',
   'ส่งไฟล์ “{0}” ให้ AI ไม่ได้: {1} · นำไฟล์ออกหรือแนบไฟล์อื่นก่อนส่ง':
     "Can't send “{0}” to the AI: {1}. Remove it or attach another file before sending",
   กำลังส่งข้อความ: 'Sending message',
@@ -1134,7 +1143,8 @@ export const en: Record<string, string> = {
   'ตรวจใบเสร็จก่อนส่ง AFP': 'Check receipts before sending to AFP',
   เริ่มต้นงานที่อยากทำ: 'What would you like to work on?',
   'บัญชี AI และข้อมูลอยู่ในเครื่องนี้': 'Your AI account and data stay on this computer',
-  'ทดลอง · อ่านใบเสร็จด้วย OCR ในเครื่อง แล้วให้คุณตรวจก่อนส่ง': 'Beta · Reads receipts with on-device OCR, then you check before sending',
+  'ทดลอง · ถามและกรอกเรื่องเบิกในแชต ตรวจใบเสร็จ แล้วให้คุณตรวจก่อนส่ง':
+    'Beta · Ask and fill in claims in chat, check receipts, then you review before sending',
   'Skill ในพื้นที่ทำงานนี้ พร้อมสถานะ Manifest และ Routing': 'Skills in this workspace, with their Manifest and Routing status',
   'จากคำขอ สู่ผลงานที่ใช้ต่อได้': 'From request to ready-to-use work',
   ซ่อนร่าง: 'Hide draft',
@@ -1212,6 +1222,9 @@ export const en: Record<string, string> = {
   ยังไม่ได้รับสถานะจากแอป: 'No status from the app yet',
   แอปยังทำงานอยู่: 'The app is still working',
   'ขั้นตอนนี้ยังไม่ส่งผลกลับมา คุณรอต่อหรือกดหยุดได้': "This step hasn't reported back yet. Keep waiting, or press Stop",
+  'เขียนคำตอบจากที่อ่านมา · กดอีกครั้งเพื่อหยุดงาน': 'Write the answer from what was read · press again to stop',
+  'ใกล้หมดเวลา กำลังเขียนคำตอบจากที่อ่านมา': 'Time is nearly up; writing the answer from what was read',
+  'อ่านครบแล้ว กำลังเขียนคำตอบ': 'Finished reading; writing the answer',
   ขั้นตอนของงาน: 'Task steps',
   '· ต้องทำโดยผู้มีอำนาจ': '· Requires an authorised person',
   'ความคิดของ AI': 'AI reasoning',
@@ -1758,8 +1771,8 @@ export const en: Record<string, string> = {
   'ไม่พบ Claude Code ในเครื่องนี้ ติดตั้งและลงชื่อเข้าใช้ Claude Code ก่อน':
     "Claude Code wasn't found on this computer. Install it and sign in to Claude Code first",
   'ไม่พบไฟล์ Skill นี้': "This Skill file wasn't found",
-  'AI ใช้เวลานานเกินกำหนดในขั้นตอนนี้ ลองใหม่หรือลดระดับการคิด':
-    'The AI took too long on this step. Try again or lower the reasoning level',
+  'AI ใช้เวลานานเกินกำหนดในขั้นตอนนี้ กด “ลองอีกครั้ง” แล้ว AI จะใช้เอกสารที่อ่านไปแล้วทำต่อ หรือลดระดับการคิด':
+    'The AI took too long on this step. Press “Try again” to continue with what it has already read, or lower the thinking level',
   'บริการ AI ตอบช้าเกินกำหนด ลองใหม่อีกครั้ง': 'The AI service took too long to respond. Please try again',
   'ไม่พบ Python ที่รองรับ': 'No supported Python found',
   'ดาวน์โหลดส่วนเสริม OCR ไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองใหม่': "Couldn't download the OCR add-on. Check your internet and try again",
@@ -2438,6 +2451,13 @@ export const en: Record<string, string> = {
   'ติดตั้ง OCR ตัวที่สอง (EasyOCR)': 'Installing the second OCR engine (EasyOCR)',
   ติดตั้งโมเดลอ่านลายมือภาษาไทย: 'Installing the Thai handwriting model',
   'ดาวน์โหลดและเตรียมโมเดล OCR ภาษาไทย': 'Downloading and preparing the Thai OCR model',
+  'ดาวน์โหลดโมเดล Typhoon OCR': 'Downloading the Typhoon OCR model',
+  'ดาวน์โหลดตัวอ่านภาพของ Typhoon OCR': 'Downloading the Typhoon OCR image encoder',
+  'ดาวน์โหลดและตรวจสอบตัวรันโมเดล (llama.cpp)': 'Downloading and checking the model runner (llama.cpp)',
+  'กำลังเตรียม Typhoon OCR': 'Preparing Typhoon OCR',
+  'อ่านภาษาไทยแม่นขึ้นด้วย Typhoon OCR · ~1 GB': 'Read Thai more accurately with Typhoon OCR · ~1 GB',
+  'OCR ในเครื่องพร้อมใช้ · Typhoon': 'Local OCR is ready · Typhoon',
+  'กำลังอ่านใบเสร็จ… ราว 1 นาทีต่อหน้า': 'Reading the receipt… about a minute a page',
   ดาวน์โหลดและเตรียมโมเดลลายมือภาษาไทย: 'Downloading and preparing the Thai handwriting model',
   'ยังไม่พบ Claude Code เปิดวิธีติดตั้งแล้วกดตรวจอีกครั้ง': "Claude Code wasn't found. Open the install guide, then press Check again",
   'กรุณาอัปเดต Claude Code เป็นรุ่น 2.1.268 ขึ้นไป แล้วเชื่อมต่อใหม่': 'Please update Claude Code to 2.1.268 or newer, then reconnect',
@@ -2935,8 +2955,8 @@ export const en: Record<string, string> = {
     'A cash bill from a shop not registered for VAT shows no separate tax. Whether it is accepted as proof of payment here has no confirmed source in the app yet; ask AFP',
   'ยอด {0} บาท เกินเพดานหมวด BV (ไม่เกิน 10,000 บาท/คนขับรถ/กิจกรรม)': '{0} baht is over the BV cap (10,000 baht per driver per activity)',
   'ยอด {0} บาท เกินวงเงินหมวดฉุกเฉิน (ไม่เกิน 10,000 บาท)': '{0} baht is over the emergency limit (10,000 baht)',
-  'ยอด {0} บาท เกินเพดานหมวด B (ไม่เกิน 10,000 บาทต่อหมวดย่อย) งานที่เกิน 10,000 บาทต้องผ่านพัสดุ (หมวด C)':
-    '{0} baht is over the category B cap (10,000 baht per sub-category); work over 10,000 baht goes through procurement (category C)',
+  'ยอด {0} บาท เกินเพดานหมวด B (รวมทุกรายการในหมวดย่อยเดียวกันไม่เกิน 10,000 บาท) งานจ้างหรือบริการนอกตารางหมวด B ที่เกิน 10,000 บาท แนวปฏิบัติ AFP ให้ดำเนินการผ่านงานพัสดุเท่านั้น ห้ามใช้เงินยืม โปรดปรึกษา AFP ก่อนจ่าย':
+    '{0} baht is over the category B cap (all items in one sub-category together, up to 10,000 baht). AFP guidance: hiring or services outside the category B table over 10,000 baht go through procurement only, never an advance. Ask AFP before paying',
   'เลยกำหนดรายงานขอความเห็นชอบแล้ว (ภายใน {0} วันทำการนับถัดจากวันที่ในใบเสร็จ ครบ {1}) AFP แจ้งว่าค่าใช้จ่ายส่วนเกินจะเบิกไม่ได้ โปรดติดต่อ AFP':
     'The approval report is overdue ({0} working days after the receipt date, due {1}). AFP says the excess cannot be claimed; contact AFP',
   'ทำรายงานขอความเห็นชอบใน STeP MIS ภายใน {0} วันทำการนับถัดจากวันที่ในใบเสร็จ: ภายใน {1} (ไม่นับวันหยุดนักขัตฤกษ์ โปรดดูปฏิทินด้วย)':
@@ -2947,6 +2967,8 @@ export const en: Record<string, string> = {
     'The emergency category needs the team lead’s or team executive’s agreement first, and all 3 conditions (urgent, unforeseen, not possible in the normal time)',
   'ชุดเคลียร์เงิน: ใบขอเบิกค่าใช้จ่าย (FM-AF-002) + ใบเสร็จรับเงินหรือใบสำคัญรับเงิน (FM-AF-014) + สำเนาบัตรประชาชนผู้รับเงินหรือใบรับรองแทนใบเสร็จ (FM-AF-035/036) + รายงานขอความเห็นชอบ':
     'Clearing set: expense claim (FM-AF-002) + receipt or receipt voucher (FM-AF-014) + copy of the payee’s ID card or a receipt substitute certificate (FM-AF-035/036) + approval report',
+  'ถ้าจ่ายเงินตัวเองไปก่อน (สำรองเงินจ่ายล่วงหน้า): ไม่ต้องแนบสัญญายืมเงิน (FM-AF-001) แต่แนบใบขออนุมัติสำรองจ่าย (FM-AF-002) และข้อเสนอโครงการ (FM-AF-003) ที่อนุมัติแล้วแทน ตาม QP-AF-003 ข้อ 4.3':
+    'If you paid with your own money first (advance payment): no loan agreement (FM-AF-001); attach the approved advance-payment request (FM-AF-002) and project proposal (FM-AF-003) instead, per QP-AF-003 section 4.3',
   'กฎของหมวดนี้ยังไม่มีในระบบ ชุดเอกสารและกำหนดเวลาโปรดถาม AFP':
     'This category’s rules are not in the app yet; ask AFP for the documents and deadlines',
   'ครบแล้ว {0} ข้อ: {1}': '{0} complete: {1}',
@@ -3389,6 +3411,8 @@ export const en: Record<string, string> = {
   ...workAssistantEn,
   ...googleChangesEn,
   ...afpEvidenceEn,
+  ...claimInterviewEn,
+  ...claimCaseEn,
   'Google Workspace เชื่อมแยกในแท็บบัญชีและบริการ': 'Google Workspace connects separately under Accounts and services',
   'แนบได้ 1 ไฟล์ หรือวางข้อมูลด้านล่าง · ส่งให้ AI ตามการตั้งค่าความเป็นส่วนตัว':
     'Attach 1 file or paste below · sent to the AI under your privacy settings',

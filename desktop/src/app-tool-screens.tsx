@@ -12,6 +12,8 @@ export function ToolScreens({ v }: { v: AppView }) {
   const {
     api,
     attachDocument,
+    caseSend,
+    caseSessions,
     chooseConnection,
     connectionId,
     consumedDocumentTask,
@@ -20,6 +22,7 @@ export function ToolScreens({ v }: { v: AppView }) {
     mediaOpened,
     notify,
     openAiSettings,
+    openCaseChat,
     receiptHandoff,
     receiptOpened,
     refresh,
@@ -62,6 +65,7 @@ export function ToolScreens({ v }: { v: AppView }) {
             connections={snapshot.connections}
             chooseConnection={setConnectionId}
             openAiSettings={openAiSettings}
+            caseChat={{ sessions: caseSessions, open: openCaseChat, send: caseSend }}
           />
         </div>
       )}

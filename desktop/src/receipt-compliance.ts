@@ -103,6 +103,16 @@ export const thaiDate = (date: Date) => `${date.getUTCDate()} ${THAI_SHORT[date.
 
 /** The expense category the person will claim under; it decides which AFP rules apply. */
 export type ClaimCategory = 'unsure' | 'B' | 'BV' | 'emergency' | 'other';
+/** One list for the receipt check and the document packet, so both name a category the same way. */
+export const CLAIM_CATEGORY_LABELS: Record<ClaimCategory, string> = {
+  unsure: 'ยังไม่แน่ใจ',
+  B: 'หมวด B (B1–B12)',
+  BV: 'หมวด BV ค่าพาหนะ',
+  emergency: 'หมวดฉุกเฉิน',
+  other: 'หมวดอื่น',
+};
+export const parseClaimCategory = (value: unknown): ClaimCategory | '' =>
+  typeof value === 'string' && Object.hasOwn(CLAIM_CATEGORY_LABELS, value) ? (value as ClaimCategory) : '';
 
 export type CheckStatus = 'ok' | 'missing' | 'warn' | 'todo' | 'info';
 /** afp: AFP circulars in the harness · general: what a payment document shows, to confirm with AFP · need-source: no source in the harness yet. */
@@ -297,7 +307,7 @@ export function complianceChecklist(input: {
             ? 'ยอด {0} บาท เกินเพดานหมวด BV (ไม่เกิน 10,000 บาท/คนขับรถ/กิจกรรม)'
             : category === 'emergency'
               ? 'ยอด {0} บาท เกินวงเงินหมวดฉุกเฉิน (ไม่เกิน 10,000 บาท)'
-              : 'ยอด {0} บาท เกินเพดานหมวด B (ไม่เกิน 10,000 บาทต่อหมวดย่อย) งานที่เกิน 10,000 บาทต้องผ่านพัสดุ (หมวด C)',
+              : 'ยอด {0} บาท เกินเพดานหมวด B (รวมทุกรายการในหมวดย่อยเดียวกันไม่เกิน 10,000 บาท) งานจ้างหรือบริการนอกตารางหมวด B ที่เกิน 10,000 บาท แนวปฏิบัติ AFP ให้ดำเนินการผ่านงานพัสดุเท่านั้น ห้ามใช้เงินยืม โปรดปรึกษา AFP ก่อนจ่าย',
       });
     if (withinB || category === 'emergency') {
       const days = category === 'emergency' ? 5 : 3;
@@ -340,6 +350,14 @@ export function complianceChecklist(input: {
         status: 'todo',
         source: 'afp',
         text: 'ชุดเคลียร์เงิน: ใบขอเบิกค่าใช้จ่าย (FM-AF-002) + ใบเสร็จรับเงินหรือใบสำคัญรับเงิน (FM-AF-014) + สำเนาบัตรประชาชนผู้รับเงินหรือใบรับรองแทนใบเสร็จ (FM-AF-035/036) + รายงานขอความเห็นชอบ',
+      });
+    if (withinB)
+      items.push({
+        id: 'reserve_set',
+        ifCategoryB,
+        status: 'info',
+        source: 'afp',
+        text: 'ถ้าจ่ายเงินตัวเองไปก่อน (สำรองเงินจ่ายล่วงหน้า): ไม่ต้องแนบสัญญายืมเงิน (FM-AF-001) แต่แนบใบขออนุมัติสำรองจ่าย (FM-AF-002) และข้อเสนอโครงการ (FM-AF-003) ที่อนุมัติแล้วแทน ตาม QP-AF-003 ข้อ 4.3',
       });
   }
   if (category === 'other')

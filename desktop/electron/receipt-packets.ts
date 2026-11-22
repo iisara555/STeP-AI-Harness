@@ -8,13 +8,15 @@ import {
   PACKET_LIMITS,
   packetText,
   packetKind,
+  parseExpenseCode,
   type ReceiptPacket,
   type PacketListItem,
   type ReviewedReceipt,
   type PacketSource,
 } from '../src/receipt-packet';
 import { blankPaymentVoucher, paymentVoucherFromReceipt } from '../src/afp-payment-voucher';
-import { blankEvidenceGuidance } from '../src/afp-evidence';
+import { storedEvidenceGuidance } from '../src/afp-evidence';
+import { parseClaimCategory } from '../src/receipt-compliance';
 
 type Records = {
   get<T>(kind: string, id: string): T | undefined;
@@ -64,6 +66,7 @@ export class ReceiptPackets {
         revision: packet.revision,
         updatedAt: packet.updatedAt,
         documentCount: packet.documents.length,
+        category: storedEvidenceGuidance(packet.guidance).category,
       }))
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
@@ -80,7 +83,7 @@ export class ReceiptPackets {
       ...packet,
       disbursement: packet.disbursement || blankPaymentVoucher(),
       includeDisbursement: Boolean(packet.includeDisbursement),
-      guidance: packet.guidance || blankEvidenceGuidance(),
+      guidance: storedEvidenceGuidance(packet.guidance),
     };
   }
   save(raw: ReceiptPacket) {
@@ -132,8 +135,29 @@ export class ReceiptPackets {
       if (origin && (await canonical(origin)) === target) throw new Error('PACKET_EXPORT_SOURCE');
     }
   }
+  /** Adds the files that are not in the packet yet and names the ones skipped as duplicates. */
+  async addNew(id: unknown, revision: unknown, selected: SelectedSource[]) {
+    const current = this.get(id, revision);
+    const seen = new Set(current.documents.map(doc => doc.sha256));
+    const fresh: SelectedSource[] = [],
+      skipped: string[] = [];
+    for (const source of selected) {
+      const hash = receiptSourceToken(source.bytes);
+      if (seen.has(hash)) skipped.push(packetText(source.name.split(/[\\/]/).pop() || 'document', 240));
+      else {
+        seen.add(hash);
+        fresh.push(source);
+      }
+    }
+    if (!fresh.length) throw new Error('PACKET_DUPLICATE_SOURCE');
+    return { packet: await this.add(id, revision, fresh), skipped };
+  }
   async add(id: unknown, revision: unknown, selected: SelectedSource[], reviewed?: ReviewedReceipt) {
     const current = this.get(id, revision);
+    // A receipt checked after its file was already added links its values to that file instead of a second copy.
+    const same =
+      reviewed && selected.length === 1 ? current.documents.find(doc => doc.sha256 === receiptSourceToken(selected[0].bytes)) : undefined;
+    if (same) return this.attachReview(current, same, reviewed!);
     if (!selected.length || current.documents.length + selected.length > PACKET_LIMITS.documents) throw new Error('PACKET_DOCUMENT_LIMIT');
     const hashes = new Set(current.documents.map(doc => doc.sha256));
     const documents: PacketSource[] = [];
@@ -162,15 +186,7 @@ export class ReceiptPackets {
     if (reviewed) {
       if (selected.length !== 1 || reviewed.checked !== true || reviewed.sourceToken !== documents[0].sha256)
         throw new Error('PACKET_REVIEW_STALE');
-      documents[0].reviewedReceipt = {
-        comparedAt: this.now(),
-        values: {
-          recipient: packetText(reviewed.recipient, 200),
-          date: packetText(reviewed.date, 80),
-          description: packetText(reviewed.description, 1200),
-          total: packetText(reviewed.total, 40),
-        },
-      };
+      documents[0].reviewedReceipt = this.reviewValues(reviewed);
     }
     const written: string[] = [];
     try {
@@ -190,13 +206,7 @@ export class ReceiptPackets {
         updatedAt: this.now(),
         paymentApproved: false,
       };
-      if (reviewed) {
-        next.voucher = { ...current.voucher, checked: false };
-        if (!next.voucher.recipient) next.voucher.recipient = reviewed.recipient;
-        if (!next.voucher.date) next.voucher.date = reviewed.date;
-        if (next.voucher.items.length === 1 && !next.voucher.items[0].description && !next.voucher.items[0].amount)
-          next.voucher.items = [{ description: reviewed.description, amount: reviewed.total }];
-      }
+      if (reviewed) this.applyReview(current, next, reviewed, documents[0].reviewedReceipt!);
       const commit = () => {
         documents.forEach((source, index) => {
           if (selected[index].originalPath) this.records.put('receipt-packet-origin', source.id, selected[index].originalPath);
@@ -210,6 +220,60 @@ export class ReceiptPackets {
       await Promise.all(written.map(path => rm(path, { force: true })));
       throw error;
     }
+  }
+  private reviewValues(reviewed: ReviewedReceipt): NonNullable<PacketSource['reviewedReceipt']> {
+    return {
+      comparedAt: this.now(),
+      values: {
+        recipient: packetText(reviewed.recipient, 200),
+        date: packetText(reviewed.date, 80),
+        description: packetText(reviewed.description, 1200),
+        total: packetText(reviewed.total, 40),
+      },
+      category: parseClaimCategory(reviewed.category) || 'unsure',
+      code: parseExpenseCode(reviewed.code),
+    };
+  }
+  /** What a checked receipt changes in the packet beside its own file: the category and the voucher's empty fields. */
+  private applyReview(
+    current: ReceiptPacket,
+    next: ReceiptPacket,
+    reviewed: ReviewedReceipt,
+    values: NonNullable<PacketSource['reviewedReceipt']>,
+  ) {
+    // The category kept on the receipt check fills an unset packet category; a different one is shown, not overwritten.
+    const kept = values.category;
+    if (kept && kept !== 'unsure' && current.guidance.category === 'unsure') next.guidance = { ...current.guidance, category: kept };
+    next.voucher = { ...current.voucher, checked: false };
+    if (!next.voucher.recipient) next.voucher.recipient = reviewed.recipient;
+    if (!next.voucher.date) next.voucher.date = reviewed.date;
+    if (next.voucher.items.length === 1 && !next.voucher.items[0].description && !next.voucher.items[0].amount)
+      next.voucher.items = [{ description: reviewed.description, amount: reviewed.total }];
+  }
+  /** Links checked receipt values to a file already in the packet; unclassified pages become the checked type. */
+  private attachReview(current: ReceiptPacket, source: PacketSource, reviewed: ReviewedReceipt) {
+    if (reviewed.checked !== true || reviewed.sourceToken !== source.sha256) throw new Error('PACKET_REVIEW_STALE');
+    const values = this.reviewValues(reviewed);
+    const kind = reviewed.kind ? packetKind(reviewed.kind) : 'other';
+    const next: ReceiptPacket = {
+      ...current,
+      documents: current.documents.map(doc =>
+        doc.id === source.id
+          ? {
+              ...doc,
+              reviewedReceipt: values,
+              pages: doc.pages.map(page => (page.kind === 'other' && kind !== 'other' ? { ...page, kind, checked: false } : page)),
+            }
+          : doc,
+      ),
+      disbursement: { ...current.disbursement, checked: false },
+      revision: current.revision + 1,
+      updatedAt: this.now(),
+      paymentApproved: false,
+    };
+    this.applyReview(current, next, reviewed, values);
+    this.records.put(KIND, next.id, next);
+    return next;
   }
   async remove(id: unknown, revision: unknown, sourceId: unknown) {
     const current = this.get(id, revision);

@@ -99,7 +99,7 @@ export default function App() {
       : view === 'media'
         ? t('สื่อภายใน')
         : view === 'receipt'
-          ? t('ตรวจใบเสร็จ AFP')
+          ? t('ผู้ช่วยเบิกจ่าย')
           : view === 'skills'
             ? t('ศูนย์รวม Skill')
             : view === 'schedules'

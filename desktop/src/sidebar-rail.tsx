@@ -137,7 +137,7 @@ export function SidebarRail({
     ['media', t('สื่อภายใน'), MegaphoneIcon, Megaphone],
     ['skills', t('ศูนย์รวม Skill'), BlocksIcon, Blocks],
     ['schedules', t('งานตั้งเวลา'), CalendarClockIcon, CalendarClock],
-    ['receipt', t('ตรวจใบเสร็จ AFP'), ReceiptIcon, Receipt],
+    ['receipt', t('ผู้ช่วยเบิกจ่าย'), ReceiptIcon, Receipt],
   ] as const;
   return (
     // Animations follow the computer's "reduce motion" setting.

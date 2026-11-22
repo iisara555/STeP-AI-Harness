@@ -15,9 +15,17 @@ def main() -> None:
     parser.add_argument("handwriting", choices=["0", "1"])
     parser.add_argument("crosscheck", choices=["0", "1"])
     parser.add_argument("tesseract", choices=["0", "1"])
+    parser.add_argument("engine", nargs="?", default="paddle", choices=["paddle", "typhoon"])
     args = parser.parse_args()
 
-    result = LocalThaiOCR().process(
+    if args.engine == "typhoon":
+        # Imported only when asked, so a PaddleOCR-only reading never touches the Typhoon files.
+        from typhoon_engine import TyphoonThaiOCR
+
+        reader = TyphoonThaiOCR()
+    else:
+        reader = LocalThaiOCR()
+    result = reader.process(
         args.input,
         OCRConfig(
             low_confidence_threshold=args.threshold,

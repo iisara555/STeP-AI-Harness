@@ -1,7 +1,6 @@
 export const afpEvidenceEn: Record<string, string> = {
   'กิจกรรม: {0}': 'Activity: {0}',
   'กรณีการเงิน: {0}': 'Finance scenario: {0}',
-  ปรับกิจกรรมและกรณีการเงิน: 'Adjust activity and finance scenario',
   'ต้องยืนยันความจำเป็นกับ AFP': 'Confirm whether needed with AFP',
   ดูเหตุผลและที่มา: 'See reasons and sources',
   'ใบเซ็นชื่อเข้าร่วม FM-AF-015': 'Attendance signatures FM-AF-015',
@@ -21,8 +20,41 @@ export const afpEvidenceEn: Record<string, string> = {
   'กิจกรรม / งาน': 'Activity / event',
   กิจกรรมอื่น: 'Other activity',
   'ยังไม่ทราบ / ให้ AFP ช่วยตรวจ': 'Unknown / ask AFP',
-  'หมวด B — ยืมเงิน': 'Category B — advance',
-  'หมวด B — เคลียร์เงินยืม': 'Category B — advance settlement',
+  ยืมเงินก่อนจ่าย: 'Advance before paying',
+  เคลียร์เงินยืม: 'Advance settlement',
+  'สำรองจ่ายเอง — ขออนุมัติก่อนจ่าย': 'Paying with my own money — approval before paying',
+  'สำรองจ่ายเอง — ขอเบิกคืน': 'Paying with my own money — reimbursement claim',
+  'QP-AF-003 ข้อ 4.3 a: ขออนุมัติสำรองจ่ายก่อนจ่าย เสนอผู้มีอำนาจลงนาม แล้วส่งงานการเงินและลง Log Book ไม่ต้องทำสัญญายืมเงิน':
+    'QP-AF-003 section 4.3 a: ask for approval before paying, have it signed by the authorized person, then hand it to Finance and sign the Log Book; no loan agreement',
+  'QP-AF-003 ข้อ 4.3 a: แนบข้อเสนอโครงการ การวางแผนการดำเนินงาน กับใบขออนุมัติสำรองจ่าย':
+    'QP-AF-003 section 4.3 a: attach the project proposal and work plan to the advance-payment request',
+  'QP-AF-003 ข้อ 4.3 b: ใช้ใบขอเบิกตามข้อ 4.2 a และแนบใบที่อนุมัติสำรองจ่ายไว้ตามข้อ 4.3 a ไม่ต้องแนบสัญญายืมเงิน FM-AF-001':
+    'QP-AF-003 section 4.3 b: use the expense claim from section 4.2 a and attach the approved advance-payment request from 4.3 a; no loan agreement FM-AF-001',
+  'QP-AF-003 ข้อ 4.3 b: แนบเอกสารชุดเดียวกับที่ใช้ขออนุมัติสำรองจ่าย (ข้อ 4.3 a)':
+    'QP-AF-003 section 4.3 b: attach the same documents used for the advance-payment approval (section 4.3 a)',
+  'QP-AF-003 ข้อ 4.2 a: ส่งเข้าระบบตรวจสอบใบเสร็จใน STeP MIS ทุกครั้งที่ได้รับ แล้วรวบรวมฉบับจริงที่ผ่านการตรวจ':
+    'QP-AF-003 section 4.2 a: submit each receipt to the STeP MIS receipt check when you get it, then collect the checked originals',
+  'แนวปฏิบัติ AFP หมวดฉุกเฉิน: รายงานภายใน 5 วันทำการ หลังได้รับความเห็นชอบจากหัวหน้าทีมก่อนดำเนินการ':
+    'AFP emergency category: report within 5 working days, after the team lead agreed before the work',
+  'แนวปฏิบัติ AFP หมวด B: ทำรายงานขอความเห็นชอบใน STeP MIS ภายใน 3 วันทำการนับถัดจากวันที่ในใบเสร็จ':
+    'AFP category B: file the approval report in STeP MIS within 3 working days after the receipt date',
+  'QP-AF-003 ข้อ 4.3 · สำรองเงินจ่ายล่วงหน้า': 'QP-AF-003 section 4.3 · paying in advance',
+  'ไม่เกิน 10,000 บาท': 'Within 10,000 baht',
+  'เกินเพดาน 10,000 บาท · ปรึกษา AFP ก่อนส่ง': 'Over the 10,000 baht cap · ask AFP before sending',
+  'รวมเกิน 10,000 บาท · ตรวจว่าแยกกันถูกต้อง': 'Over 10,000 baht together · check they are split correctly',
+  'หมวด B ยังไม่ระบุหมวดย่อย': 'Category B, sub-category not set',
+  ยังไม่ระบุหมวด: 'Category not set',
+  เลือกหมวดเพื่อเทียบเพดาน: 'Choose a category to compare with the cap',
+  'หมวด: {0} · กรณีการเงิน: {1}': 'Category: {0} · finance scenario: {1}',
+  '{0} ตรวจไว้เป็น{1} ไม่ตรงกับหมวดของชุดนี้': '{0} was checked as {1}, which differs from this packet’s category',
+  'ปรับหมวด กิจกรรม และกรณีการเงิน': 'Adjust category, activity and finance scenario',
+  หมวดค่าใช้จ่าย: 'Expense category',
+  'หมวดค่าใช้จ่าย: {0}': 'Expense category: {0}',
+  ยอดรวมตามหมวดย่อย: 'Totals by sub-category',
+  '{0} ใบ · {1} บาท': '{0} receipts · {1} baht',
+  'อ่านยอดไม่ได้ {0} ใบ': '{0} with an unreadable amount',
+  'รวมเฉพาะใบเสร็จที่เพิ่มจากหน้าตรวจใบเสร็จ ใบแจ้งหนี้และสลิปไม่นับซ้ำ':
+    'Only receipts added from the receipt check are summed; invoices and slips are not counted again',
   'ใบเสร็จรับเงิน / ใบสำคัญรับเงิน FM-AF-014': 'Receipt / receipt voucher FM-AF-014',
   'สำเนาบัตรผู้รับเงิน / ใบรับรองแทนใบเสร็จ FM-AF-035 หรือ FM-AF-036': 'Payee ID copy / receipt replacement FM-AF-035 or FM-AF-036',
   ตรวจเมื่อกิจกรรมมีผู้เข้าร่วมและเอกสารนี้เกี่ยวข้องกับเรื่องเบิก:
@@ -39,8 +71,6 @@ export const afpEvidenceEn: Record<string, string> = {
   ตรวจเมื่อจำเป็นต้องใช้ใบรับรองแทนใบเสร็จตามกรณี: 'Review when a receipt replacement is needed for this case',
   แนะนำเอกสารตามกิจกรรม: 'Evidence guidance for this activity',
   วิเคราะห์บนเครื่อง: 'Analyzed on this device',
-  'ระบบดูชื่อเรื่องและวัตถุประสงค์ แล้วเทียบกับประเภทหน้าที่เลือก คุณเปลี่ยนข้อเสนอได้':
-    'Suggests an activity from the title and purpose, then compares selected page types. You can change the suggestions.',
   ลักษณะกิจกรรม: 'Activity type',
   'ระบบคาดว่า: {0} · โปรดตรวจหรือเปลี่ยนได้': 'Suggested: {0} · review or change it',
   'พบหลายลักษณะกิจกรรม · โปรดเลือกประเภทที่ตรง': 'Several activity types match · choose the right one',
@@ -50,8 +80,6 @@ export const afpEvidenceEn: Record<string, string> = {
   ดูจากบริบท: 'Suggest from context',
   มี: 'Yes',
   'ไม่มี / ไม่เกี่ยวข้อง': 'No / not relevant',
-  'กรณีการเงินต้องเลือกเอง ระบบไม่เดาหมวดค่าใช้จ่ายจากชื่อกิจกรรม':
-    'Choose the finance scenario yourself; the activity name does not determine its finance category.',
   พบหน้าที่ตรวจเทียบแล้ว: 'Reviewed pages found',
   'พบในชุด · รอตรวจเทียบ': 'In packet · review pending',
   'ชื่อไฟล์คล้ายกัน · รอยืนยันประเภท': 'Similar filename · type not confirmed',
@@ -61,8 +89,6 @@ export const afpEvidenceEn: Record<string, string> = {
   'ข้อเสนอให้ตรวจเพิ่ม · ยังไม่มีแหล่งยืนยันว่าต้องแนบ': 'Suggested for review · no source confirms it is required',
   'ในชุด: {0} · หน้า {1}': 'In packet: {0} · page(s) {1}',
   เลือกกิจกรรมหรือกรณีการเงินเพื่อดูรายการที่เกี่ยวข้อง: 'Choose an activity or finance scenario to see relevant items',
-  'รายการเป็นเครื่องช่วยตรวจตามบริบท ไม่ยืนยันว่าเอกสารครบหรืออนุมัติเบิกได้ โปรดเทียบข้อกำหนดล่าสุดกับ AFP':
-    'These contextual prompts do not establish completeness or payment approval. Check current requirements with AFP.',
   'รายการอื่นที่ต้องการตรวจ ({0})': 'Other items to review ({0})',
   'เพิ่มรายการเองและเชื่อมไฟล์ในชุดได้ รายการเหล่านี้ไม่ส่งให้ AI':
     'Add your own items and link packet files. These items are not sent to AI.',
