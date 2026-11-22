@@ -1042,6 +1042,13 @@ export const en: Record<string, string> = {
     'An attached agency form is checked against the MIS quality register for its code and revision.',
   'ตรวจใบกำกับภาษี (เลขผู้เสียภาษี เลขที่ และ VAT) และเตือนเรื่องหัก ณ ที่จ่ายในใบสำคัญจ่าย':
     'Tax invoices are checked for the tax ID, number and VAT, and payment vouchers flag withholding to review.',
+  'ลบเรื่องเบิกจ่ายได้ และหน้าผู้ช่วยเบิกจ่ายตัวหนังสือน้อยลง ใช้ง่ายขึ้น':
+    'Delete a claim case, and a quieter, easier Claims assistant page.',
+  'แชตของเรื่องเบิกเลือกโมเดลและแนบไฟล์หรือภาพให้ AI อ่านได้ ตอบด้วย Skill ผู้เชี่ยวชาญเรื่องเบิกจ่าย':
+    'Each claim case chat picks its model, takes files and pictures for the AI, and answers with the claims expert Skill.',
+  'ช่วยเขียนเหตุผลการเดินทางหมวด BV ให้ครบ 5 ส่วนตามที่ AFP ขอ': 'Help writing a BV travel reason with the five parts AFP asks for.',
+  'เมื่อการลงชื่อเข้าใช้ Claude หมดอายุ แอปบอกให้ลงชื่อใหม่แทนข้อความผิดพลาดทั่วไป':
+    'An expired Claude sign-in now asks you to sign in again instead of showing a generic error.',
   '"ตรวจใบเสร็จ AFP" เปลี่ยนเป็น "ผู้ช่วยเบิกจ่าย" แต่ละเรื่องเบิกมีแชตของตัวเอง ถามทีละข้อและตอบจากเอกสาร AFP':
     '"AFP receipt check" is now the Claims assistant: each claim case has its own chat that asks one question at a time and answers from AFP documents.',
   'ลากหลายไฟล์มาวางในแชตของเรื่องเบิก ระบบอ่านในเครื่องและบอกว่าแต่ละไฟล์เป็นเอกสารอะไร':

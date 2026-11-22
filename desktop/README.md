@@ -10,7 +10,7 @@
 
 ภาพใช้ข้อมูลตัวอย่าง หน้าจอและตัวเลือกอาจต่างตามรุ่นและการตั้งค่าขององค์กร
 
-Source version: Desktop **0.6.38**. ผู้ช่วยเบิกจ่าย (Claims assistant): a chat inside each claim case that asks one question at a time and answers from AFP documents, several files dropped into a case and typed from their printed titles on this computer, plus optional Typhoon OCR for Thai scans and long tasks that finish with an answer instead of timing out.
+Source version: Desktop **0.6.39**. ผู้ช่วยเบิกจ่าย (Claims assistant): delete a case, a quieter case page, an AI picker and attachments in each case chat, a claims expert Skill and BV travel-reason guidance; an expired Claude sign-in now says so, and small models make fewer tool mistakes.
 
 Desktop **0.6.15** กดปุ่มเข้าสู่ระบบเว็บอย่าง STeP MBS ให้เองหลังกรอกบัญชีจาก Vault ไม่ต้องสลับไปกดเอง
 
@@ -168,4 +168,4 @@ AI ได้รับโครงและชื่อช่องที่ร�
 
 อ่าน [ภาพรวม STeP AI](../README.md) หรือ [รายละเอียดสำหรับผู้ดูแลและนักพัฒนา](../docs/desktop-development.md) เมื่อต้องตั้งค่าระบบ ทดสอบ หรือสร้างตัวติดตั้ง
 
-รุ่นใน source: **STeP Desktop v0.6.38** ดูไฟล์ที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การมี release ไม่ได้แทนการอนุมัติใช้งานในหน่วยงาน
+รุ่นใน source: **STeP Desktop v0.6.39** ดูไฟล์ที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การมี release ไม่ได้แทนการอนุมัติใช้งานในหน่วยงาน
