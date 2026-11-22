@@ -3441,6 +3441,7 @@ export const en: Record<string, string> = {
   'ประมาณการจาก token ที่ผู้ให้บริการรายงาน · ไม่รวมรูปภาพ ค่าสมาชิก และการใช้นอกแอป':
     'Estimated from tokens the provider reports · excludes images, subscriptions and use outside the app',
   'ตัวเชื่อม Antigravity ในเครื่อง (ทดลอง)': 'Local Antigravity bridge (trial)',
+  'ให้ AI แบบ OpenRouter เรียกเครื่องมือแบบ native (ทดลอง)': 'Native tool calls for OpenRouter-style AI (trial)',
   'เปลี่ยนเฉพาะวิธีพูด · ข้อเท็จจริงและมาตรฐานเอกสารคงเดิม': 'Changes only how it talks · facts and document standards stay the same',
   'ตัวอย่าง: เตือนให้ตรวจเอกสารก่อนส่ง': 'Example: a reminder to check a document before sending',
   'พักหรือกลับมาใช้ทุกบัญชีในแอปนี้ · ไม่ออกจากระบบ AI และไม่เปลี่ยนสิทธิ์ที่ Google':

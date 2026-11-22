@@ -132,6 +132,16 @@ export async function compatibleRun(
     throw new Error("INVALID_INPUT");
   const protocol = profile.protocol || "openai",
     endpoint = providerEndpoint(profile.baseUrl, protocol);
+  const native =
+    protocol === "openai" &&
+    Array.isArray(context.nativeTools) &&
+    context.nativeTools.length > 0;
+  if (
+    native &&
+    (context.nativeTools.length > 8 ||
+      JSON.stringify(context.nativeTools).length > 20_000)
+  )
+    throw new Error("INVALID_INPUT");
   if (context.webSearch) throw new Error("PROVIDER_CAPABILITY_UNSUPPORTED");
   // Pictures (an image or the pages of a scanned PDF) go as standard content parts, the way the OpenAI and Anthropic
   // APIs and the services that copy them (OpenRouter, Qwen, MiniMax, Ollama, ...) take them. Whether the chosen model
@@ -199,6 +209,9 @@ export async function compatibleRun(
               : { max_tokens: 8192 }),
           stream: true,
           stream_options: { include_usage: true },
+          // Native tool calling (policy nativeToolCalls): the service returns tool requests as structured calls whose
+          // arguments it has already escaped, instead of JSON the model writes by hand in a step-tool fence.
+          ...(native ? { tools: context.nativeTools } : {}),
           messages: [
             ...(context.system
               ? [{ role: "system", content: context.system }]
@@ -261,6 +274,8 @@ export async function compatibleRun(
     outputTruncated = false;
   let usage,
     rawUsage = {};
+  const calls = [];
+  let callChars = 0;
   const reader = response.body.getReader(),
     decoder = new TextDecoder("utf-8", { fatal: true });
   const consume = (block) => {
@@ -316,9 +331,24 @@ export async function compatibleRun(
       event.content_block?.type === "tool_use"
     )
       throw new Error("PROVIDER_TOOL_DENIED");
+    if (native)
+      for (const call of event.choices?.[0]?.delta?.tool_calls || []) {
+        const index = Number.isSafeInteger(call?.index) ? call.index : calls.length;
+        if (index < 0 || index > 15) throw new Error("PROVIDER_OUTPUT_LIMIT");
+        calls[index] ??= { name: "", arguments: "" };
+        const name = call.function?.name ?? "",
+          args = call.function?.arguments ?? "";
+        if (typeof name !== "string" || typeof args !== "string")
+          throw new Error("PROVIDER_STREAM_INVALID");
+        calls[index].name += name;
+        calls[index].arguments += args;
+        callChars += name.length + args.length;
+        if (callChars > 1_700_000) throw new Error("PROVIDER_OUTPUT_LIMIT");
+      }
     if (
       event.choices?.some(
-        (c) => c.delta?.tool_calls?.length || c.delta?.function_call,
+        (c) =>
+          (!native && c.delta?.tool_calls?.length) || c.delta?.function_call,
       )
     )
       throw new Error("PROVIDER_TOOL_DENIED");
@@ -354,6 +384,23 @@ export async function compatibleRun(
       throw Object.assign(new Error("PROVIDER_OUTPUT_LIMIT"), {
         outputTruncated: true,
       });
+    // Each structured call becomes the same step-tool request the text protocol uses, so one parser, one validator and
+    // every host gate apply. Backticks are escaped so content holding a code fence cannot end the block early.
+    for (const call of calls.filter(Boolean)) {
+      let request;
+      try {
+        const parsed = JSON.parse(call.arguments || "{}");
+        request =
+          call.name === "step_tool"
+            ? parsed
+            : { tool: call.name, ...(parsed && typeof parsed === "object" ? parsed : {}) };
+        request = JSON.stringify(request);
+      } catch {
+        // Arguments that are not JSON stay as they came, so the loop reports the request as unreadable.
+        request = call.arguments;
+      }
+      text += "\n\n```step-tool\n" + request.replace(/`/g, "\\u0060") + "\n```";
+    }
     if (!ended || !text.trim()) throw new Error("PROVIDER_STREAM_INCOMPLETE");
     return text;
   } catch (error) {

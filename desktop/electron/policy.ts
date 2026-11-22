@@ -47,6 +47,7 @@ export const FEATURES = [
   'autoUpdate',
   'claudeSubscription',
   'antigravityNativeBridge',
+  'nativeToolCalls',
   'learningReview',
   'ocrTrial',
   'answerCheck',
@@ -237,6 +238,11 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // step-tool text block and a new turn per tool. Every call still goes through the same permission, consent and
   // privacy checks. Off until the owner has piloted it on a signed-in device (docs/antigravity-adapter.md).
   antigravityNativeBridge: false,
+  // OpenAI-compatible connections (OpenRouter and the other presets) get STeP tool requests as native function calls,
+  // whose arguments the service escapes, instead of JSON the model writes in a step-tool fence (learned from OpenCode).
+  // The calls become the same step-tool requests, so every validation, permission and privacy gate is unchanged. Off
+  // until a live comparison on the owner's OpenRouter models shows fewer broken requests.
+  nativeToolCalls: false,
   // The demo release offers the developer switch on every machine. Each developer must still opt in locally.
   developmentMode: true,
   // A background review after every 10 user turns drafts lessons into the Learning Inbox (proposals only), as Hermes

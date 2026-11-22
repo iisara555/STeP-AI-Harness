@@ -25,7 +25,7 @@ import { needsPublicWebSearch } from '../../src/modules/router/public-informatio
 import { usedWebSources, webSources } from '../src/web';
 import { brokenRequests, loopRequests, type LoopRequest } from '../src/tools';
 import { speakingStyleRules } from '../src/speaking-styles';
-import { ToolLoop, TOOL_RULES, BROWSER_RULES, type LoopHost } from './tool-loop';
+import { ToolLoop, TOOL_RULES, BROWSER_RULES, NATIVE_TOOL, NATIVE_TOOL_RULE, type LoopHost } from './tool-loop';
 import { SUBAGENT_MAX_TURNS, SUBAGENT_TOOLS, subagentSystem } from './subagents';
 import type { ToolScope } from './tools';
 import { RETRYABLE_CODES, RETRY_DELAYS_MS, retryDelay } from './retry';
@@ -130,6 +130,8 @@ export type Harness = {
   qualityRepair?: () => boolean;
   /** Antigravity tool calls through the governed step_host MCP bridge (policy `features.antigravityNativeBridge`). */
   antigravityBridge?: () => boolean;
+  /** Policy nativeToolCalls: OpenAI-compatible connections request tools as native function calls. */
+  nativeToolCalls?: () => boolean;
   tools?: (scope: ToolScope) => Promise<LoopHost>;
   recordUsage?: (connection: Connection, count: TokenCount) => void;
   /** Administrator limits, else the window a model on this computer actually loaded (electron/local-context.ts). */
@@ -1470,6 +1472,13 @@ export class WorkService {
           !target && !options.isolatedQuestion && !textOnly && !options.draftOnly && this.harness.tools && this.harness.toolLoop?.(),
         );
         const scopedToolInstructions = toolsEnabled ? this.harness.toolInstructions?.() : undefined;
+        // Native function calls only where the transport supports them: OpenAI-compatible chat completions, full tool rules.
+        const nativeTools =
+          toolsEnabled &&
+          scopedToolInstructions === undefined &&
+          connection.provider === 'compatible' &&
+          (connection.protocol ?? 'openai') === 'openai' &&
+          Boolean(this.harness.nativeToolCalls?.());
         const baseRules = textOnly ? TEXT_RULES : chat ? CHAT_RULES : DRAFTING_RULES;
         // A weak keyword match is often the wrong document ("อยากตรวจคุณภาพอาหาร" matched the quality manual), so the
         // index narrows to the matched documents only when the match is strong; otherwise the answer sees every document
@@ -1507,6 +1516,7 @@ export class WorkService {
           this.harness.permissionMode?.() === 'plan' &&
             'Current permission mode is plan. Provide a plan and references for review; do not draft the final document, propose file mutations, or request command execution.',
           toolsEnabled && (scopedToolInstructions ?? TOOL_RULES),
+          nativeTools && NATIVE_TOOL_RULE,
           toolsEnabled && scopedToolInstructions === undefined && BROWSER_RULES,
           !toolsEnabled &&
             !textOnly &&
@@ -1750,6 +1760,7 @@ export class WorkService {
                 webSearch: search,
                 longFormTor: !search && !analysisImage && draftingTool?.id === 'tor',
                 session: search || analysisImage ? undefined : providerSession,
+                nativeTools: nativeTools && !search && !analysisImage ? [NATIVE_TOOL] : undefined,
                 nativeBridge:
                   bridgeOn && bridgeLoop && !search && !analysisImage
                     ? (request, signal) => bridgeLoop!.bridge(request, signal)

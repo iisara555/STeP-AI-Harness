@@ -63,6 +63,7 @@ const featureNames: Record<string, string> = localized({
   autoEffort: 'ปรับระดับการคิดตามขนาดงาน',
   maintenance: 'ตรวจข้อมูลที่จำ บทเรียน และ Skill ทุกวัน',
   antigravityNativeBridge: 'ตัวเชื่อม Antigravity ในเครื่อง (ทดลอง)',
+  nativeToolCalls: 'ให้ AI แบบ OpenRouter เรียกเครื่องมือแบบ native (ทดลอง)',
 });
 
 /** The policy switches in a few plain groups, so staff can scan them; switches not listed fall into the last group. */
