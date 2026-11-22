@@ -13,7 +13,7 @@ import { existsSync } from 'node:fs';
 import { rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { Rpc } from './rpc';
-import { explainRuntimeFailure } from './diagnostics';
+import { explainRuntimeFailure, scrub } from './diagnostics';
 import { claudeEnv } from './claude-auth';
 import { anthropicEnv } from './anthropic-auth';
 import { AntigravityAdapter, antigravityModels, prewarmAntigravity, antigravitySpareCount, closeAntigravitySpares } from './antigravity';
@@ -559,6 +559,23 @@ const claudeSpares = new Map<string, ClaudeSpare>();
 const SPARE_IDLE_MS = 10 * 60_000;
 const SPARE_SYSTEM = 'You are the STeP Desktop drafting assistant. Follow the instructions that follow.';
 class SpareRefused extends Error {}
+// The Agent SDK names some failures on the assistant message (`error`); the rest are explained from the runtime's own
+// words, e.g. "Not logged in · Please run /login" when the saved sign-in has expired and was cleared.
+const CLAUDE_ERROR_CODES: Record<string, string> = {
+  authentication_failed: 'LOGIN_REQUIRED',
+  verification_required: 'LOGIN_REQUIRED',
+  oauth_org_not_allowed: 'PROVIDER_PERMISSION_DENIED',
+  account_on_hold: 'PROVIDER_PERMISSION_DENIED',
+  billing_error: 'PROVIDER_QUOTA',
+  model_not_found: 'MODEL_NOT_AVAILABLE',
+  overloaded: 'PROVIDER_BUSY',
+};
+/** A failed Claude turn as a code the interface explains, with the scrubbed runtime lines kept for diagnostics. */
+export function claudeFailure(lines: string[], sdkError = '', fallback = 'PROVIDER_REQUEST_FAILED') {
+  const code = CLAUDE_ERROR_CODES[sdkError] || explainRuntimeFailure(lines) || fallback;
+  const detail = [...(sdkError ? [`sdk error: ${sdkError}`] : []), ...lines].map(line => scrub(String(line))).filter(Boolean);
+  return Object.assign(new Error(code), { detail: detail.slice(-8) });
+}
 export const claudeSpareCount = (connectionId: string) => (claudeSpares.has(connectionId) ? 1 : 0);
 export function closeClaudeSpares(connectionId?: string) {
   claudeSpareEpoch++;
@@ -705,6 +722,9 @@ export class ClaudeAdapter implements ProviderAdapter {
     let stream: Query | undefined;
     let keep = false;
     let completed = false;
+    // What the runtime said about a failure before it ended the turn or exited.
+    const said: string[] = [];
+    let sdkError = '';
     try {
       if (context.signal.aborted) throw new Error('CANCELLED');
       const system = context.jsonSchema
@@ -845,6 +865,10 @@ export class ClaudeAdapter implements ProviderAdapter {
           break;
         }
         const message = next.value;
+        if (message.type === 'assistant' && message.error) {
+          sdkError = message.error;
+          for (const part of message.message?.content || []) if (part.type === 'text' && part.text) said.push(part.text);
+        }
         if (message.type === 'stream_event' && message.event.type === 'content_block_delta' && message.event.delta.type === 'text_delta') {
           text += message.event.delta.text;
           context.emit(message.event.delta.text);
@@ -876,7 +900,14 @@ export class ClaudeAdapter implements ProviderAdapter {
           } else context.onUsage?.(providerUsage('anthropic', message.usage));
         }
         if (message.type === 'result' && (message.is_error || message.subtype !== 'success'))
-          throw new Error(explainRuntimeFailure('errors' in message ? message.errors : []) || 'PROVIDER_REQUEST_FAILED');
+          throw claudeFailure(
+            [
+              ...said,
+              ...('errors' in message ? message.errors || [] : []),
+              ...('result' in message && message.result ? [message.result] : []),
+            ],
+            sdkError,
+          );
         if (message.type === 'result' && message.subtype === 'success' && !text) {
           text = message.result;
           context.emit(text);
@@ -893,10 +924,12 @@ export class ClaudeAdapter implements ProviderAdapter {
       if (context.signal.aborted) throw new Error('CANCELLED');
       // The spare could not take this conversation: start the same message cold, once.
       if (error instanceof SpareRefused) retryCold = true;
+      else if (Array.isArray((error as any)?.detail)) throw error;
       else
-        throw new Error(
-          explainRuntimeFailure([String(error)]) ||
-            (error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'PROVIDER_REQUEST_FAILED'),
+        throw claudeFailure(
+          [...said, String(error)],
+          sdkError,
+          error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'PROVIDER_REQUEST_FAILED',
         );
     } finally {
       context.signal.removeEventListener('abort', abort);
