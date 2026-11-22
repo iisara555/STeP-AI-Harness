@@ -642,7 +642,7 @@ export async function prewarmAntigravity(connection: Connection, context: Provid
   const key = providerSessionKey(connection, fullContext);
   const home = await antigravityHome(fullContext);
   try {
-    await checkAntigravity(connection.executable, home, context.signal);
+    await checkAntigravity(connection.executable, home, context.signal, antigravityNeeds(fullContext));
   } catch {
     await home.close().catch(() => {});
     return false;
@@ -844,7 +844,7 @@ export class AntigravityAdapter implements ProviderAdapter {
     let clean = true;
     let conversation = '';
     try {
-      await checkAntigravity(connection.executable, home, context.signal);
+      await checkAntigravity(connection.executable, home, context.signal, antigravityNeeds(context));
       const extra: string[] = [];
       // agy constrains the final result to this schema (`--json-schema`, 1.2.14+). The recovery attempt goes without it,
       // in case the CLI answers a schema through a tool step, which STeP stops.
@@ -965,7 +965,7 @@ export class AntigravityAdapter implements ProviderAdapter {
   private async open(session: ProviderSession, identity: string, connection: Connection, context: ProviderContext) {
     const home = await antigravityHome(context);
     try {
-      await checkAntigravity(connection.executable, home, context.signal);
+      await checkAntigravity(connection.executable, home, context.signal, antigravityNeeds(context));
     } catch (error) {
       if (!(error as any)?.shutdownIncomplete) await home.close();
       throw error;
@@ -1088,7 +1088,9 @@ export class AntigravityAdapter implements ProviderAdapter {
 
 // Executables that already answered as 1.2.14+, keyed by path with the file's size and change time, so replacing or
 // updating the binary checks it again. Without this every message started one extra agy process just for --version.
+// A text-only version (see ANTIGRAVITY_TEXT_FROM) is kept as `<stamp>#text`.
 const checked = new Map<string, string>();
+const TEXT_ONLY = '#text';
 function fileStamp(executable: string) {
   try {
     const info = statSync(executable);
@@ -1098,7 +1100,7 @@ function fileStamp(executable: string) {
   }
 }
 
-/** Whether this exact file (same size and change time) already passed checkAntigravity, without starting it. */
+/** Whether this exact file (same size and change time) already passed checkAntigravity as fully supported, without starting it. */
 export function antigravityChecked(executable: string) {
   const stamp = fileStamp(executable);
   return Boolean(stamp) && checked.get(executable) === stamp;
@@ -1106,11 +1108,36 @@ export function antigravityChecked(executable: string) {
 
 /** agy major.minor from which STeP's isolated agent is not loaded (raise after a live check of a newer agy). */
 export const ANTIGRAVITY_TESTED_BELOW = [1, 4] as const;
-export async function checkAntigravity(executable: string, context: Pick<ProviderContext, 'cwd' | 'env'>, signal?: AbortSignal) {
+/**
+ * agy major.minor from which plain text runs work again (1.5.10 on Windows, 2026-11-18,
+ * `scripts/probe-antigravity-version.ts`): the plain agent loads in print and stream-json, init confirms `strict`, and
+ * agy's own file read is refused. The step_host bridge and the image tool do not: 1.5 rejects an agent whose
+ * `mcpServers` is a list of names ("unknown agent"), and with server objects no MCP tool name is in its registry. So
+ * from this version a run that needs either is refused (`ANTIGRAVITY_FEATURE_UNTESTED`) and reconnecting installs the
+ * pinned copy; 1.4.x stays refused. The init check and the stop on the first tool step still apply to every version.
+ */
+export const ANTIGRAVITY_TEXT_FROM = [1, 5] as const;
+const atLeast = (major: number, minor: number, bound: readonly [number, number]) =>
+  major > bound[0] || (major === bound[0] && minor >= bound[1]);
+/** What a run needs from agy beyond plain text. */
+export type AntigravityNeeds = { bridge?: boolean; images?: boolean };
+const needsMcp = (needs?: AntigravityNeeds) => Boolean(needs?.bridge || needs?.images);
+const antigravityNeeds = (context: Pick<ProviderContext, 'nativeBridge' | 'images'>): AntigravityNeeds => ({
+  bridge: Boolean(context.nativeBridge),
+  images: Boolean(context.images?.length),
+});
+export async function checkAntigravity(
+  executable: string,
+  context: Pick<ProviderContext, 'cwd' | 'env'>,
+  signal?: AbortSignal,
+  needs?: AntigravityNeeds,
+): Promise<'full' | 'text'> {
   const stamp = fileStamp(executable);
-  if (stamp && checked.get(executable) === stamp) {
+  if (stamp && (checked.get(executable) === stamp || checked.get(executable) === stamp + TEXT_ONLY)) {
     if (signal?.aborted) throw new Error('CANCELLED');
-    return;
+    if (checked.get(executable) === stamp) return 'full';
+    if (needsMcp(needs)) throw new Error('ANTIGRAVITY_FEATURE_UNTESTED');
+    return 'text';
   }
   const { output } = await runAntigravity(executable, ['--version'], context, { timeoutMs: 10_000, signal });
   const version = /^\s*(\d+)\.(\d+)\.(\d+)\s*$/.exec(output);
@@ -1122,14 +1149,15 @@ export async function checkAntigravity(executable: string, context: Pick<Provide
   )
     throw new Error('ANTIGRAVITY_UPDATE_REQUIRED');
   // agy 1.4 refuses STeP's isolated agent ("unknown agent \"step-draft\" (no custom agents are available)", seen with
-  // 1.4.12 on Windows, 2026-10-31), so every request would fail before its first turn. A newer agy the employee installed
-  // (or that updated itself) is refused here; reconnecting installs STeP's own pinned copy, which is used first.
-  if (
-    Number(version[1]) > ANTIGRAVITY_TESTED_BELOW[0] ||
-    (Number(version[1]) === ANTIGRAVITY_TESTED_BELOW[0] && Number(version[2]) >= ANTIGRAVITY_TESTED_BELOW[1])
-  )
-    throw new Error('ANTIGRAVITY_VERSION_UNTESTED');
-  if (stamp) checked.set(executable, stamp);
+  // 1.4.12 on Windows, 2026-10-31), so every request would fail before its first turn. 1.5+ loads the plain agent again
+  // (ANTIGRAVITY_TEXT_FROM) but not the MCP tools. Reconnecting installs STeP's own pinned copy, which is used first.
+  const major = Number(version[1]),
+    minor = Number(version[2]);
+  const textOnly = atLeast(major, minor, ANTIGRAVITY_TESTED_BELOW);
+  if (textOnly && !atLeast(major, minor, ANTIGRAVITY_TEXT_FROM)) throw new Error('ANTIGRAVITY_VERSION_UNTESTED');
+  if (stamp) checked.set(executable, stamp + (textOnly ? TEXT_ONLY : ''));
+  if (textOnly && needsMcp(needs)) throw new Error('ANTIGRAVITY_FEATURE_UNTESTED');
+  return textOnly ? 'text' : 'full';
 }
 
 export async function antigravityModels(connection: Connection, context: Pick<ProviderContext, 'cwd' | 'env'>): Promise<ModelOption[]> {

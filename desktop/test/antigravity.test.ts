@@ -10,12 +10,13 @@ import {
   antigravityHome,
   antigravityModels,
   antigravityUsage,
+  checkAntigravity,
   runAntigravity,
 } from '../electron/antigravity';
 import { adapter, listModels } from '../electron/providers';
 import { signInAndTest, signOutManagedProvider } from '../electron/connect';
 import { checkRuntime } from '../electron/runtimes';
-import { antigravityCurrent } from '../electron/antigravity-install';
+import { antigravityCurrent, antigravitySupport } from '../electron/antigravity-install';
 import { ToolLoop } from '../electron/tool-loop';
 import type { Connection } from '../src/types';
 
@@ -457,7 +458,7 @@ test('Antigravity catalog is bounded to Gemini and does not imply account readin
     await old.close();
   }
   // agy 1.4 does not load STeP's isolated agent, so it is refused before any request instead of failing every turn.
-  for (const version of ['1.4.0', '1.4.12', '2.0.1']) {
+  for (const version of ['1.4.0', '1.4.12']) {
     const newer = await fixture('success', version);
     try {
       await assert.rejects(antigravityModels(newer.connection, newer.context), { message: 'ANTIGRAVITY_VERSION_UNTESTED' });
@@ -466,6 +467,32 @@ test('Antigravity catalog is bounded to Gemini and does not imply account readin
       });
       // Reconnecting sees it as not current, which installs STeP's own pinned agy.
       assert.equal(await antigravityCurrent(newer.connection.executable, join(newer.root, 'check')), false);
+      assert.equal(await antigravitySupport(newer.connection.executable, join(newer.root, 'check')), 'none');
+    } finally {
+      await newer.close();
+    }
+  }
+  // agy 1.5+ loads the plain agent again (live 1.5.10, 2026-11-18) but not the MCP tools: text runs work, a run that
+  // needs the step_host bridge or images is refused, and reconnecting still prefers STeP's pinned copy.
+  for (const version of ['1.5.10', '2.0.1']) {
+    const newer = await fixture('success', version);
+    try {
+      assert.equal(await new AntigravityAdapter().run('Synthetic', newer.connection, newer.context), 'สวัสดีครับ');
+      await assert.rejects(
+        new AntigravityAdapter().run('Synthetic', newer.connection, {
+          ...newer.context,
+          nativeBridge: async () => ({ ok: true, result: {} }),
+        }),
+        { message: 'ANTIGRAVITY_FEATURE_UNTESTED' },
+      );
+      // Twice: the second check comes from the cache and must refuse the same way.
+      for (let i = 0; i < 2; i++)
+        await assert.rejects(checkAntigravity(newer.connection.executable, newer.context, undefined, { images: true }), {
+          message: 'ANTIGRAVITY_FEATURE_UNTESTED',
+        });
+      assert.equal(await checkAntigravity(newer.connection.executable, newer.context), 'text');
+      assert.equal(await antigravityCurrent(newer.connection.executable, join(newer.root, 'check')), false);
+      assert.equal(await antigravitySupport(newer.connection.executable, join(newer.root, 'check')), 'text');
     } finally {
       await newer.close();
     }
@@ -474,6 +501,7 @@ test('Antigravity catalog is bounded to Gemini and does not imply account readin
     const tested = await fixture('success', version);
     try {
       assert.equal(await antigravityCurrent(tested.connection.executable, join(tested.root, 'check')), true);
+      assert.equal(await checkAntigravity(tested.connection.executable, tested.context, undefined, { bridge: true, images: true }), 'full');
     } finally {
       await tested.close();
     }

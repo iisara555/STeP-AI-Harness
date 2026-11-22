@@ -3024,8 +3024,10 @@ export const en: Record<string, string> = {
   'เครื่องรุ่นนี้ยังติดตั้ง Antigravity CLI อัตโนมัติไม่ได้ ติดตั้งเองตามคู่มือ':
     'This device cannot install the Antigravity CLI automatically; install it from the guide',
   'ยังไม่พบ Antigravity CLI กดเชื่อมต่อเพื่อให้ STeP ติดตั้งให้': 'Antigravity CLI not found. Press connect and STeP installs it',
-  'Antigravity CLI ในเครื่องเป็นรุ่นใหม่ (1.4 ขึ้นไป) ที่ยังใช้กับ STeP ไม่ได้ กดเชื่อมต่อ Antigravity อีกครั้ง STeP จะติดตั้งรุ่นที่ทดสอบแล้วไว้ใช้เอง โดยไม่แตะรุ่นของคุณ':
-    'Your Antigravity CLI is a newer version (1.4 or later) that does not work with STeP yet. Connect Antigravity again and STeP will install the tested version for its own use, leaving yours as it is',
+  'Antigravity CLI ในเครื่องเป็นรุ่น 1.4 ที่ยังใช้กับ STeP ไม่ได้ กดเชื่อมต่อ Antigravity อีกครั้ง STeP จะติดตั้งรุ่นที่ทดสอบแล้วไว้ใช้เอง โดยไม่แตะรุ่นของคุณ':
+    'Your Antigravity CLI is version 1.4, which does not work with STeP. Connect Antigravity again and STeP will install the tested version for its own use, leaving yours as it is',
+  'Antigravity CLI รุ่นใหม่ในเครื่องตอบข้อความได้ แต่ยังส่งภาพหรือใช้ตัวเชื่อมเครื่องมือของ STeP ไม่ได้ กดเชื่อมต่อ Antigravity อีกครั้ง STeP จะติดตั้งรุ่นที่ทดสอบแล้วไว้ใช้เอง โดยไม่แตะรุ่นของคุณ':
+    "Your newer Antigravity CLI answers text but cannot take pictures or use STeP's tool connection yet. Connect Antigravity again and STeP will install the tested version for its own use, leaving yours as it is",
   'ต้องใช้ Antigravity CLI รุ่น 1.2.14 ขึ้นไป กดเชื่อมต่อเพื่อให้ STeP ติดตั้งรุ่นใหม่ให้':
     'Antigravity CLI 1.2.14 or newer is required. Press connect and STeP installs it',
   '{0} คำตอบ ให้คะแนน {1} · ดี {2}% · ต้องแก้ {3}%': '{0} answers, {1} rated · good {2}% · needs fixing {3}%',
