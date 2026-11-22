@@ -20,6 +20,7 @@ standardVersion: 2
 - ต้องส่งเอกสารภายในเมื่อไหร่ · ปฏิทินปิดรับเอกสารรายเดือน
 - ค่าใช้จ่ายนี้ลงหมวดอะไร: หมวด B, BV, B9.2
 - จ้างเหมารถตู้ต้องทำยังไง เพดานเท่าไหร่
+- เขียนเหตุผลการเดินทางหมวด BV (ค่าพาหนะ) ยังไงให้ครบ ไม่ถูกส่งกลับแก้
 - ค่าตอบแทนวิทยากร: นับชั่วโมงยังไง เบิกได้กี่คนต่อหัวข้อ ต้องเตรียมกำหนดการแบบไหน
 - ยืมเงิน/เคลียร์เงินมีข้อควรระวังอะไร · เอกสารภาษาต่างประเทศต้องทำยังไง
 - E-Signature ใน STeP MIS ใช้กับหมวดไหน เริ่มเมื่อไหร่ ตั้งค่ายังไง
@@ -46,6 +47,7 @@ standardVersion: 2
 | เรื่อง | Source | ทะเบียน |
 | --- | --- | --- |
 | Lead Time การเงิน/พัสดุ, หมวด B/BV/B9.2, รถตู้, วิทยากร, ยืมเงิน, E-Signature, เงินชดเชยคอมฯ | `docs/knowledge/afp-operational-circulars.md` | `afp-operational-circulars` |
+| เหตุผลการเดินทางหมวด BV: 5 ส่วน โครงประโยค ตัวอย่าง | `docs/knowledge/afp-bv-travel-reason.md` | `afp-bv-travel-reason` |
 | ระเบียบระดับไหนกำกับเรื่องนี้ (STeP / มช. / ระดับชาติ) — มีแต่ชื่อฉบับ ไม่มีเนื้อความ | [`docs/knowledge/afp-regulation-hierarchy.md`](../../../docs/knowledge/afp-regulation-hierarchy.md) | `afp-regulation-hierarchy` |
 | อัตราค่ายานพาหนะต่อกิโลเมตร สิทธิสวัสดิการตามประกาศ | `docs/knowledge/hr-personnel-welfare-index.md` | `hr-personnel-welfare-2569` |
 | ช่องทางยื่นเรื่องของพนักงาน | `docs/knowledge/hr-service-channels.md` | `hr-service-channels` |

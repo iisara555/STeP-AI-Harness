@@ -227,6 +227,18 @@ documents:
       Lead Time งานการเงินและงานพัสดุ หมวดค่าใช้จ่าย B/BV/B9.2
       การจ้างเหมารถตู้ ค่าตอบแทนวิทยากร ข้อควรระวังการยืมเงิน
       E-Signature ใน STeP MIS และเงินชดเชยคอมพิวเตอร์พกพา
+  afp-bv-travel-reason:
+    title: 'เหตุผลการเดินทาง หมวด BV (ค่าพาหนะ): เขียนให้ครบ 5 ส่วน'
+    keywords: [เหตุผลการเดินทาง, เขียนเหตุผล, ค่าพาหนะ, หมวด BV]
+    path: docs/knowledge/afp-bv-travel-reason.md
+    owner: afp
+    documentType: team-circular
+    effectiveDate: '2026-11-20'
+    source: อีเมลประชาสัมพันธ์จากงานพัสดุ procurement@step.cmu.ac.th (20 พ.ย. 2569)
+    summary: >-
+      วิธีเขียนเหตุผลการเดินทางเมื่อเบิกหมวด BV เพื่อประกอบรายงานขอความเห็นชอบจ้างเหมารถตู้ตาม ว 119
+      ตรวจครบ 5 ส่วน ใคร ทำอะไร เมื่อไร จากไหนไปไหน เพื่อกิจกรรมอะไร โครงประโยคแนะนำ ตัวอย่างจาก AFP
+      และตัวอย่างที่สั้นเกินไป
   cc-iso-document-register:
     title: ทะเบียนเอกสารระบบคุณภาพ ทีม CC (ISO Document Register)
     keywords: [รหัสเอกสาร QP, แบบฟอร์ม FM, WI, Revision]

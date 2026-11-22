@@ -401,6 +401,98 @@ test('SDK errors are classified without exposing secrets and cancellation remain
   );
 });
 
+test('an expired Claude sign-in is reported as LOGIN_REQUIRED with the runtime reason kept for diagnostics', async () => {
+  const f = await fixture();
+  // What Claude Code sends once its saved sign-in has expired and was cleared: an assistant error, then an error result.
+  const cases: [any[], string, RegExp][] = [
+    [
+      [
+        {
+          type: 'assistant',
+          error: 'authentication_failed',
+          message: { content: [{ type: 'text', text: 'Not logged in · Please run /login' }] },
+        },
+        { type: 'result', subtype: 'success', is_error: true, result: 'Not logged in · Please run /login' },
+      ],
+      'LOGIN_REQUIRED',
+      /sdk error: authentication_failed/,
+    ],
+    [
+      [{ type: 'result', subtype: 'success', is_error: true, result: 'Login expired · Please run /login' }],
+      'LOGIN_REQUIRED',
+      /Login expired/,
+    ],
+    [
+      [{ type: 'result', subtype: 'success', is_error: true, result: 'OAuth token revoked · Please run /login' }],
+      'LOGIN_REQUIRED',
+      /revoked/,
+    ],
+    [
+      [
+        { type: 'assistant', error: 'billing_error', message: { content: [] } },
+        { type: 'result', subtype: 'success', is_error: true, result: '' },
+      ],
+      'PROVIDER_QUOTA',
+      /billing_error/,
+    ],
+    [
+      [{ type: 'result', subtype: 'success', is_error: true, result: 'Something unexpected sk-ant-secret-value' }],
+      'PROVIDER_REQUEST_FAILED',
+      /Something unexpected/,
+    ],
+  ];
+  for (const [messages, expected, detail] of cases) {
+    let calls = 0;
+    const provider = new ClaudeAdapter(
+      async () =>
+        ({
+          query: () => {
+            calls++;
+            return (async function* () {
+              yield* messages;
+            })();
+          },
+        }) as any,
+    );
+    await assert.rejects(
+      provider.run('hello', { mode: 'subscription', executable: f.executable } as Connection, {
+        ...f.context,
+        signal: new AbortController().signal,
+        emit: () => {},
+      }),
+      (error: any) => {
+        assert.equal(error.message, expected);
+        assert.ok(
+          error.detail.some((line: string) => detail.test(line)),
+          JSON.stringify(error.detail),
+        );
+        assert.ok(!error.detail.join(' ').includes('sk-ant-secret'), 'detail is scrubbed');
+        return true;
+      },
+    );
+    assert.equal(calls, 1);
+  }
+  // A runtime that exits after saying it is not logged in is explained the same way.
+  const exited = new ClaudeAdapter(
+    async () =>
+      ({
+        query: () =>
+          (async function* () {
+            yield { type: 'assistant', error: 'authentication_failed', message: { content: [{ type: 'text', text: 'Not logged in' }] } };
+            throw new Error('Claude Code process exited with code 1');
+          })(),
+      }) as any,
+  );
+  await assert.rejects(
+    exited.run('hello', { mode: 'subscription', executable: f.executable } as Connection, {
+      ...f.context,
+      signal: new AbortController().signal,
+      emit: () => {},
+    }),
+    (error: any) => error.message === 'LOGIN_REQUIRED' && error.detail.some((line: string) => /exited with code 1/.test(line)),
+  );
+});
+
 test('sign-in status is kept apart from a failing test request', async () => {
   const f = await fixture('browser');
   let signedIn = false;

@@ -37,7 +37,7 @@ const KNOWN: [RegExp, string][] = [
     'MODEL_NOT_AVAILABLE',
   ],
   [
-    /token (?:has )?expired|refresh token|not logged in|login required|authentication required|re-?authenticate|invalid_grant|unauthorized|\b401\b|authentication_failed/i,
+    /token (?:has )?expired|token revoked|refresh token|not logged in|login (?:required|expired)|run \/login|authentication required|re-?authenticate|invalid_grant|unauthorized|\b401\b|authentication_failed/i,
     'LOGIN_REQUIRED',
   ],
   [/PERMISSION_DENIED|\b403\b|not (?:eligible|authorized)/i, 'PROVIDER_PERMISSION_DENIED'],
