@@ -1,6 +1,6 @@
 import type { Connection, DesktopAPI, ModelOption, Session, Snapshot, WorkMode } from './types';
 import { CLAUDE_CODE, connectionName, effortLabel, explainError } from './messages';
-import { imageModels, isImageRequest } from './image-routing';
+import { canGenerateImages, isImageRequest } from './image-routing';
 import { useEffect, useRef, useState } from 'react';
 import { t } from './i18n';
 
@@ -95,7 +95,7 @@ export function useAiChoice({ api, snapshot, session, running, workMode, query, 
     setImageCatalogError('');
     setAvailableImages([]);
     setImageModel('');
-    if (api && wantsImage && connection?.ready && imageModels(connection).length)
+    if (api && wantsImage && connection?.ready && canGenerateImages(connection))
       void api
         .call('imageModels', { id: connection.id })
         .then(ids => {

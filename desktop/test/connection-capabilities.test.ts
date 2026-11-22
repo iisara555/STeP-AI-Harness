@@ -48,6 +48,10 @@ test('vision and image routes expose their policy blockers and model-dependent s
   assert.equal(state(api, policy, 'image').state, 'conditional');
   assert.equal(state({ ...api, mode: 'subscription' }, policy, 'image').reason, 'api-required');
   assert.equal(state(api, { ...policy, mode: 'plan' }, 'image').reason, 'plan');
+  // OpenRouter and the organization's gateway create pictures through OpenRouter's Images API; other services do not.
+  for (const preset of ['openrouter', 'organization'])
+    assert.equal(state({ ...api, provider: 'compatible', preset } as Connection, policy, 'image').state, 'conditional');
+  assert.equal(state({ ...api, provider: 'compatible', preset: 'deepseek' } as Connection, policy, 'image').reason, 'api-required');
 });
 test('organization capabilities distinguish disabled, missing server and enabled-but-unverified access', () => {
   const get = (p: PolicySnapshot, id: string) => organizationCapabilities(p).find(x => x.id === id)!;

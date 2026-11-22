@@ -3,6 +3,7 @@ import { ArrowRight, CalendarClock, LoaderCircle, Pause, Pencil, Play, Plus, Pow
 import type { Automation, AutomationRun } from '../electron/cron';
 import type { Connection, DesktopAPI } from './types';
 import { connectionName, explainError } from './messages';
+import { canGenerateImages } from './image-routing';
 import { locale, t } from './i18n';
 import { ConfirmDialog } from './ui';
 import {
@@ -20,7 +21,15 @@ import {
 } from './schedules';
 import './schedules.css';
 
-type Draft = { id: string; name: string; query: string; connectionId: string; choice: ScheduleChoice; enabled: boolean };
+type Draft = {
+  id: string;
+  name: string;
+  query: string;
+  connectionId: string;
+  choice: ScheduleChoice;
+  enabled: boolean;
+  output: 'draft' | 'image';
+};
 const blank = (connectionId = ''): Draft => ({
   id: '',
   name: '',
@@ -28,6 +37,7 @@ const blank = (connectionId = ''): Draft => ({
   connectionId,
   choice: { repeat: 'weekdays', time: '08:30', days: [1] },
   enabled: true,
+  output: 'draft',
 });
 const STATUS: Record<AutomationRun['status'], string> = {
   queued: 'รอคิว',
@@ -100,6 +110,7 @@ export function ScheduledTasks({
         schedule: toCron(job.choice),
         label: scheduleText(toCron(job.choice)),
         connectionId: job.connectionId,
+        output: job.output === 'image' ? 'image' : undefined,
         enabled,
       });
     });
@@ -124,6 +135,7 @@ export function ScheduledTasks({
       connectionId: job.connectionId,
       choice: fromCron(job.schedule) || blank().choice,
       enabled: job.enabled,
+      output: job.output === 'image' ? 'image' : 'draft',
     });
     document.querySelector('.schedules')?.scrollTo({ top: 0 });
   };
@@ -342,6 +354,9 @@ function ScheduleEditor({
     }
   }, [choice, now]);
   const connection = connections.find(c => c.id === job.connectionId);
+  // A picture task needs an account that can create images; on any other account it stays a written draft.
+  const images = canGenerateImages(connection);
+  const output = images ? job.output : 'draft';
   const valid = job.name.trim() && job.query.trim() && connection && preview;
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const offset = -new Date(now).getTimezoneOffset();
@@ -353,7 +368,7 @@ function ScheduleEditor({
       aria-label={job.id ? t('แก้ไขงานตั้งเวลา') : t('งานตั้งเวลาใหม่')}
       onSubmit={e => {
         e.preventDefault();
-        if (valid && !busy) void onSave(job, job.enabled);
+        if (valid && !busy) void onSave({ ...job, output }, job.enabled);
       }}
       onKeyDown={e => {
         if (e.key === 'Escape') onCancel();
@@ -446,6 +461,20 @@ function ScheduleEditor({
           ))}
         </select>
       </label>
+      {images && (
+        <label className="field">
+          {t('ผลลัพธ์')}
+          <select
+            aria-label={t('ผลลัพธ์ของงาน')}
+            value={output}
+            onChange={e => setJob({ ...job, output: e.target.value === 'image' ? 'image' : 'draft' })}
+          >
+            <option value="draft">{t('ร่างข้อความ')}</option>
+            <option value="image">{t('รูปภาพ 1 รูป')}</option>
+          </select>
+        </label>
+      )}
+      {output === 'image' && <p className="small muted">{t('ทุกรอบสร้างรูปด้วยโมเดลภาพของบัญชีนี้ อาจมีค่าใช้จ่าย')}</p>}
       {!connection && (
         <p className="small schedules-error">
           {t('เลือกบัญชี AI ที่พร้อมใช้งานก่อนบันทึก')}{' '}
