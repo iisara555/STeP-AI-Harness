@@ -67,12 +67,14 @@ test('protocol ignores arbitrary prose, invalid fields, NUL and unknown tools', 
   assert.equal(loopRequests('files read secret').length, 0);
   for (const value of [
     { tool: 'delete', input: 'a' },
-    { tool: 'files', input: 2 },
+    { tool: 'files', input: { path: 'a' } },
     { tool: 'files', input: 'a\0b' },
     { tool: 'files', input: 'a', args: [] },
   ])
     assert.equal(loopRequests('```step-tool\n' + JSON.stringify(value) + '\n```').length, 0);
   assert.equal(loopRequests(request('sheet_read', 'a.xlsx', { range: 'A1:C2' }))[0].tool, 'sheet_read');
+  // A number where text is expected is repaired (src/tool-repair.ts), then validated like any request.
+  assert.deepEqual(loopRequests('```step-tool\n' + JSON.stringify({ tool: 'files', input: 2 }) + '\n```'), [{ tool: 'files', input: '2' }]);
 });
 test('a reply that is only a tool request in a json fence or bare JSON is a request; an example inside an answer is not', () => {
   const call = JSON.stringify({ tool: 'reference', input: 'hr-personnel-welfare-2569' }, null, 2);
