@@ -869,6 +869,8 @@ export const en: Record<string, string> = {
   'ข้อความเหล่านี้ไม่พบในเอกสาร STeP โปรดตรวจก่อนใช้': 'These statements are not in the STeP documents; check them before use',
   'ตรวจกับเอกสาร STeP แล้ว ไม่พบข้อความที่ขัดกับเอกสาร': 'Checked against the STeP documents: nothing contradicts them',
   'ตรวจคำตอบเรื่อง STeP กับเอกสาร': 'Check STeP answers against the documents',
+  'ตรวจงานกับขั้นตอนของ Skill ก่อนส่ง': 'Check work against its Skill before showing it',
+  'กำลังตรวจงานกับขั้นตอนของ Skill': 'Checking the work against its Skill',
   ปรับระดับการคิดตามขนาดงาน: 'Reasoning level by task size',
   'กำลังตรวจคำตอบกับเอกสาร STeP': 'Checking the answer against the STeP documents',
   เวลาตั้งแต่ส่งคำถามจนได้คำตอบ: 'Time from sending the request to the finished answer',

@@ -152,6 +152,23 @@ Office operations run in a disposable worker with 256 MB heap and a 20-second de
 
 Applying an existing file saves its exact bytes in local SQLite first. The source must still match the preview hash; changed files/workspace paths are refused. Restoration stages another Changes preview through the same apply gate. Backups are limited to 30 entries/40 million base64 characters; employees can inspect/remove a selected backup in Changes. Staged bytes/backups stay local and are never sent as binary tool results. They are not Git worktrees or OS snapshots. New files have no earlier file to restore.
 
+## Answer review inside the loop (learned from OpenCode, 2026-11-22)
+
+A finished answer (a reply with no tool request) is checked before the loop returns it, while turns and tools remain
+(`LoopHost.review`, `MAX_REVIEWS` = 2). The findings go back as an `<answer_check>` block with the answer, appended to
+the history so the prompt stays a prefix of the next one; the model verifies or reads what is missing and writes the
+whole corrected answer. The same feedback twice, the deadline, the last turn or an unreadable request ends review and
+returns the latest answer. Two checks feed it (`desktop/electron/answer-review.ts`):
+
+- Deterministic, no model call, always on: a table total that does not add up, a document code not in the sources, a
+  claim that a file was written or a tool ran when it did not, a draft that lost its document envelope. Heading and
+  placeholder warnings stay review notes only.
+- The Skill review, behind policy `skillReview` (off by default): one call compares the answer with the Skill's Output,
+  Guardrails and Verification sections and returns done, continue or blocked. Only continue sends the model back; what
+  needs the employee stays as `[รอยืนยัน]`.
+
+The post-hoc checks after the loop (envelope repair, review notes, the STeP answer check) are unchanged.
+
 ## Public retrieval and organization proxy
 
 Address exclusions use a conservative subset of the [IANA IPv4 registry](https://www.iana.org/assignments/iana-ipv4-special-registry) and [IANA IPv6 registry](https://www.iana.org/assignments/iana-ipv6-special-registry). Some special-purpose globally reachable ranges are intentionally excluded.

@@ -42,6 +42,7 @@ import { promptMetrics } from './prompt-metrics';
 import { extractStructuredJson } from './json-schema';
 import { selectSkillBundle } from './skill-resources';
 import { sanitizeModelOutput, evaluateOutputQuality, buildRepairPrompt } from './output-quality';
+import { SKILL_REVIEW_SCHEMA, SKILL_REVIEW_SYSTEM, parseSkillReview, qualityFeedback, skillChecklist } from './answer-review';
 import { autoEffort, auxiliaryConnection, modelOption, taskSize } from './effort';
 import { selfContainedText } from './text-intent';
 import { selectDiscovery } from './discovery';
@@ -126,6 +127,8 @@ export type Harness = {
   toolInstructions?: () => string;
   /** Policy answerCheck: check chat answers about STeP against the document excerpts they used. */
   answerCheck?: () => boolean;
+  /** Policy skillReview: check a Skill-routed answer against the Skill's Output and Guardrails before it is shown. */
+  skillReview?: () => boolean;
   /** Optional 1-pass auto-repair when deterministic output quality checks find critical defects. */
   qualityRepair?: () => boolean;
   /** Antigravity tool calls through the governed step_host MCP bridge (policy `features.antigravityNativeBridge`). */
@@ -1931,6 +1934,70 @@ export class WorkService {
               activity(reason === 'deadline' ? tm('ใกล้หมดเวลา กำลังเขียนคำตอบจากที่อ่านมา') : tm('อ่านครบแล้ว กำลังเขียนคำตอบ')),
             reads: requests => {
               loopReads = requests.length ? { step: index, requests } : undefined;
+            },
+            // A finished answer is checked while the tools are still at hand, so the AI fixes what a check finds itself.
+            review: async (answer, signal) => {
+              const text = sanitizeModelOutput(masked(answer)) || answer;
+              const found = qualityFeedback(
+                evaluateOutputQuality(text, {
+                  documentTool: target ? undefined : draftingTool?.id,
+                  executedTools: trace.steps
+                    .flatMap(s => s.tools || [])
+                    .filter(t => t.ok)
+                    .map(t => t.tool),
+                  writtenFilesCount: written.size,
+                  groundingCorpus: [
+                    incomingSource || session.sourceText || '',
+                    knowledgeText(given),
+                    ...catalog.map(c => `${c.id} ${c.title} ${c.summary || ''}`),
+                  ].join('\n'),
+                }).findings,
+              );
+              if (found) return found;
+              const checklist = general || !this.harness.skillReview?.() ? '' : skillChecklist(selectedInstructions.join('\n\n'));
+              if (!checklist) return undefined;
+              activity(tm('กำลังตรวจงานกับขั้นตอนของ Skill'));
+              const reviewPrompt = [
+                section('procedure', checklist),
+                section('request', [session.originalQuery, latest].filter(Boolean).join('\n').slice(0, 4000)),
+                section('answer', text.slice(0, 40_000)),
+              ].join('\n\n');
+              const calledAt = Date.now();
+              const call: ProviderCallTrace = {
+                ...promptMetrics(SKILL_REVIEW_SYSTEM, reviewPrompt),
+                kind: 'check',
+                outcome: 'running',
+                ms: 0,
+              };
+              stepTrace.providerCalls!.push(call);
+              let counted: TokenCount = { input: 0, output: 0, total: 0 };
+              try {
+                const reply = await runtime.adapter.run(reviewPrompt, connection, {
+                  ...runtime.context,
+                  signal,
+                  system: SKILL_REVIEW_SYSTEM,
+                  jsonSchema: SKILL_REVIEW_SCHEMA,
+                  effort: autoEffort(modelOption(selectedConnection)?.efforts, 'small'),
+                  emit: () => {},
+                  onUsage: count => {
+                    counted = combineUsage(counted, count, 'max');
+                  },
+                });
+                call.outcome = 'completed';
+                return parseSkillReview(reply) || undefined;
+              } catch (error) {
+                // The answer stands without a review; a failed review never fails the answer.
+                checkAbort();
+                call.outcome = 'error';
+                call.code = codeOf(error);
+                return undefined;
+              } finally {
+                call.ms = Date.now() - calledAt;
+                if (counted.total) call.usage = counted;
+                usage = combineUsage(usage, counted);
+                stepUsage = combineUsage(stepUsage, counted);
+                recordUsage(counted);
+              }
             },
             // Fold earlier tool results once, just before the prompt would need compacting on every turn.
             tooLarge: text => tokens(system + text) > budget * LOOP_FOLD_SHARE,
