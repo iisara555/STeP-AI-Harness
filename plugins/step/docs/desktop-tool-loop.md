@@ -191,6 +191,23 @@ returns the latest answer. Two checks feed it (`desktop/electron/answer-review.t
 
 The post-hoc checks after the loop (envelope repair, review notes, the STeP answer check) are unchanged.
 
+## Native tool calls on OpenAI-compatible connections (policy `nativeToolCalls`, 2026-11-22)
+
+OpenCode uses each provider's native tool calling. Desktop keeps the text protocol as the one path every provider
+shares, and adds native calls where they help most: OpenAI-compatible chat completions (OpenRouter, Qwen, DeepSeek and
+the other presets), whose models most often break a long `content` string when writing JSON by hand.
+
+- The request offers one function, `step_tool` (`NATIVE_TOOL` in `tool-loop.ts`), with the fields `tool` (an enum of
+  `LOOP_TOOLS`), `input`, `content` and `args`. It is not one function per tool, so the tool rules stay the single
+  description and the offer costs about 150 tokens. `NATIVE_TOOL_RULE` tells the model to call it instead of writing
+  a fence.
+- `src/modules/providers/compatible.js` collects the streamed `tool_calls` fragments and appends each call to the
+  reply as a step-tool block. Backticks are escaped as `\u0060`, so a code fence inside `content` cannot end the block.
+  Arguments that are not JSON are passed on as they are, and the loop reports them as unreadable. Without `nativeTools`,
+  and always on the Anthropic protocol, tool calls are still refused (`PROVIDER_TOOL_DENIED`).
+- Results still return as `<tool_results>` text in the next prompt (not `role: tool` messages), so the prompt stays a
+  prefix of the next one and compaction, folding and the loop's limits are unchanged.
+
 ## Public retrieval and organization proxy
 
 Address exclusions use a conservative subset of the [IANA IPv4 registry](https://www.iana.org/assignments/iana-ipv4-special-registry) and [IANA IPv6 registry](https://www.iana.org/assignments/iana-ipv6-special-registry). Some special-purpose globally reachable ranges are intentionally excluded.

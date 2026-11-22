@@ -31,6 +31,8 @@ import {
   BROWSER_RULES,
   BROWSER_RULES_ON_REQUEST,
   SMALL_MODEL_TOOL_RULE,
+  NATIVE_TOOL,
+  NATIVE_TOOL_RULE,
   needsBrowserRules,
   smallModel,
   type LoopHost,
@@ -142,6 +144,8 @@ export type Harness = {
   qualityRepair?: () => boolean;
   /** Antigravity tool calls through the governed step_host MCP bridge (policy `features.antigravityNativeBridge`). */
   antigravityBridge?: () => boolean;
+  /** Policy nativeToolCalls: OpenAI-compatible connections request tools as native function calls. */
+  nativeToolCalls?: () => boolean;
   tools?: (scope: ToolScope) => Promise<LoopHost>;
   recordUsage?: (connection: Connection, count: TokenCount) => void;
   /** Administrator limits, else the window a model on this computer actually loaded (electron/local-context.ts). */
@@ -1493,6 +1497,13 @@ export class WorkService {
               ? BROWSER_RULES
               : BROWSER_RULES_ON_REQUEST
             : '';
+        // Native function calls only where the transport supports them: OpenAI-compatible chat completions, full tool rules.
+        const nativeTools =
+          toolsEnabled &&
+          scopedToolInstructions === undefined &&
+          connection.provider === 'compatible' &&
+          (connection.protocol ?? 'openai') === 'openai' &&
+          Boolean(this.harness.nativeToolCalls?.());
         const baseRules = textOnly ? TEXT_RULES : chat ? CHAT_RULES : DRAFTING_RULES;
         // A weak keyword match is often the wrong document ("อยากตรวจคุณภาพอาหาร" matched the quality manual), so the
         // index narrows to the matched documents only when the match is strong; otherwise the answer sees every document
@@ -1532,6 +1543,7 @@ export class WorkService {
           toolsEnabled && (scopedToolInstructions ?? TOOL_RULES),
           browserRules,
           toolsEnabled && smallModel(connection.model) && SMALL_MODEL_TOOL_RULE,
+          nativeTools && NATIVE_TOOL_RULE,
           !toolsEnabled &&
             !textOnly &&
             'Host tool execution is disabled for this turn. The Desktop draft export UI supports DOCX, PDF, Markdown, XLSX and PPTX where policy permits. For Excel provide the requested table in the draft and direct the user to XLSX export; do not claim a file was created or substitute CSV without their choice. Direct Google Sheets access requires an available authorized connector.',
@@ -1773,6 +1785,7 @@ export class WorkService {
                 webSearch: search,
                 longFormTor: !search && !analysisImage && draftingTool?.id === 'tor',
                 session: search || analysisImage ? undefined : providerSession,
+                nativeTools: nativeTools && !search && !analysisImage ? [NATIVE_TOOL] : undefined,
                 nativeBridge:
                   bridgeOn && bridgeLoop && !search && !analysisImage
                     ? (request, signal) => bridgeLoop!.bridge(request, signal)

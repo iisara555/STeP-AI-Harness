@@ -472,6 +472,7 @@ async function main() {
     hybridSkillSelection: () => policyState.policy.features.hybridSkillSelection,
     visionEnabled: () => policyState.policy.features.vision,
     antigravityBridge: () => policyState.policy.features.antigravityNativeBridge,
+    nativeToolCalls: () => policyState.policy.features.nativeToolCalls,
     answerCheck: () => policyState.policy.features.answerCheck,
     skillReview: () => policyState.policy.features.skillReview,
     autoEffort: () => policyState.policy.features.autoEffort,
