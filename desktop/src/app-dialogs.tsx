@@ -28,6 +28,7 @@ export function AppDialogs({ v }: { v: AppView }) {
     api,
     authCode,
     automationOpen,
+    caseSend,
     claudeCode,
     connection,
     connectionId,
@@ -185,6 +186,11 @@ export function AppDialogs({ v }: { v: AppView }) {
           onConfirm={async () => {
             const ask = consentAsk;
             setConsentAsk(null);
+            // A case chat answers inside its case, so its request goes back there instead of opening the main chat.
+            if (ask.caseChat) {
+              await action(() => caseSend(ask.sessionId, ask.text, ask.sourceText || '', ask.token));
+              return;
+            }
             await action(() =>
               start(ask.sessionId, ask.text, {
                 attachments: ask.attachments,

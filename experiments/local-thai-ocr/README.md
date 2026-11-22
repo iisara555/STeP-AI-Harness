@@ -21,6 +21,15 @@
 - มี Web UI ในเครื่องที่ `http://127.0.0.1:8765`
 - ไฟล์ชั่วคราวถูกลบหลังประมวลผล
 
+## Typhoon OCR V2 0.8B (ส่วนเสริม, 2026-11-20)
+
+- เมื่อติดตั้งไฟล์ Typhoon ใน `STEP_TYPHOON_DIR` (Desktop ใช้ `<App Data>/components/ocr/typhoon`: `llama/llama-server[.exe]`, `models/typhoon-ocr2-0.8b-Q8_0.gguf`, `models/mmproj-typhoon-ocr2-0.8b-f16.gguf`) บริการจะอ่านหน้าด้วย **Typhoon OCR V2 0.8B** (โมเดลภาษาภาพของ SCB 10X, Apache-2.0) ผ่าน `llama-server` ของ llama.cpp build `b12464` (MIT) บนเครื่องนี้ ค่าเริ่มต้น `engine=auto`; ส่ง `engine=paddle` เพื่อใช้ PaddleOCR อย่างเดียว
+- ลำดับต่อหน้า: PaddleOCR อ่านและเตรียมหน้า (หมุน แก้เอียง ปรับความคมชัด) แล้ว Typhoon อ่านหน้าที่เตรียมแล้ว ใช้ prompt, การขยายภาพให้ด้านยาวอย่างน้อย 1,600 px และ temperature 0 ตาม client ทางการ `typhoon-ocr2` 0.2.0 ตารางแยกเป็นบรรทัดละแถวเพื่อให้ป้ายกับยอดเงินอยู่บรรทัดเดียวกัน
+- **ตรวจตัวเลขซ้ำด้วย PaddleOCR**: โมเดลภาษาอาจเขียนตัวเลขที่ไม่มีบนหน้า ทุกบรรทัดที่มีตัวเลขสามหลักขึ้นไปหรือยอดเงินมีสตางค์ต้องพบตัวเลขเดียวกันในคำอ่านของ PaddleOCR ไม่พบ = `needs_review` พร้อมคำอ่านของ PaddleOCR ให้เทียบ (`crosscheck_engine: paddle`) และยอดเงินหรือเลข 13 หลักที่ PaddleOCR อ่านได้ชัดแต่ Typhoon ข้ามไป จะถูกเพิ่มเป็นบรรทัดให้ตรวจ
+- คำตอบที่ถูกตัด (`finish_reason: length`), อ่านไม่ได้, เริ่ม server ไม่ได้ หรือเกินงบเวลาของไฟล์ (780 วินาที) ใช้ผล PaddleOCR ของหน้านั้นพร้อมคำเตือน ไม่ใช้คำตอบครึ่งเดียว
+- `llama-server` ผูก `127.0.0.1` พอร์ตสุ่ม และ API key ใหม่ทุกคำขอ ไม่เก็บ log (log อาจมีข้อความในเอกสาร) ปิดเมื่ออ่านเสร็จ ใช้ RAM ราว 1.2 GB ขณะอ่าน
+- ความเร็ว CPU: 28–50 วินาทีต่อหน้าบน i7-10700K 12 threads (benchmark 2026-11-20) เครื่องพนักงานที่ไม่มี GPU อาจราว 1 นาทีต่อหน้าหรือมากกว่า
+
 ## OCR/mapping ใน source ปัจจุบัน (2026-10-20)
 
 - แยก subtotal / VAT amount / paid total ตาม label และความสัมพันธ์ทางคณิตศาสตร์ ไม่ตีความ VAT rate เป็นจำนวนเงิน; ค่าที่คำนวณเติมยังต้องตรวจเทียบต้นฉบับ
@@ -192,5 +201,7 @@ not a passing OCR run. No image-generation fonts are shipped in the employee app
 - ยังไม่โหลด table/layout pipeline เพิ่ม
 
 ## License / third-party
+
+Typhoon OCR V2 0.8B (Apache-2.0) และ llama.cpp (MIT) ไม่อยู่ใน repository และไม่อยู่ในชุดติดตั้ง Desktop ดาวน์โหลดจาก Hugging Face (revision `d4ef040`) และ GitHub Releases ของ llama.cpp เมื่อพนักงานกดติดตั้ง โดยตรวจขนาดและ SHA-256 ทุกไฟล์
 
 Prototype ไม่ bundle model weights หรือ source ของ third party เข้ามาใน repository. PDF path ใช้ pypdfium2/PDFium ซึ่งมี license แบบ permissive ตาม upstream; binary redistribution ยังต้องแนบ license ของ PDFium dependencies ที่เกี่ยวข้อง. ตรวจ `THIRD-PARTY-NOTICE.md` ก่อนทำ installer สำหรับแจกจริง.

@@ -12,7 +12,7 @@ test('local OCR quality regressions preserve numeric meaning, EXIF orientation, 
     if (!process.env.STEP_OCR_TEST_PYTHON) { t.skip('Install OCR core Python dependencies or set STEP_OCR_TEST_PYTHON to run engine checks'); return; }
     assert.fail(probe.stderr || String(probe.error));
   }
-  for (const pattern of ['test_ocr_quality.py', 'test_crosscheck.py', 'test_tiled_ocr.py', 'test_pdf_selection.py']) {
+  for (const pattern of ['test_ocr_quality.py', 'test_crosscheck.py', 'test_tiled_ocr.py', 'test_pdf_selection.py', 'test_typhoon_engine.py']) {
     const run = spawnSync(python, [...prefix, '-m', 'unittest', 'discover', '-s', 'tests', '-p', pattern], options);
     assert.equal(run.status, 0, run.stderr || String(run.error));
   }

@@ -94,9 +94,13 @@ try {
     .trim()
     .split('\n')
     .map(line => JSON.parse(line));
-  assert.ok(pages.length >= 2, 'the long template must be read beyond the first page');
+  // Skill and document reads page at 12,000 characters (three times other results, see test/long-task.test.ts), so this
+  // template arrives whole in one turn; any later pages must still join up to the exact file.
   assert.ok(pages.every(page => page.ok));
-  assert.equal(pages[0].nextOffset, 4000);
+  assert.ok(
+    pages.slice(0, -1).every(page => page.nextOffset % 12000 === 0),
+    'knowledge pages are 12,000 characters',
+  );
   assert.equal(pages.at(-1).nextOffset, undefined);
   const resource = JSON.parse(pages.map(page => page.text).join(''));
   assert.equal(resource.resource, 'templates/pre-mortem-matrix-template.md');

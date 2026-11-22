@@ -76,11 +76,18 @@ test('deadlines, caps and the emergency category follow the AFP circular', () =>
   assert.equal(deadline.status, 'warn');
   assert.equal(deadline.ifCategoryB, undefined, 'a chosen category needs no "if"');
   const big = complianceChecklist({ ...cashBill, values: { ...cashBill.values, total: '12,500.00' }, category: 'B' });
-  assert.ok(big.some(i => i.id === 'over_cap' && i.status === 'warn'));
+  const overCap = big.find(i => i.id === 'over_cap')!;
+  assert.equal(overCap.status, 'warn');
+  // Circular section 3.1 sums every item in one sub-category; section 3.3 sends larger hiring to procurement, no advance.
+  assert.match(overCap.text, /รวมทุกรายการในหมวดย่อยเดียวกัน/);
+  assert.match(overCap.text, /ผ่านงานพัสดุ.*ห้ามใช้เงินยืม/);
+  assert.equal(big.find(i => i.id === 'reserve_set')?.status, 'info');
+  assert.match(big.find(i => i.id === 'reserve_set')!.text, /QP-AF-003 ข้อ 4\.3/);
   const emergency = complianceChecklist({ ...cashBill, category: 'emergency', today: new Date(2026, 9, 3) });
   assert.deepEqual(emergency.find(i => i.id === 'report_deadline')!.vars, [5, '9 ต.ค. 2569']);
   assert.ok(emergency.some(i => i.id === 'emergency_approval'));
   assert.ok(!emergency.some(i => i.id === 'clearing_set'));
+  assert.ok(!emergency.some(i => i.id === 'reserve_set'));
   const other = complianceChecklist({ ...cashBill, category: 'other' });
   assert.ok(other.some(i => i.id === 'other_category' && i.source === 'need-source'));
   assert.ok(!other.some(i => i.id === 'report_deadline'));

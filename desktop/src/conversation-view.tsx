@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AccountQuotaMenuSummary, InlineQuotaChip } from './usage';
 import {
   AlertTriangle,
@@ -35,7 +35,7 @@ import { ThinkingScribble } from './thinking-scribble';
 import { VoiceButton } from './voice';
 import { WORKFLOW_LABELS, WorkPlanCard } from './work-plan';
 import { WelcomeGreeting } from './welcome-greeting';
-import { liveAnswer, liveThinking, useElapsed, useLiveRun } from './live-run';
+import { liveAnswer, liveThinking, offerWriteNow, useElapsed, useLiveRun } from './live-run';
 import { SavedThinking, ThinkingPanel } from './thinking-panel';
 import { WorkAssistantActivity, WorkAssistantGuide, workActionsFromTrace } from './work-assistant';
 import type { WorkMode, Workflow } from './types';
@@ -166,9 +166,22 @@ export function ConversationView({ v }: { v: AppView }) {
   // Read again whenever a stage or a thought arrives (`thought`) and each second for the running time.
   const thinking = running && thought >= 0 ? liveThinking(now) : undefined;
   const elapsed = useElapsed(running, startedAt);
+  // A long read (a high reasoning level going through Skills and references) can be cut short by the person: the AI then
+  // writes its answer from what it has read (the tool loop's final turn). Offered on the stop button after two minutes,
+  // once per run.
+  const [writeNowAt, setWriteNowAt] = useState(0);
   // A refresh can land after main saved the answer but before it reports the run finished; the saved message
   // then already shows the streamed text, so the live copy is hidden instead of appearing twice.
   const { liveText, streamSaved } = liveAnswer(stream, session?.messages.at(-1));
+  // While the AI is still reading after two minutes, the stop button first asks it to write from what it has read;
+  // a second press stops the task.
+  const writeNow = Boolean(
+    running &&
+    selected &&
+    startedAt &&
+    writeNowAt !== startedAt &&
+    offerWriteNow({ elapsedMs: now - startedAt, stream, liveText, progress }),
+  );
   const messageCount = session?.messages.length;
   useEffect(() => {
     // An empty task shows the welcome from its greeting; only a conversation follows its latest message.
@@ -990,18 +1003,6 @@ export function ConversationView({ v }: { v: AppView }) {
                       {t('เริ่มงานใหม่')}
                     </button>
                   )}
-                  {/* A side question only makes sense while the main run is busy; otherwise Enter just sends. */}
-                  {running && (
-                    <button
-                      className="quiet"
-                      disabled={
-                        !query.trim() || Boolean(files.length || pendingSource) || session.sideQuestions?.some(q => q.status === 'running')
-                      }
-                      onClick={() => void action(() => askAside())}
-                    >
-                      {t('ถามแทรก')}
-                    </button>
-                  )}
                 </div>
               )}
               <Readiness api={api} query={query} connectionId={session?.connectionId || connectionId} model={currentModel} />
@@ -1239,8 +1240,27 @@ export function ConversationView({ v }: { v: AppView }) {
                     </div>
                   )}
                 </div>
-                {running ? (
-                  <button className="send stop" title={t('หยุดงาน')} onClick={() => void api.call('cancel', { id: selected })}>
+                {running && query.trim() ? (
+                  // Typed while the task runs: the send button asks a side question (the task keeps running). Enter still
+                  // keeps the text for the next turn, so a follow-up is never answered as a side question by accident.
+                  <button
+                    className="send"
+                    title={t('ถามแทรก')}
+                    disabled={Boolean(files.length || pendingSource || session?.sideQuestions?.some(q => q.status === 'running'))}
+                    onClick={() => void action(() => askAside())}
+                  >
+                    <ArrowUp size={20} />
+                  </button>
+                ) : running ? (
+                  <button
+                    className="send stop"
+                    title={writeNow ? t('เขียนคำตอบจากที่อ่านมา · กดอีกครั้งเพื่อหยุดงาน') : t('หยุดงาน')}
+                    onClick={() => {
+                      if (!writeNow) return void api.call('cancel', { id: selected });
+                      setWriteNowAt(startedAt);
+                      void api.call('writeNow', { id: selected });
+                    }}
+                  >
                     <Square size={17} />
                   </button>
                 ) : (

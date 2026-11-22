@@ -20,7 +20,7 @@ export const COMMANDS = [
   ['left', 'สลับแถบงาน', ''],
   ['right', 'สลับร่าง', ''],
   ['skills', 'ศูนย์รวม Skill', ''],
-  ['receipt', 'ตรวจใบเสร็จ AFP', ''],
+  ['receipt', 'ผู้ช่วยเบิกจ่าย', ''],
   ['documents', 'เครื่องมือร่างเอกสาร', ''],
   ['theme-system', 'ธีมตามระบบ', ''],
   ['theme-light', 'ธีมสว่าง', ''],

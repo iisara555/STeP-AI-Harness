@@ -80,3 +80,19 @@ export function liveAnswer(stream: string, lastMessage?: { role: string; text: s
     liveText.endsWith(lastMessage.text.trim());
   return { liveText, streamSaved };
 }
+
+/** The tool loop's own words for its last, no-tools turn (electron/service.ts); after them the AI is already writing. */
+const WRITING = new Set(['อ่านครบแล้ว กำลังเขียนคำตอบ', 'ใกล้หมดเวลา กำลังเขียนคำตอบจากที่อ่านมา']);
+export const WRITE_NOW_AFTER_MS = 120_000;
+
+/**
+ * Whether the stop button first asks the AI to write its answer (`writeNow`): after two minutes, while the AI is still reading. A reading turn often
+ * streams a line of its own ("กำลังตรวจเอกสาร…") before its tool requests, so streamed text alone does not mean the
+ * answer is being written: tool requests in the stream, or a reading/searching status, still count as reading.
+ */
+export function offerWriteNow(run: { elapsedMs: number; stream: string; liveText: string; progress?: string }) {
+  if (run.elapsedMs < WRITE_NOW_AFTER_MS) return false;
+  const progress = run.progress || '';
+  if (WRITING.has(progress)) return false;
+  return !run.liveText || run.stream.includes('```step-tool') || /อ่าน|ค้น/.test(progress);
+}

@@ -83,7 +83,7 @@ async function launch() {
   app = await electron.launch({ args: ['.'], env, timeout: 45000 });
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1500, height: 1050 });
-  await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
+  await page.getByRole('button', { name: /ผู้ช่วยเบิกจ่าย/ }).click();
   await page.getByRole('button', { name: 'ชุดเอกสารเบิกจ่าย', exact: true }).click();
   await page.getByRole('button', { name: 'ร่างและส่งออก', exact: true }).click();
   await page.getByRole('button', { name: 'ใบสำคัญจ่ายสำหรับ AFP', exact: true }).click();
