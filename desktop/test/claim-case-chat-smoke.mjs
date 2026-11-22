@@ -129,6 +129,8 @@ try {
   // The AI saw the claims rule and the case's fixed-label context, not the typed title.
   const asked = calls.find(call => call.prompt.includes('ต้องเคลียร์ภายในกี่วัน'));
   assert.ok(asked.system.includes('claim-update'));
+  // ...and answered with the claims expert Skill (AFP categories, forms and deadlines).
+  assert.ok(JSON.stringify(asked).includes('ผู้เชี่ยวชาญเรื่องเบิกจ่าย (แชตของเรื่อง)'), 'the case chat uses claims-case-expert');
   assert.ok(asked.prompt.includes('หมวด: ยังไม่แน่ใจ'));
   assert.ok(!asked.prompt.includes('ประชุมคณะทำงาน ข้อมูลสมมติ'));
 

@@ -238,6 +238,8 @@ const KNOWLEDGE_RULE =
   'STeP knowledge registry: ID | title | short purpose. <organization_knowledge> holds matching excerpts; a document under § ทั้งฉบับ is given complete, so answer from it without opening it again. If they do not answer the question, use reference(input=ID,args.action=outline) for headings, then reference(input=ID,args.section=heading) for a section, or reference(input=ID) to read the document. The index may show only the top three matching documents plus mandatory references; use reference(input="",args.action=catalog) for the complete readable index if needed. Read the relevant registered source before saying the documents do not cover it.';
 const ORGANIZATION_RULE =
   'For anything about STeP itself (people and HR, welfare, leave, careers, procedures, policies, the quality system, facilities, contacts), answer from <organization_knowledge> or a registered document read with the reference tool, and name the document and section you used. If the organization documents do not cover it, say so plainly and suggest the owning team; never fill the gap from general knowledge, other organizations or the web.';
+/** The Skill every disbursement case chat answers with (skills/common/claims-case-expert). */
+export const CLAIM_CASE_SKILL = 'claims-case-expert';
 /** Words that tie a text task to STeP itself; such text keeps the organization's documents in context. */
 const ORGANIZATION_WORDS =
   /\bSTeP\b|สเต็ป|อุทยานวิทยาศาสตร์|\bCMU\b|มช\.?|ระเบียบ|ประกาศ|สวัสดิการ|วันลา|ลาพักร้อน|ลาป่วย|ลากิจ|ฝ่ายบุคคล|\bHR\b|เงินเดือน|เบิกจ่าย|พนักงาน|บุคลากร|นโยบาย|\bpolicy\b|\bleave\b|\bwelfare\b/i;
@@ -1015,7 +1017,8 @@ export class WorkService {
         team: session.team,
         workspaceDir,
         clarificationAnswer: session.answers.join('\n'),
-        skill: session.skill,
+        // A disbursement case answers with the claims expert Skill (AFP categories, forms, deadlines, document wording).
+        skill: session.claimPacketId ? CLAIM_CASE_SKILL : session.skill,
         // In chat the model sees the whole conversation, so it asks its own questions in context.
         conversational: chat,
         // A disbursement case answers as the claims assistant: no Skill guess or menu question in between.

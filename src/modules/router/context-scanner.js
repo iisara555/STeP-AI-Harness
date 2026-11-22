@@ -147,6 +147,17 @@ export const QUALIFIED_INTENT_RULES = [
       ['กี่วัน', 'กี่บาท', 'เท่าไหร่', 'เท่าไร', 'ได้ไหม', 'ได้มั้ย', 'ได้บ้าง', 'ยังไง', 'อย่างไร', 'เมื่อไหร่', 'ใครอนุมัติ', 'สิทธิ', 'เงื่อนไข', 'หลักเกณฑ์', 'ข้อไหน', 'ต้องทำ', 'ต้องมี', 'ต้องใช้', 'ล่วงหน้า', 'ที่ไหน', 'ระบบไหน', 'ยื่นที่', 'ขั้นตอน'],
     ],
   },
+  // A question asked inside one claims case (ผู้ช่วยเบิกจ่าย) or about the wording
+  // AFP reads in a case (BV travel reason, payment certificate note). Both halves
+  // are required, and it is checked before afp-operations so a travel reason that
+  // mentions a van or a speaker stays with the case expert.
+  {
+    intent: 'claims-case',
+    allAny: [
+      ['ผู้ช่วยเบิกจ่าย', 'เรื่องเบิกจ่ายนี้', 'ชุดเอกสารเบิกจ่ายนี้', 'เหตุผลการเดินทาง', 'เหตุผลจ้างรถตู้', 'ใบรับรองแทนใบเสร็จ'],
+      ['เขียน', 'ร่าง', 'ช่วย', 'กี่วัน', 'ภายใน', 'ยังไง', 'อย่างไร', 'เท่าไหร่', 'เท่าไร', 'ต้องใช้', 'ต้องมี', 'ต้องทำ', 'ได้ไหม', 'ได้มั้ย', 'หมวดอะไร', 'เอกสารอะไร', 'ครบ'],
+    ],
+  },
   // AFP operations questions name a finance or procurement subject and ask
   // about time, category or procedure. Both halves are required: 'ใบเสร็จ'
   // alone is a receipt-audit job, and 'กี่วัน' alone belongs to any planning
