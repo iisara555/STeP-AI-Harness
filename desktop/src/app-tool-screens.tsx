@@ -65,7 +65,14 @@ export function ToolScreens({ v }: { v: AppView }) {
             connections={snapshot.connections}
             chooseConnection={setConnectionId}
             openAiSettings={openAiSettings}
-            caseChat={{ sessions: caseSessions, open: openCaseChat, send: caseSend }}
+            caseChat={{
+              sessions: caseSessions,
+              open: openCaseChat,
+              send: caseSend,
+              refresh,
+              vision: Boolean(snapshot.policy?.features.vision),
+              autoEffort: Boolean(snapshot.policy?.features.autoEffort),
+            }}
           />
         </div>
       )}

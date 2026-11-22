@@ -188,7 +188,7 @@ export function AppDialogs({ v }: { v: AppView }) {
             setConsentAsk(null);
             // A case chat answers inside its case, so its request goes back there instead of opening the main chat.
             if (ask.caseChat) {
-              await action(() => caseSend(ask.sessionId, ask.text, ask.sourceText || '', ask.token));
+              await action(() => caseSend(ask.sessionId, ask.text, ask.sourceText || '', ask.attachments, ask.token));
               return;
             }
             await action(() =>

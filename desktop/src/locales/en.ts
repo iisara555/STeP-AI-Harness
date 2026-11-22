@@ -2167,6 +2167,12 @@ export const en: Record<string, string> = {
     'Describe it as you would to a colleague: what you need, who it is for and how long it should be. Enter sends, Shift+Enter adds a new line.',
   'ตัวอย่าง: “สรุปไฟล์นี้เป็น 5 ข้อ สำหรับรายงานผู้บริหาร ใช้ภาษาทางการ”':
     'Example: “Summarise this file in 5 points for an executive report, in formal language”',
+  '{0} · ยังไม่พร้อม': '{0} · not ready',
+  'บัญชีนี้ยังไม่พร้อม กดเชื่อมต่อและทดสอบในหน้าตั้งค่าก่อน': 'This account is not ready. Connect and test it in Settings first',
+  'AI ของเรื่องนี้': 'AI for this case',
+  'โมเดลสำหรับเรื่องนี้ เปลี่ยนได้ทุกเมื่อ': 'Model for this case; change it any time',
+  'ตรวจและแนบเอกสารให้ AI อ่านในเรื่องนี้': 'Check and attach a document for the AI to read in this case',
+  'เพิ่มเป็นหลักฐานในเรื่องนี้ (อ่านในเครื่อง ไม่ส่งให้ AI)': 'Add as evidence to this case (read on this computer, not sent to the AI)',
   'แนบไฟล์ให้ AI อ่าน': 'Attach files for the AI to read',
   'ปุ่ม + แนบไฟล์ Word, PDF, Excel ได้ ระบบตรวจและปิดบังข้อมูลส่วนบุคคล เช่น เลขบัตรประชาชน เบอร์โทร แล้วให้คุณดูข้อความก่อนส่งทุกครั้ง':
     'The + button attaches Word, PDF or Excel files. Personal data such as national ID and phone numbers is detected and masked, and you see the text before anything is sent.',

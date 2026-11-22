@@ -213,7 +213,7 @@ export function ReceiptApp({
   chooseConnection?: (id: string) => void;
   openAiSettings?: () => void;
   /** The chat inside each disbursement case; it answers there and never opens the main chat. */
-  caseChat?: Omit<CaseChatApi, 'aiName' | 'openAiSettings'>;
+  caseChat?: Omit<CaseChatApi, 'aiName' | 'openAiSettings' | 'connections' | 'connectionId'>;
 }) {
   const [preferredOcrId, setPreferredOcrId] = useState('');
   const [receiptMode, setReceiptMode] = useState<'review' | 'packet'>('review');
@@ -745,10 +745,13 @@ export function ReceiptApp({
         notify={notify}
         onEvent={onEvent}
         chat={{
+          ...caseChat,
           sessions: caseChat?.sessions || [],
           open: caseChat?.open || (async () => null),
           send: caseChat?.send || (async () => false),
           aiName: caseChat ? caseAiName : '',
+          connections: caseChat ? connections : [],
+          connectionId: usableConnectionId || '',
           openAiSettings,
         }}
         review={

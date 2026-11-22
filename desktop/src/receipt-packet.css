@@ -319,10 +319,8 @@
   position: sticky;
   bottom: 0;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: end;
-  gap: var(--space-1) var(--space-2);
-  padding: var(--space-2-5) var(--space-3);
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-2-5);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-xl);
   background: var(--surface);
@@ -351,9 +349,48 @@
   background: var(--text);
   color: var(--surface);
 }
-.case-composer-ai {
-  grid-column: 1 / -1;
-  padding-inline: var(--space-1);
+/* Like the main composer: attach on the left, the case's AI and send on the right. */
+.case-composer-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.case-composer-tools .spacer {
+  flex: 1;
+}
+.case-composer .attachments {
+  padding: 0;
+}
+.case-ai-picker {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.case-composer-tools > button {
+  flex-shrink: 0;
+}
+.case-ai-picker .ai-picker-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  max-width: 260px;
+  font-size: var(--text-xs);
+  padding: var(--pad-control-sm);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.case-ai-picker .ai-picker-button:hover:not(:disabled),
+.case-ai-picker .ai-picker-button:focus-visible {
+  background: var(--hover);
+  color: var(--text);
+}
+.case-composer .attachment-preview {
+  padding: var(--pad-control-sm);
+  font-size: var(--text-xs);
+  color: var(--muted);
 }
 .case-panel {
   position: sticky;

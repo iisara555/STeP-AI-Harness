@@ -4492,8 +4492,9 @@ async function main() {
         const id = inputText(input.id, 60),
           text = inputText(input.text);
         const sending = store.session(id);
-        // A disbursement-case chat answers and proposes case fields only: no document drafting, images, Skills picked
-        // by hand, workflows, coordinator or attachments (those belong to the case's own evidence list).
+        // A disbursement-case chat answers and proposes case fields only: no document drafting, image creation, Skills
+        // picked by hand, workflows or coordinator. Files and pictures attached for the AI to read go with a message as
+        // in the main chat, through the same attach checks; the case's evidence list stays separate.
         const claimCase = Boolean(sending.claimPacketId);
         if (
           claimCase &&
@@ -4503,7 +4504,6 @@ async function main() {
             input.workflow ||
             input.coordinator ||
             input.autoContinue ||
-            input.attachments?.length ||
             input.mode !== 'chat')
         )
           throw new Error('INVALID_INPUT');

@@ -22,6 +22,7 @@ import { PaymentVoucherForm } from './afp-payment-voucher-form';
 import { AfpEvidencePanel } from './afp-evidence-panel';
 import { suggestPacketKind } from './afp-evidence';
 import { ClaimCaseChat, type CaseChatApi } from './claim-case-chat';
+import { caseAi } from './case-ai-picker';
 import { caseContext, caseListStatus } from './claim-case';
 import { applyReadings, type ReadingBatch, type ReadingItem, type SourceReading } from './evidence-reading';
 const DROPPABLE = /\.(pdf|png|jpe?g)$/i;
@@ -297,17 +298,22 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
     }));
   };
   // "ถาม AI" anywhere in a case asks in that case's own chat; the main chat never opens.
-  const askInCase = async (text: string) => {
+  const askInCase = async (text: string, attachments: string[] = []) => {
     const value = draft.current;
     if (!value) return false;
-    if (!chat.aiName) {
+    if (
+      !caseAi(
+        chat,
+        chat.sessions.find(s => s.claimPacketId === value.id),
+      ).ready
+    ) {
       notify(t('ยังไม่ได้เลือก AI เลือกในกล่องพิมพ์ หรือเพิ่มบัญชี AI ก่อน'), 'info');
       return false;
     }
     try {
       const target = chat.sessions.find(s => s.claimPacketId === value.id)?.id || (await chat.open(value.id, value.title));
       if (!target) return false;
-      await chat.send(target, text, caseContext(value));
+      await chat.send(target, text, caseContext(value), attachments);
       return true;
     } catch (failure) {
       notify(explainError(failure), 'error');
