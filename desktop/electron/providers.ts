@@ -69,6 +69,8 @@ export type ProviderContext = {
   onWebActivity?: (stage: 'search' | 'read' | 'complete' | 'failed') => void;
   /** Keeps the runtime conversation open between the tool turns of one run (see ProviderSession). */
   session?: ProviderSession;
+  /** Native function definitions an OpenAI-compatible transport offers (policy nativeToolCalls); calls come back as step-tool text. */
+  nativeTools?: readonly unknown[];
   /** Optional governed local MCP bridge executor for native Antigravity tool turns. */
   nativeBridge?: GovernedBridgeExecutor;
   /** Optional incremental delta when continuing a warm multi-message conversation on the same ProviderSession. */

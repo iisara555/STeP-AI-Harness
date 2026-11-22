@@ -18,6 +18,7 @@ import {
   type Note,
 } from './claim-interview';
 import type { ReceiptPacket } from './receipt-packet';
+import { BV_FORMULA } from './bv-travel-reason';
 
 const WHY = /ทำไม|เพราะอะไร|why|\?\s*$/i;
 const WHY_WORD = /ทำไม|เพราะอะไร|why/i;
@@ -127,6 +128,7 @@ export const ClaimInterview = forwardRef<
         {question && (
           <div className="claim-turn">
             <p className="claim-ask">{t(question.text)}</p>
+            {question.example && <p className="claim-example small muted">{t(question.example)}</p>}
             {question.recommended && (
               <p className="claim-recommend">
                 {t(
@@ -236,6 +238,13 @@ function SummaryCard({ summary }: { summary: ClaimSummary }) {
               <li key={item}>{t(item)}</li>
             ))}
           </ul>
+        </>
+      )}
+      {summary.travelReason && (
+        <>
+          <h4>{t('เหตุผลการเดินทาง (ร่าง)')}</h4>
+          <p className="claim-reason">{summary.travelReason}</p>
+          <p className="small muted">{t('ใส่ในช่องวัตถุประสงค์เมื่อกดใช้ แก้ต่อได้ · {0}', t(BV_FORMULA))}</p>
         </>
       )}
       {summary.notes.length > 0 && (

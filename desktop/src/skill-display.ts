@@ -30,6 +30,7 @@ const THAI_NAMES: Record<string, string> = {
   'qms-risk-opportunity-review': 'ทบทวนความเสี่ยงและโอกาสของระบบคุณภาพ',
   'quality-objective-kpi-review': 'ทบทวนวัตถุประสงค์คุณภาพและตัวชี้วัด',
   'receipt-audit': 'ตรวจใบเสร็จและหลักฐานเบิกจ่าย',
+  'claims-case-expert': 'ผู้เชี่ยวชาญเรื่องเบิกจ่าย',
   'sop-authoring': 'เขียนขั้นตอนปฏิบัติงานมาตรฐาน (SOP)',
   'spreadsheet-work': 'ทำงานกับไฟล์ Excel',
   'stakeholder-questionnaire': 'ชุดคำถามถึงเจ้าของข้อมูล',

@@ -274,7 +274,7 @@ test('controlled RPC runs both arms through real Office tools and resumes withou
 test('restricted harness instructions replace unavailable tool descriptions while the default host stays unchanged', async () => {
   const { Store } = await import('../electron/store.ts');
   const { WorkService } = await import('../electron/service.ts');
-  const { TOOL_RULES, BROWSER_RULES } = await import('../electron/tool-loop.ts');
+  const { TOOL_RULES, BROWSER_RULES, BROWSER_RULES_ON_REQUEST } = await import('../electron/tool-loop.ts');
   const { evaluatePrivacyGate } = await import('../../src/modules/privacy/index.js');
   const store = new Store(':memory:');
   const scoped = 'SYNTHETIC_SCOPED_RULES: sheet_create sheet_read slides_create ask_user';
@@ -326,7 +326,9 @@ test('restricted harness instructions replace unavailable tool descriptions whil
     assert.equal(systems[0].includes(BROWSER_RULES), false);
     assert.doesNotMatch(systems[0], /web_search|browser_control|tool_search/);
     assert.ok(systems[1].includes(TOOL_RULES));
-    assert.ok(systems[1].includes(BROWSER_RULES));
+    // No web-page work in this task: the browser rules wait behind tool_describe browser_control.
+    assert.equal(systems[1].includes(BROWSER_RULES), false);
+    assert.ok(systems[1].includes(BROWSER_RULES_ON_REQUEST));
   } finally {
     store.close();
   }

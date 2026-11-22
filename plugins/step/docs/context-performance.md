@@ -49,6 +49,22 @@ and outgoing consent apply to these reads. Document content/metadata changes
 invalidate the in-memory knowledge cache. Skill discovery caches metadata and
 invalidates it when manifests, package metadata or Skill files change.
 
+## Conversation compaction (checkpoint)
+
+When a conversation outgrows the model's budget, `compact()` (`desktop/electron/compact.ts`) summarizes the older
+turns into a checkpoint kept in `session.contextCheckpoint`. Since 2026-11-22 it follows OpenCode's structured
+compaction, tuned for document and finance work:
+
+- The summary call (`CHECKPOINT_SYSTEM`) writes fixed sections: Goal, Employee instructions, Exact facts (amounts,
+  dates, clause numbers copied exactly), Decisions, Done so far, Open. When new turns arrive, the previous checkpoint is
+  sent first and returned updated, not summarized again as prose.
+- Recent turns stay word for word: always the last two, and older ones while they fit 15% of the budget (at most
+  15k tokens) after a 3k reserve for the summary. Turns already in a checkpoint are never taken back out of it, so a
+  growing tail does not re-summarize old turns.
+- The host does not rely on the summarizer for figures: amounts, percentages, dates, ข้อ/มาตรา/เลขที่ numbers that the
+  employee wrote and the checkpoint lacks are appended verbatim (`missingFigures`, at most 40, employee messages only,
+  through the privacy gate).
+
 ## Provider transport and caching
 
 Codex and Gemini retain their existing RPC process/thread across a step's tool

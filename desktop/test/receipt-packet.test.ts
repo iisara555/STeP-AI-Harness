@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile, rm, readdir } from 'node:fs/promises';
+import { mkdtemp, writeFile, rm, readdir, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PDFDocument, PDFName, PDFDict } from 'pdf-lib';
@@ -373,3 +373,24 @@ test('the 10,000 baht cap sums every receipt in one sub-category, not each recei
     /เกินเพดาน 10,000/,
   );
 });
+
+test('deleting a case removes it and its app-owned file copies, never the original the person picked', async () =>
+  fixture(async (packets, root) => {
+    const bytes = await pdfBytes(),
+      original = join(root, 'original.pdf');
+    await writeFile(original, bytes);
+    let packet = packets.create();
+    const other = packets.create();
+    packet = await packets.add(packet.id, packet.revision, [{ name: 'original.pdf', extension: 'pdf', bytes, originalPath: original }]);
+    const copy = packets.path(packet.id, packet.documents[0].id);
+    assert.equal(await packets.delete(packet.id), true);
+    assert.throws(() => packets.get(packet.id), /PACKET_NOT_FOUND/);
+    assert.deepEqual(
+      packets.list().map(item => item.id),
+      [other.id],
+    );
+    await assert.rejects(readFile(copy), /ENOENT/);
+    assert.deepEqual(await readFile(original), bytes);
+    await assert.rejects(packets.delete(packet.id), /PACKET_NOT_FOUND/);
+    await assert.rejects(packets.delete('../elsewhere'), /INVALID_INPUT/);
+  }));

@@ -2119,3 +2119,17 @@ test('invoke_subagent asks first, runs the service delegate and refuses without 
     await plan.workbench.close();
   }
 });
+
+test('tool_describe browser_control carries the full browser rules the system prompt left out', async () => {
+  const { BROWSER_RULES } = await import('../electron/tool-loop');
+  const f = await fixture();
+  try {
+    const browser = (await f.tools.execute({ tool: 'tool_describe', input: 'browser_control' }, f.scope)) as { guide?: string };
+    assert.equal(browser.guide, BROWSER_RULES);
+    const files = (await f.tools.execute({ tool: 'tool_describe', input: 'files' }, f.scope)) as { guide?: string };
+    assert.equal(files.guide, undefined);
+  } finally {
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});

@@ -152,6 +152,62 @@ Office operations run in a disposable worker with 256 MB heap and a 20-second de
 
 Applying an existing file saves its exact bytes in local SQLite first. The source must still match the preview hash; changed files/workspace paths are refused. Restoration stages another Changes preview through the same apply gate. Backups are limited to 30 entries/40 million base64 characters; employees can inspect/remove a selected backup in Changes. Staged bytes/backups stay local and are never sent as binary tool results. They are not Git worktrees or OS snapshots. New files have no earlier file to restore.
 
+## Request repair and scoped rules (learned from OpenCode, 2026-11-22)
+
+Smaller models slip on the request form far more than frontier models; on OpenCode's same-model harness leaderboards
+the harness mattered most on open models. Three changes target that, without new permissions:
+
+- **Repair before validation** (`src/tool-repair.ts`): a request is repaired only when the tool's schema settles the
+  meaning, then validated and dispatched like any other. Repairs: another harness's tool name with the same meaning
+  (`read_file` → `files`, `bash` → `terminal`, `str_replace` → `patch`), the `{"name","arguments"}` function-call shape,
+  a missing `input` given under the tool's own name for it (`path` for files, `query` for web_search), a known argument
+  written beside `input`, `args` sent as a JSON string, a null optional argument (never a null option such as
+  `action`), and `"20"`/`"true"`/`'["a"]'`/a wrong-case option where the schema wants an integer, boolean, list or
+  option. Unknown tool names and text that is not a number stay refused. The result row carries `repaired` saying what
+  changed, so the model sends the right form next time. Direct `validateToolRequest` calls are unchanged.
+- **Browser rules on request**: `BROWSER_RULES` (about 4,100 characters) goes into the system prompt only when the
+  employee's messages in the conversation show web-page work (a link, a site, a form, a sign-in, an order or a booking;
+  `needsBrowserRules`). Otherwise a one-line pointer asks the model to call `tool_describe browser_control`, whose result
+  carries the full rules as `guide`. The decision reads the whole conversation, so once a conversation needs the
+  rules it keeps them and the prompt prefix stays stable. `npm run eval:context`, organization case: tool rules
+  3,553 → 2,581 tokens, input 10,692 → 9,720.
+- **Small-model form**: models of 14B parameters or fewer, Flash-Lite, Gemma and similar (`smallModel`) also get
+  three worked requests (skill, reference, files).
+
+## Answer review inside the loop (learned from OpenCode, 2026-11-22)
+
+A finished answer (a reply with no tool request) is checked before the loop returns it, while turns and tools remain
+(`LoopHost.review`, `MAX_REVIEWS` = 2). The findings go back as an `<answer_check>` block with the answer, appended to
+the history so the prompt stays a prefix of the next one; the model verifies or reads what is missing and writes the
+whole corrected answer. The same feedback twice, the deadline, the last turn or an unreadable request ends review and
+returns the latest answer. Two checks feed it (`desktop/electron/answer-review.ts`):
+
+- Deterministic, no model call, always on: a table total that does not add up, a document code not in the sources, a
+  claim that a file was written or a tool ran when it did not, a draft that lost its document envelope. Heading and
+  placeholder warnings stay review notes only.
+- The Skill review, behind policy `skillReview` (off by default): one call compares the answer with the Skill's Output,
+  Guardrails and Verification sections and returns done, continue or blocked. Only continue sends the model back; what
+  needs the employee stays as `[รอยืนยัน]`.
+
+The post-hoc checks after the loop (envelope repair, review notes, the STeP answer check) are unchanged.
+
+## Native tool calls on OpenAI-compatible connections (policy `nativeToolCalls`, 2026-11-22)
+
+OpenCode uses each provider's native tool calling. Desktop keeps the text protocol as the one path every provider
+shares, and adds native calls where they help most: OpenAI-compatible chat completions (OpenRouter, Qwen, DeepSeek and
+the other presets), whose models most often break a long `content` string when writing JSON by hand.
+
+- The request offers one function, `step_tool` (`NATIVE_TOOL` in `tool-loop.ts`), with the fields `tool` (an enum of
+  `LOOP_TOOLS`), `input`, `content` and `args`. It is not one function per tool, so the tool rules stay the single
+  description and the offer costs about 150 tokens. `NATIVE_TOOL_RULE` tells the model to call it instead of writing
+  a fence.
+- `src/modules/providers/compatible.js` collects the streamed `tool_calls` fragments and appends each call to the
+  reply as a step-tool block. Backticks are escaped as `\u0060`, so a code fence inside `content` cannot end the block.
+  Arguments that are not JSON are passed on as they are, and the loop reports them as unreadable. Without `nativeTools`,
+  and always on the Anthropic protocol, tool calls are still refused (`PROVIDER_TOOL_DENIED`).
+- Results still return as `<tool_results>` text in the next prompt (not `role: tool` messages), so the prompt stays a
+  prefix of the next one and compaction, folding and the loop's limits are unchanged.
+
 ## Public retrieval and organization proxy
 
 Address exclusions use a conservative subset of the [IANA IPv4 registry](https://www.iana.org/assignments/iana-ipv4-special-registry) and [IANA IPv6 registry](https://www.iana.org/assignments/iana-ipv6-special-registry). Some special-purpose globally reachable ranges are intentionally excluded.

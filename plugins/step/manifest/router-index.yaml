@@ -922,6 +922,34 @@ skills:
           description: อัตราค่าตอบแทนวิทยากรและเงินชดเชยคอมพิวเตอร์ยังไม่มีในเอกสารที่ลงทะเบียน
       human_only: {}
 
+  - name: claims-case-expert
+    cluster: governance-operations
+    domain: finance
+    processId: procurement.request
+    teams:
+      primary: [afp]
+      consumers: ["*"]
+    wildcardReason: "every team files disbursement cases in the claims assistant, so any employee's case chat needs AFP's category, form and deadline guidance"
+    description: แชตของเรื่องเบิกจ่ายหนึ่งเรื่องในผู้ช่วยเบิกจ่าย ชี้หมวด กรณีการเงิน (ยืมเงิน เคลียร์เงินยืม สำรองจ่าย) แบบฟอร์ม FM-AF กำหนดรายงานขอความเห็นชอบ และร่างข้อความในเอกสาร เช่น เหตุผลการเดินทางหมวด BV
+    intent: [claims-case]
+    triggers: [ผู้ช่วยเบิกจ่าย, เรื่องเบิกจ่ายนี้, ชุดเอกสารเบิกจ่ายนี้, เหตุผลการเดินทาง, เขียนเหตุผลการเดินทาง, เหตุผลจ้างรถตู้, ใบรับรองแทนใบเสร็จ]
+    paths: []
+    fileTypes: [pdf, png, jpg]
+    requires: []
+    scope:
+      allow:
+        - ชี้หมวดค่าใช้จ่าย กรณีการเงิน และแบบฟอร์มที่ต้องใช้ตามเอกสาร AFP พร้อมข้อที่อ้าง
+        - บอกกำหนดรายงานขอความเห็นชอบพร้อมเงื่อนไขการนับวัน
+        - ร่างข้อความในเอกสารจากข้อมูลที่พนักงานบอก และเว้นส่วนที่ไม่รู้ให้พนักงานเติม
+      escalate:
+        disbursement_decision:
+          to: afp
+          description: การสรุปว่าเรื่องนี้เบิกได้หรือไม่ได้ เป็นดุลพินิจของเจ้าหน้าที่ AFP
+        unregistered_rate:
+          to: afp
+          description: อัตราค่าตอบแทนวิทยากร ค่าอาหารต่อหัว และเพดานที่ไม่มีในเอกสารที่ลงทะเบียน
+      human_only: {}
+
   - name: hr-policy-lookup
     cluster: governance-operations
     domain: people-development

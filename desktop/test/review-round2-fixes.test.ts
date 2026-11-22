@@ -138,7 +138,7 @@ test('R2-L2: further common credential files are protected paths without false p
 });
 
 test('L3: a broken request names the field and the expected type', () => {
-  const problems = brokenRequests('```step-tool\n{"tool":"files","input":"a.txt","args":{"offset":"40000"}}\n```');
+  const problems = brokenRequests('```step-tool\n{"tool":"files","input":"a.txt","args":{"offset":"forty"}}\n```');
   assert.equal(problems.length, 1);
   assert.match(problems[0], /args\.offset/);
   assert.match(problems[0], /integer/);

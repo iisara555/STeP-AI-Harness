@@ -472,7 +472,9 @@ async function main() {
     hybridSkillSelection: () => policyState.policy.features.hybridSkillSelection,
     visionEnabled: () => policyState.policy.features.vision,
     antigravityBridge: () => policyState.policy.features.antigravityNativeBridge,
+    nativeToolCalls: () => policyState.policy.features.nativeToolCalls,
     answerCheck: () => policyState.policy.features.answerCheck,
+    skillReview: () => policyState.policy.features.skillReview,
     autoEffort: () => policyState.policy.features.autoEffort,
     skillMetadata: async id => {
       const m = await routing.loadSkillContextMetadata(id);
@@ -4115,6 +4117,18 @@ async function main() {
       }
       case 'receiptPacketRemoveSource':
         return receiptPackets.remove(input.id, input.revision, input.sourceId);
+      case 'receiptPacketDelete': {
+        // The case's own chat goes with it; a case whose chat is still answering is not deleted under it.
+        const packetId = receiptPackets.get(input.id).id;
+        const chats = store.list<Session>('session').filter(s => s.claimPacketId === packetId);
+        if (chats.some(s => service.isActive(s.id) || coordinator.has(s.id))) throw new Error('RUN_ALREADY_ACTIVE');
+        await receiptPackets.delete(packetId);
+        for (const s of chats) {
+          store.remove('session', s.id);
+          for (const [aid, a] of attachments) if (a.sessionId === s.id) attachments.delete(aid);
+        }
+        return true;
+      }
       case 'receiptPacketOpenSource': {
         const path = receiptPackets.path(input.id, input.sourceId);
         const message = await shell.openPath(path);
@@ -4492,8 +4506,9 @@ async function main() {
         const id = inputText(input.id, 60),
           text = inputText(input.text);
         const sending = store.session(id);
-        // A disbursement-case chat answers and proposes case fields only: no document drafting, images, Skills picked
-        // by hand, workflows, coordinator or attachments (those belong to the case's own evidence list).
+        // A disbursement-case chat answers and proposes case fields only: no document drafting, image creation, Skills
+        // picked by hand, workflows or coordinator. Files and pictures attached for the AI to read go with a message as
+        // in the main chat, through the same attach checks; the case's evidence list stays separate.
         const claimCase = Boolean(sending.claimPacketId);
         if (
           claimCase &&
@@ -4503,7 +4518,6 @@ async function main() {
             input.workflow ||
             input.coordinator ||
             input.autoContinue ||
-            input.attachments?.length ||
             input.mode !== 'chat')
         )
           throw new Error('INVALID_INPUT');

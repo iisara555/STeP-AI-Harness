@@ -869,6 +869,8 @@ export const en: Record<string, string> = {
   'ข้อความเหล่านี้ไม่พบในเอกสาร STeP โปรดตรวจก่อนใช้': 'These statements are not in the STeP documents; check them before use',
   'ตรวจกับเอกสาร STeP แล้ว ไม่พบข้อความที่ขัดกับเอกสาร': 'Checked against the STeP documents: nothing contradicts them',
   'ตรวจคำตอบเรื่อง STeP กับเอกสาร': 'Check STeP answers against the documents',
+  'ตรวจงานกับขั้นตอนของ Skill ก่อนส่ง': 'Check work against its Skill before showing it',
+  'กำลังตรวจงานกับขั้นตอนของ Skill': 'Checking the work against its Skill',
   ปรับระดับการคิดตามขนาดงาน: 'Reasoning level by task size',
   'กำลังตรวจคำตอบกับเอกสาร STeP': 'Checking the answer against the STeP documents',
   เวลาตั้งแต่ส่งคำถามจนได้คำตอบ: 'Time from sending the request to the finished answer',
@@ -1040,6 +1042,13 @@ export const en: Record<string, string> = {
     'An attached agency form is checked against the MIS quality register for its code and revision.',
   'ตรวจใบกำกับภาษี (เลขผู้เสียภาษี เลขที่ และ VAT) และเตือนเรื่องหัก ณ ที่จ่ายในใบสำคัญจ่าย':
     'Tax invoices are checked for the tax ID, number and VAT, and payment vouchers flag withholding to review.',
+  'ลบเรื่องเบิกจ่ายได้ และหน้าผู้ช่วยเบิกจ่ายตัวหนังสือน้อยลง ใช้ง่ายขึ้น':
+    'Delete a claim case, and a quieter, easier Claims assistant page.',
+  'แชตของเรื่องเบิกเลือกโมเดลและแนบไฟล์หรือภาพให้ AI อ่านได้ ตอบด้วย Skill ผู้เชี่ยวชาญเรื่องเบิกจ่าย':
+    'Each claim case chat picks its model, takes files and pictures for the AI, and answers with the claims expert Skill.',
+  'ช่วยเขียนเหตุผลการเดินทางหมวด BV ให้ครบ 5 ส่วนตามที่ AFP ขอ': 'Help writing a BV travel reason with the five parts AFP asks for.',
+  'เมื่อการลงชื่อเข้าใช้ Claude หมดอายุ แอปบอกให้ลงชื่อใหม่แทนข้อความผิดพลาดทั่วไป':
+    'An expired Claude sign-in now asks you to sign in again instead of showing a generic error.',
   '"ตรวจใบเสร็จ AFP" เปลี่ยนเป็น "ผู้ช่วยเบิกจ่าย" แต่ละเรื่องเบิกมีแชตของตัวเอง ถามทีละข้อและตอบจากเอกสาร AFP':
     '"AFP receipt check" is now the Claims assistant: each claim case has its own chat that asks one question at a time and answers from AFP documents.',
   'ลากหลายไฟล์มาวางในแชตของเรื่องเบิก ระบบอ่านในเครื่องและบอกว่าแต่ละไฟล์เป็นเอกสารอะไร':
@@ -2167,6 +2176,22 @@ export const en: Record<string, string> = {
     'Describe it as you would to a colleague: what you need, who it is for and how long it should be. Enter sends, Shift+Enter adds a new line.',
   'ตัวอย่าง: “สรุปไฟล์นี้เป็น 5 ข้อ สำหรับรายงานผู้บริหาร ใช้ภาษาทางการ”':
     'Example: “Summarise this file in 5 points for an executive report, in formal language”',
+  '{0} · ยังไม่พร้อม': '{0} · not ready',
+  'บัญชีนี้ยังไม่พร้อม กดเชื่อมต่อและทดสอบในหน้าตั้งค่าก่อน': 'This account is not ready. Connect and test it in Settings first',
+  'AI ของเรื่องนี้': 'AI for this case',
+  'โมเดลสำหรับเรื่องนี้ เปลี่ยนได้ทุกเมื่อ': 'Model for this case; change it any time',
+  'ตรวจและแนบเอกสารให้ AI อ่านในเรื่องนี้': 'Check and attach a document for the AI to read in this case',
+  'เพิ่มเป็นหลักฐานในเรื่องนี้ (อ่านในเครื่อง ไม่ส่งให้ AI)': 'Add as evidence to this case (read on this computer, not sent to the AI)',
+  'ทดลอง · คุณตรวจก่อนส่งทุกครั้ง': 'Trial · you check everything before sending',
+  ลบเรื่องแล้ว: 'Case deleted',
+  ยืนยันการลบ: 'Confirm delete',
+  'ลบ “{0}”?': 'Delete “{0}”?',
+  'ลบเรื่อง “{0}”': 'Delete case “{0}”',
+  ลบเรื่อง: 'Delete case',
+  ตั้งชื่อเรื่อง: 'Name this case',
+  'กำลังบันทึก…': 'Saving…',
+  รอบันทึก: 'Not saved yet',
+  'ยังไม่มีหลักฐาน · ลากไฟล์มาวางในแชตได้': 'No evidence yet · drop files into the chat',
   'แนบไฟล์ให้ AI อ่าน': 'Attach files for the AI to read',
   'ปุ่ม + แนบไฟล์ Word, PDF, Excel ได้ ระบบตรวจและปิดบังข้อมูลส่วนบุคคล เช่น เลขบัตรประชาชน เบอร์โทร แล้วให้คุณดูข้อความก่อนส่งทุกครั้ง':
     'The + button attaches Word, PDF or Excel files. Personal data such as national ID and phone numbers is detected and masked, and you see the text before anything is sent.',
@@ -3441,6 +3466,7 @@ export const en: Record<string, string> = {
   'ประมาณการจาก token ที่ผู้ให้บริการรายงาน · ไม่รวมรูปภาพ ค่าสมาชิก และการใช้นอกแอป':
     'Estimated from tokens the provider reports · excludes images, subscriptions and use outside the app',
   'ตัวเชื่อม Antigravity ในเครื่อง (ทดลอง)': 'Local Antigravity bridge (trial)',
+  'ให้ AI แบบ OpenRouter เรียกเครื่องมือแบบ native (ทดลอง)': 'Native tool calls for OpenRouter-style AI (trial)',
   'เปลี่ยนเฉพาะวิธีพูด · ข้อเท็จจริงและมาตรฐานเอกสารคงเดิม': 'Changes only how it talks · facts and document standards stay the same',
   'ตัวอย่าง: เตือนให้ตรวจเอกสารก่อนส่ง': 'Example: a reminder to check a document before sending',
   'พักหรือกลับมาใช้ทุกบัญชีในแอปนี้ · ไม่ออกจากระบบ AI และไม่เปลี่ยนสิทธิ์ที่ Google':

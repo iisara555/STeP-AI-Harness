@@ -157,7 +157,7 @@ export type StepTrace = {
   usage?: { input: number; output: number; total: number };
   contextScope?: 'text' | 'full';
   /** Long-task loop events: earlier results folded, reads answered from the run's cache, reads given back, final turn. */
-  loop?: { folds: number; repeats: number; seeded: number; final?: 'deadline' | 'reread' };
+  loop?: { folds: number; repeats: number; seeded: number; final?: 'deadline' | 'reread'; reviews?: number };
   discovery?: { skills: 'top3' | 'full'; documents: 'top3' | 'full'; skillCount: number; documentCount: number };
   toolMs?: number;
   tools?: ToolTrace[];

@@ -689,6 +689,26 @@ skills:
       mandatory: [human-approval-rule, data-classification-rule]
       optional: [afp-regulation-hierarchy]
 
+  # Draft written by the developer from registered AFP documents (2026-11-22); AFP has not reviewed or approved it yet.
+  claims-case-expert:
+    owner: afp
+    version: 0.1.0
+    domain: [finance, procurement]
+    process: [procurement.request]
+    path: skills/common/claims-case-expert/SKILL.md
+    description: พาพนักงานทำเรื่องเบิกจ่ายหนึ่งเรื่องในแชตของผู้ช่วยเบิกจ่าย ชี้หมวด กรณีการเงิน แบบฟอร์ม FM-AF กำหนดเวลา และร่างข้อความในเอกสาร เช่น เหตุผลการเดินทาง BV ตามเอกสาร AFP โดยไม่ตัดสินว่าเบิกได้
+    governance:
+      owner: afp
+      reviewer: [afp]
+      approvedBy: []
+      reviewedAt: "2026-11-22"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: draft
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
+      optional: [afp-regulation-hierarchy]
+
   hr-policy-lookup:
     owner: hd
     version: 1.0.0

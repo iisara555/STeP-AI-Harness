@@ -702,16 +702,18 @@ export function useWorkspace() {
     setSelected(s.id);
   }
   /** The chat of one disbursement case, made on first use; it runs beside the main chat and never opens it. */
-  async function openCaseChat(packetId: string, title: string) {
-    if (connectionId === CLAUDE_CODE || !snapshot?.connections.some(c => c.id === connectionId && c.ready)) return null;
-    const s: Session = await api!.call('create', { connectionId, project: t('ผู้ช่วยเบิกจ่าย'), claimPacketId: packetId, title });
+  async function openCaseChat(packetId: string, title: string, chosen?: string) {
+    // The case's own AI picker can start its chat on another account than the main composer's.
+    const use = chosen || connectionId;
+    if (use === CLAUDE_CODE || !snapshot?.connections.some(c => c.id === use && c.ready)) return null;
+    const s: Session = await api!.call('create', { connectionId: use, project: t('ผู้ช่วยเบิกจ่าย'), claimPacketId: packetId, title });
     await refresh();
     return s.id;
   }
   /** Sends in a case chat. The consent dialog, when it is needed, sends the same request again with its token. */
-  async function caseSend(id: string, text: string, sourceText: string, consent?: string) {
+  async function caseSend(id: string, text: string, sourceText: string, attachments: string[] = [], consent?: string) {
     const run = resolveRun(
-      { mode: 'chat', sourceText, imageModel: '', retry: false, coordinator: false, isolated: true, consent },
+      { mode: 'chat', sourceText, attachments, imageModel: '', retry: false, coordinator: false, isolated: true, consent },
       { mode: 'chat', imageModel: '', coordinated: false },
     );
     const result = await api!.call('send', runPayload(id, text, run, ''));

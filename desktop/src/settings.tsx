@@ -60,9 +60,11 @@ const featureNames: Record<string, string> = localized({
   learningReview: 'ทบทวนหาบทเรียนอัตโนมัติ',
   ocrTrial: 'บันทึกผลทดลอง OCR สำหรับทีมนำร่อง',
   answerCheck: 'ตรวจคำตอบเรื่อง STeP กับเอกสาร',
+  skillReview: 'ตรวจงานกับขั้นตอนของ Skill ก่อนส่ง',
   autoEffort: 'ปรับระดับการคิดตามขนาดงาน',
   maintenance: 'ตรวจข้อมูลที่จำ บทเรียน และ Skill ทุกวัน',
   antigravityNativeBridge: 'ตัวเชื่อม Antigravity ในเครื่อง (ทดลอง)',
+  nativeToolCalls: 'ให้ AI แบบ OpenRouter เรียกเครื่องมือแบบ native (ทดลอง)',
 });
 
 /** The policy switches in a few plain groups, so staff can scan them; switches not listed fall into the last group. */
@@ -79,6 +81,7 @@ const POLICY_GROUPS: [string, string[]][] = [
       'skillSuggestions',
       'autoEffort',
       'answerCheck',
+      'skillReview',
       'vision',
       'receiptVision',
       'voice',

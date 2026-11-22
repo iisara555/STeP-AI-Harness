@@ -209,7 +209,8 @@ test('task lifecycle protocol rejects malformed actions and unbounded numeric ar
     { action: 'unknown' },
     { action: 'wait', timeoutMs: 30001 },
     { action: 'wait', timeoutMs: -1 },
-    { action: 'wait', timeoutMs: '1000' },
+    // "30001" is read as a number by the parser's repair and still refused by the bound.
+    { action: 'wait', timeoutMs: '30001' },
     { action: 'poll', length: 40001 },
     { action: 'poll', offset: -1 },
   ];

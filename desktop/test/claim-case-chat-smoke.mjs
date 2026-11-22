@@ -15,6 +15,9 @@ const calls = [];
 const server = createServer(async (req, res) => {
   let body = '';
   for await (const chunk of req) body += chunk;
+  // Two models, so the case's own picker has a choice.
+  if (req.method === 'GET' && req.url.endsWith('/models'))
+    return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ data: [{ id: 'm' }, { id: 'm2' }] }));
   if (req.method === 'GET') return res.writeHead(404).end();
   const parsed = JSON.parse(body);
   const system = (parsed.messages || [])
@@ -22,7 +25,7 @@ const server = createServer(async (req, res) => {
     .map(message => message.content)
     .join('\n');
   const prompt = parsed.messages?.at(-1)?.content || '';
-  calls.push({ system, prompt });
+  calls.push({ system, prompt, model: parsed.model });
   const current = /<current_message>\n([\s\S]*?)\n<\/current_message>/.exec(prompt)?.[1] || '';
   const answer = /ยืมเงิน/.test(current)
     ? 'ถ้ายืมเงินจากการเงินแล้วจ่ายไปแล้ว ต้องเคลียร์เงินยืมภายใน 3 วันทำการ ตามแนวปฏิบัติ AFP ข้อ 3.1 (ข้อความทดสอบ)\n\n```claim-update\n{"category":"B","finance":"b_clearance","activity":"meeting","amount":800}\n```'
@@ -126,6 +129,8 @@ try {
   // The AI saw the claims rule and the case's fixed-label context, not the typed title.
   const asked = calls.find(call => call.prompt.includes('ต้องเคลียร์ภายในกี่วัน'));
   assert.ok(asked.system.includes('claim-update'));
+  // ...and answered with the claims expert Skill (AFP categories, forms and deadlines).
+  assert.ok(JSON.stringify(asked).includes('ผู้เชี่ยวชาญเรื่องเบิกจ่าย (แชตของเรื่อง)'), 'the case chat uses claims-case-expert');
   assert.ok(asked.prompt.includes('หมวด: ยังไม่แน่ใจ'));
   assert.ok(!asked.prompt.includes('ประชุมคณะทำงาน ข้อมูลสมมติ'));
 
@@ -163,6 +168,55 @@ try {
   await expect(chat.locator('.message')).toHaveCount(0);
   await page.locator('.case-list li button', { hasText: 'ประชุมคณะทำงาน ข้อมูลสมมติ' }).click();
   await expect(chat.getByText('SYNTHETIC-CASE-ANSWER', { exact: true })).toBeVisible();
+
+  // The case has its own AI picker like the main composer: another model for this case only.
+  const picker = chat.getByRole('button', { name: 'เลือกบริการ โมเดลและระดับการคิด', exact: true });
+  await picker.click();
+  const menu = chat.getByRole('group', { name: 'AI ของเรื่องนี้' });
+  await expect(menu.getByLabel('เลือกโมเดล', { exact: true }).locator('option[value="m2"]')).toHaveCount(1);
+  await menu.getByLabel('เลือกโมเดล', { exact: true }).selectOption('m2');
+  await expect(page.locator('.case-composer-ai')).toHaveText('m2');
+  await shot('5-case-chat-model-picker');
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  assert.equal((await snapshot()).sessions.find(s => s.claimPacketId).model, 'm2');
+
+  // A file attached for the AI goes with the next question, as in the main chat; case evidence stays separate.
+  const note = join(home, 'บันทึกประชุม-สมมติ.txt');
+  await writeFile(note, 'SYNTHETIC-ATTACHED-NOTE ค่าอาหารว่าง 25 คน');
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+  }, note);
+  await chat.getByRole('button', { name: 'แนบไฟล์ให้ AI อ่าน', exact: true }).click();
+  const chip = chat.locator('.attachments > span');
+  await expect(chip).toContainText('บันทึกประชุม-สมมติ.txt');
+  await input.fill('ไฟล์นี้ใช้เป็นหลักฐานได้ไหม?');
+  await shot('6-case-chat-attached-file');
+  const before = calls.length;
+  await input.press('Enter');
+  await expect(chat.getByText('SYNTHETIC-CASE-ANSWER', { exact: true })).toHaveCount(2, { timeout: 30_000 });
+  await expect(chip).toHaveCount(0);
+  const withFile = calls.slice(before).find(call => call.prompt.includes('ไฟล์นี้ใช้เป็นหลักฐานได้ไหม'));
+  assert.ok(withFile, 'the question reached the AI');
+  assert.ok(JSON.stringify(withFile).includes('SYNTHETIC-ATTACHED-NOTE'), 'the attached file went with it');
+  assert.equal(withFile.model, 'm2');
+
+  // A case is deleted from its row after a confirm in the same row; its chat goes with it.
+  const rows = page.locator('.case-list li');
+  const count = await rows.count();
+  const doomed = rows.filter({ hasText: 'ประชุมคณะทำงาน ข้อมูลสมมติ' });
+  await doomed.hover();
+  await doomed.getByRole('button', { name: 'ลบเรื่อง “ประชุมคณะทำงาน ข้อมูลสมมติ”', exact: true }).click();
+  const confirm = page.getByRole('group', { name: 'ยืนยันการลบ' });
+  await confirm.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
+  await expect(rows).toHaveCount(count);
+  await doomed.hover();
+  await doomed.getByRole('button', { name: 'ลบเรื่อง “ประชุมคณะทำงาน ข้อมูลสมมติ”', exact: true }).click();
+  await confirm.getByRole('button', { name: 'ลบ', exact: true }).click();
+  await expect(rows).toHaveCount(count - 1);
+  await expect(rows.filter({ hasText: 'ประชุมคณะทำงาน ข้อมูลสมมติ' })).toHaveCount(0);
+  await expect.poll(async () => (await snapshot()).sessions.filter(s => s.claimPacketId).length).toBe(0);
+  await shot('7-case-deleted');
 
   // Dark and narrow.
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));

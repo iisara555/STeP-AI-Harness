@@ -11,6 +11,7 @@ import {
 } from './afp-evidence';
 import { CLAIM_CATEGORY_LABELS, parseClaimCategory, type ClaimCategory } from './receipt-compliance';
 import { PACKET_DOCUMENT_LABELS, packetCategoryTotals, formatSatang, type PacketListItem, type ReceiptPacket } from './receipt-packet';
+import { BV_PART_LABELS, checkBvReason } from './bv-travel-reason';
 
 type Translate = (text: string, ...values: (string | number)[]) => string;
 const plain: Translate = (text, ...values) => values.reduce<string>((value, part, i) => value.replace(`{${i}}`, String(part)), text);
@@ -52,6 +53,8 @@ export function caseContext(packet: ReceiptPacket, translate: Translate = plain)
     translate('กรณีการเงิน: {0}', translate(FINANCE_LABELS[guidance.finance])),
     translate('กิจกรรม: {0}', translate(ACTIVITY_LABELS[guidance.activity])),
     translate('ชื่อเรื่อง: {0}', packet.title.trim() && packet.title !== 'ชุดเอกสารใหม่' ? translate('กรอกแล้ว') : translate('ยังไม่กรอก')),
+    // The reason's words stay out with the purpose; only which of AFP's five parts it has is told.
+    guidance.category === 'BV' ? bvReasonLine(packet.purpose, translate) : '',
     translate('หลักฐาน: {0} ไฟล์', packet.documents.length),
     ...[...kinds].map(([kind, pages]) =>
       translate('- {0}: {1} หน้า', translate(PACKET_DOCUMENT_LABELS[kind as keyof typeof PACKET_DOCUMENT_LABELS] || kind), pages),
@@ -69,6 +72,18 @@ export function caseContext(packet: ReceiptPacket, translate: Translate = plain)
   ]
     .filter(Boolean)
     .join('\n');
+}
+
+function bvReasonLine(purpose: string, translate: Translate) {
+  const check = checkBvReason(purpose);
+  if (check.empty) return translate('เหตุผลการเดินทาง BV: ยังไม่กรอก');
+  if (check.ok) return translate('เหตุผลการเดินทาง BV: ครบ 5 ส่วน');
+  const missing = check.missing.map(part => translate(BV_PART_LABELS[part])).join(', ');
+  return translate(
+    'เหตุผลการเดินทาง BV: ยังไม่ครบ{0}{1}',
+    missing ? translate(' ยังไม่พบ {0}', missing) : '',
+    check.short ? translate(' และสั้นเกินไป') : check.placeholder ? translate(' ยังมีช่อง [ ] ที่ต้องเติม') : '',
+  );
 }
 
 const pick = <T extends string>(value: unknown, allowed: Record<T, unknown>): T | undefined =>
@@ -162,6 +177,12 @@ export function claimUpdateRows(update: ClaimUpdate, translate: Translate = plai
   if (update.finance) rows.push({ key: 'finance', label: translate('กรณีการเงิน'), value: translate(FINANCE_LABELS[update.finance]) });
   if (update.activity) rows.push({ key: 'activity', label: translate('กิจกรรม'), value: translate(ACTIVITY_LABELS[update.activity]) });
   return rows;
+}
+
+/** The short marks a case shows in the list: its category code (none while unsure) and how many files it holds. */
+export function caseListMarks(item: PacketListItem) {
+  const short: Record<string, string> = { B: 'B', BV: 'BV', emergency: 'ฉุกเฉิน', other: 'อื่น' };
+  return { category: (item.category && short[item.category]) || '', files: item.documentCount };
 }
 
 /** The one line under a case in the list: its category and how much evidence it holds. */
