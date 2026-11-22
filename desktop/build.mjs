@@ -3,6 +3,7 @@ import { build as buildRenderer } from 'vite';
 import { copyFile, cp } from 'node:fs/promises';
 import { parseReceiptCloudConfig } from './electron/receipt-cloud-config.ts';
 import { googleClientBuildConfig } from './electron/google-client.ts';
+import { parseOrganizationAiConfig } from './electron/organization-ai-config.ts';
 // Read only at build time; never write the input JSON to the checkout or pass it to Vite/preload.
 const googleClient = googleClientBuildConfig(
   process.env.STEP_GOOGLE_DESKTOP_CLIENT_JSON,
@@ -13,6 +14,11 @@ const receiptCloud = process.env.STEP_RECEIPT_CLOUD_URL
   ? parseReceiptCloudConfig({ url: process.env.STEP_RECEIPT_CLOUD_URL, model: process.env.STEP_RECEIPT_CLOUD_MODEL })
   : undefined;
 if (process.env.STEP_RECEIPT_CLOUD_URL && !receiptCloud) throw new Error('INVALID_RECEIPT_CLOUD_CONFIG');
+// "AI ขององค์กร": the organization AI gateway's public address; it holds the AI key on its server, never in this build.
+const organizationAi = process.env.STEP_ORGANIZATION_AI_URL
+  ? parseOrganizationAiConfig({ url: process.env.STEP_ORGANIZATION_AI_URL })
+  : undefined;
+if (process.env.STEP_ORGANIZATION_AI_URL && !organizationAi) throw new Error('INVALID_ORGANIZATION_AI_URL');
 await buildRenderer();
 await build({
   entryPoints: ['electron/main.ts'],
@@ -24,6 +30,7 @@ await build({
   define: {
     __STEP_GOOGLE_DESKTOP_CLIENT__: JSON.stringify(googleClient),
     __STEP_RECEIPT_CLOUD__: receiptCloud ? JSON.stringify(receiptCloud) : 'undefined',
+    __STEP_ORGANIZATION_AI__: organizationAi ? JSON.stringify(organizationAi) : 'undefined',
   },
   external: ['electron', '@anthropic-ai/claude-agent-sdk', '@github/copilot-sdk'],
 });

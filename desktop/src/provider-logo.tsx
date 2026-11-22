@@ -10,7 +10,7 @@ try {
 }
 const url = (name: string) => files[`./assets/providers/${name}.svg`];
 // Colour marks are drawn as they are; one-colour marks follow the text colour, so they read in light and dark themes.
-const MONO = new Set(['copilot', 'groq', 'kimi', 'lmstudio', 'ollama', 'openai', 'openrouter', 'xai', 'zai']);
+const MONO = new Set(['copilot', 'groq', 'kimi', 'lmstudio', 'ollama', 'openai', 'openrouter', 'organization', 'xai', 'zai']);
 
 /** The logo key for a connection or a picker choice: a preset's own mark, else the provider's. */
 export const providerLogoKey = (c: { provider?: string; preset?: string }) =>
