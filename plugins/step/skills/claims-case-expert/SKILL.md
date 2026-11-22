@@ -45,7 +45,7 @@ standardVersion: 3
 | เรื่อง | เอกสาร | ทะเบียน |
 | --- | --- | --- |
 | หมวด B1–B12 เพดาน ข้อจำกัดทีม รายงานขอความเห็นชอบ 3 วันทำการ หมวดฉุกเฉิน หมวด C BV รถตู้ วิทยากร ข้อควรระวังยืมเงิน E-Signature | `../../docs/knowledge/afp-operational-circulars.md` ข้อ 3–7 | `afp-operational-circulars` |
-| เหตุผลการเดินทางหมวด BV 5 ส่วน โครงประโยค ตัวอย่างจาก AFP | `docs/knowledge/afp-bv-travel-reason.md` | `afp-bv-travel-reason` |
+| เหตุผลการเดินทางหมวด BV 5 ส่วน โครงประโยค ตัวอย่างจาก AFP | `../../docs/knowledge/afp-bv-travel-reason.md` | `afp-bv-travel-reason` |
 | ยืมเงิน (4.1) เคลียร์เงินยืม 3 กรณี (4.2) สำรองจ่าย ขออนุมัติและขอเบิก (4.3) รายการแบบฟอร์ม FM-AF (ข้อ 5) | `../../docs/knowledge/qp-af-003.md` | `afp-advance-procedure` |
 | จ่ายเงิน ใบสำคัญจ่าย ภาษีหัก ณ ที่จ่าย ค่าพาหนะส่วนตัว | `../../docs/knowledge/qp-af-004.md` | `afp-payment-procedure` |
 | ระเบียบระดับไหนกำกับ (มีแต่ชื่อฉบับ) | `../../docs/knowledge/afp-regulation-hierarchy.md` | `afp-regulation-hierarchy` |

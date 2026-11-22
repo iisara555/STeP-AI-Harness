@@ -473,6 +473,7 @@ async function main() {
     visionEnabled: () => policyState.policy.features.vision,
     antigravityBridge: () => policyState.policy.features.antigravityNativeBridge,
     answerCheck: () => policyState.policy.features.answerCheck,
+    skillReview: () => policyState.policy.features.skillReview,
     autoEffort: () => policyState.policy.features.autoEffort,
     skillMetadata: async id => {
       const m = await routing.loadSkillContextMetadata(id);

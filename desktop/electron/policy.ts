@@ -50,6 +50,7 @@ export const FEATURES = [
   'learningReview',
   'ocrTrial',
   'answerCheck',
+  'skillReview',
   'autoEffort',
   'maintenance',
   'developmentMode',
@@ -251,6 +252,11 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // beyond the documents (owner's decision, 2026-10-18); it runs only for answers grounded in STeP documents, so general
   // questions are not slowed. Each check is one more model call; IT can set it to false.
   answerCheck: true,
+  // Before a Skill-routed answer or draft is shown, one more model call checks it against the Skill's Output and
+  // Guardrails; when something required is missing that the AI can still do, it goes back to work with its tools (at
+  // most two rounds, learned from OpenCode's goal judge). Off by default until a live comparison on the owner's
+  // models shows it helps; each check is one more model call.
+  skillReview: false,
   // When the employee has not picked a reasoning level, a short chat question gets a light level and a large task (a
   // Playbook, plan mode, a long request or many files) a deeper one, within the levels the model offers (electron/effort.ts).
   // The employee's choice always wins. IT can set it to false to always use the model default.
