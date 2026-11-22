@@ -260,7 +260,7 @@ export function AppSidebar({ v }: { v: AppView }) {
               }}
             >
               <Receipt size={17} />
-              <span className="nav-label">{t('ตรวจใบเสร็จ AFP')}</span>
+              <span className="nav-label">{t('ผู้ช่วยเบิกจ่าย')}</span>
               <span className="nav-short" aria-hidden="true">
                 {t('ใบเสร็จ')}
               </span>

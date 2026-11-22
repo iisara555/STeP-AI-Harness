@@ -105,7 +105,7 @@ try {
   const screens = [
     ['07-skills-hub', 'ศูนย์รวม Skill', '.skills-hub'],
     ['08-documents', 'เครื่องมือร่างเอกสาร', '.document-tools'],
-    ['09-receipt', 'ตรวจใบเสร็จ AFP', '.receipt-app'],
+    ['09-receipt', 'ผู้ช่วยเบิกจ่าย', '.receipt-app'],
     ['09b-schedules', 'งานตั้งเวลา', '.schedules'],
   ];
   for (const [name, label, selector] of screens) {

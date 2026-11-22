@@ -24,11 +24,14 @@ import {
   thaiBahtWords,
   formatSatang,
   packetAssessment,
+  packetCategoryTotals,
   type ReceiptPacket,
   type ReceiptVoucher,
 } from '../src/receipt-packet';
+import { CLAIM_CATEGORY_LABELS } from '../src/receipt-compliance';
+import { expenseCodeLabel } from '../src/receipt-workflow';
 import { THAI_DOCUMENT_LANGUAGE } from '../src/thai-typography';
-import { ACTIVITY_LABELS, FINANCE_LABELS, blankEvidenceGuidance, evidenceChecklist, inferActivity } from '../src/afp-evidence';
+import { ACTIVITY_LABELS, FINANCE_LABELS, storedEvidenceGuidance, evidenceChecklist, inferActivity } from '../src/afp-evidence';
 
 const FONT = 'TH Sarabun New';
 export const RECEIPT_VOUCHER_FOOTER = 'FM-AF-014 V.02 วันที่บังคับใช้เอกสาร 1 มิ.ย. 2568 (อายุการจัดเก็บเอกสาร 15 ปี)';
@@ -243,7 +246,7 @@ export function receiptPacketCoverHtml(
   const assessment = packetAssessment(packet),
     total = voucherTotal(packet.voucher);
   const index = packetIndex(packet, coverPages, voucherPages, disbursementPages);
-  const guidance = packet.guidance || blankEvidenceGuidance(),
+  const guidance = storedEvidenceGuidance(packet.guidance),
     context = inferActivity(packet),
     checklist = evidenceChecklist(packet);
   const evidenceStatus = {
@@ -253,9 +256,9 @@ export function receiptPacketCoverHtml(
     missing: 'ยังไม่พบหน้าที่ระบุประเภท',
   };
   const guidanceHtml =
-    context.activity || guidance.finance !== 'unknown' || guidance.extra.some(item => item.label.trim())
-      ? `<h2>รายการตรวจตามบริบท</h2><p>กิจกรรม: ${html(context.activity ? ACTIVITY_LABELS[context.activity] : 'ยังไม่แน่ใจ')} · กรณีการเงิน: ${html(FINANCE_LABELS[guidance.finance])}</p>
-       <ul>${checklist.map(item => `<li>${html(item.label)} — ${evidenceStatus[item.status]} (${item.source === 'need-source' ? 'ข้อเสนอ รอยืนยัน' : item.source === 'qp-af-003' ? 'QP-AF-003 ข้อ 4.2' : 'แนวปฏิบัติ AFP หมวด B'})</li>`).join('')}
+    context.activity || guidance.finance !== 'unknown' || guidance.category !== 'unsure' || guidance.extra.some(item => item.label.trim())
+      ? `<h2>รายการตรวจตามบริบท</h2><p>หมวด: ${html(CLAIM_CATEGORY_LABELS[guidance.category])} · กิจกรรม: ${html(context.activity ? ACTIVITY_LABELS[context.activity] : 'ยังไม่แน่ใจ')} · กรณีการเงิน: ${html(FINANCE_LABELS[guidance.finance])}</p>
+       <ul>${checklist.map(item => `<li>${html(item.label)} — ${evidenceStatus[item.status]} (${item.source === 'need-source' ? 'ข้อเสนอ รอยืนยัน' : item.source === 'qp-af-003' ? 'QP-AF-003 ข้อ 4.2' : item.source === 'qp-af-003-reserve' ? 'QP-AF-003 ข้อ 4.3' : 'แนวปฏิบัติ AFP หมวด B'})</li>`).join('')}
        ${guidance.extra
          .filter(item => item.label.trim())
          .map(
@@ -265,6 +268,15 @@ export function receiptPacketCoverHtml(
          .join('')}</ul>
        <p class="notice">รายการนี้เป็นข้อช่วยตรวจ ไม่ยืนยันว่าเอกสารครบหรือได้รับอนุมัติ ให้ AFP ตรวจข้อกำหนดตามกรณี</p>`
       : '';
+  const totals = packetCategoryTotals(packet);
+  const totalsHtml = totals.length
+    ? `<h2>ยอดรวมตามหมวดย่อย</h2><ul>${totals
+        .map(
+          total =>
+            `<li>${html(total.category === 'unsure' ? 'ยังไม่ระบุหมวด' : total.key === 'B?' ? 'หมวด B ยังไม่ระบุหมวดย่อย' : total.category === 'B' ? expenseCodeLabel(total.code) : CLAIM_CATEGORY_LABELS[total.category])} — ${total.receipts} ใบ ${formatSatang(total.total)} บาท${total.status === 'over' ? ' (เกินเพดาน 10,000 บาท)' : total.status === 'check' ? ' (รวมเกิน 10,000 บาท โปรดตรวจการแยก)' : total.status === 'unset' ? ' (ยังไม่ได้เทียบเพดาน)' : ''}${total.unreadable ? ` · อ่านยอดไม่ได้ ${total.unreadable} ใบ` : ''}</li>`,
+        )
+        .join('')}</ul>`
+    : '';
   return printDocument(
     `<h1>สรุปชุดเอกสารเบิกจ่าย</h1><p><b>เรื่อง</b> ${html(packet.title)}</p>
     <p><b>โครงการ</b> ${html(packet.project || 'ยังไม่ระบุ')}</p><p><b>วัตถุประสงค์</b> ${multiline(packet.purpose || 'ยังไม่ระบุ')}</p>
@@ -272,6 +284,7 @@ export function receiptPacketCoverHtml(
     <p><b>ผลตรวจข้อมูล</b> ${assessment.status === 'prepared-for-afp' ? 'ข้อมูลที่ระบุได้รับการตรวจเทียบแล้ว — รอ AFP ตรวจ' : 'ร่าง — ยังมีข้อมูลหรือหลักฐานรอตรวจ'}</p>
     <p class="notice">เป็นการจัดชุดและตรวจข้อมูลเบื้องต้น ไม่ใช่การยืนยันสิทธิ งบประมาณ หรือการอนุมัติจ่ายเงิน เอกสารที่ต้องใช้ขึ้นกับประเภทค่าใช้จ่ายและข้อกำหนดปัจจุบันของ AFP</p>
     ${guidanceHtml}
+    ${totalsHtml}
     ${
       packet.includeVoucher
         ? `<p>ร่างใบสำคัญรับเงิน ${FM014_REFERENCE.code} อยู่หน้า ${coverPages + 1}${voucherPages > 1 ? `–${coverPages + voucherPages}` : ''}

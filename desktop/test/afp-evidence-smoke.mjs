@@ -23,7 +23,7 @@ async function launch(first = false) {
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1500, height: 1050 });
   if (first) await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
-  await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
+  await page.getByRole('button', { name: /ผู้ช่วยเบิกจ่าย/ }).click();
   await page.getByRole('button', { name: 'ชุดเอกสารเบิกจ่าย', exact: true }).click();
   return page;
 }
@@ -32,7 +32,7 @@ try {
   await page.addStyleTag({ content: '*,*::before,*::after{animation:none!important;transition:none!important}' });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
-  await page.getByRole('button', { name: 'สร้างชุดใหม่', exact: true }).click();
+  await page.getByRole('button', { name: 'เรื่องใหม่', exact: true }).click();
   await page.getByLabel('ชื่อเรื่องเบิก', { exact: true }).fill('อบรมวิทยากร ข้อมูลสมมติ');
   await page.getByLabel('วัตถุประสงค์ของชุดเอกสาร', { exact: true }).fill('กิจกรรมทดสอบระบบเท่านั้น');
   assert.equal(await page.locator('.packet-steps').evaluate(element => getComputedStyle(element).flexDirection), 'row');
@@ -52,7 +52,15 @@ try {
   await expect(panel).toContainText('ต้องยืนยันความจำเป็นกับ AFP');
   await panel.getByText('ดูเหตุผลและที่มา', { exact: true }).click();
   await expect(panel).toContainText('ข้อเสนอให้ตรวจเพิ่ม');
-  await panel.getByText('ปรับกิจกรรมและกรณีการเงิน', { exact: true }).click();
+  await panel.getByText('ปรับหมวด กิจกรรม และกรณีการเงิน', { exact: true }).click();
+  await page.getByRole('combobox', { name: 'กรณีการเงินที่ทราบ', exact: true }).selectOption('reserve_claim');
+  await expect(panel).toContainText('QP-AF-003 ข้อ 4.3 · สำรองเงินจ่ายล่วงหน้า');
+  await expect(panel.locator('.evidence-list')).toContainText('ข้อเสนอโครงการ FM-AF-003');
+  await expect(panel.locator('.evidence-list')).not.toContainText('สัญญายืมเงิน FM-AF-001');
+  await page.getByRole('combobox', { name: 'หมวดค่าใช้จ่าย', exact: true }).selectOption('emergency');
+  await expect(panel).toContainText('หมวด: หมวดฉุกเฉิน · กรณีการเงิน: สำรองจ่ายเอง — ขอเบิกคืน');
+  await expect(panel).toContainText('5 วันทำการ');
+  await page.getByRole('combobox', { name: 'หมวดค่าใช้จ่าย', exact: true }).selectOption('B');
   await page.getByRole('combobox', { name: 'กรณีการเงินที่ทราบ', exact: true }).selectOption('b_clearance');
   await expect(panel).toContainText('แนวปฏิบัติ AFP หมวด B');
   await panel.getByRole('heading', { name: 'แนะนำเอกสารตามกิจกรรม', exact: true }).scrollIntoViewIfNeeded();
@@ -112,8 +120,9 @@ try {
   page = await launch();
   await page.getByRole('button', { name: 'หลักฐาน', exact: true }).click();
   const restored = page.getByRole('region', { name: 'แนะนำเอกสารตามกิจกรรม' });
-  await restored.getByText('ปรับกิจกรรมและกรณีการเงิน', { exact: true }).click();
+  await restored.getByText('ปรับหมวด กิจกรรม และกรณีการเงิน', { exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'กรณีการเงินที่ทราบ', exact: true })).toHaveValue('b_clearance');
+  await expect(page.getByRole('combobox', { name: 'หมวดค่าใช้จ่าย', exact: true })).toHaveValue('B');
   await expect(restored).toContainText('พบหน้าที่ตรวจเทียบแล้ว');
   await restored.getByText('รายการอื่นที่ต้องการตรวจ (1)', { exact: true }).click();
   await expect(restored.getByLabel('รายการเพิ่มเติม 1', { exact: true })).toHaveValue('กำหนดการตัวอย่าง');

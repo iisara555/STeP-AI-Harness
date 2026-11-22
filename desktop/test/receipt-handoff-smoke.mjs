@@ -80,8 +80,8 @@ try {
   );
   await page.reload();
   // The sidebar entry carries its "ทดลอง" badge in its name while the window is wide enough to show it.
-  await page.getByRole('button', { name: /^ตรวจใบเสร็จ AFP/ }).click();
-  await expect(page.getByRole('heading', { name: 'ตรวจใบเสร็จ AFP' })).toBeVisible();
+  await page.getByRole('button', { name: /^ผู้ช่วยเบิกจ่าย/ }).click();
+  await expect(page.getByRole('heading', { name: 'ผู้ช่วยเบิกจ่าย' })).toBeVisible();
   await page.getByRole('button', { name: 'เลือกใบเสร็จ' }).click();
   await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
   await expect(page.getByLabel('ยอดรวมที่ชำระ')).toHaveValue('107.00');
@@ -89,7 +89,7 @@ try {
   const sourcePane = page.getByRole('region', { name: 'ใบเสร็จต้นฉบับ' });
   const reviewPane = page.getByRole('region', { name: 'ข้อมูลที่ต้องตรวจ' });
   await expect(reviewPane.getByRole('heading', { level: 2 })).toHaveText([
-    'ต้องแก้หรือเติมข้อมูลก่อนใช้ประกอบการเบิก',
+    'ต้องเตรียมเอกสารหรือยืนยันเงื่อนไขเพิ่มเติม',
     'ทำอะไรต่อ',
     'ดูองค์ประกอบพื้นฐานใบเสร็จ',
   ]);
@@ -150,14 +150,14 @@ try {
     assert.equal(source.ocr.provenance, 'EXTRACTED_UNVERIFIED');
   }
   assert.equal(sent[2].consent, 'synthetic-consent');
-  await page.getByRole('button', { name: /^ตรวจใบเสร็จ AFP/ }).click();
+  await page.getByRole('button', { name: /^ผู้ช่วยเบิกจ่าย/ }).click();
   await page.getByRole('button', { name: 'ชุดเอกสารเบิกจ่าย', exact: true }).click();
-  await page.getByRole('button', { name: 'สร้างชุดใหม่', exact: true }).click();
+  await page.getByRole('button', { name: 'เรื่องใหม่', exact: true }).click();
   await page.getByLabel('ชื่อเรื่องเบิก', { exact: true }).fill('อบรม SECRET_PERSON 1234567890123');
   await page.getByLabel('โครงการหรือหน่วยงาน', { exact: true }).fill('SECRET_PROJECT');
   await page.getByLabel('วัตถุประสงค์ของชุดเอกสาร', { exact: true }).fill('SECRET_PURPOSE');
   await page.getByRole('button', { name: 'หลักฐาน', exact: true }).click();
-  await page.getByText('ปรับกิจกรรมและกรณีการเงิน', { exact: true }).click();
+  await page.getByText('ปรับหมวด กิจกรรม และกรณีการเงิน', { exact: true }).click();
   await page.getByRole('combobox', { name: 'กรณีการเงินที่ทราบ', exact: true }).selectOption('b_clearance');
   const guidance = page.getByRole('region', { name: 'แนะนำเอกสารตามกิจกรรม' });
   await guidance.getByText('รายการอื่นที่ต้องการตรวจ (0)', { exact: true }).click();
@@ -208,7 +208,8 @@ try {
     globalThis.receiptSendFixture.fail = true;
   });
   await sendContext.click();
-  await expect(page.locator('.packet-error')).toBeVisible();
+  // Asking from the evidence guidance goes to the case's own chat; a failed send is said in a toast and the text stays.
+  await expect(page.locator('.toast.error')).toBeVisible();
   await expect(contextInput).toHaveValue('อบรมหนึ่งวัน มีวิทยากรและอาหาร โทร 081-234-5678');
   await app.evaluate(() => {
     globalThis.receiptSendFixture.fail = false;
@@ -221,7 +222,8 @@ try {
   assert.equal(allSent.length, 6);
   for (const request of allSent.slice(3)) {
     assert.deepEqual(request.attachments, []);
-    assert.ok(!request.sourceText);
+    // The case context travels as fixed labels only.
+    assert.match(request.sourceText, /^ข้อมูลเรื่องเบิกในแอป/);
     assert.equal(request.autoImage, false);
     assert.match(request.text, /ประเภทกิจกรรม: อบรม \/ workshop/);
     assert.match(request.text, /วิทยากรและอาหาร/);

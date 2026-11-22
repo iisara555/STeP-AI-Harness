@@ -216,7 +216,7 @@ try {
   await expect(page.locator('.profile')).toContainText('Synthetic latest assistant');
 
   await configure({ fakeVision: true });
-  await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
+  await page.getByRole('button', { name: /ผู้ช่วยเบิกจ่าย/ }).click();
   await page.getByRole('button', { name: 'เลือกใบเสร็จ', exact: true }).click();
   await pending('vision');
   await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();

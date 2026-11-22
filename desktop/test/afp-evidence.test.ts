@@ -7,7 +7,15 @@ import { PDFDocument } from 'pdf-lib';
 import { Store } from '../electron/store';
 import { ReceiptPackets } from '../electron/receipt-packets';
 import { receiptPacketCoverHtml } from '../electron/receipt-voucher';
-import { blankEvidenceGuidance, evidenceAiPrompt, evidenceChecklist, inferActivity, suggestEvidenceKind } from '../src/afp-evidence';
+import {
+  blankEvidenceGuidance,
+  evidenceAiPrompt,
+  evidenceChecklist,
+  inferActivity,
+  storedEvidenceGuidance,
+  suggestEvidenceKind,
+  suggestPacketKind,
+} from '../src/afp-evidence';
 import { createReceiptPacket, editReceiptPacket, packetAssessment } from '../src/receipt-packet';
 import { setLanguage, t, loadEnglish } from '../src/i18n';
 
@@ -83,6 +91,14 @@ test('a filename is only a hint; classification, selected pages and human review
   const status = () => evidenceChecklist(packet).find(item => item.id === 'attendance')?.status;
   assert.equal(status(), 'suggested');
   assert.equal(suggestEvidenceKind('FM-AF-015-FM-AF-035.pdf'), null);
+  // Payment documents are suggested from the name too; a mixed name suggests nothing.
+  assert.equal(suggestPacketKind('ใบเสร็จน้ำดื่ม-1.pdf'), 'receipt');
+  assert.equal(suggestPacketKind('ใบเสร็จรับเงิน/ใบกำกับภาษี ร้านป้าย.pdf'), 'tax_invoice');
+  assert.equal(suggestPacketKind('ใบแจ้งหนี้ร้านป้าย.pdf'), 'invoice_or_quotation');
+  assert.equal(suggestPacketKind('สลิปโอนเงิน.jpg'), 'transfer_slip');
+  assert.equal(suggestPacketKind('FM-AF-015 ใบเซ็นชื่อประชุม.pdf'), 'attendance');
+  assert.equal(suggestPacketKind('ใบเสร็จและใบเซ็นชื่อ.pdf'), null);
+  assert.equal(suggestPacketKind('scan001.pdf'), null);
   packet.documents[0].pages[0].kind = 'attendance';
   assert.equal(status(), 'unchecked');
   packet.documents[0].pages[0].checked = true;
@@ -127,11 +143,13 @@ test('English handoff translates the selected finance scenario and preserves rev
   const packet = base();
   packet.title = 'อบรม';
   packet.guidance.finance = 'b_clearance';
+  packet.guidance.category = 'B';
   packet.guidance.speaker = 'no';
   setLanguage('en');
   try {
     const prompt = evidenceAiPrompt(packet, t, 'One-day workshop with meals');
-    assert.match(prompt, /Category B — advance settlement/);
+    assert.match(prompt, /Advance settlement/);
+    assert.match(prompt, /Expense category: /);
     assert.match(prompt, /the employee selected no \/ not relevant/);
     assert.match(prompt, /One-day workshop with meals/);
     assert.doesNotMatch(prompt, /[\u0e00-\u0e7f]/);
@@ -208,4 +226,43 @@ test('changing selected evidence or its review state invalidates a previous disb
   input.documents[0].pages[0].included = true;
   input.documents[0].pages[0].checked = false;
   assert.equal(editReceiptPacket(packet, input, now).disbursement.checked, false);
+});
+
+test('paying with my own money follows QP-AF-003 section 4.3 and never asks for a loan agreement', () => {
+  const packet = base();
+  packet.guidance.finance = 'reserve_approval';
+  let list = evidenceChecklist(packet);
+  assert.deepEqual(
+    list.map(item => item.id),
+    ['request', 'proposal'],
+  );
+  assert.ok(list.every(item => item.source === 'qp-af-003-reserve'));
+  packet.guidance.finance = 'reserve_claim';
+  packet.guidance.category = 'B';
+  list = evidenceChecklist(packet);
+  assert.deepEqual(
+    list.map(item => item.id),
+    ['request', 'proposal', 'receipt', 'recipient', 'approval'],
+  );
+  assert.ok(!list.some(item => item.id === 'loan' || item.kinds.includes('loan_agreement')));
+  assert.match(list.find(item => item.id === 'approval')!.reason, /3 วันทำการ/);
+  packet.guidance.category = 'emergency';
+  assert.match(evidenceChecklist(packet).find(item => item.id === 'approval')!.reason, /5 วันทำการ/);
+  packet.guidance.category = 'other';
+  assert.ok(!evidenceChecklist(packet).some(item => item.id === 'approval'));
+  assert.match(receiptPacketCoverHtml(packet, 1, 0, ''), /QP-AF-003 ข้อ 4\.3/);
+});
+
+test('packets saved before the category existed read their หมวด B finance choice as category B', () => {
+  assert.deepEqual(storedEvidenceGuidance(undefined), blankEvidenceGuidance());
+  const legacy = { activity: 'auto', finance: 'b_clearance', speaker: 'auto', extra: [] } as never;
+  assert.equal(storedEvidenceGuidance(legacy).category, 'B');
+  assert.equal(storedEvidenceGuidance({ ...blankEvidenceGuidance(), finance: 'reserve_claim' }).category, 'unsure');
+  assert.equal(storedEvidenceGuidance({ ...blankEvidenceGuidance(), category: 'nonsense' as never }).category, 'unsure');
+  const packet = base();
+  const input = structuredClone(packet);
+  input.guidance.category = 'BV';
+  assert.equal(editReceiptPacket(packet, input, now).guidance.category, 'BV');
+  input.guidance.category = 'C' as never;
+  assert.throws(() => editReceiptPacket(packet, input, now), /INVALID_INPUT/);
 });

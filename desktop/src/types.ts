@@ -323,6 +323,8 @@ export type Session = {
   model?: string;
   effort?: string;
   pinned?: boolean;
+  /** The disbursement case (receipt packet) this chat belongs to; such chats live in the claims assistant, not the chat list. */
+  claimPacketId?: string;
   usage?: Usage;
   skill?: string;
   allowedIdentifiers?: string[];
@@ -605,6 +607,7 @@ export type RunEvent = {
 export interface DesktopAPI {
   call(method: string, input?: unknown): Promise<any>;
   onEvent(callback: (event: RunEvent) => void): () => void;
+  filePath?(file: File): string;
 }
 declare global {
   interface Window {

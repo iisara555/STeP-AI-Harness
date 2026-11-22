@@ -130,7 +130,9 @@
               textKind: line.text_kind || "uncertain",
               fusionCandidates: Array.isArray(line.fusion_candidates) ? line.fusion_candidates : [],
               tileCandidates: Array.isArray(line.tile_candidates) ? line.tile_candidates : [],
-              engine: "paddle",
+              crosscheckEngine: line.crosscheck_engine || "easyocr",
+              // Typhoon OCR reads the page; PaddleOCR checks its numbers and may add a line Typhoon skipped.
+              engine: line.engine === "typhoon" || line.engine === "paddle" ? line.engine : "paddle",
             });
           }
         }
@@ -166,7 +168,7 @@
           usable: record.tesseractStatus && record.tesseractStatus !== "error",
         },
         {
-          engine: "easyocr",
+          engine: record.crosscheckEngine || "easyocr",
           text: record.crosscheckCandidate || "",
           confidence: record.crosscheckConfidence ?? null,
           usable: Boolean(record.crosscheckCandidate),

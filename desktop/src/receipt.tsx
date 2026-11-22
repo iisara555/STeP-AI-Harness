@@ -4,6 +4,7 @@ import {
   DOCUMENT_TYPES,
   DOCUMENT_TYPE_LABELS,
   classifyFromText,
+  CLAIM_CATEGORY_LABELS as CATEGORY_LABELS,
   complianceChecklist,
   receiptCompleteness,
   type ClaimCategory,
@@ -33,6 +34,7 @@ import { isReceiptGeminiApi, receiptGeminiConnection } from '../electron/receipt
 import { explainError, connectionName } from './messages';
 import type { Connection } from './types';
 import { ReceiptPacketApp } from './receipt-packet-app';
+import type { CaseChatApi } from './claim-case-chat';
 
 type MappingCandidate = {
   value: string;
@@ -109,6 +111,9 @@ type OcrStatus = {
   crosscheck: boolean;
   handwriting: boolean;
   tesseract: boolean;
+  /** Typhoon OCR V2 reads the page and PaddleOCR checks its numbers. */
+  typhoon?: boolean;
+  typhoonSupported?: boolean;
   installed: boolean;
   folder: string;
   installing?: boolean;
@@ -121,13 +126,6 @@ type OcrStatus = {
   cloud?: { model: string; accounts: { id: string; label: string }[] };
 };
 type Vision = ReceiptVisionResult & { model: string; pagePreviews?: string[] };
-const CATEGORY_LABELS: Record<ClaimCategory, string> = {
-  unsure: 'ยังไม่แน่ใจ',
-  B: 'หมวด B (B1–B12)',
-  BV: 'หมวด BV ค่าพาหนะ',
-  emergency: 'หมวดฉุกเฉิน',
-  other: 'หมวดอื่น',
-};
 const SOURCE_LABELS: Record<ComplianceItem['source'], string> = {
   afp: 'AFP แจ้งเวียน',
   general: 'หลักทั่วไป · ยืนยันกับ AFP',
@@ -201,18 +199,21 @@ export function ReceiptApp({
   connections = [],
   chooseConnection,
   openAiSettings,
+  caseChat,
 }: {
   call: (method: string, input?: unknown) => Promise<any>;
   onError: (error: unknown) => void;
   notify: (text: string, tone?: 'info' | 'success' | 'error', action?: { label: string; run: () => unknown }) => void;
   handoff: (text: string, sourceText: string, allowIds?: string[]) => Promise<void>;
-  onEvent: (callback: (event: { type: string; text?: string }) => void) => () => void;
+  onEvent: (callback: (event: { type: string; text?: string; sessionId?: string; count?: number }) => void) => () => void;
   connectionId?: string;
   /** Whether a read or check is running, so the sidebar can show it while another page is open. */
   onBusy?: (busy: boolean) => void;
   connections?: Connection[];
   chooseConnection?: (id: string) => void;
   openAiSettings?: () => void;
+  /** The chat inside each disbursement case; it answers there and never opens the main chat. */
+  caseChat?: Omit<CaseChatApi, 'aiName' | 'openAiSettings'>;
 }) {
   const [preferredOcrId, setPreferredOcrId] = useState('');
   const [receiptMode, setReceiptMode] = useState<'review' | 'packet'>('review');
@@ -684,6 +685,8 @@ export function ReceiptApp({
   const cloudReady = Boolean(status?.cloud && status.vision && cloudAccountId);
   const apiReady = status?.geminiApi && status.vision && Boolean(geminiOcr);
   const usableConnectionId = connections.find(c => c.id === connectionId && c.ready)?.id;
+  const caseConnection = connections.find(c => c.id === usableConnectionId);
+  const caseAiName = caseConnection ? [connectionName(caseConnection), caseConnection.model].filter(Boolean).join(' · ') : '';
   const canPick = Boolean(ready || apiReady || cloudReady || (!status?.cloud && status?.vision && usableConnectionId));
   // Why "เลือกใบเสร็จ" is grey, said right under it instead of only further down the page.
   const pickReason =
@@ -726,7 +729,7 @@ export function ReceiptApp({
   return (
     <div className="receipt-app">
       <header className="receipt-heading">
-        <h1 className="sr-only">{t('ตรวจใบเสร็จ AFP')}</h1>
+        <h1 className="sr-only">{t('ผู้ช่วยเบิกจ่าย')}</h1>
         <nav className="receipt-modes" aria-label={t('งานใบเสร็จและชุดเอกสาร')}>
           <button aria-pressed={receiptMode === 'review'} onClick={() => setReceiptMode('review')}>
             {t('ตรวจใบเสร็จ')}
@@ -740,7 +743,14 @@ export function ReceiptApp({
         active={receiptMode === 'packet'}
         call={call}
         notify={notify}
-        onAskAi={text => handoff(text, '')}
+        onEvent={onEvent}
+        chat={{
+          sessions: caseChat?.sessions || [],
+          open: caseChat?.open || (async () => null),
+          send: caseChat?.send || (async () => false),
+          aiName: caseChat ? caseAiName : '',
+          openAiSettings,
+        }}
         review={
           doc?.sourceToken
             ? {
@@ -751,6 +761,9 @@ export function ReceiptApp({
                 description: expenseDescription,
                 total: values.total || '',
                 kind: docType,
+                category,
+                // The suggested sub-category only travels when it belongs to the category the person kept.
+                code: categorySuggestion.category === category ? categorySuggestion.code : '',
               }
             : undefined
         }
@@ -872,7 +885,11 @@ export function ReceiptApp({
             onClick={() => void run('read', read)}
           >
             {busy === 'read' ? <LoaderCircle size={16} className="spin" /> : <FileSearch size={16} />}
-            {busy === 'read' ? t('กำลังอ่านใบเสร็จ… ครั้งแรกอาจใช้ 1–2 นาที') : t('เลือกใบเสร็จ')}
+            {busy === 'read'
+              ? status?.typhoon
+                ? t('กำลังอ่านใบเสร็จ… ราว 1 นาทีต่อหน้า')
+                : t('กำลังอ่านใบเสร็จ… ครั้งแรกอาจใช้ 1–2 นาที')
+              : t('เลือกใบเสร็จ')}
           </button>
           {pickReason && (
             <p id="receipt-pick-reason" className="small receipt-pick-reason">
@@ -958,7 +975,9 @@ export function ReceiptApp({
                     : status.geminiApi
                       ? t('นโยบายยังไม่อนุญาตให้ส่งภาพใบเสร็จ')
                       : ready
-                        ? t('OCR ในเครื่องพร้อมใช้')
+                        ? status.typhoon
+                          ? t('OCR ในเครื่องพร้อมใช้ · Typhoon')
+                          : t('OCR ในเครื่องพร้อมใช้')
                         : status.installed
                           ? t('บริการ OCR ในเครื่องยังไม่เปิด')
                           : t('ยังไม่ได้ติดตั้ง OCR ในเครื่องนี้')}
@@ -967,6 +986,33 @@ export function ReceiptApp({
               <RefreshCw size={15} />
             </button>
           </div>
+          {/* Typhoon OCR is a further, optional download: offered once the local OCR runs, gone once it is in place. */}
+          {ready && !status?.typhoon && status?.typhoonSupported && !status.geminiApi && !status.cloud && (
+            <>
+              <button
+                className="quiet"
+                disabled={Boolean(busy)}
+                onClick={() =>
+                  void run('typhoon', async () => {
+                    setInstallProgress(t('กำลังเตรียม Typhoon OCR'));
+                    try {
+                      setStatus(await call('ocrTyphoonInstall', { connectionId: readingConnectionId }));
+                    } finally {
+                      setInstallProgress('');
+                    }
+                  })
+                }
+              >
+                {busy === 'typhoon' ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />}
+                {t('อ่านภาษาไทยแม่นขึ้นด้วย Typhoon OCR · ~1 GB')}
+              </button>
+              {busy === 'typhoon' && (
+                <p role="status" className="small muted">
+                  {installProgress.replace(/^STEP\s*/, '')}
+                </p>
+              )}
+            </>
+          )}
           {/* One quiet paragraph for every note that applies, instead of a stack of small lines. */}
           {(() => {
             const notes: ReactNode[] = [];
@@ -1007,16 +1053,14 @@ export function ReceiptApp({
               </p>
             )}
             <section className="receipt-review-section" aria-labelledby="receipt-fixes-title">
-              <h2 id="receipt-fixes-title">{t('ต้องแก้หรือเติมข้อมูลก่อนใช้ประกอบการเบิก')}</h2>
+              {/* The heading is the receipt's state, so no second line repeats it. */}
+              <h2 id="receipt-fixes-title" aria-live="polite">
+                {doc ? assessmentTitles[assessment.status] : t('ต้องแก้หรือเติมข้อมูลก่อนใช้ประกอบการเบิก')}
+              </h2>
               {!doc ? (
                 <p className="muted">{t('เลือกใบเสร็จด้านซ้าย แล้วระบบจะแสดงจุดที่ต้องตรวจ')}</p>
               ) : (
                 <>
-                  {assessment.status !== 'needs-correction' && (
-                    <p className="receipt-assessment" role="status">
-                      {assessmentTitles[assessment.status]}
-                    </p>
-                  )}
                   {corrections.length > 0 && (
                     <ul className="receipt-corrections">
                       {corrections.map(text => (
