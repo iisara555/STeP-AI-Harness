@@ -24,6 +24,8 @@ import { suggestPacketKind } from './afp-evidence';
 import { ClaimCaseChat, type CaseChatApi } from './claim-case-chat';
 import { caseContext, caseListStatus } from './claim-case';
 import { applyReadings, type ReadingBatch, type ReadingItem, type SourceReading } from './evidence-reading';
+import { BV_TEMPLATE } from './bv-travel-reason';
+import { BvReasonExportWarning, BvReasonHint } from './bv-reason-note';
 const DROPPABLE = /\.(pdf|png|jpe?g)$/i;
 const hasFiles = (event: React.DragEvent) => Array.from(event.dataTransfer?.types || []).includes('Files');
 
@@ -345,6 +347,8 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
       {t(label)}
     </option>
   ));
+  // A BV case's purpose is the travel reason AFP reads for the van-hire approval report (docs/knowledge/afp-bv-travel-reason.md).
+  const bv = packet?.guidance.category === 'BV';
   const field = (label: string, key: 'title' | 'project' | 'purpose') => (
     <label>
       {t(label)}
@@ -352,7 +356,9 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
         <textarea
           value={packet![key]}
           maxLength={1200}
-          rows={2}
+          rows={bv ? 3 : 2}
+          placeholder={bv ? t(BV_TEMPLATE) : undefined}
+          aria-describedby={bv ? 'bv-reason-hint' : undefined}
           onChange={event => mutate(value => ({ ...value, [key]: event.target.value }))}
         />
       ) : (
@@ -494,7 +500,8 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
                   </h2>
                   {field('ชื่อเรื่องเบิก', 'title')}
                   {field('โครงการหรือหน่วยงาน', 'project')}
-                  {field('วัตถุประสงค์ของชุดเอกสาร', 'purpose')}
+                  {field(bv ? 'เหตุผลการเดินทาง (วัตถุประสงค์)' : 'วัตถุประสงค์ของชุดเอกสาร', 'purpose')}
+                  {bv && <BvReasonHint id="bv-reason-hint" text={packet.purpose} />}
                   <label>
                     {t('ประเภทงาน')}
                     <select
@@ -902,6 +909,7 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
                     onExport={exportFile}
                   />
                 </div>
+                {bv && <BvReasonExportWarning text={packet.purpose} onFix={() => goToStep('details')} />}
                 <div className="packet-export">
                   <div>
                     <strong>

@@ -6,6 +6,7 @@
 import { ACTIVITY_LABELS, evidenceChecklist, inferActivity, type Activity, type FinanceChoice } from './afp-evidence';
 import { addWorkingDays, parseReceiptDate, thaiDate, type ClaimCategory } from './receipt-compliance';
 import { createReceiptPacket, formatSatang, moneySatang, type ReceiptPacket } from './receipt-packet';
+import { BV_SOURCE, checkBvReason, draftBvReason, type BvPart } from './bv-travel-reason';
 
 export type Note = { text: string; source: string };
 type ExpenseRule = {
@@ -132,7 +133,17 @@ export const EXPENSE_TYPES = {
 } satisfies Record<string, ExpenseRule>;
 export type ExpenseType = keyof typeof EXPENSE_TYPES;
 
-export type QuestionId = 'expense' | 'activity' | 'paid' | 'funding' | 'amount' | 'date';
+/** The five parts of a BV travel reason, asked only for a vehicle hire (docs/knowledge/afp-bv-travel-reason.md). */
+export type BvQuestionId = 'bvWho' | 'bvWhat' | 'bvWhen' | 'bvRoute' | 'bvActivity';
+export type QuestionId = 'expense' | 'activity' | 'paid' | 'funding' | 'amount' | 'date' | BvQuestionId;
+const BV_QUESTIONS: Record<BvQuestionId, BvPart> = {
+  bvWho: 'who',
+  bvWhat: 'what',
+  bvWhen: 'when',
+  bvRoute: 'route',
+  bvActivity: 'activity',
+};
+const isBv = (id: QuestionId): id is BvQuestionId => Object.hasOwn(BV_QUESTIONS, id);
 export type ClaimAnswers = {
   expense?: ExpenseType;
   activity?: Activity | 'none';
@@ -142,7 +153,7 @@ export type ClaimAnswers = {
   amount?: number | null;
   /** The receipt date as printed, or '' when there is no receipt yet. */
   date?: string;
-};
+} & Partial<Record<BvQuestionId, string>>;
 export type Option = { value: string; label: string };
 export type Question = {
   id: QuestionId;
@@ -151,11 +162,26 @@ export type Question = {
   options: Option[];
   recommended?: { value: string; reason: string };
   input: 'text' | 'amount' | 'date';
+  /** A short sample answer shown under the question. */
+  example?: string;
 };
 
-const ORDER: QuestionId[] = ['expense', 'activity', 'paid', 'funding', 'amount', 'date'];
+const ORDER: QuestionId[] = [
+  'expense',
+  'activity',
+  'paid',
+  'funding',
+  'amount',
+  'date',
+  'bvWho',
+  'bvWhat',
+  'bvWhen',
+  'bvRoute',
+  'bvActivity',
+];
 const answered = (answers: ClaimAnswers, id: QuestionId) => answers[id] !== undefined;
-const relevant = (answers: ClaimAnswers, id: QuestionId) => id !== 'date' || answers.paid === true;
+const relevant = (answers: ClaimAnswers, id: QuestionId) =>
+  isBv(id) ? answers.expense === 'vehicle' : id !== 'date' || answers.paid === true;
 
 export function nextQuestion(answers: ClaimAnswers): QuestionId | null {
   return ORDER.find(id => relevant(answers, id) && !answered(answers, id)) || null;
@@ -188,7 +214,7 @@ const ACTIVITY_OPTIONS: Option[] = [
 export function questionView(
   id: QuestionId,
   answers: ClaimAnswers,
-  packet?: Pick<ReceiptPacket, 'title' | 'purpose' | 'guidance'>,
+  packet?: Pick<ReceiptPacket, 'title' | 'purpose' | 'guidance'> & Partial<Pick<ReceiptPacket, 'project'>>,
 ): Question {
   const context = packet ? `${packet.title}\n${packet.purpose}` : '';
   switch (id) {
@@ -269,13 +295,58 @@ export function questionView(
         options: [{ value: 'none', label: 'ยังไม่มีใบเสร็จ' }],
         input: 'date',
       };
+    default:
+      return bvQuestion(id, packet);
   }
+}
+
+const BV_WHY: Note = {
+  text: 'AFP ขอให้เหตุผลการเดินทางหมวด BV ครบ 5 ส่วน ใคร ทำอะไร เมื่อไร จากไหนไปไหน เพื่อกิจกรรมอะไร เพื่อประกอบรายงานขอความเห็นชอบจ้างเหมารถตู้ตาม ว 119 เหตุผลสั้น ๆ เช่น "รับวิทยากร" มักถูกส่งกลับแก้',
+  source: BV_SOURCE,
+};
+const UNKNOWN: Option = { value: 'unknown', label: 'ยังไม่ทราบ' };
+const PROJECT_LIMIT = 120;
+
+function bvQuestion(id: BvQuestionId, packet?: Partial<Pick<ReceiptPacket, 'project'>>): Question {
+  const base = { id, why: BV_WHY, input: 'text' as const };
+  if (id === 'bvWho')
+    return {
+      ...base,
+      text: 'เหตุผลการเดินทาง: ใครเดินทาง',
+      options: ['วิทยากร', 'ผู้เข้าร่วมกิจกรรม', 'บุคลากรอุทยานวิทยาศาสตร์ฯ'].map(label => ({ value: label, label })),
+      example: 'พิมพ์เองได้ เช่น คณะผู้ประกอบการ 12 คน',
+    };
+  if (id === 'bvWhat')
+    return {
+      ...base,
+      text: 'ใช้รถไปทำอะไร',
+      options: ['รับ', 'ส่ง', 'รับ-ส่ง', 'อำนวยความสะดวกในการเดินทาง'].map(label => ({ value: label, label })),
+    };
+  if (id === 'bvWhen')
+    return { ...base, text: 'เดินทางวันไหน', options: [UNKNOWN], example: 'เช่น 9 ก.ย. 2569 หรือ ระหว่างวันที่ 4–6 กันยายน 2569' };
+  if (id === 'bvRoute')
+    return {
+      ...base,
+      text: 'จากไหนไปไหน',
+      options: [UNKNOWN],
+      example: 'เช่น จากท่าอากาศยานเชียงใหม่ไปยังโรงแรม… หรือ ภายในกรุงเทพมหานคร',
+    };
+  const project = packet?.project?.replace(/\s+/g, ' ').trim() || '';
+  const usable = project && project.length <= PROJECT_LIMIT ? project : '';
+  return {
+    ...base,
+    text: 'เพื่อกิจกรรมหรือโครงการอะไร',
+    options: usable ? [{ value: usable, label: usable }, UNKNOWN] : [UNKNOWN],
+    recommended: usable ? { value: usable, reason: 'จากช่องโครงการของเรื่องนี้' } : undefined,
+    example: 'เช่น เข้าร่วมกิจกรรมแถลงความสำเร็จโครงการ…',
+  };
 }
 
 /** Free text read locally: a chip value, an amount or a date. null when it is not clearly one answer. */
 export function parseAnswer(id: QuestionId, text: string): string | null {
   const value = text.trim();
   if (!value) return null;
+  if (isBv(id)) return /^(?:ยังไม่ทราบ|ไม่ทราบ|ไม่รู้|ไม่แน่ใจ)$/.test(value) ? 'unknown' : bvText(value);
   if (id === 'expense') return expenseFromText(value);
   if (id === 'activity') {
     if (/ไม่ใช่|ไม่ได้ใช้|ไม่มีกิจกรรม/.test(value)) return 'none';
@@ -306,9 +377,20 @@ export function parseAnswer(id: QuestionId, text: string): string | null {
   return parseReceiptDate(value) ? value : null;
 }
 
+const BV_LIMIT = 200;
+/** One line of the person's own words for a travel-reason part, or null when it is empty or too long. */
+const bvText = (value: string) => {
+  const clean = value.replace(/\s+/g, ' ').trim();
+  return clean && clean.length <= BV_LIMIT ? clean : null;
+};
+
 export function applyAnswer(answers: ClaimAnswers, id: QuestionId, value: string): ClaimAnswers {
   const next = { ...answers };
-  if (id === 'expense' && Object.hasOwn(EXPENSE_TYPES, value)) next.expense = value as ExpenseType;
+  if (isBv(id)) {
+    const clean = value === 'unknown' ? '' : bvText(value);
+    if (clean === null) throw new Error('INVALID_INPUT');
+    next[id] = clean;
+  } else if (id === 'expense' && Object.hasOwn(EXPENSE_TYPES, value)) next.expense = value as ExpenseType;
   else if (id === 'activity' && ACTIVITY_OPTIONS.some(option => option.value === value)) next.activity = value as Activity | 'none';
   else if (id === 'paid' && (value === 'yes' || value === 'no')) {
     next.paid = value === 'yes';
@@ -334,6 +416,13 @@ export function answerLabel(id: QuestionId, answers: ClaimAnswers, translate: Tr
     return answers.amount === null || answers.amount === undefined
       ? translate('ยังไม่ทราบ')
       : translate('{0} บาท', formatSatang(answers.amount));
+  // The person's own words stay as typed; only a chip label is translated.
+  if (isBv(id))
+    return answers[id]
+      ? bvQuestion(id).options.some(o => o.value === answers[id])
+        ? translate(answers[id]!)
+        : answers[id]!
+      : translate('ยังไม่ทราบ');
   return answers.date || translate('ยังไม่มีใบเสร็จ');
 }
 /** "B10 · ค่าน้ำดื่ม" in the UI language, or why there is no code. */
@@ -366,6 +455,8 @@ export type ClaimSummary = {
   /** The approval-report due date and its working days, for category B and emergency receipts with a date. */
   deadline: { date: string; days: number } | null;
   notes: Note[];
+  /** For a vehicle hire (BV): the travel reason drafted from AFP's template, with [ ] where a part is still unknown. */
+  travelReason: string | null;
 };
 
 /** The result of a finished interview; the documents come from the same checklist the packet shows. */
@@ -408,6 +499,21 @@ export function claimSummary(answers: ClaimAnswers, today = new Date()): ClaimSu
             source: 'QP-AF-003 ข้อ 4.3 a, แนวปฏิบัติ AFP ข้อ 6',
           },
     );
+  const travelReason =
+    answers.expense === 'vehicle'
+      ? draftBvReason({
+          who: answers.bvWho,
+          what: answers.bvWhat,
+          when: answers.bvWhen,
+          route: answers.bvRoute,
+          activity: answers.bvActivity,
+        })
+      : null;
+  if (travelReason && !checkBvReason(travelReason).ok)
+    notes.push({
+      text: 'เหตุผลการเดินทางยังขาดบางส่วน เติมในวงเล็บ [ ] ให้ครบก่อนส่ง AFP',
+      source: BV_SOURCE,
+    });
   if (rule.category === 'unsure' || rule.category === 'other')
     notes.push({ text: 'หมวดและเอกสารของค่าใช้จ่ายนี้ยังไม่มีกฎครบในระบบ โปรดยืนยันกับ AFP', source: 'ยังไม่มีแหล่งในระบบ' });
   const days = rule.category === 'B' ? 3 : rule.category === 'emergency' ? 5 : 0;
@@ -426,15 +532,22 @@ export function claimSummary(answers: ClaimAnswers, today = new Date()): ClaimSu
     documents,
     deadline,
     notes,
+    travelReason,
   };
 }
 
-/** Apply a summary to a packet: category, finance case, activity and mode; a default title is replaced, a typed one kept. */
+/**
+ * Apply a summary to a packet: category, finance case, activity and mode; a default title is replaced, a typed one kept.
+ * A BV travel reason goes into the purpose when the purpose is empty or does not yet have all five parts; a complete one
+ * the person wrote is kept.
+ */
 export function applyClaimSummary(packet: ReceiptPacket, summary: ClaimSummary): ReceiptPacket {
   const untitled = !packet.title.trim() || packet.title === 'ชุดเอกสารใหม่';
+  const reason = summary.travelReason && !checkBvReason(packet.purpose).ok ? summary.travelReason : null;
   return {
     ...packet,
     title: untitled ? summary.title : packet.title,
+    purpose: reason ?? packet.purpose,
     mode: summary.mode,
     guidance: {
       ...packet.guidance,
@@ -452,7 +565,10 @@ export function claimAiPrompt(answers: ClaimAnswers, summary: ClaimSummary, tran
     translate(
       'ช่วยอธิบายการเบิกครั้งนี้จากเอกสาร STeP ที่ตรวจได้ (แนวปฏิบัติ AFP และ QP-AF-003) ถ้าข้อมูลยังไม่พอให้ถามทีละข้อ ห้ามสรุปว่าเบิกได้หรืออนุมัติจ่าย',
     ),
-    ...answeredQuestions(answers).map(id => `- ${translate(questionView(id, answers).text)}: ${answerLabel(id, answers, translate)}`),
+    // The travel-reason answers are the person's own words (names, places), so they stay out like the title does.
+    ...answeredQuestions(answers)
+      .filter(id => !isBv(id))
+      .map(id => `- ${translate(questionView(id, answers).text)}: ${answerLabel(id, answers, translate)}`),
     translate('หมวดที่ระบบเสนอ: {0}', claimCategoryText(summary, translate)),
     translate('อัตราที่ยังไม่มีในเอกสาร ให้บอกว่าต้องถาม AFP อย่าเดาตัวเลข'),
   ].join('\n');
