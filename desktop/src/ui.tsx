@@ -493,6 +493,7 @@ export const connectionInput = (c: ProviderChoice) => ({
 /** The connect button's words: what happens when it is pressed. */
 export function connectLabel(c: ProviderChoice, fallback = t('เพิ่มการเชื่อมต่อ')) {
   const preset = c.provider === 'compatible' ? presetFor(c.preset) : undefined;
+  if (preset?.signIn === 'organization') return t('ลงชื่อด้วยบัญชี Google ขององค์กร');
   if (preset?.signIn && !c.key.trim()) return t('ลงชื่อด้วย {0}', preset.label);
   if (preset) return t('เชื่อมต่อ {0}', preset.label);
   if (c.mode === 'subscription' && c.provider === 'openai') return t('เชื่อมต่อ ChatGPT');
@@ -515,7 +516,7 @@ type Tile = {
   kind: 'account' | 'key' | 'local';
   choice: ProviderChoice;
 };
-function providerTiles(claudeSubscription: boolean, presets: boolean): Tile[] {
+function providerTiles(claudeSubscription: boolean, presets: boolean, organization = false): Tile[] {
   const key = (provider: string, label: string, description: string): Tile => ({
     id: provider + '-api',
     label,
@@ -527,13 +528,15 @@ function providerTiles(claudeSubscription: boolean, presets: boolean): Tile[] {
     const p = presetFor(id)!;
     return {
       id,
-      label: p.label,
+      label: p.signIn === 'organization' ? t(p.label) : p.label,
       description: t(p.description),
       kind: p.key === 'none' ? 'local' : p.signIn ? 'account' : 'key',
       choice: { ...initialChoice, provider: 'compatible', mode: 'api', preset: id },
     };
   };
   return [
+    // Where the organization runs its own AI gateway, the organization pays and nobody needs an account or key.
+    ...(organization ? [preset('organization')] : []),
     {
       id: 'chatgpt',
       label: 'ChatGPT',
@@ -571,7 +574,7 @@ const tileFor = (tiles: Tile[], c: ProviderChoice) =>
     c.preset ? tile.choice.preset === c.preset : !tile.choice.preset && tile.choice.provider === c.provider && tile.choice.mode === c.mode,
   );
 // Antigravity is on the first page so staff with only a Google account can connect without a key.
-const MAIN_TILES = ['chatgpt', 'claude-sub', 'gemini-api', 'antigravity'];
+const MAIN_TILES = ['organization', 'chatgpt', 'claude-sub', 'gemini-api', 'antigravity'];
 const KIND_LABEL: Record<Tile['kind'], string> = { account: 'ลงชื่อเข้าใช้', key: 'API key', local: 'ในเครื่องนี้' };
 const KIND_ICON: Record<Tile['kind'], LucideIcon> = { account: UserRound, key: KeyRound, local: Monitor };
 function TileKind({ kind }: { kind: Tile['kind'] }) {
@@ -590,18 +593,19 @@ export function ProviderFields(props: {
   call: (method: string, input?: any) => Promise<any>;
   claudeSubscription?: boolean;
   presets?: boolean;
+  /** Policy names the organization's AI gateway: its tile comes first and is the recommended one. */
+  organization?: boolean;
   /** The connect button (and its progress), shown with the chosen service. */
   action?: ReactNode;
   /** First-run setup: the main services first, the rest behind "more services". */
   compact?: boolean;
 }) {
-  const all = providerTiles(Boolean(props.claudeSubscription), props.presets !== false);
+  const all = providerTiles(Boolean(props.claudeSubscription), props.presets !== false, Boolean(props.organization));
+  const recommended = props.organization ? 'organization' : 'antigravity';
   const selected = tileFor(all, props.value);
   const [advanced, setAdvanced] = useState(false),
     [more, setMore] = useState(false);
-  const main = all
-    .filter(tile => MAIN_TILES.includes(tile.id))
-    .sort((a, b) => Number(b.id === 'antigravity') - Number(a.id === 'antigravity'));
+  const main = all.filter(tile => MAIN_TILES.includes(tile.id)).sort((a, b) => Number(b.id === recommended) - Number(a.id === recommended));
   // "More services" adds the rest after the main ones, so the tiles already seen keep their places.
   const tiles =
     props.compact && !more && (!selected || MAIN_TILES.includes(selected.id))
@@ -626,7 +630,7 @@ export function ProviderFields(props: {
                   <strong>{tile.label}</strong>
                   <TileKind kind={tile.kind} />
                 </span>
-                {tile.id === 'antigravity' && <span className="provider-recommended">{t('แนะนำ')}</span>}
+                {tile.id === recommended && <span className="provider-recommended">{t('แนะนำ')}</span>}
                 <span className="provider-tile-text">{tile.description}</span>
               </button>
             ))}
@@ -702,7 +706,8 @@ function ProviderDetail({
           : preset?.keyUrl
             ? 'preset:' + preset.id
             : '';
-  const needsKey = value.mode === 'api' && preset?.key !== 'none';
+  const organization = preset?.signIn === 'organization';
+  const needsKey = value.mode === 'api' && preset?.key !== 'none' && !organization;
   // Choosing a service brings its key field and connect button into view; the first render leaves the page where it is.
   const card = useRef<HTMLDivElement>(null),
     shown = useRef(false);
@@ -712,11 +717,11 @@ function ProviderDetail({
   }, [tile.id]);
   return (
     <div className="provider-detail" ref={card}>
-      {tile.kind === 'account' && !preset && value.provider !== 'antigravity' && (
+      {tile.kind === 'account' && (!preset || organization) && value.provider !== 'antigravity' && (
         <p className="small">{t('กดปุ่มด้านล่างแล้วลงชื่อในเบราว์เซอร์ ไม่ต้องใช้ API key')}</p>
       )}
       {value.provider === 'claude' && value.mode === 'subscription' && <ClaudeCodeNote call={call} subscription />}
-      {preset?.signIn && (
+      {preset?.signIn === 'openrouter' && (
         <p className="small">
           {t('กดลงชื่อแล้วอนุญาตในหน้า {0} ระบบจะได้คีย์ของแอปนี้มาเก็บเข้ารหัสเอง หรือวางคีย์ที่มีอยู่แล้วด้านล่าง', preset.label)}
         </p>
@@ -739,7 +744,7 @@ function ProviderDetail({
       {needsKey && (
         <p className="small muted">{t('API key คือรหัสลับจากหน้าบัญชีของ {0} ใช้แทนการลงชื่อเข้าใช้ ห้ามส่งต่อให้ผู้อื่น', tile.label)}</p>
       )}
-      {preset && (
+      {preset && !organization && (
         <label>
           <span>
             {t('โมเดล')} <span className="muted small">{t('(ไม่บังคับ)')}</span>
@@ -764,11 +769,13 @@ function ProviderDetail({
       <p className="connection-cost" role="status">
         {value.provider === 'antigravity'
           ? t('ใช้สิทธิ์และโควตาของบัญชี Google ที่ลงชื่อ ไม่ต้องใช้ API key')
-          : preset?.key === 'none'
-            ? t('ไม่มีค่าใช้จ่าย · ข้อมูลอยู่ในเครื่องนี้')
-            : tile.kind === 'account' && !preset
-              ? t('ใช้แพ็กเกจบัญชีที่คุณลงชื่อ · ระบบไม่สลับไปใช้งบ API อัตโนมัติ')
-              : t('ใช้งบ API · คิดตามการใช้กับบัญชีเจ้าของคีย์ ยืนยันผู้รับผิดชอบค่าใช้จ่ายก่อนเชื่อมต่อ')}
+          : organization
+            ? t('องค์กรเป็นผู้จ่าย · ใช้ได้ตามโควตาที่องค์กรกำหนด')
+            : preset?.key === 'none'
+              ? t('ไม่มีค่าใช้จ่าย · ข้อมูลอยู่ในเครื่องนี้')
+              : tile.kind === 'account' && !preset
+                ? t('ใช้แพ็กเกจบัญชีที่คุณลงชื่อ · ระบบไม่สลับไปใช้งบ API อัตโนมัติ')
+                : t('ใช้งบ API · คิดตามการใช้กับบัญชีเจ้าของคีย์ ยืนยันผู้รับผิดชอบค่าใช้จ่ายก่อนเชื่อมต่อ')}
       </p>
       {children}
       {value.provider === 'antigravity' && (

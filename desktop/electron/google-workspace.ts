@@ -403,6 +403,10 @@ export class GoogleWorkspace {
       });
     }
   }
+  /** The same identity for the organization AI gateway ("AI ขององค์กร"), sent in place of an AI key. */
+  organizationIdentity(accountId: string, signal: AbortSignal) {
+    return this.receiptIdentity(accountId, signal);
+  }
   /** Host-only identity for the configured organization OCR service. No Workspace access/refresh token leaves the host. */
   async receiptIdentity(accountId: string, signal: AbortSignal) {
     const a = this.account(accountId),

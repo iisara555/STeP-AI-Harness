@@ -129,6 +129,7 @@ export function AIConnections({
         call={call}
         claudeSubscription={Boolean(snapshot.features?.claudeSubscription)}
         presets={snapshot.features?.providerPresets !== false}
+        organization={Boolean(snapshot.features?.organizationAi)}
         action={
           choice.mode !== 'claude-code' && (
             <button

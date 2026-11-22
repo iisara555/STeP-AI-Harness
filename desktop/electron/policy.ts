@@ -1,5 +1,7 @@
 import { parseReceiptCloudConfig, type ReceiptCloudConfig } from './receipt-cloud-config';
+import { parseOrganizationAiConfig, type OrganizationAiConfig } from './organization-ai-config';
 declare const __STEP_RECEIPT_CLOUD__: ReceiptCloudConfig | undefined;
+declare const __STEP_ORGANIZATION_AI__: OrganizationAiConfig | undefined;
 import { providerEndpoint } from '../../src/modules/providers/compatible.js';
 import { readFileSync, existsSync, lstatSync } from 'node:fs';
 import { isAbsolute } from 'node:path';
@@ -163,6 +165,11 @@ export type Policy = {
   receiptLocalOnly?: boolean;
   receiptCloud?: ReceiptCloudConfig;
   googleWorkspace?: { clientId: string; domains: string[]; services: GoogleService[] };
+  /**
+   * "AI ขององค์กร": the organization's AI gateway, reached with the employee's organization Google sign-in (no AI key on
+   * the computer). Bundled at build time or set here; null in managed policy removes it.
+   */
+  organizationAi?: OrganizationAiConfig;
   credentialStorage?: { sharedDevice?: boolean; blockHostExecution?: boolean };
   /** สรุปเช้านี้: whether an employee may let it read today's Calendar and Tasks every day without asking again. */
   morningBrief?: { rememberConsent: boolean };
@@ -294,8 +301,11 @@ export function defaultPolicy(): Policy {
       domains: ['step.cmu.ac.th'],
       services: [...DEFAULT_GOOGLE_SERVICES],
     },
+    ...(bundledOrganizationAi() ? { organizationAi: bundledOrganizationAi() } : {}),
   };
 }
+const bundledOrganizationAi = (): OrganizationAiConfig | undefined =>
+  typeof __STEP_ORGANIZATION_AI__ !== 'undefined' && __STEP_ORGANIZATION_AI__ ? { ...__STEP_ORGANIZATION_AI__ } : undefined;
 
 /** Invalid or untrusted policy must not fall back to newly enabled credential/demo capabilities. */
 const bundledReceiptCloud = (): ReceiptCloudConfig | undefined =>
@@ -312,6 +322,8 @@ function closedPolicy(): Policy {
   policy.features.learningReview = false;
   policy.receiptLocalOnly = true;
   delete policy.googleWorkspace;
+  // Prompts must not go to a default organization address on the strength of a policy file that failed to parse.
+  delete policy.organizationAi;
   return policy;
 }
 
@@ -391,6 +403,12 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
     }
   }
   if (raw.receiptLocalOnly !== false) delete policy.receiptCloud;
+  if (raw.organizationAi === null) delete policy.organizationAi;
+  else if (raw.organizationAi !== undefined) {
+    const organizationAi = parseOrganizationAiConfig(raw.organizationAi);
+    if (organizationAi) policy.organizationAi = organizationAi;
+    else problems.push('organizationAi requires an HTTPS gateway address with no credentials, port or query');
+  }
   if (raw.googleWorkspace === null) delete policy.googleWorkspace;
   else if (raw.googleWorkspace !== undefined) {
     const g = raw.googleWorkspace;

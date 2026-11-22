@@ -21,6 +21,36 @@ export const IMAGE_MODELS = {
   compatible: [],
   copilot: [],
 } satisfies Record<string, string[]>;
-export function imageModels(connection?: Connection) {
-  return connection?.mode === 'api' ? IMAGE_MODELS[connection.provider] : [];
+/** Image models on OpenRouter's Images API (POST /images), best first; only these are offered on an OpenRouter key. */
+export const OPENROUTER_IMAGE_MODELS = [
+  'openai/gpt-image-2.6-sunburst',
+  'openai/gpt-image-2.5-sunburst',
+  'openai/gpt-image-2.6-flare',
+  'openai/gpt-image-2.5-flare',
+  'openai/gpt-image-2',
+  'google/gemini-3.1-flash-image',
+  'google/gemini-3.1-flash-lite-image',
+];
+/**
+ * Compatible connections that serve OpenRouter's Images API: OpenRouter itself, and "AI ขององค์กร", whose gateway lists
+ * only the image models the organization allows (so its catalog is read from the gateway, not fixed here).
+ */
+export function imagePreset(connection?: Pick<Connection, 'provider' | 'preset'>) {
+  return connection?.provider === 'compatible' && (connection.preset === 'openrouter' || connection.preset === 'organization')
+    ? connection.preset
+    : undefined;
+}
+/** Whether this connection can be asked to create a picture at all; the account's catalog decides which models. */
+export function canGenerateImages(connection?: Connection) {
+  return Boolean(
+    connection?.mode === 'api' && (connection.provider === 'openai' || connection.provider === 'gemini' || imagePreset(connection)),
+  );
+}
+/** The image models Desktop may use on this connection, before the account's own catalog narrows them. */
+export function imageModels(connection?: Connection): string[] {
+  if (!canGenerateImages(connection)) return [];
+  const preset = imagePreset(connection);
+  if (preset === 'openrouter') return OPENROUTER_IMAGE_MODELS;
+  if (preset === 'organization') return [];
+  return IMAGE_MODELS[connection!.provider];
 }

@@ -39,7 +39,7 @@ import { liveAnswer, liveThinking, offerWriteNow, useElapsed, useLiveRun } from 
 import { SavedThinking, ThinkingPanel } from './thinking-panel';
 import { WorkAssistantActivity, WorkAssistantGuide, workActionsFromTrace } from './work-assistant';
 import type { WorkMode, Workflow } from './types';
-import { imageModels } from './image-routing';
+import { canGenerateImages } from './image-routing';
 import { locale, t } from './i18n';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
 import { publicSourceUrl } from './web';
@@ -748,7 +748,7 @@ export function ConversationView({ v }: { v: AppView }) {
               {wantsImage && (
                 <div className="image-route" role="status">
                   <Sparkles size={14} />
-                  {imageModels(connection).length ? (
+                  {canGenerateImages(connection) ? (
                     <>
                       <span>{t('สร้างรูปภาพ')}</span>
                       <select
@@ -768,7 +768,7 @@ export function ConversationView({ v }: { v: AppView }) {
                     </>
                   ) : (
                     <span>
-                      {t('หากต้องการสร้างรูปภาพ เลือก OpenAI หรือ Google ที่เชื่อมด้วย API key การลงชื่อแบบนี้ยังสร้างรูปไม่ได้')}
+                      {t('หากต้องการสร้างรูปภาพ เลือก OpenAI, Google, OpenRouter หรือ AI ขององค์กร การลงชื่อแบบนี้ยังสร้างรูปไม่ได้')}
                     </span>
                   )}
                 </div>

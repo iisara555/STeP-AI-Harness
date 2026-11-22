@@ -1,5 +1,6 @@
 import type { Connection, PolicySnapshot } from './types';
 import { takesImages } from './vision-transport';
+import { canGenerateImages } from './image-routing';
 
 export type Capability = {
   id: string;
@@ -57,20 +58,19 @@ export function connectionCapabilities(c: Connection, policy?: PolicySnapshot): 
       'model',
       'เลือกโมเดลที่รองรับภาพ และยินยอมส่งภาพก่อนใช้ ผลทดสอบแชตยังไม่ยืนยันการอ่านภาพ',
     );
-  const image =
-    c.mode !== 'api' || !['openai', 'gemini'].includes(c.provider)
-      ? entry(
-          'image',
-          definitions[3][1],
-          'blocked',
-          'api-required',
-          'ใช้ OpenAI หรือ Gemini API และโมเดลภาพที่บัญชีมีสิทธิ์ OAuth อย่างเดียวใช้ไม่ได้',
-        )
-      : !policy
-        ? entry('image', definitions[3][1], 'unknown', 'unknown', 'ยังไม่ทราบโหมดการทำงาน ติดต่อ IT')
-        : policy.mode === 'plan'
-          ? entry('image', definitions[3][1], 'blocked', 'plan', 'ออกจากโหมดอ่านอย่างเดียวก่อนสร้างภาพ')
-          : entry('image', definitions[3][1], 'conditional', 'model', 'เลือกโมเดลภาพที่บัญชีมีสิทธิ์ การสร้างภาพอาจมีค่าใช้จ่าย API');
+  const image = !canGenerateImages(c)
+    ? entry(
+        'image',
+        definitions[3][1],
+        'blocked',
+        'api-required',
+        'ใช้ OpenAI, Gemini API, OpenRouter หรือ AI ขององค์กร และโมเดลภาพที่บัญชีมีสิทธิ์ OAuth อย่างเดียวใช้ไม่ได้',
+      )
+    : !policy
+      ? entry('image', definitions[3][1], 'unknown', 'unknown', 'ยังไม่ทราบโหมดการทำงาน ติดต่อ IT')
+      : policy.mode === 'plan'
+        ? entry('image', definitions[3][1], 'blocked', 'plan', 'ออกจากโหมดอ่านอย่างเดียวก่อนสร้างภาพ')
+        : entry('image', definitions[3][1], 'conditional', 'model', 'เลือกโมเดลภาพที่บัญชีมีสิทธิ์ การสร้างภาพอาจมีค่าใช้จ่าย API');
   return [chat, web, vision, image];
 }
 
