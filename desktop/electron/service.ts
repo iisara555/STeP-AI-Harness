@@ -987,16 +987,19 @@ export class WorkService {
     arm();
     // Each stage and the model's reasoning stay with the answer (src/thinking.ts). A quiet update is a routine wait
     // ("preparing the answer") that says nothing about how the answer was reached, so it is not kept as a stage.
+    // A `stage` names the step in the thinking ("AI คิด") when the live status line says it another way ("กำลังเตรียมคำตอบ").
     const thinking = new ThinkingLog();
-    const status = (message: string, quiet = false) => {
-      if (quiet) thinking.turn();
+    type Thought = { quiet?: boolean; stage?: string };
+    const record = (message: string, { quiet, stage }: Thought) => {
+      if (stage) thinking.step(stage);
+      else if (quiet) thinking.turn();
       else thinking.step(message);
-      this.emit({ sessionId: id, type: 'status', text: message, ...(quiet ? { quiet } : {}) });
+      return { ...(quiet && !stage ? { quiet } : {}), ...(stage ? { stage } : {}) };
     };
-    const activity = (message: string, quiet = false) => {
-      if (!quiet) thinking.step(message);
-      this.emit({ sessionId: id, type: 'activity', text: message, ...(quiet ? { quiet } : {}) });
-    };
+    const status = (message: string, thought: Thought = {}) =>
+      this.emit({ sessionId: id, type: 'status', text: message, ...record(message, thought) });
+    const activity = (message: string, thought: Thought = {}) =>
+      this.emit({ sessionId: id, type: 'activity', text: message, ...record(message, thought) });
     // A host heartbeat means the app is responsive, not that the provider made progress.
     const heartbeat = setInterval(() => this.emit({ sessionId: id, type: 'heartbeat' }), 3000);
     const checkAbort = () => {
@@ -1028,7 +1031,7 @@ export class WorkService {
     const googleChanges: GoogleChange[] = [];
     const artifacts = new Map<string, ArtifactRef>();
     try {
-      status(tm('กำลังเตรียมงาน'), true);
+      status(tm('กำลังเตรียมงาน'), { quiet: true });
       let routed = await this.harness.route(session.originalQuery, {
         team: session.team,
         workspaceDir,
@@ -1156,7 +1159,7 @@ export class WorkService {
             (known[0]?.score || 0) >= STRONG_MATCH,
           )
         ) {
-          activity(tm('กำลังเลือก Skill ที่เหมาะกับงาน'));
+          activity(tm('กำลังเลือก Skill ที่เหมาะกับงาน'), { stage: tm('เลือก Skill ที่เหมาะกับงาน') });
           const selection = prepareSkillSelection(
             skillRegistry,
             session.originalQuery,
@@ -1483,8 +1486,13 @@ export class WorkService {
           if (skillBundle?.preloadedText) selectedInstructions.push(skillBundle.preloadedText);
         }
         sources = [...new Set([...sources, ...paths, ...known.map(k => k.path)])];
-        // Only a Playbook's own steps are stages worth keeping; the single default step is a routine "answering" line.
-        status(step.description || tm('กำลังจัดทำร่าง'), !step.description || !(contract.mode === 'PLAYBOOK' && contract.steps?.length));
+        // A Playbook's own steps are stages; the single default step is a routine "answering" line, kept only as the Skill
+        // it follows.
+        const playbookStep = Boolean(step.description && contract.mode === 'PLAYBOOK' && contract.steps?.length);
+        status(
+          step.description || tm('กำลังจัดทำร่าง'),
+          playbookStep ? {} : skillTitle ? { stage: tm('ใช้ Skill {0}', skillTitle) } : { quiet: true },
+        );
         // Standing rules and registries precede task-specific instructions and preferences.
         const toolsEnabled = Boolean(
           !target && !options.isolatedQuestion && !textOnly && !options.draftOnly && this.harness.tools && this.harness.toolLoop?.(),
@@ -1746,7 +1754,11 @@ export class WorkService {
         prompt = await compactPrompt(prompt);
         // Name the STeP document the answer reads when keyword search is sure of it, so the wait is not a blank line (S5).
         const strong = (given[0]?.score || 0) >= STRONG_MATCH;
-        activity(strong ? tm('กำลังเตรียมคำตอบจากเอกสาร {0}', shortTitle(given[0].title)) : tm('กำลังรอ AI เตรียมคำตอบ'), !strong);
+        if (strong)
+          activity(tm('กำลังเตรียมคำตอบจากเอกสาร {0}', shortTitle(given[0].title)), {
+            stage: tm('ใช้เอกสาร {0}', shortTitle(given[0].title)),
+          });
+        else activity(tm('กำลังรอ AI เตรียมคำตอบ'), { quiet: true });
         // The runtime conversation stays open across this step's tool turns (closed below when the step ends).
         const providerSession = new ProviderSession();
         // With the policy feature on, an Antigravity answer turn may call this step's tools through the governed
@@ -1801,7 +1813,8 @@ export class WorkService {
               if (!search && (analysisImage || options.images?.length) && !this.harness.visionEnabled?.())
                 throw new Error('VISION_DISABLED');
               stepTrace.promptChars = Math.max(stepTrace.promptChars, nextPrompt.length);
-              if (!search) status(tm('กำลังเตรียมคำตอบ'), true);
+              // Each model call is a stage of its own, so the reasoning it streams sits under it.
+              if (!search) status(tm('กำลังเตรียมคำตอบ'), { stage: tm('AI คิด') });
               checkAbort();
               const answer = await selectedRuntime.adapter.run(nextPrompt, connection, {
                 ...selectedRuntime.context,
@@ -1850,7 +1863,7 @@ export class WorkService {
                   if (continueTor) streamed += delta;
                   if (!receiving) {
                     receiving = true;
-                    activity(tm('กำลังเขียนคำตอบ'), true);
+                    activity(tm('กำลังเขียนคำตอบ'), { quiet: true });
                   }
                   this.emit({ sessionId: id, type: 'delta', text: delta });
                 },
@@ -2287,7 +2300,7 @@ export class WorkService {
       };
       let check: Message['check'];
       if (checking && !checkLater) {
-        activity(tm('กำลังตรวจคำตอบกับเอกสาร STeP'));
+        activity(tm('กำลังตรวจคำตอบกับเอกสาร STeP'), { stage: tm('ตรวจคำตอบกับเอกสาร STeP') });
         const done = await runCheck(controller.signal);
         trace.steps.at(-1)?.providerCalls?.push(done.call);
         usage = combineUsage(usage, done.counted);

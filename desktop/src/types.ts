@@ -610,6 +610,8 @@ export type RunEvent = {
   text?: string;
   /** For status and activity: a routine wait that is shown but not kept among the answer's thinking stages. */
   quiet?: boolean;
+  /** For status and activity: the stage this starts in the answer's thinking, when it is named apart from the status text. */
+  stage?: string;
   /** For discard: how many characters of the streamed answer to take back. */
   count?: number;
   trace?: RunTrace;
