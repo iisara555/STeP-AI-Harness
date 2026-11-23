@@ -16,7 +16,7 @@ import { ProviderSession, type TokenCount } from '../electron/providers';
 import { strictJsonSchema } from '../electron/json-schema';
 import { runBridgeProbe } from '../scripts/probe-antigravity-bridge';
 import type { Connection } from '../src/types';
-import { promptTooLong, tokens } from '../electron/compact';
+import { promptTooLong, ProviderPromptLimitError, tokens } from '../electron/compact';
 
 // A stand-in for agy in stream-json mode: one turn per stdin line on one conversation, until stdin closes.
 // `kind` picks how it misbehaves; usage is reported as conversation totals with num_turns counting turns.
@@ -206,7 +206,13 @@ test('a first message agy would cut is refused before agy starts; a long later t
     const long = 'ประวัติงาน '.repeat(9000);
     assert.ok(tokens(f.context.system + long) > ANTIGRAVITY_FIRST_MESSAGE_TOKENS);
     // The host answers this error by compacting the prompt once and sending it again.
-    await assert.rejects(adapter.run(long + '\nRequest', f.connection, f.context), error => promptTooLong(error));
+    await assert.rejects(
+      adapter.run(long + '\nRequest', f.connection, f.context),
+      error =>
+        promptTooLong(error) &&
+        error instanceof ProviderPromptLimitError &&
+        error.maxPromptTokens < ANTIGRAVITY_FIRST_MESSAGE_TOKENS - tokens(f.context.system),
+    );
     assert.equal((await f.calls()).filter(c => c.start).length, 0);
     // A structured or picture request runs alone with its whole prompt too.
     await assert.rejects(

@@ -41,7 +41,7 @@ import { SUBAGENT_MAX_TURNS, SUBAGENT_TOOLS, subagentSystem } from './subagents'
 import type { ToolScope } from './tools';
 import { RETRYABLE_CODES, RETRY_DELAYS_MS, retryDelay } from './retry';
 import { section } from './prompt';
-import { CHECKPOINT_SYSTEM, compact, contextBudget, LOOP_FOLD_SHARE, promptTooLong, tokens } from './compact';
+import { CHECKPOINT_SYSTEM, compact, contextBudget, LOOP_FOLD_SHARE, promptTooLong, ProviderPromptLimitError, tokens } from './compact';
 import { mainLocale, tm } from './i18n';
 import { internalSystemFor, internalSystemRule } from './internal-systems';
 import { workflowRule } from './workflows';
@@ -1647,7 +1647,13 @@ export class WorkService {
         trace.steps.push(stepTrace);
         // Compact against the connected model's own window, not one size for all.
         const budget = contextBudget(connection);
-        const compactPrompt = async (value: string, reactive = false) => {
+        const compactPrompt = async (value: string, recovery?: { system: string; maxPromptTokens?: number }) => {
+          const recoverySystem = recovery?.system ?? system;
+          // The transport budget excludes its own rules. Leave one token for rounding the system and prompt separately.
+          const inputBudget =
+            recovery?.maxPromptTokens === undefined
+              ? budget
+              : Math.min(budget, Math.max(0, tokens(recoverySystem) + recovery.maxPromptTokens - 1));
           const result = await compact(value, {
             checkpoint: this.store.session(id).contextCheckpoint,
             retain: checkpoint => {
@@ -1655,11 +1661,11 @@ export class WorkService {
               current.contextCheckpoint = checkpoint;
               this.store.save(current);
             },
-            system,
-            budget,
+            system: recoverySystem,
+            budget: inputBudget,
             state: taskState(),
             signal: controller.signal,
-            reactive,
+            reactive: Boolean(recovery),
             privacy: value => {
               const scan = this.harness.privacy(value);
               if (scan.action === 'block-external' || typeof scan.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
@@ -1851,7 +1857,10 @@ export class WorkService {
               if (!search && !controller.signal.aborted && !reactiveRetried && promptTooLong(error)) {
                 reactiveRetried = true;
                 retryCount++;
-                nextPrompt = await compactPrompt(nextPrompt, true);
+                nextPrompt = await compactPrompt(nextPrompt, {
+                  system: providerSystem,
+                  maxPromptTokens: error instanceof ProviderPromptLimitError ? error.maxPromptTokens : undefined,
+                });
                 arm();
                 continue;
               }

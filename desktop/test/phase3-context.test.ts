@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { compact, contextBudget, CONTEXT_TOKENS, MAX_CONTEXT_TOKENS, tokens } from '../electron/compact';
+import { compact, contextBudget, CONTEXT_TOKENS, MAX_CONTEXT_TOKENS, ProviderPromptLimitError, tokens } from '../electron/compact';
 import { section, fence } from '../electron/prompt';
 import { WorkService, type Harness } from '../electron/service';
 import { Store } from '../electron/store';
@@ -157,6 +157,59 @@ test('service reactively compacts once on provider overflow and accounts summary
   assert.deepEqual(events, ['pre_compact', 'post_compact']);
   assert.equal(store.session(s.id).status, 'review');
   store.close();
+});
+
+test('service compacts to the transport limit when it is lower than the model window', async () => {
+  const store = new Store(':memory:');
+  try {
+    store.put('connection', 'c', { id: 'c', provider: 'antigravity', model: 'gemini-pro', ready: true } as Connection);
+    const session = store.create('c', 'cc');
+    const latestTurn = 'Recent decision ' + 'b'.repeat(92000);
+    session.messages = Array.from({ length: 8 }, (_, i) => ({
+      role: i % 2 ? 'assistant' : 'user',
+      text: i < 6 ? 'Earlier work ' + 'a'.repeat(28000) : latestTurn,
+      at: new Date().toISOString(),
+    }));
+    store.save(session);
+    const harness: Harness = {
+      root: tmpdir(),
+      route: async () => ({ routingContract: { mode: 'GENERAL', authority: { status: 'ALLOW' }, mandatoryReferences: [] } }),
+      contextPolicy: () => ({ history: 'ignore', carryover: false }),
+      privacy: privacy.evaluatePrivacyGate,
+      skillMetadata: async () => null,
+      documentPrivacy: async () => null,
+      nextOutput: async () => null,
+    };
+    const sizes: number[] = [];
+    const transportRules = 'Extra instructions added by the transport. '.repeat(110);
+    const service = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: tmpdir(), env: {} },
+        adapter: {
+          run: async (prompt, _connection, context) => {
+            if (context.system?.startsWith('Summarize')) return 'Earlier work checkpoint.';
+            const transportSystem = (context.system || '') + transportRules;
+            const size = tokens(transportSystem + prompt);
+            sizes.push(size);
+            if (size > 56000) throw new ProviderPromptLimitError(56000 - tokens(transportSystem));
+            assert.ok(prompt.includes(latestTurn));
+            assert.ok(prompt.includes('Continue work'));
+            return 'Done';
+          },
+        },
+      }),
+      () => {},
+    );
+    await service.run(session.id, 'Continue work', '', true, undefined, 'chat');
+    assert.equal(sizes.length, 2);
+    assert.ok(sizes[0] > 56000, 'the first prompt exceeds the transport limit');
+    assert.ok(sizes[1] <= 56000, 'the recovery fits the real transport limit');
+    assert.equal(store.session(session.id).status, 'review');
+  } finally {
+    store.close();
+  }
 });
 
 test('the compaction budget follows the connected model, within bounds', async () => {

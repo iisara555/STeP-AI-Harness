@@ -100,6 +100,11 @@ export type CompactOptions = {
   hook?: (event: 'pre_compact' | 'post_compact', before: number, after: number) => Promise<void>;
 };
 export const tokens = (text: string): number => estimateTextTokens(text).estimatedTokens;
+export class ProviderPromptLimitError extends Error {
+  constructor(readonly maxPromptTokens: number) {
+    super('CONTEXT_LIMIT');
+  }
+}
 export function promptTooLong(error: unknown) {
   return (
     error instanceof Error &&
