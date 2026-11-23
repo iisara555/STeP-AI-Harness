@@ -174,6 +174,8 @@ try {
   report.panelGone = panelGone;
   report.lostStages = [...lostStages];
   report.rawMarkup = frames.filter(frame => frame.notes.some(note => note.includes('**'))).length;
+  // No stage is named twice at once: in the panel and on the status line under it.
+  report.namedTwice = frames.filter(frame => frame.status && frame.stages.includes(frame.status)).length;
 
   // The streamed words: what was on screen is not taken away while the AI works (only added to).
   let shrinks = 0;
@@ -186,6 +188,7 @@ try {
     assert.equal(report.panelGone, 0, 'the thinking panel does not blink out');
     assert.deepEqual(report.lostStages, [], 'a stage title stays once shown');
     assert.equal(report.rawMarkup, 0, 'no half-typed heading markup');
+    assert.equal(report.namedTwice, 0, 'a stage is not named in the panel and on the status line at once');
     assert.equal(report.textShrinks, 0, 'streamed words do not vanish');
     assert.equal(report.kindWithoutLabel, 0, 'the waiting mark changes only with the status line');
     for (const kind of ['think', 'write']) assert.ok(report.kinds.includes(kind), `the ${kind} mark shows`);

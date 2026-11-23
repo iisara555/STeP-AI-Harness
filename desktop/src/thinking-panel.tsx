@@ -63,17 +63,22 @@ export function ThinkingPanel({
   // Open while the AI works so the thinking is seen as it happens; a finished answer keeps it folded under one line.
   const [open, setOpen] = useState(running);
   // While the AI works, the status line under the panel (`current`) names the stage in progress, so the panel shows its
-  // thoughts without repeating its title. Only while the line names it (or is about to): once the line moves on (the
-  // next model turn, or a stage too quick to show there), the title shows here, so no stage is hidden from both, and a
-  // title once shown here is never taken back.
+  // thoughts without repeating its title. Only while the line names it (or, for the latest stage, is about to): once
+  // the line moves on (the next model turn, or a stage too quick to show there), the title shows here, so no stage is
+  // hidden from both, and a title once shown here is never taken back. The line holds a label a moment after the next
+  // stage starts (live-run.ts), so an earlier stage is checked too, or its title would show twice.
   const last = thinking.steps.length - 1;
+  const named = (step: ThinkingStep, i: number) => {
+    const label = stageLabel(step.title).label;
+    return label === current[0] || (i === last && current.includes(label));
+  };
   const steps = (
     running
-      ? thinking.steps.map((step, i) =>
-          i === last
-            ? { ...step, title: current.includes(stageLabel(step.title).label) ? '' : step.title, notes: settledNotes(step.notes) }
-            : step,
-        )
+      ? thinking.steps.map((step, i) => ({
+          ...step,
+          title: named(step, i) ? '' : step.title,
+          notes: i === last ? settledNotes(step.notes) : step.notes,
+        }))
       : thinking.steps
   ).filter(step => step.title || step.notes.length);
   if (!steps.length) return null;
