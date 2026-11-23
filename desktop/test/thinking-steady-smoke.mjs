@@ -116,6 +116,7 @@ try {
         stages: [...(panel?.querySelectorAll('.thinking-stage-title') || [])].map(el => el.textContent.replace(/\d+ วินาที$/, '')),
         notes: [...(panel?.querySelectorAll('.thinking-note') || [])].map(el => el.textContent),
         text: working?.querySelector('.streaming')?.textContent || '',
+        kind: working?.querySelector('.activity .thinking-scribble')?.dataset.kind || '',
       };
       const key = JSON.stringify({ ...frame, at: 0 });
       if (key !== last) (frames.push(frame), (last = key));
@@ -150,6 +151,13 @@ try {
   for (const frame of frames) if (labels.at(-1)?.text !== frame.status) labels.push({ text: frame.status, at: frame.at });
   const brief = labels.slice(0, -1).filter((label, i) => labels[i + 1].at - label.at < 1000);
   report.labels = labels.map(label => label.text);
+  // The waiting mark follows the same steady line: it names the kind of work and never changes on its own.
+  const kinds = [];
+  for (const frame of frames) if (frame.kind && kinds.at(-1) !== frame.kind) kinds.push(frame.kind);
+  report.kinds = kinds;
+  report.kindWithoutLabel = frames.filter(
+    (frame, i) => i && frame.kind !== frames[i - 1].kind && frame.status === frames[i - 1].status,
+  ).length;
   report.briefLabels = brief.map(label => label.text);
 
   // The thinking panel: once shown it stays; a stage title, once shown, stays; no raw ** of a heading still arriving.
@@ -179,6 +187,8 @@ try {
     assert.deepEqual(report.lostStages, [], 'a stage title stays once shown');
     assert.equal(report.rawMarkup, 0, 'no half-typed heading markup');
     assert.equal(report.textShrinks, 0, 'streamed words do not vanish');
+    assert.equal(report.kindWithoutLabel, 0, 'the waiting mark changes only with the status line');
+    for (const kind of ['think', 'write']) assert.ok(report.kinds.includes(kind), `the ${kind} mark shows`);
   }
   assert.deepEqual(errors, []);
   console.log('Thinking steady smoke passed: the working area changes without blinking.');

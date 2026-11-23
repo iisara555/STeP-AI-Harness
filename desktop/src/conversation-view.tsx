@@ -32,7 +32,7 @@ import { MorningBriefCard } from './morning-brief';
 import { QuestionCard } from './tool-question';
 import { Readiness } from './readiness';
 import { RichText, formatElapsed } from './ui';
-import { ThinkingScribble } from './thinking-scribble';
+import { ThinkingScribble, waitingKind } from './thinking-scribble';
 import { VoiceButton } from './voice';
 import { WORKFLOW_LABELS, WorkPlanCard } from './work-plan';
 import { WelcomeGreeting } from './welcome-greeting';
@@ -516,7 +516,7 @@ export function ConversationView({ v }: { v: AppView }) {
                 {session && <WorkAssistantActivity actions={workActions[session.id] || []} running />}
                 {/* One quiet line while working, as in Claude and Codex: each step replaces the last, nothing stacks up. */}
                 <div className="activity" role="status" aria-live="polite">
-                  <ThinkingScribble />
+                  <ThinkingScribble kind={waitingKind(working)} />
                   <span>{working}</span>
                   <span className="activity-detail">
                     {elapsed || t('0 วินาที')}

@@ -731,55 +731,232 @@
   font-size: var(--text-xs);
   padding: var(--pad-control-sm);
 }
-/* Uneven overlapping pencil loops, continually retraced at different speeds. */
+/* The waiting marks (src/thinking-scribble.tsx): one pencil, one ink colour, round ends and uneven widths. Each kind
+   draws, holds and wipes its strokes; reduced motion slows every stroke three times and stills the wobble. */
 .thinking-scribble {
+  --scribble-slow: 1;
   display: inline-flex;
   flex-shrink: 0;
   color: var(--text);
 }
 .thinking-scribble svg {
   display: block;
+  overflow: visible;
+  animation: scribble-in var(--motion) var(--ease-out) both;
 }
 .scribble-threads {
   transform-box: view-box;
   transform-origin: 50px 50px;
-  animation: scribble-shift 3.8s ease-in-out infinite;
 }
-.scribble-stroke {
-  stroke-dasharray: 72 28;
-  animation: scribble-trace 2.4s linear infinite;
+.scribble-trail {
+  opacity: 0.18;
+  stroke-width: 2.6;
 }
-.scribble-a {
-  stroke-width: 3.4;
-  animation-delay: -0.8s;
+.scribble-ink {
+  stroke-dasharray: 100 100;
+  animation: scribble-write calc(var(--scribble-d, 2s) * var(--scribble-slow)) var(--scribble-ease, cubic-bezier(0.45, 0, 0.4, 1)) infinite;
+  animation-delay: calc(var(--scribble-delay, 0s) * var(--scribble-slow));
 }
-.scribble-b {
-  stroke-width: 2.5;
-  stroke-dasharray: 58 42;
-  animation-duration: 2s;
-  animation-delay: -1.4s;
+/* Thinking: three small loops written in turn, the familiar typing beat in pencil. */
+[data-kind='think'] .scribble-threads {
+  animation: scribble-bob calc(1.6s * var(--scribble-slow)) ease-in-out infinite;
 }
-.scribble-c {
+.scribble-dot {
+  --scribble-d: 1.6s;
+  stroke-width: 6;
+}
+.scribble-dot:nth-child(2) {
+  --scribble-delay: 0.2s;
+}
+.scribble-dot:nth-child(3) {
+  --scribble-delay: 0.4s;
+}
+/* Reading a Skill or document: four dots appear one by one and a line joins them, sources being connected. */
+.scribble-pt {
+  stroke-width: 11;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: var(--scribble-pt) calc(3.4s * var(--scribble-slow)) cubic-bezier(0.3, 1.4, 0.5, 1) infinite;
+}
+.scribble-pt:nth-child(1) {
+  --scribble-pt: scribble-pt-1;
+}
+.scribble-pt:nth-child(2) {
+  --scribble-pt: scribble-pt-2;
+}
+.scribble-pt:nth-child(3) {
+  --scribble-pt: scribble-pt-3;
+}
+.scribble-pt:nth-child(4) {
+  --scribble-pt: scribble-pt-4;
+}
+.scribble-link {
   stroke-width: 4.4;
-  stroke-dasharray: 48 52;
-  animation-duration: 1.7s;
-  animation-delay: -0.3s;
+  stroke-dasharray: 100 100;
+  animation: scribble-link calc(3.4s * var(--scribble-slow)) cubic-bezier(0.45, 0, 0.4, 1) infinite;
 }
-@keyframes scribble-trace {
+/* Searching or using a tool: a short stroke that stretches and inches along a faint wave. */
+.scribble-worm {
+  stroke-width: 6.4;
+  stroke-dasharray: 8 92;
+  animation:
+    scribble-crawl calc(3.6s * var(--scribble-slow)) linear infinite,
+    scribble-inch calc(0.6s * var(--scribble-slow)) ease-in-out infinite alternate;
+}
+/* Writing: a cursive line written on and wiped from its start. */
+[data-kind='write'] .scribble-threads {
+  animation: scribble-nib calc(2.4s * var(--scribble-slow)) ease-in-out infinite;
+}
+.scribble-pen {
+  --scribble-d: 2.4s;
+  stroke-width: 6;
+}
+/* Waiting is progress information: under reduced motion (which stops every animation, base.css) the strokes keep a
+   trace three times slower, so a wait never looks frozen; the wobble and the fade stay off. */
+@media (prefers-reduced-motion: reduce) {
+  .thinking-scribble {
+    --scribble-slow: 3;
+  }
+  .thinking-scribble .scribble-ink {
+    animation: scribble-write calc(var(--scribble-d, 2s) * 3) var(--scribble-ease, cubic-bezier(0.45, 0, 0.4, 1))
+      calc(var(--scribble-delay, 0s) * 3) infinite !important;
+  }
+  .thinking-scribble .scribble-ink.scribble-worm {
+    animation:
+      scribble-crawl 10.8s linear infinite,
+      scribble-inch 1.8s ease-in-out infinite alternate !important;
+  }
+  .thinking-scribble .scribble-pt {
+    animation: var(--scribble-pt) 10.2s cubic-bezier(0.3, 1.4, 0.5, 1) infinite !important;
+  }
+  .thinking-scribble .scribble-link {
+    animation: scribble-link 10.2s cubic-bezier(0.45, 0, 0.4, 1) infinite !important;
+  }
+}
+@keyframes scribble-pt-1 {
+  0%,
+  2% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  8%,
+  84% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes scribble-pt-2 {
+  0%,
+  10% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  16%,
+  84% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes scribble-pt-3 {
+  0%,
+  18% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  24%,
+  84% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes scribble-pt-4 {
+  0%,
+  26% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  32%,
+  84% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes scribble-link {
+  0%,
+  34% {
+    stroke-dashoffset: 100;
+    opacity: 1;
+  }
+  70%,
+  84% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+@keyframes scribble-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes scribble-write {
+  0% {
+    stroke-dashoffset: 100;
+  }
+  55% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -100;
+  }
+}
+@keyframes scribble-crawl {
+  from {
+    stroke-dashoffset: 8;
+  }
   to {
     stroke-dashoffset: -100;
   }
 }
-@keyframes scribble-shift {
+@keyframes scribble-inch {
+  from {
+    stroke-dasharray: 6 94;
+  }
+  to {
+    stroke-dasharray: 20 80;
+  }
+}
+@keyframes scribble-bob {
   0%,
   100% {
-    transform: rotate(-5deg) scale(0.96, 1.02);
+    transform: translateY(1px);
   }
-  32% {
-    transform: rotate(6deg) scale(1.03, 0.96);
+  45% {
+    transform: translateY(-2px) rotate(-2deg);
   }
-  67% {
-    transform: rotate(-2deg) scale(0.98, 1.04);
+}
+@keyframes scribble-nib {
+  0%,
+  100% {
+    transform: translate(-2px, 1px) rotate(-3deg);
+  }
+  50% {
+    transform: translate(2px, -1px) rotate(2deg);
   }
 }
 .written-files {
