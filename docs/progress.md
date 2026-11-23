@@ -4,9 +4,11 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-22_
+_Last updated: 2026-11-23_
 
 ## In flight
+
+- **Developer knowledge maintenance (2026-11-23)**. Added a developer-side Skill and an offline metadata preview for the MIS, Gmail and Sheets intake design. Review packets surface revision conflicts, withdrawals and partial reads before publication. The developer Skill records the source audit and approval flow. IT needs to verify Google/MIS identities, live settings and audit logs before configuring connectors.
 
 - **Desktop v0.6.39 prepared (2026-11-22, owner asked to merge all and release)**: one combined PR merges #391 (expired Claude sign-in), #393 (BV travel reason), #392 (case chat picker/attachments, case delete, quieter claims page), #394 (claims-case-expert Skill, draft pending AFP) and the OpenCode phases #387–#390 (tool repair, checkpoint compaction, in-loop answer review, native tool calls behind `nativeToolCalls`, off). Harness remains 0.7.7. Publish with `desktop-release.yml` on `main` with `publish=true` after merge and green post-merge CI.
 - **Claims page redesign and case delete (2026-11-22, owner asked)**: the owner found no way to delete a claims case and the side panels too wordy. A case row now has a delete icon on hover/focus with an inline confirm; `receiptPacketDelete` removes the case, its app-owned file copies and its case chat (refused while that chat runs; originals untouched, covered in `receipt-packet.test.ts` and `claim-case-chat-smoke`). The case list is one line per case (name, category mark, file count), the case name edits in place at the chat head with a check for saved, and the three steps are one underlined tab row. Smokes: claim-case-chat, case-files, claim-interview, afp-evidence, receipt-packet, afp-payment-voucher, receipt-handoff. Waits on owner review with the before/after screenshots.
