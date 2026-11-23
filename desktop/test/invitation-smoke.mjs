@@ -113,7 +113,10 @@ try {
   await expect(form.getByRole('alert')).toContainText('http://');
   await form.getByLabel('ลิงก์ตอบรับเข้าร่วมงาน').fill('https://example.org/rsvp?code=0007');
   await form.getByLabel('ลิงก์แผนที่สถานที่จัดงาน').fill('https://example.org/map#room');
-  await expect(form.getByRole('img')).toHaveCount(2);
+  const qrPreviews = form.getByRole('img', { name: /^QR / });
+  await expect(qrPreviews).toHaveCount(2);
+  await expect(qrPreviews.nth(0)).toHaveAccessibleName('QR ตอบรับเข้าร่วมงาน');
+  await expect(qrPreviews.nth(1)).toHaveAccessibleName('QR แผนที่สถานที่จัดงาน');
   if (qa) await page.screenshot({ path: join(qa, 'form.png'), fullPage: true });
   // The form follows the printed letter: header, subject and addressee, body, closing (with the QR links).
   await expect(form.locator('.invitation-section h3')).toHaveText([/หัวหนังสือ/, /เรื่องและผู้รับ/, /เนื้อความ/, /ท้ายหนังสือ/]);
