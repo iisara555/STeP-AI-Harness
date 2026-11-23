@@ -25,6 +25,7 @@ import {
 import { ArtifactsList, type OpenedArtifact } from './artifacts-list';
 import { CLAUDE_CODE, connectionName, effortLabel, errorText, explainError } from './messages';
 import { ChatMarkdown } from './chat-markdown';
+import { ContextWindowGauge } from './context-window-gauge';
 import { FeedbackButtons } from './feedback';
 import { GoogleChangesList } from './google-changes-list';
 import { MorningBriefCard } from './morning-brief';
@@ -1009,6 +1010,9 @@ export function ConversationView({ v }: { v: AppView }) {
                 </div>
               )}
               <Readiness api={api} query={query} connectionId={session?.connectionId || connectionId} model={currentModel} />
+              {workMode !== 'image' && (
+                <ContextWindowGauge session={session} connectionId={connection?.id} model={currentModel} onEvent={api.onEvent} />
+              )}
               {/* Laid out like Claude Desktop: add and modes on the left, AI and send on the right. */}
               <div className="composer-tools">
                 <button

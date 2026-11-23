@@ -158,13 +158,13 @@ try {
   await expect(page.getByRole('button', { name: 'หยุดงาน', exact: true })).toBeVisible();
   await writeFile(join(home, 'main-release'), 'release synthetic main run');
   await waitDone();
-  await page.setViewportSize({ width: 960, height: 720 });
+  await page.setViewportSize({ width: 960, height: 680 });
   const inputBox = await page.locator('.composer textarea').boundingBox();
   // With the run finished, the side-question button gives way to the send button.
   await expect(page.locator('.composer').getByRole('button', { name: 'ถามแทรก', exact: true })).toHaveCount(0);
   const sendBox = await page.locator('.composer .send').boundingBox();
-  assert.ok(inputBox && inputBox.y >= 0 && inputBox.y + inputBox.height <= 720);
-  assert.ok(sendBox && sendBox.x >= 0 && sendBox.x + sendBox.width <= 960 && sendBox.y + sendBox.height <= 720);
+  assert.ok(inputBox && inputBox.y >= 0 && inputBox.y + inputBox.height <= 680, JSON.stringify(inputBox));
+  assert.ok(sendBox && sendBox.x >= 0 && sendBox.x + sendBox.width <= 960 && sendBox.y + sendBox.height <= 680, JSON.stringify(sendBox));
   await mkdir('release/qa/long-task-workflows', { recursive: true });
   await page.screenshot({ path: 'release/qa/long-task-workflows/questions-and-draft.png' });
   await page.getByRole('button', { name: 'ทำตามแผนแบบต่อเนื่อง', exact: true }).click();

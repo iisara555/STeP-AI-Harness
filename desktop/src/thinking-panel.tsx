@@ -93,6 +93,10 @@ export function ThinkingPanel({
         {steps.map((step, i) => (
           <Stage key={i} step={step} />
         ))}
+        {/* Antigravity, for one, reports its steps and time but not the words of its thinking. */}
+        {!running && !steps.some(step => step.notes.length) && (
+          <li className="thinking-stage thinking-unsaid">{t('AI ที่เชื่อมอยู่ไม่ส่งข้อความความคิดออกมา จึงเห็นเฉพาะขั้นตอนที่ทำ')}</li>
+        )}
       </ol>
     </details>
   );

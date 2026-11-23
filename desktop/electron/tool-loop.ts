@@ -167,6 +167,8 @@ export type LoopHost = {
    * stopped task can give them back on "ลองอีกครั้ง" or "ต่อ" instead of reading everything again.
    */
   reads?: (requests: LoopRequest[]) => void;
+  /** A bounded list of approved static read requests can be saved before a run is interrupted. */
+  checkpointReads?: (requests: LoopRequest[]) => void;
   activity?: (text: string) => void;
   begin?: (action: { id: string; tool: string }) => void;
   timing?: (tool: string, ms: number) => void;
@@ -377,8 +379,16 @@ export class ToolLoop {
       this.cachedChars += approved.length;
       ok = value != null && !(typeof value === 'object' && 'cancelled' in value && value.cancelled === true);
       if (!ok) failure = 'TOOL_DENIED';
-      else if (key)
+      else if (key) {
         this.reads.set(key, { id, total: approved.length, request: { tool: r.tool, input: r.input, ...(r.args ? { args: r.args } : {}) } });
+        if (!signal.aborted && this.host.checkpointReads && this.reads.size <= MAX_SEED_READS) {
+          try {
+            this.host.checkpointReads([...this.reads.values()].map(read => read.request));
+          } catch {
+            /* A checkpoint write must not change the outcome of an approved read. */
+          }
+        }
+      }
       const hint = !ok ? toolRemediationHint(r.tool, 'TOOL_DENIED', r) : undefined;
       const repaired = repairNotes.get(r);
       return {

@@ -33,14 +33,16 @@ export function resetThinking(started = Date.now()) {
   patch('thought', n => n + 1);
 }
 /** A run event that adds to the thinking: a stage, streamed reasoning, or the end of a model turn. */
-export function think(event: { type: string; text?: string; quiet?: boolean }) {
+export function think(event: { type: string; text?: string; quiet?: boolean; stage?: string }) {
   const changed =
     event.type === 'reasoning'
       ? thinking.reason(event.text || '')
       : event.type === 'status' || event.type === 'activity'
-        ? event.quiet
-          ? (thinking.turn(), false)
-          : thinking.step(event.text || '')
+        ? event.stage
+          ? thinking.step(event.stage)
+          : event.quiet
+            ? (thinking.turn(), false)
+            : thinking.step(event.text || '')
         : false;
   if (changed) patch('thought', n => n + 1);
 }

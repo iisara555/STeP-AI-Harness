@@ -1,3 +1,14 @@
+.composer-area:has(.side-question-history),
+.composer:has(.side-question-history) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+/* Let the scrollable answers give up space before the plan, input or send button. */
+.composer-area:has(.side-question-history) > :not(.composer),
+.composer:has(.side-question-history) > :not(.side-question-history) {
+  flex-shrink: 0;
+}
 .side-question-history {
   max-height: 32vh;
   overflow: auto;

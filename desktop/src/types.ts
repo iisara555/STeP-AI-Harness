@@ -76,7 +76,7 @@ export type Usage = { input: number; output: number; total: number; runs: number
 /** Only provider-reported account meters. Unknown values stay absent, never zero. */
 export type ProviderUsageData = {
   status: 'ok' | 'unavailable';
-  source: 'codex' | 'claude' | 'copilot' | 'openrouter' | 'deepseek' | 'minimax' | 'zai' | 'kimi';
+  source: 'codex' | 'claude' | 'copilot' | 'antigravity' | 'openrouter' | 'deepseek' | 'minimax' | 'zai' | 'kimi';
   experimental?: boolean;
   plan?: string;
   reason?: string;
@@ -184,6 +184,14 @@ export type ProviderCallTrace = {
   };
   usage?: { input: number; output: number; total: number; cachedInput?: number; cacheWriteInput?: number };
 };
+/** Estimated text input for a single request and the Desktop budget it is measured against. */
+export type ContextWindowReading = {
+  inputTokens: number;
+  budgetTokens: number;
+  connectionId: string;
+  model: string;
+  measuredAt: number;
+};
 export type RunTrace = {
   id: string;
   at: string;
@@ -194,6 +202,7 @@ export type RunTrace = {
   code?: string;
   ms: number;
   steps: StepTrace[];
+  contextWindow?: ContextWindowReading;
   skillSelection?: { method: 'router' | 'model' | 'previous' | 'fallback'; skill?: string };
   /** Reasoning level sent for this run: the employee's choice, or picked by task size (auto). No level means the model default. */
   effort?: { size: 'small' | 'medium' | 'large'; auto: boolean; level?: string };
@@ -258,7 +267,7 @@ export type Proposal = {
   at: string;
 };
 export type DocumentTemplateInfo = { key: string; sha256: string; name: string; font: string };
-export type SummaryCheckpoint = { covered: number; prefixHash: string; text: string };
+export type SummaryCheckpoint = { format?: 2; covered: number; prefixHash: string; text: string };
 export type Session = {
   /** Read-only answers from a frozen task snapshot; never become document edits or main-task history. */
   sideQuestions?: {
@@ -570,6 +579,7 @@ export type RunEvent = {
     | 'status'
     | 'activity'
     | 'work-action'
+    | 'context-window'
     | 'heartbeat'
     | 'changed'
     | 'side-question'
@@ -600,11 +610,14 @@ export type RunEvent = {
   text?: string;
   /** For status and activity: a routine wait that is shown but not kept among the answer's thinking stages. */
   quiet?: boolean;
+  /** For status and activity: the stage this starts in the answer's thinking, when it is named apart from the status text. */
+  stage?: string;
   /** For status: another model turn of the same step (after a tool result), not a new step. */
   turn?: boolean;
   /** For discard: how many characters of the streamed answer to take back. */
   count?: number;
   trace?: RunTrace;
+  contextWindow?: ContextWindowReading;
   workAction?: WorkAction;
   detail?: string[];
   connectionId?: string;

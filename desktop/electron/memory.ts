@@ -68,6 +68,8 @@ export function stableMemory(text: string) {
   if (EPHEMERAL.some(pattern => pattern.test(text))) throw new Error('MEMORY_EPHEMERAL');
   return text;
 }
+/** The turn "needs fixing" sends to redo an answer (Thai, or the English UI's wording); its own text is not a topic. */
+export const REVISE_REQUEST = /^(แก้คำตอบก่อนหน้าตามนี้|Revise the previous answer as follows):/;
 const ORIGINS = ['manual', 'chat', 'feedback'];
 /** Where a memory came from: how it was proposed and, for proposals, the task and the employee's own words. */
 function origin(raw: any): Pick<MemoryEntry, 'origin' | 'origin_session' | 'origin_evidence'> {
@@ -435,6 +437,38 @@ export class Memories {
     };
     this.store.put('memory-proposal', proposal.id, proposal);
     return proposal;
+  }
+  /**
+   * "Needs fixing" with "remember for next time" ticked: the person confirmed this note in the dialog, so it is saved
+   * now, not left as a proposal nobody opens. It names the request it corrects, so the AI applies it when a similar
+   * request comes again instead of guessing. A request that fails the privacy or stability check is left out and only
+   * the note is kept; a note that fails is refused.
+   */
+  async rememberFeedback(sessionId: string, note: string, request: string) {
+    const text = stableMemory(safeMemory(note.trim(), this.privacy));
+    if (!text || text.length > 1000) throw new Error('MEMORY_INVALID');
+    let topic = (request.split('\n').find(line => line.trim()) || '').replace(/\s+/g, ' ').trim();
+    topic = topic.length > 120 ? topic.slice(0, 119) + '…' : topic;
+    try {
+      if (topic) stableMemory(safeMemory(topic, this.privacy));
+    } catch {
+      topic = '';
+    }
+    const memory = topic ? `เมื่อขอเรื่อง “${topic}” คำตอบเดิมต้องแก้: ${text}` : text;
+    // Pressing it again on the same answer must not save the same correction twice.
+    const same = (await this.list()).find(m => m.text === memory);
+    if (same) return same;
+    return this.save(
+      {
+        name: topic ? topic.slice(0, 60) : 'Answer feedback',
+        text: memory,
+        type: 'feedback',
+        scope: 'private',
+        importance: 0.8,
+        ttl_days: 0,
+      },
+      { origin: 'feedback', origin_session: sessionId, origin_evidence: text },
+    );
   }
   /** Autodream is a local background queue, never a provider call or automatic memory write. */
   dream(session: Session) {

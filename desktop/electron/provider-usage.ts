@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { CopilotClient } from '@github/copilot-sdk';
 import { createRpc, initialize, claudeSdkOptions } from './providers';
+import { antigravityQuota } from './antigravity';
 import { presetFor } from '../src/provider-presets';
 import type { ProviderContext } from './providers';
 import type { Connection, ProviderUsageData, ProviderUsageReport } from '../src/types';
@@ -10,6 +11,7 @@ type Dependencies = {
   fetcher?: typeof fetch;
   loadClaude?: () => Promise<typeof import('@anthropic-ai/claude-agent-sdk')>;
   createCopilot?: (options: ConstructorParameters<typeof CopilotClient>[0]) => CopilotClient;
+  antigravityQuota?: (c: Connection, context: Context) => Promise<unknown>;
 };
 const object = (v: unknown): Record<string, any> => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
 const number = (v: unknown): number | undefined => {
@@ -384,6 +386,53 @@ export function normalizeKimiUsage(raw: unknown): ProviderUsageData {
   return finish(result);
 }
 
+/**
+ * Antigravity's own `agy -p "/usage" --output-format json` answer: model groups (Gemini, Claude and GPT, ...) that each
+ * share a 5-hour and a weekly limit, reported as a remaining fraction. A run that started an agent turn is refused.
+ */
+export function normalizeAntigravityUsage(raw: unknown): ProviderUsageData {
+  const response = object(raw),
+    command = object(response.command),
+    turns = number(response.num_turns);
+  if (response.status !== 'SUCCESS' || command.name !== 'usage' || (turns !== undefined && turns !== 0))
+    throw new Error('USAGE_RESPONSE_INVALID');
+  const result = data('antigravity');
+  result.experimental = true;
+  const groups = object(command.data).groups;
+  for (const value of (Array.isArray(groups) ? groups : []).slice(0, 20)) {
+    const group = object(value),
+      rows: ProviderUsageData['limits'] = [];
+    for (const item of (Array.isArray(group.buckets) ? group.buckets : []).slice(0, 10)) {
+      const bucket = object(item),
+        fraction = number(bucket.remaining_fraction ?? bucket.remainingFraction);
+      if (fraction === undefined || fraction < 0 || fraction > 1) continue;
+      const window = typeof bucket.window === 'string' ? bucket.window.toLowerCase() : '',
+        hint = `${typeof bucket.id === 'string' ? bucket.id : ''} ${typeof bucket.name === 'string' ? bucket.name : ''}`.toLowerCase();
+      const windowMinutes =
+        window === '5h' || /\b5h\b|five.?hour/.test(hint)
+          ? 300
+          : window === 'weekly' || /week/.test(hint)
+            ? 10080
+            : window === 'daily' || /daily/.test(hint)
+              ? 1440
+              : window === 'monthly' || /month/.test(hint)
+                ? 43200
+                : undefined;
+      rows.push({
+        name: windowMinutes === 300 ? 'five_hour' : windowMinutes === 10080 ? 'seven_day' : 'quota',
+        scope: scope(group.name) || scope(bucket.name),
+        windowMinutes,
+        usedPercent: percent((1 - fraction) * 100),
+        resetsAt: timestamp(bucket.reset_time ?? bucket.resetTime),
+      });
+    }
+    // Shorter windows first in each group, so the compact chip reads "5H · 1W" for the leading group.
+    rows.sort((a, b) => (a.windowMinutes ?? Infinity) - (b.windowMinutes ?? Infinity));
+    result.limits.push(...rows);
+  }
+  return finish(result);
+}
+
 /** Fixed-origin, read-only endpoints only. A custom/overridden preset does not gain access to its account API. */
 function apiService(c: Connection) {
   const preset = presetFor(c.preset);
@@ -417,6 +466,7 @@ function sourceFor(c: Connection): ProviderUsageData['source'] | undefined {
   if (c.provider === 'openai' && c.mode === 'subscription') return 'codex';
   if (c.provider === 'claude' && c.mode === 'subscription') return 'claude';
   if (c.provider === 'copilot') return 'copilot';
+  if (c.provider === 'antigravity' && c.mode === 'subscription') return 'antigravity';
   return apiService(c);
 }
 export function usageDashboard(c: Connection): string | undefined {
@@ -558,6 +608,20 @@ export async function readProviderUsage(c: Connection, context: Context, deps: D
       await client.forceStop().catch(() => {});
     }
   }
+  if (source === 'antigravity') {
+    let raw: unknown;
+    try {
+      // agy stops itself after 30 seconds; this outer limit only covers its isolated-home setup and cleanup.
+      raw = await deadline((deps.antigravityQuota || antigravityQuota)(c, context), 45_000);
+    } catch (error) {
+      const code = error instanceof Error ? error.message : '';
+      if (code === 'LOGIN_REQUIRED' || code === 'PROVIDER_PERMISSION_DENIED') throw new Error('USAGE_AUTH_REQUIRED');
+      if (code === 'PROVIDER_TIMEOUT' || code === 'USAGE_TIMEOUT') throw new Error('USAGE_TIMEOUT');
+      if (code === 'USAGE_RESPONSE_INVALID') throw new Error(code);
+      throw new Error('USAGE_REQUEST_FAILED');
+    }
+    return normalizeAntigravityUsage(raw);
+  }
   if (!context.key) throw new Error('USAGE_AUTH_REQUIRED');
   const fetcher = deps.fetcher || fetch;
   if (source === 'openrouter') {
@@ -666,7 +730,7 @@ export class ProviderUsage {
         }[c.provider],
       status: !c.ready ? 'disconnected' : source ? 'idle' : 'unsupported',
       source,
-      experimental: source === 'claude' || source === 'copilot' || source === 'zai' ? true : undefined,
+      experimental: source === 'claude' || source === 'copilot' || source === 'antigravity' || source === 'zai' ? true : undefined,
       canRefresh,
       hasDashboard: Boolean(usageDashboard(c)),
       limits: [],

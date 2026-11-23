@@ -113,6 +113,7 @@ try {
 
   const chat = page.getByRole('region', { name: 'แชตในเรื่องนี้' });
   await expect(chat.getByText(/ต้องเคลียร์เงินยืมภายใน 3 วันทำการ/)).toBeVisible({ timeout: 30_000 });
+  await expect(chat.getByRole('meter', { name: 'หน้าต่างบริบท' })).toBeVisible();
   await expect(chat.locator('.message.user')).toContainText('ต้องเคลียร์ภายในกี่วัน');
   // The view never left the claims assistant, and the proposal block shows as a card, not as code.
   await expect(page.locator('.topbar-heading strong')).toHaveText('ผู้ช่วยเบิกจ่าย');

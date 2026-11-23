@@ -136,7 +136,8 @@ try {
   );
   assert.equal(snapshot.sessions[0].proposals.length, 0);
   assert.equal(await page.locator('.composer textarea').inputValue(), '');
-  // Feedback under an answer: a rating stays on the message; "needs fixing" proposes, "remember this" saves after the dialog.
+  // Feedback under an answer: a rating stays on the message; "needs fixing" answers again with the note and remembers
+  // it with the request it corrects; "remember this" saves after the dialog.
   const answer = page.locator('article.message.assistant').first();
   await answer.getByRole('button', { name: 'ดี', exact: true }).click();
   await expect(answer.getByRole('button', { name: 'ดี', exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -144,12 +145,33 @@ try {
   assert.equal(rated.feedback, 'good');
   await answer.getByRole('button', { name: 'ต้องแก้', exact: true }).click();
   const fixDialog = page.getByRole('alertdialog', { name: 'คำตอบนี้ต้องแก้อะไร' });
+  const rememberFix = fixDialog.getByRole('checkbox', { name: 'จำไว้ใช้กับคำขอแบบนี้ครั้งถัดไป' });
+  await expect(rememberFix).toBeDisabled();
   await fixDialog.locator('textarea').fill('สรุปเป็นตารางท้ายคำตอบ');
-  await fixDialog.getByRole('button', { name: 'ส่งความเห็น' }).click();
+  await expect(rememberFix).toBeChecked();
+  if (process.env.STEP_FEEDBACK_SCREENSHOT) await page.screenshot({ path: process.env.STEP_FEEDBACK_SCREENSHOT + '-dialog.png' });
+  await fixDialog.getByRole('button', { name: 'แก้คำตอบ', exact: true }).click();
   await fixDialog.waitFor({ state: 'detached' });
+  await expect
+    .poll(
+      async () =>
+        (await page.evaluate(() => window.step.call('snapshot'))).sessions[0].messages.filter(m => m.role === 'user').at(-1)?.text,
+    )
+    .toBe('แก้คำตอบก่อนหน้าตามนี้: สรุปเป็นตารางท้ายคำตอบ');
+  await waitComplete();
+  await expect(page.locator('article.message.assistant')).toHaveCount(2);
+  if (process.env.STEP_FEEDBACK_SCREENSHOT) await page.screenshot({ path: process.env.STEP_FEEDBACK_SCREENSHOT + '-revised.png' });
   let memory = await page.evaluate(() => window.step.call('memoryList'));
-  assert.ok(memory.proposals.some(p => p.type === 'feedback' && p.text === 'สรุปเป็นตารางท้ายคำตอบ'));
-  assert.equal(memory.entries.length, 0, 'feedback waits for confirmation');
+  assert.ok(
+    memory.entries.some(
+      m =>
+        m.type === 'feedback' &&
+        m.origin === 'feedback' &&
+        m.text === 'เมื่อขอเรื่อง “First message” คำตอบเดิมต้องแก้: สรุปเป็นตารางท้ายคำตอบ',
+    ),
+    'the note is remembered with the request it corrects, without a second confirmation',
+  );
+  assert.equal(memory.proposals.length, 0);
   await expect(answer.getByRole('button', { name: 'ต้องแก้', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await answer.getByRole('button', { name: 'จำสิ่งนี้', exact: true }).click();
   const rememberDialog = page.getByRole('alertdialog', { name: 'จำสิ่งนี้ไว้ใช้กับงานถัดไป' });

@@ -59,7 +59,7 @@ test('a failed compaction cannot commit a replacement checkpoint', async () => {
     compact(section('conversation', JSON.stringify(Array.from({ length: 8 }, () => ({ role: 'user', text: 'large '.repeat(2000) })))), {
       system: '',
       state: '',
-      budget: 10,
+      budget: 1000,
       signal: new AbortController().signal,
       privacy: value => value,
       summarize: async () => {
