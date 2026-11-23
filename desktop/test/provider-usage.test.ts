@@ -10,6 +10,7 @@ import {
   normalizeMiniMaxUsage,
   normalizeZaiUsage,
   normalizeKimiUsage,
+  normalizeAntigravityUsage,
   readProviderUsage,
   ProviderUsage,
   usageDashboard,
@@ -477,7 +478,8 @@ test('unsupported/API-only or disconnected accounts do not start runtimes; error
     connection({ ready: false }),
     connection({ mode: 'api' }),
     connection({ provider: 'gemini' }),
-    connection({ provider: 'antigravity' }),
+    connection({ provider: 'antigravity', mode: 'api' }),
+    connection({ provider: 'antigravity', ready: false }),
     connection({ provider: 'claude', mode: 'oauth' }),
     connection({ provider: 'compatible', mode: 'api', preset: 'ollama', baseUrl: 'http://127.0.0.1:11434/v1' }),
   ]) {
@@ -538,4 +540,139 @@ test('local API ledger separates connections and preserves unattributed historic
   assert.equal(report.entries.find(e => e.connectionId === 'a')?.total, 10);
   assert.equal(report.entries.filter(e => !e.connectionId).length, 1);
   store.close();
+});
+
+// Shaped like `agy -p "/usage" --output-format json` (agy 1.3.2); every value is synthetic.
+const agyUsage = (overrides: Record<string, unknown> = {}) => ({
+  conversation_id: '',
+  status: 'SUCCESS',
+  response: 'Gemini Models\tWeekly Limit Remaining\t99%\t2026-11-14T13:45:55Z\n',
+  num_turns: 0,
+  usage: { input_tokens: 0, output_tokens: 0, total_tokens: 0 },
+  command: {
+    name: 'usage',
+    data: {
+      description: 'Within each group, models share a weekly limit and a 5-hour limit.',
+      groups: [
+        {
+          name: 'Gemini Models',
+          buckets: [
+            {
+              id: 'gemini-weekly',
+              name: 'Weekly Limit Remaining',
+              window: 'weekly',
+              remaining_fraction: 0.75,
+              reset_time: '2026-11-14T13:45:55Z',
+            },
+            { id: 'gemini-5h', name: 'Five Hour Limit Remaining', window: '5h', remaining_fraction: 1, reset_time: '2026-11-08T20:28:13Z' },
+          ],
+        },
+        {
+          name: 'Claude and GPT models',
+          buckets: [
+            {
+              id: '3p-weekly',
+              name: 'Weekly Limit Remaining',
+              window: 'weekly',
+              remaining_fraction: 0.3134,
+              reset_time: '2026-11-10T06:43:46Z',
+            },
+            { id: '3p-5h', name: 'Five Hour Limit Remaining', window: '5h', remaining_fraction: 0.65 },
+          ],
+        },
+        {
+          name: 'Gemini 4 Argon',
+          buckets: [
+            {
+              id: 'argon-weekly',
+              name: 'Gemini 4 Argon Weekly Limit',
+              window: 'weekly',
+              remaining_fraction: 0,
+              reset_time: 'private-email@example.com',
+            },
+            { id: 'broken', name: 'Broken', window: 'weekly', remaining_fraction: 1.5 },
+            { id: 'missing', name: 'Missing', window: 'weekly' },
+          ],
+        },
+      ],
+    },
+  },
+  ...overrides,
+});
+
+test('Antigravity reads agy /usage groups as 5-hour and weekly limits, shortest window first', () => {
+  const result = normalizeAntigravityUsage(agyUsage());
+  assert.equal(result.status, 'ok');
+  assert.equal(result.source, 'antigravity');
+  assert.equal(result.experimental, true);
+  assert.deepEqual(
+    result.limits.map(l => [l.name, l.scope, l.windowMinutes, l.usedPercent]),
+    [
+      ['five_hour', 'Gemini Models', 300, 0],
+      ['seven_day', 'Gemini Models', 10080, 25],
+      ['five_hour', 'Claude and GPT models', 300, 35],
+      ['seven_day', 'Claude and GPT models', 10080, 68.66],
+      ['seven_day', 'Gemini 4 Argon', 10080, 100],
+    ],
+  );
+  assert.equal(result.limits[1].resetsAt, '2026-11-14T13:45:55.000Z');
+  assert.equal(result.limits[2].resetsAt, undefined, 'a missing reset stays unknown');
+  assert.equal(result.limits[4].resetsAt, undefined, 'a malformed reset is dropped');
+  assert.doesNotMatch(JSON.stringify(result), /private-|Within each group/);
+});
+
+test('Antigravity refuses anything but a turn-free /usage answer, and reports no groups as unavailable', () => {
+  for (const bad of [
+    agyUsage({ status: 'ERROR' }),
+    agyUsage({ num_turns: 1 }),
+    agyUsage({ command: { name: 'model', data: {} } }),
+    { response: 'Gemini Models\tWeekly Limit Remaining\t99%' },
+    null,
+  ])
+    assert.throws(() => normalizeAntigravityUsage(bad), /USAGE_RESPONSE_INVALID/);
+  assert.equal(normalizeAntigravityUsage(agyUsage({ command: { name: 'usage', data: { groups: [] } } })).status, 'unavailable');
+});
+
+test('Antigravity usage runs only agy /usage for signed-in subscriptions and maps runtime failures to safe codes', async () => {
+  const c = connection({ provider: 'antigravity', mode: 'subscription', executable: 'agy' });
+  const calls: Connection[] = [];
+  const result = await readProviderUsage(c, context, {
+    antigravityQuota: async connectionArg => {
+      calls.push(connectionArg);
+      return agyUsage();
+    },
+    fetcher: async () => {
+      throw new Error('network must not be used');
+    },
+  });
+  assert.equal(calls.length, 1);
+  assert.equal(result.limits.length, 5);
+  for (const [thrown, code] of [
+    ['LOGIN_REQUIRED', 'USAGE_AUTH_REQUIRED'],
+    ['PROVIDER_PERMISSION_DENIED', 'USAGE_AUTH_REQUIRED'],
+    ['PROVIDER_TIMEOUT', 'USAGE_TIMEOUT'],
+    ['USAGE_RESPONSE_INVALID', 'USAGE_RESPONSE_INVALID'],
+    ['ANTIGRAVITY_VERSION_UNTESTED', 'USAGE_REQUEST_FAILED'],
+    ['ya29.synthetic-secret-token leaked', 'USAGE_REQUEST_FAILED'],
+  ])
+    await assert.rejects(
+      readProviderUsage(c, context, {
+        antigravityQuota: async () => {
+          throw new Error(thrown);
+        },
+      }),
+      (error: Error) => error.message === code,
+    );
+  const usage = new ProviderUsage(
+    async () => context,
+    (conn, ctx) => readProviderUsage(conn, ctx, { antigravityQuota: async () => agyUsage() }),
+  );
+  const base = usage.snapshot(c);
+  assert.equal(base.status, 'idle');
+  assert.equal(base.source, 'antigravity');
+  assert.equal(base.canRefresh, true);
+  assert.equal(base.experimental, true);
+  const report = await usage.refresh(c);
+  assert.equal(report.status, 'ok');
+  assert.equal(report.limits[0].scope, 'Gemini Models');
 });

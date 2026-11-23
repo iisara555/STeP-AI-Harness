@@ -10,6 +10,7 @@ export function usageSourceName(source: ProviderUsageData['source'] | string) {
     codex: 'ChatGPT',
     claude: 'Claude',
     copilot: 'GitHub Copilot',
+    antigravity: 'Antigravity',
     openrouter: 'OpenRouter',
     deepseek: 'DeepSeek',
     minimax: 'MiniMax',
