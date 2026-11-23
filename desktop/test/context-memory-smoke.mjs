@@ -349,6 +349,11 @@ try {
   page = await child.firstWindow();
   page.on('pageerror', e => errors.push(e.message));
   await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.length).toBe(2);
+  const restoredCheckpoint = (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(
+    s => s.id === 'source',
+  ).contextCheckpoint;
+  assert.equal(restoredCheckpoint.format, 2);
+  assert.equal(restoredCheckpoint.prefixHash, source.contextCheckpoint.prefixHash);
   const resumed = await page.evaluate(id => window.step.call('sessionResume', { id }), fork.id);
   assert.ok(resumed.messages.length > 24);
   await page.getByRole('button', { name: 'ตัวเลือกงานนี้' }).click();

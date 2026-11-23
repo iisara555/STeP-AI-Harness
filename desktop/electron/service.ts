@@ -23,7 +23,7 @@ import { Store } from './store';
 import { ProviderSession, type ProviderAdapter, type ProviderContext, type TokenCount } from './providers';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
 import { usedWebSources, webSources } from '../src/web';
-import { brokenRequests, loopRequests, type LoopRequest } from '../src/tools';
+import { brokenRequests, loopRequests } from '../src/tools';
 import { speakingStyleRules } from '../src/speaking-styles';
 import {
   ToolLoop,
@@ -756,9 +756,9 @@ export class WorkService {
     const hadTask = Boolean(session.originalQuery);
     const clarification = session.clarification;
     const stopped = ['error', 'interrupted', 'cancelled'].includes(session.status);
-    // What a stopped step had read is given back to this attempt once (ToolLoop seed), then forgotten.
-    const resume = stopped ? session.resumeReads : undefined;
-    delete session.resumeReads;
+    // Replay only static reads when the employee retries or explicitly continues the stopped task.
+    const resume = stopped && (options.retry || (policy.resume && !policy.inferred)) ? session.resumeReads : undefined;
+    if (!resume) delete session.resumeReads;
     // Stored data is re-read through the request parser, so only well-formed requests for known tools come back.
     const resumeSeed = resume
       ? loopRequests(
@@ -970,7 +970,6 @@ export class WorkService {
     // Each model step gets its own budget; high reasoning levels can take several minutes per step.
     // A model turn that completes is progress, so a long tool loop (an xhigh model reading Skills and references
     // turn after turn) restarts the budget for its next turn, up to STEP_PROGRESS_BUDGETS budgets per step.
-    let loopReads: { step: number; requests: LoopRequest[] } | undefined;
     let timedOut = false,
       timeout = setTimeout(() => {}, 0),
       stepLimit = Date.now() + STEP_PROGRESS_BUDGETS * this.stepTimeoutMs;
@@ -1671,6 +1670,7 @@ export class WorkService {
           if (recovery?.maxPromptTokens !== undefined) displayedBudget = inputBudget;
           const result = await compact(value, {
             checkpoint: this.store.session(id).contextCheckpoint,
+            history: textOnly ? undefined : history,
             retain: checkpoint => {
               const current = this.store.session(id);
               current.contextCheckpoint = checkpoint;
@@ -2001,9 +2001,7 @@ export class WorkService {
             deadline: () => this.writeNowRequests.has(id) || Date.now() >= stepLimit - this.stepTimeoutMs,
             finalTurn: reason =>
               activity(reason === 'deadline' ? tm('ใกล้หมดเวลา กำลังเขียนคำตอบจากที่อ่านมา') : tm('อ่านครบแล้ว กำลังเขียนคำตอบ')),
-            reads: requests => {
-              loopReads = requests.length ? { step: index, requests } : undefined;
-            },
+            checkpointReads: requests => this.store.saveResumeReads(id, { step: index, requests, at: new Date().toISOString() }),
             // A finished answer is checked while the tools are still at hand, so the AI fixes what a check finds itself.
             review: async (answer, signal) => {
               const text = sanitizeModelOutput(masked(answer)) || answer;
@@ -2125,7 +2123,6 @@ export class WorkService {
               stepTrace.loop = { ...bridgeLoop!.stats };
               return providerSession.closeAndWait();
             });
-          loopReads = undefined;
         } else result = await callProvider(prompt).finally(() => providerSession.closeAndWait());
         stepTrace.ms = Date.now() - stepStarted;
         if (stepUsage.total) stepTrace.usage = stepUsage;
@@ -2136,6 +2133,7 @@ export class WorkService {
         if (index < steps.length - 1) {
           const current = this.store.session(id);
           current.checkpoint = { key, done: index + 1, total: steps.length, handoff, sources, skillTitle, at: new Date().toISOString() };
+          delete current.resumeReads;
           this.store.save(current);
         }
       }
@@ -2302,6 +2300,7 @@ export class WorkService {
       session.routeKey = trace.route;
       delete session.checkpoint;
       delete session.lastRun;
+      delete session.resumeReads;
       if (usage.total) {
         const u = session.usage || { input: 0, output: 0, total: 0, runs: 0 };
         session.usage = { input: u.input + usage.input, output: u.output + usage.output, total: u.total + usage.total, runs: u.runs + 1 };
@@ -2349,7 +2348,6 @@ export class WorkService {
     } catch (error) {
       session = this.store.session(id);
       session.status = controller.signal.aborted && !timedOut ? 'cancelled' : 'error';
-      if (loopReads) session.resumeReads = { ...loopReads, at: new Date().toISOString() };
       const code = codeOf(error);
       const shown = timedOut ? 'RUN_TIMEOUT' : controller.signal.aborted ? 'CANCELLED' : code;
       const done = session.checkpoint?.done || 0;

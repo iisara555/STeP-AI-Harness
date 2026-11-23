@@ -1,7 +1,18 @@
-import { estimateTextTokens } from '../../src/modules/context-budget/index.js';
 import { section } from './prompt';
 import { createHash } from 'node:crypto';
 import type { SummaryCheckpoint } from '../src/types';
+import {
+  CHECKPOINT_FORMAT,
+  CHECKPOINT_TOKENS,
+  checkpointText,
+  preserveUserFacts,
+  recentPreview,
+  tokens,
+  updateCheckpoint,
+  type HistoryTurn,
+} from './checkpoint';
+
+export { missingFigures, tokens } from './checkpoint';
 
 /** The budget when the model's context window is not known (a custom endpoint, a local Ollama model). */
 export const CONTEXT_TOKENS = 48_000;
@@ -89,6 +100,8 @@ type Part = { tag: string; text: string };
 export type CompactResult = { prompt: string; before: number; after: number; method: 'none' | 'micro' | 'summary' };
 export type CompactOptions = {
   checkpoint?: SummaryCheckpoint;
+  /** The host's full masked history when a tool turn reuses a previously compacted prompt. */
+  history?: HistoryTurn[];
   retain?: (checkpoint: SummaryCheckpoint) => void;
   system: string;
   state: string;
@@ -99,7 +112,6 @@ export type CompactOptions = {
   privacy: (text: string) => string;
   hook?: (event: 'pre_compact' | 'post_compact', before: number, after: number) => Promise<void>;
 };
-export const tokens = (text: string): number => estimateTextTokens(text).estimatedTokens;
 export class ProviderPromptLimitError extends Error {
   constructor(readonly maxPromptTokens: number) {
     super('CONTEXT_LIMIT');
@@ -139,26 +151,16 @@ export const RECENT_TOKENS = 15_000;
 /** Room left for the summary itself when choosing how many recent turns fit. */
 const SUMMARY_RESERVE = 3_000;
 
-const FIGURE =
-  /(?:ข้อ|มาตรา|เลขที่|หมวด|ที่\s*อว)\s*[\d๐-๙][\d๐-๙.()/]*|(?:พ\.ศ\.|ค\.ศ\.)\s*[\d๐-๙]{4}|[\d๐-๙]{1,3}(?:,[\d๐-๙]{3})+(?:\.[\d๐-๙]+)?|[\d๐-๙]+(?:\.[\d๐-๙]+)?\s*(?:%|บาท|baht|THB|วัน|คน|ชั่วโมง|ชม\.|เดือน|ปี|หน้า|ชุด|รายการ)|[\d๐-๙]{1,2}\s*(?:ม\.ค\.|ก\.พ\.|มี\.ค\.|เม\.ย\.|พ\.ค\.|มิ\.ย\.|ก\.ค\.|ส\.ค\.|ก\.ย\.|ต\.ค\.|พ\.ย\.|ธ\.ค\.|มกราคม|กุมภาพันธ์|มีนาคม|เมษายน|พฤษภาคม|มิถุนายน|กรกฎาคม|สิงหาคม|กันยายน|ตุลาคม|พฤศจิกายน|ธันวาคม)\s*[\d๐-๙]{2,4}/g;
-const bare = (text: string) => text.replace(/[\s,]/g, '');
+const signature = (turns: HistoryTurn[]) => createHash('sha256').update(JSON.stringify(turns)).digest('hex');
 
-/**
- * Figures the employee wrote that a summary left out, copied verbatim. A summarizer may round or drop an amount or a
- * clause number; the host does not rely on it for these. Bounded, and only from the employee's own messages.
- */
-export function missingFigures(messages: { role?: unknown; text?: unknown }[], summary: string) {
-  const have = bare(summary);
-  const found: string[] = [];
-  for (const m of messages) {
-    if (m.role !== 'user') continue;
-    for (const match of String(m.text || '').matchAll(FIGURE)) {
-      const figure = match[0].trim();
-      if (!found.includes(figure) && !have.includes(bare(figure))) found.push(figure);
-      if (found.length === 40) return found;
-    }
+function readConversation(text: string): HistoryTurn[] {
+  try {
+    const turns = JSON.parse(text);
+    if (Array.isArray(turns)) return turns.filter(turn => typeof turn?.role === 'string' && typeof turn?.text === 'string');
+  } catch {
+    // Invalid history is never treated as instructions.
   }
-  return found;
+  return [];
 }
 
 /** Never shorten standing governance, the current request, route, or the host task-state envelope. */
@@ -168,7 +170,8 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
   if (!options.reactive && before <= budget) return { prompt, before, after: before, method: 'none' };
   if (options.signal.aborted) throw new Error('CANCELLED');
   await options.hook?.('pre_compact', before, before);
-  const items = parts(prompt).filter(p => p.tag !== 'task_state');
+  let items = parts(prompt).filter(p => p.tag !== 'task_state');
+  const target = options.reactive ? Math.min(budget, before - 1) : budget;
   // Keep non-tagged host text verbatim (including retrieval citation requirements).
   const outside = prompt.replace(/<([a-z_]+)>\n[\s\S]*?\n<\/\1>/g, '').trim();
   const lastResult = items.map(p => p.tag).lastIndexOf('tool_results');
@@ -194,93 +197,76 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
   let value = build();
   let method: CompactResult['method'] = 'micro';
   let checkpoint: SummaryCheckpoint | undefined;
-  if (options.reactive || tokens(options.system + value) > budget) {
-    const conversation = items.find(p => p.tag === 'conversation');
-    let messages: any[] = [];
-    try {
-      messages = JSON.parse(conversation?.text || '[]');
-    } catch {
-      /* Invalid history is discarded, never treated as instructions. */
-    }
-    if (Array.isArray(messages) && messages.length > 2 && conversation) {
-      const signature = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-      const cached = options.checkpoint;
-      // Recent turns stay word for word: the last two always, older ones while they fit a share of the budget that the
-      // rest of the prompt leaves free. Previews of what is cut keep that estimate honest.
-      conversation.text = JSON.stringify(messages.slice(-2));
-      let room = Math.min(Math.floor(budget * RECENT_SHARE), RECENT_TOKENS, budget - SUMMARY_RESERVE - tokens(options.system + build()));
-      let cut = messages.length - 2;
+  if (options.reactive) {
+    for (const part of items) if (part.tag === 'tool_history') part.text = preview(part.text, 1500);
+    value = build();
+  }
+  if (options.reactive || tokens(options.system + value) > target) {
+    const conversation = items.find(part => part.tag === 'conversation');
+    const inlineSummary = items.findLast(part => part.tag === 'context_summary');
+    const messages = options.history ?? readConversation(conversation?.text || '[]');
+    if (conversation && messages.length) {
+      // Rebuild the summary once. The full, masked history keeps checkpoint hashes stable across tool turns.
+      items = items.filter(part => part.tag !== 'context_summary');
+      conversation.text = '[]';
+      const roomForHistory = target - tokens(options.system + build());
+      if (roomForHistory <= 0) throw new Error('CONTEXT_LIMIT');
+
+      const recentCount = Math.min(2, messages.length);
+      let cut = messages.length - recentCount;
+      conversation.text = JSON.stringify(messages.slice(cut));
+      let room = Math.min(Math.floor(budget * RECENT_SHARE), RECENT_TOKENS, target - SUMMARY_RESERVE - tokens(options.system + build()));
       while (cut > 1) {
         const size = tokens(JSON.stringify(messages[cut - 1]));
         if (size > room) break;
         room -= size;
         cut--;
       }
-      // A checkpoint that already covers more turns is kept as it is: turns are never taken back out of a summary.
-      if (
-        cached &&
+      const cached = options.checkpoint;
+      const canonicalHistory = !inlineSummary || Boolean(options.history);
+      const reusable =
+        canonicalHistory &&
+        cached?.format === CHECKPOINT_FORMAT &&
         Number.isSafeInteger(cached.covered) &&
-        cached.covered > cut &&
-        cached.covered <= messages.length - 2 &&
-        signature(messages.slice(0, cached.covered)) === cached.prefixHash
-      )
-        cut = cached.covered;
-      const old = messages.slice(0, cut);
-      const valid =
-        cached &&
-        Number.isSafeInteger(cached.covered) &&
-        cached.covered >= 0 &&
-        cached.covered <= old.length &&
+        cached.covered > 0 &&
+        cached.covered <= messages.length - recentCount &&
         typeof cached.text === 'string' &&
         cached.text.length <= 60000 &&
-        signature(old.slice(0, cached.covered)) === cached.prefixHash
+        signature(messages.slice(0, cached.covered)) === cached.prefixHash
           ? cached
           : undefined;
-      const retained = valid ? options.privacy(valid.text) : '';
-      // Several bounded calls avoid asking an already over-full provider to summarize its oversized prompt.
-      const chunks: string[] = [];
-      let batch = '';
-      const priorParts =
-        valid && valid.covered < old.length
-          ? Array.from({ length: Math.ceil(retained.length / 6000) }, (_, i) => ({
-              role: 'summary',
-              text: retained.slice(i * 6000, (i + 1) * 6000),
-            }))
-          : [];
-      for (const m of [...priorParts, ...old.slice(valid?.covered || 0)]) {
-        const line = JSON.stringify({ role: m.role, text: preview(String(m.text || ''), 6000) });
-        if (tokens(batch + line) > 6000 && batch) {
-          chunks.push(batch);
-          batch = '';
-        }
-        batch += line + '\n';
-      }
-      if (batch) chunks.push(batch);
-      const summaries: string[] = [];
-      if (valid?.covered === old.length) summaries.push(retained);
-      if (chunks.length > 12)
-        summaries.push('[Some older turns omitted from this bounded summary. The complete transcript remains local.]');
-      for (const chunk of chunks.slice(-12)) {
-        if (options.signal.aborted) throw new Error('CANCELLED');
-        summaries.push(preview(options.privacy(await options.summarize(chunk)), 3500));
-      }
-      const figures = missingFigures(old, summaries.join('\n'));
-      if (figures.length)
-        summaries.push(
-          options.privacy('Exact figures the employee gave (verbatim, kept by the host): ' + figures.join('; ').slice(0, 1500)),
+      if (reusable) cut = Math.max(cut, reusable.covered);
+
+      const earlier = messages.slice(0, cut);
+      const previous = reusable?.text ?? (!canonicalHistory ? inlineSummary?.text || '' : '');
+      if (earlier.length || previous) {
+        const summary = await updateCheckpoint(
+          earlier.slice(reusable?.covered ?? 0),
+          previous ? options.privacy(previous) : '',
+          options.summarize,
+          options.privacy,
+          options.signal,
         );
-      conversation.text = JSON.stringify(messages.slice(cut));
-      items.push({ tag: 'context_summary', text: summaries.join('\n\n') });
-      checkpoint = { covered: old.length, prefixHash: signature(old), text: summaries.join('\n\n') };
-      method = 'summary';
-      value = build();
-    }
-    // Reactive retry also makes old file/tool previews smaller. The latest source remains complete.
-    if (options.reactive) {
-      for (const p of items) {
-        if (p.tag === 'tool_history') p.text = preview(p.text, 1500);
+        if (canonicalHistory && earlier.length > (reusable?.covered ?? 0)) {
+          checkpoint = { format: CHECKPOINT_FORMAT, covered: earlier.length, prefixHash: signature(earlier), text: summary };
+        }
+        const displaySummary = checkpointText(summary, Math.min(CHECKPOINT_TOKENS, Math.floor(roomForHistory / 2)));
+        const facts = preserveUserFacts(earlier, displaySummary, Math.min(650, Math.floor(roomForHistory / 5)));
+        const context = [displaySummary, facts ? options.privacy(facts) : ''].filter(Boolean).join('\n\n');
+        if (!context) throw new Error('CONTEXT_LIMIT');
+        items.push({ tag: 'context_summary', text: context });
+        method = 'summary';
       }
+
+      const recent = messages.slice(cut);
+      conversation.text = JSON.stringify(recent);
       value = build();
+      if (recent.length && tokens(options.system + value) > target) {
+        conversation.text = '[]';
+        const recentBudget = target - tokens(options.system + build());
+        conversation.text = JSON.stringify(recentPreview(recent, recentBudget));
+        value = build();
+      }
     }
   }
   const after = tokens(options.system + value);

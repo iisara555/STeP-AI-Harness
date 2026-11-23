@@ -8,6 +8,8 @@ _Last updated: 2026-11-23_
 
 ## In flight
 
+- **Long-task checkpoint reliability (2026-11-23)**. Compaction updates one checkpoint across the full older-history range, keeps explicit user requirements and whole numeric facts, and shortens oversized previous messages without changing current sources. A tool-turn retry uses the original masked history and keeps a single summary. Approved static read requests are saved while the task runs and reopened through the current permissions only on retry or an explicit continuation.
+
 - **Desktop context gauge (2026-11-23)**. The main and disbursement chat composers display the estimated latest prompt against the effective full-send input budget. The reading updates after compaction, uses Antigravity’s transport allowance, and is retained on the run for the same account and model.
 
 - **Antigravity context-limit retry (2026-11-23)**. When Antigravity refuses a full prompt that would be cut, the adapter reports the prompt budget left after its own system instructions. Desktop uses that limit for the compaction retry while keeping the latest source, request and task state. The adapter and synthetic chat cover this path. The specific limit reported by the owner still needs diagnostics from the affected app and model.

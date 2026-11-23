@@ -267,7 +267,7 @@ export type Proposal = {
   at: string;
 };
 export type DocumentTemplateInfo = { key: string; sha256: string; name: string; font: string };
-export type SummaryCheckpoint = { covered: number; prefixHash: string; text: string };
+export type SummaryCheckpoint = { format?: 2; covered: number; prefixHash: string; text: string };
 export type Session = {
   /** Read-only answers from a frozen task snapshot; never become document edits or main-task history. */
   sideQuestions?: {

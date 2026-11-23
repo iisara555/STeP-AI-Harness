@@ -95,6 +95,7 @@ export class Store {
     delete s.longTask;
     delete s.sideQuestions;
     delete s.lastRun;
+    delete s.resumeReads;
     delete s.consentedAt;
     delete s.allowedIdentifiers;
     delete s.usage;
@@ -289,6 +290,14 @@ export class Store {
   save(session: Session) {
     session.updatedAt = new Date().toISOString();
     this.put('session', session.id, session);
+  }
+  saveResumeReads(id: string, reads: NonNullable<Session['resumeReads']>) {
+    // This changes only recovery metadata. The transcript and its search index stay intact.
+    this.db
+      .prepare(
+        "UPDATE records SET value=json_set(value,'$.resumeReads',json(?)) WHERE kind='session' AND id=? AND json_extract(value,'$.status')='running'",
+      )
+      .run(JSON.stringify(reads), id);
   }
   edit(id: string, text: string, baseRevision: number, document?: unknown, presentation?: unknown) {
     const session = this.session(id);
