@@ -5,7 +5,7 @@ import { section, fence } from '../electron/prompt';
 import { WorkService, type Harness } from '../electron/service';
 import { Store } from '../electron/store';
 import { tmpdir } from 'node:os';
-import type { Connection } from '../src/types';
+import type { Connection, ContextWindowReading } from '../src/types';
 const privacy: any = await import('../../src/modules/privacy/index.js');
 
 test('canonical estimator counts Thai and preserves short prompts exactly', async () => {
@@ -181,6 +181,7 @@ test('service compacts to the transport limit when it is lower than the model wi
       nextOutput: async () => null,
     };
     const sizes: number[] = [];
+    const readings: ContextWindowReading[] = [];
     const transportRules = 'Extra instructions added by the transport. '.repeat(110);
     const service = new WorkService(
       store,
@@ -191,22 +192,37 @@ test('service compacts to the transport limit when it is lower than the model wi
           run: async (prompt, _connection, context) => {
             if (context.system?.startsWith('Summarize')) return 'Earlier work checkpoint.';
             const transportSystem = (context.system || '') + transportRules;
+            const maxPromptTokens = 56000 - tokens(transportSystem);
+            context.onFullPromptBudget?.(maxPromptTokens);
             const size = tokens(transportSystem + prompt);
             sizes.push(size);
-            if (size > 56000) throw new ProviderPromptLimitError(56000 - tokens(transportSystem));
+            if (size > 56000) throw new ProviderPromptLimitError(maxPromptTokens);
             assert.ok(prompt.includes(latestTurn));
             assert.ok(prompt.includes('Continue work'));
             return 'Done';
           },
         },
       }),
-      () => {},
+      event => {
+        if (event.type === 'context-window' && event.contextWindow) readings.push(event.contextWindow);
+      },
     );
     await service.run(session.id, 'Continue work', '', true, undefined, 'chat');
     assert.equal(sizes.length, 2);
     assert.ok(sizes[0] > 56000, 'the first prompt exceeds the transport limit');
     assert.ok(sizes[1] <= 56000, 'the recovery fits the real transport limit');
-    assert.equal(store.session(session.id).status, 'review');
+    const finished = store.session(session.id);
+    assert.equal(finished.status, 'review');
+    assert.ok(
+      readings.some(r => r.inputTokens > r.budgetTokens),
+      'the live gauge reports the oversized input',
+    );
+    const last = readings.at(-1)!;
+    assert.ok(
+      last.inputTokens < last.budgetTokens && last.budgetTokens < 56000,
+      'the gauge falls after compaction and accounts for transport rules',
+    );
+    assert.deepEqual(finished.runs?.at(-1)?.contextWindow, last, 'the last measured input remains visible after reopening the task');
   } finally {
     store.close();
   }

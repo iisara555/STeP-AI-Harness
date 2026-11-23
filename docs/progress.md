@@ -8,6 +8,8 @@ _Last updated: 2026-11-23_
 
 ## In flight
 
+- **Desktop context gauge (2026-11-23)**. The main and disbursement chat composers display the estimated latest prompt against the effective full-send input budget. The reading updates after compaction, uses Antigravity’s transport allowance, and is retained on the run for the same account and model.
+
 - **Antigravity context-limit retry (2026-11-23)**. When Antigravity refuses a full prompt that would be cut, the adapter reports the prompt budget left after its own system instructions. Desktop uses that limit for the compaction retry while keeping the latest source, request and task state. The adapter and synthetic chat cover this path. The specific limit reported by the owner still needs diagnostics from the affected app and model.
 
 - **Desktop v0.6.40 prepared (2026-11-23, owner asked to release)**: ships #397 (verified organization account at the Skill/feedback intake). Harness remains 0.7.7. Publish with `desktop-release.yml` on `main` with `publish=true` after merge and green post-merge CI. After staff update, the owner deploys the new Apps Script version (code and permission already in place).

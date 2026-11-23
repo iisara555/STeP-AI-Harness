@@ -42,6 +42,7 @@ import type { ToolScope } from './tools';
 import { RETRYABLE_CODES, RETRY_DELAYS_MS, retryDelay } from './retry';
 import { section } from './prompt';
 import { CHECKPOINT_SYSTEM, compact, contextBudget, LOOP_FOLD_SHARE, promptTooLong, ProviderPromptLimitError, tokens } from './compact';
+import { ANTIGRAVITY_FIRST_MESSAGE_TOKENS } from './antigravity';
 import { mainLocale, tm } from './i18n';
 import { internalSystemFor, internalSystemRule } from './internal-systems';
 import { workflowRule } from './workflows';
@@ -1647,13 +1648,27 @@ export class WorkService {
         trace.steps.push(stepTrace);
         // Compact against the connected model's own window, not one size for all.
         const budget = contextBudget(connection);
+        let displayedBudget = connection.provider === 'antigravity' ? Math.min(budget, ANTIGRAVITY_FIRST_MESSAGE_TOKENS) : budget;
+        const measureContext = (inputTokens: number) => {
+          const reading = trace.contextWindow;
+          if (reading?.inputTokens === inputTokens && reading.budgetTokens === displayedBudget) return;
+          const contextWindow = {
+            inputTokens,
+            budgetTokens: displayedBudget,
+            connectionId: selectedConnection.id,
+            model: selectedConnection.model,
+            measuredAt: Date.now(),
+          };
+          trace.contextWindow = contextWindow;
+          this.emit({ sessionId: id, type: 'context-window', contextWindow });
+        };
+        // Allow for rounding the host system and provider prompt estimates separately.
+        const fullSendBudget = (hostSystem: string, promptBudget: number) =>
+          Math.min(budget, Math.max(1, tokens(hostSystem) + promptBudget - 1));
         const compactPrompt = async (value: string, recovery?: { system: string; maxPromptTokens?: number }) => {
           const recoverySystem = recovery?.system ?? system;
-          // The transport budget excludes its own rules. Leave one token for rounding the system and prompt separately.
-          const inputBudget =
-            recovery?.maxPromptTokens === undefined
-              ? budget
-              : Math.min(budget, Math.max(0, tokens(recoverySystem) + recovery.maxPromptTokens - 1));
+          const inputBudget = recovery?.maxPromptTokens === undefined ? budget : fullSendBudget(recoverySystem, recovery.maxPromptTokens);
+          if (recovery?.maxPromptTokens !== undefined) displayedBudget = inputBudget;
           const result = await compact(value, {
             checkpoint: this.store.session(id).contextCheckpoint,
             retain: checkpoint => {
@@ -1671,7 +1686,10 @@ export class WorkService {
               if (scan.action === 'block-external' || typeof scan.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
               return scan.redactedText;
             },
-            hook: (event, before, after) => this.harness.compactHook?.(event, id, before, after) || Promise.resolve(),
+            hook: (event, before, after) => {
+              if (event === 'pre_compact') measureContext(before);
+              return this.harness.compactHook?.(event, id, before, after) || Promise.resolve();
+            },
             summarize: async data => {
               activity(tm('กำลังย่อบทสนทนาเก่า โดยเก็บสถานะงานไว้'));
               let counted: TokenCount = { input: 0, output: 0, total: 0 };
@@ -1722,6 +1740,7 @@ export class WorkService {
             current.compaction = { before: result.before, after: result.after, method: result.method, at: new Date().toISOString() };
             this.store.save(current);
           }
+          measureContext(result.after);
           return result.prompt;
         };
         prompt = await compactPrompt(prompt);
@@ -1775,6 +1794,8 @@ export class WorkService {
               ms: 0,
             };
             stepTrace.providerCalls!.push(call);
+            const measureAnswer = !search && !analysisImage;
+            if (measureAnswer) measureContext(call.inputEstimate);
             try {
               if (tokens(providerSystem + nextPrompt) > budget) throw new Error('CONTEXT_LIMIT');
               if (!search && (analysisImage || options.images?.length) && !this.harness.visionEnabled?.())
@@ -1788,6 +1809,12 @@ export class WorkService {
                 onTransport: info => {
                   call.transport = info;
                 },
+                onFullPromptBudget: measureAnswer
+                  ? promptBudget => {
+                      displayedBudget = fullSendBudget(providerSystem, promptBudget);
+                      measureContext(call.inputEstimate);
+                    }
+                  : undefined,
                 webSearch: search,
                 longFormTor: !search && !analysisImage && draftingTool?.id === 'tor',
                 session: search || analysisImage ? undefined : providerSession,

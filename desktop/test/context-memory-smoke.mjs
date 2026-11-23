@@ -215,6 +215,12 @@ try {
   const source = state.sessions.find(s => s.id === 'source');
   assert.equal(source.compaction.method, 'summary');
   assert.ok(source.compaction.after < source.compaction.before);
+  const reading = source.runs.at(-1).contextWindow;
+  assert.ok(reading.inputTokens < reading.budgetTokens);
+  const contextGauge = page.locator('.composer').getByRole('meter', { name: 'หน้าต่างบริบท' });
+  await expect(contextGauge).toBeVisible();
+  await expect(contextGauge).toHaveAttribute('aria-valuenow', String(reading.inputTokens));
+  await expect(contextGauge).toHaveAttribute('aria-valuemax', String(reading.budgetTokens));
   assert.ok(source.loadedContext.includes('STEP.md'));
   assert.ok(source.loadedContext.includes('.step/output-styles/brief.md'));
   assert.ok(source.loadedContext.some(s => s.includes('Source preference')));

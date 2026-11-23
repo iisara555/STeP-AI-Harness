@@ -948,3 +948,43 @@
 .morning-brief-time-setting input {
   width: 110px;
 }
+
+.context-window-gauge {
+  display: flex;
+  justify-content: flex-end;
+  padding-inline: var(--space-3);
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.context-window-meter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+.context-window-track {
+  width: 3rem;
+  height: 0.25rem;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--line-strong);
+}
+.context-window-track > span {
+  display: block;
+  height: 100%;
+  background: var(--muted);
+}
+.context-window-percent {
+  font-variant-numeric: tabular-nums;
+}
+.context-window-meter[data-level='near'] {
+  color: var(--accent-ink);
+}
+.context-window-meter[data-level='near'] .context-window-track > span {
+  background: var(--accent-ink);
+}
+.context-window-meter[data-level='full'] {
+  color: var(--danger);
+}
+.context-window-meter[data-level='full'] .context-window-track > span {
+  background: var(--danger);
+}
