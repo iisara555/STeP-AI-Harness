@@ -600,6 +600,8 @@ export type RunEvent = {
   text?: string;
   /** For status and activity: a routine wait that is shown but not kept among the answer's thinking stages. */
   quiet?: boolean;
+  /** For status: another model turn of the same step (after a tool result), not a new step. */
+  turn?: boolean;
   /** For discard: how many characters of the streamed answer to take back. */
   count?: number;
   trace?: RunTrace;

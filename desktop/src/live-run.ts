@@ -64,6 +64,31 @@ export function useLiveRun<T extends string | number>(select: (run: LiveRun) => 
   return value;
 }
 
+/** How long a working label stays before the next one replaces it. */
+export const LABEL_HOLD_MS = 1500;
+
+/**
+ * The working label, changed at most once per `hold`: a tool loop moves through "preparing", "writing" and a tool stage
+ * within a second, and showing each made the line blink. A stage that passes faster is skipped (the thinking panel
+ * still lists it), and a label that comes back within the hold never left.
+ */
+export function useSteadyLabel(label: string, hold = LABEL_HOLD_MS) {
+  const [shown, setShown] = useState(label);
+  const since = useRef(0);
+  useEffect(() => {
+    if (label === shown) return;
+    const show = () => {
+      since.current = Date.now();
+      setShown(label);
+    };
+    const wait = since.current + hold - Date.now();
+    if (wait <= 0) return show();
+    const timer = setTimeout(show, wait);
+    return () => clearTimeout(timer);
+  }, [label, shown, hold]);
+  return shown;
+}
+
 /** The run's elapsed time, for the status bar and the working indicator. */
 export function useElapsed(running: boolean, startedAt: number) {
   const now = useLiveRun(run => run.now);

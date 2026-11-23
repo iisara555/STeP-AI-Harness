@@ -5,7 +5,7 @@ import { ACTION_ICONS, ACTION_LABELS } from './work-assistant';
 import { ChevronDown } from 'lucide-react';
 import { Brain, CircleCheck } from './icons';
 import { t } from './i18n';
-import { savedThinking, type Thinking, type ThinkingStep } from './thinking';
+import { savedThinking, settledNotes, type Thinking, type ThinkingStep } from './thinking';
 
 /** "45 วินาที", "2 นาที 25 วินาที": the time a thought or the whole thinking took. */
 export function thinkingTime(ms: number) {
@@ -50,13 +50,31 @@ function Stage({ step }: { step: ThinkingStep }) {
   );
 }
 
-export function ThinkingPanel({ thinking, running = false }: { thinking: Thinking; running?: boolean }) {
+export function ThinkingPanel({
+  thinking,
+  running = false,
+  current = [],
+}: {
+  thinking: Thinking;
+  running?: boolean;
+  /** While running: the label the status line shows, and the one it moves to next. */
+  current?: string[];
+}) {
   // Open while the AI works so the thinking is seen as it happens; a finished answer keeps it folded under one line.
   const [open, setOpen] = useState(running);
-  // While the AI works, the status line under the panel already names the stage in progress, so the panel shows its
-  // thoughts without repeating its title.
+  // While the AI works, the status line under the panel (`current`) names the stage in progress, so the panel shows its
+  // thoughts without repeating its title. Only while the line names it (or is about to): once the line moves on (the
+  // next model turn, or a stage too quick to show there), the title shows here, so no stage is hidden from both, and a
+  // title once shown here is never taken back.
+  const last = thinking.steps.length - 1;
   const steps = (
-    running ? thinking.steps.map((step, i) => (i === thinking.steps.length - 1 ? { ...step, title: '' } : step)) : thinking.steps
+    running
+      ? thinking.steps.map((step, i) =>
+          i === last
+            ? { ...step, title: current.includes(stageLabel(step.title).label) ? '' : step.title, notes: settledNotes(step.notes) }
+            : step,
+        )
+      : thinking.steps
   ).filter(step => step.title || step.notes.length);
   if (!steps.length) return null;
   const time = thinkingTime(thinking.ms);

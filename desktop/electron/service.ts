@@ -988,10 +988,11 @@ export class WorkService {
     // Each stage and the model's reasoning stay with the answer (src/thinking.ts). A quiet update is a routine wait
     // ("preparing the answer") that says nothing about how the answer was reached, so it is not kept as a stage.
     const thinking = new ThinkingLog();
-    const status = (message: string, quiet = false) => {
+    // `turn` marks another model turn of the same step, so the window keeps what that step already streamed.
+    const status = (message: string, quiet = false, turn = false) => {
       if (quiet) thinking.turn();
       else thinking.step(message);
-      this.emit({ sessionId: id, type: 'status', text: message, ...(quiet ? { quiet } : {}) });
+      this.emit({ sessionId: id, type: 'status', text: message, ...(quiet ? { quiet } : {}), ...(turn ? { turn } : {}) });
     };
     const activity = (message: string, quiet = false) => {
       if (!quiet) thinking.step(message);
@@ -1774,7 +1775,7 @@ export class WorkService {
               if (!search && (analysisImage || options.images?.length) && !this.harness.visionEnabled?.())
                 throw new Error('VISION_DISABLED');
               stepTrace.promptChars = Math.max(stepTrace.promptChars, nextPrompt.length);
-              if (!search) status(tm('กำลังเตรียมคำตอบ'), true);
+              if (!search) status(tm('กำลังเตรียมคำตอบ'), true, true);
               checkAbort();
               const answer = await selectedRuntime.adapter.run(nextPrompt, connection, {
                 ...selectedRuntime.context,

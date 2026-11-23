@@ -31,6 +31,18 @@ export function splitThoughts(text: string): ThinkingNote[] {
   return notes;
 }
 
+/**
+ * Live reasoning arrives in pieces, so its last line can be a heading still being typed ("**ตรวจเอก"): shown as is, the
+ * stars appeared and then the line jumped to a bold heading. The unfinished heading waits until its line is complete.
+ */
+export function settledNotes(notes: ThinkingNote[]) {
+  const last = notes.at(-1);
+  if (!last) return notes;
+  const text = last.text.replace(/(^|\n)[ \t]*(\*\*[^*\n]*\*?|\*)$/, '').trimEnd();
+  if (text === last.text) return notes;
+  return text || last.title ? [...notes.slice(0, -1), { ...last, text }] : notes.slice(0, -1);
+}
+
 /** Collects a run's stages and reasoning as they arrive; `result` is what the answer keeps. */
 export class ThinkingLog {
   private stages: { title: string; at: number; reasoning: string }[] = [];

@@ -35,7 +35,7 @@ import { ThinkingScribble } from './thinking-scribble';
 import { VoiceButton } from './voice';
 import { WORKFLOW_LABELS, WorkPlanCard } from './work-plan';
 import { WelcomeGreeting } from './welcome-greeting';
-import { liveAnswer, liveThinking, offerWriteNow, useElapsed, useLiveRun } from './live-run';
+import { liveAnswer, liveThinking, offerWriteNow, useElapsed, useLiveRun, useSteadyLabel } from './live-run';
 import { SavedThinking, ThinkingPanel } from './thinking-panel';
 import { WorkAssistantActivity, WorkAssistantGuide, workActionsFromTrace } from './work-assistant';
 import type { WorkMode, Workflow } from './types';
@@ -173,6 +173,9 @@ export function ConversationView({ v }: { v: AppView }) {
   // A refresh can land after main saved the answer but before it reports the run finished; the saved message
   // then already shows the streamed text, so the live copy is hidden instead of appearing twice.
   const { liveText, streamSaved } = liveAnswer(stream, session?.messages.at(-1));
+  // The one working line under the answer; held steady so quick tool turns do not make it blink.
+  const nextWorking = progress ? t(progress) : liveText ? t('กำลังเขียนคำตอบ') : t('กำลังคิด');
+  const working = useSteadyLabel(nextWorking);
   // While the AI is still reading after two minutes, the stop button first asks it to write from what it has read;
   // a second press stops the task.
   const writeNow = Boolean(
@@ -507,13 +510,13 @@ export function ConversationView({ v }: { v: AppView }) {
                     ))}
                   </ol>
                 )}
-                {thinking && <ThinkingPanel thinking={thinking} running />}
+                {thinking && <ThinkingPanel thinking={thinking} running current={[working, nextWorking]} />}
                 {liveText && !streamSaved && <RichText className="message-body streaming" text={liveText} onLink={openLink} />}
                 {session && <WorkAssistantActivity actions={workActions[session.id] || []} running />}
                 {/* One quiet line while working, as in Claude and Codex: each step replaces the last, nothing stacks up. */}
                 <div className="activity" role="status" aria-live="polite">
                   <ThinkingScribble />
-                  <span>{progress ? t(progress) : liveText ? t('กำลังเขียนคำตอบ') : t('กำลังคิด')}</span>
+                  <span>{working}</span>
                   <span className="activity-detail">
                     {elapsed || t('0 วินาที')}
                     {now - heartbeatAt > 15000 && <> · {t('ยังไม่ได้รับสถานะจากแอป')}</>}
