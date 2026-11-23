@@ -48,7 +48,7 @@ const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' })
 const byNumber = (a, b) => collator.compare(a.number, b.number) || collator.compare(a.title, b.title);
 const fmt = (n) => n.toLocaleString('en-US');
 
-function readRows(extract) {
+export function readRows(extract) {
   const rows = [];
   for (const { key, type } of REGISTERS) {
     const register = extract?.[key];

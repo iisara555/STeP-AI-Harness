@@ -2,7 +2,8 @@
 import { closeSync, constants, fstatSync, openSync, readSync } from 'node:fs';
 
 const sources = ['mis', 'gmail', 'sheets'];
-const sourceStates = ['complete', 'partial', 'unavailable'];
+// not-configured: no reader is set up for the source yet. It holds no records and asks for no review.
+const sourceStates = ['complete', 'partial', 'unavailable', 'not-configured'];
 const recordStates = ['active', 'withdrawn'];
 const maxBytes = 2 * 1024 * 1024;
 
@@ -60,7 +61,7 @@ function readSnapshot(path) {
         !Array.isArray(batch.records)
       )
         throw new Error();
-      if (batch.status === 'unavailable' && batch.records.length) throw new Error();
+      if ((batch.status === 'unavailable' || batch.status === 'not-configured') && batch.records.length) throw new Error();
       const ids = new Set();
       for (const record of batch.records) {
         if (!validRecord(record) || ids.has(record.id)) throw new Error();
@@ -126,7 +127,11 @@ function preview(current, previous) {
   return {
     mode: 'preview',
     reviewRequired:
-      changes.length > 0 || disagreements.length > 0 || sources.some((source) => sourceStatus[source] !== 'complete'),
+      changes.length > 0 ||
+      disagreements.length > 0 ||
+      sources.some((source) => sourceStatus[source] === 'partial' || sourceStatus[source] === 'unavailable') ||
+      // A source switched off after it held reviewed records needs a person to say those records still stand.
+      sources.some((source) => sourceStatus[source] === 'not-configured' && previous?.[source].records.length > 0),
     sourceStatus,
     changes: changes.sort((a, b) => a.source.localeCompare(b.source) || a.id.localeCompare(b.id)),
     disagreements: disagreements.sort((a, b) => a.id.localeCompare(b.id)),

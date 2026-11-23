@@ -107,3 +107,23 @@ test('rejects raw content, duplicates, invalid dates and unavailable sources wit
     assert.equal(result.stdout, '');
   }
 });
+
+test('a source without a reader asks for review only when it used to hold reviewed records', () => {
+  const unconnected = batch([], 'not-configured');
+  const reviewed = snapshot(batch([record('QP-DEMO-001')]), unconnected, unconnected);
+  const same = run(reviewed, reviewed);
+  assert.equal(same.status, 0, same.stderr);
+  assert.equal(JSON.parse(same.stdout).reviewRequired, false);
+
+  const switchedOff = run(
+    snapshot(batch([record('QP-DEMO-001')]), unconnected),
+    snapshot(batch([record('QP-DEMO-001')]), batch([record('QP-DEMO-002')])),
+  );
+  assert.equal(switchedOff.status, 0, switchedOff.stderr);
+  const report = JSON.parse(switchedOff.stdout);
+  assert.equal(report.reviewRequired, true);
+  assert.deepEqual(report.changes, []);
+
+  const withRecords = run(snapshot(batch(), batch([record('QP-DEMO-001')], 'not-configured')));
+  assert.equal(withRecords.status, 2);
+});
