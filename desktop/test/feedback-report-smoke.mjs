@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
 const home = await mkdtemp(join(tmpdir(), 'step-feedback-report-'));
 const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home, STEP_DISABLE_UPDATES: '1' };
@@ -51,6 +52,31 @@ try {
   await expect(report.getByText('พบข้อมูลส่วนบุคคลหรือรหัสลับในข้อความ', { exact: false })).toBeVisible();
   assert.deepEqual(await app.evaluate(() => globalThis.asked), [], 'text with personal data never reaches the confirmation');
 
+  // The intake takes only a verified organization account: without one connected, nothing is offered for sending.
+  await report.getByRole('textbox').fill('ปุ่มส่งออกไม่ทำงาน');
+  await send.click();
+  await expect(report.getByText('ช่องทางนี้รับเฉพาะพนักงาน', { exact: false })).toBeVisible();
+  assert.deepEqual(await app.evaluate(() => globalThis.asked), [], 'no sign-in, no confirmation');
+  // A synthetic organization account (never signed in: the confirmation is cancelled before any token is needed).
+  const db = new DatabaseSync(join(home, 'workspace.sqlite'));
+  db.prepare('INSERT INTO records VALUES (?,?,?)').run(
+    'google-account',
+    'org-account',
+    JSON.stringify({
+      id: 'org-account',
+      subject: '12345',
+      label: 'st••••@step.cmu.ac.th',
+      domain: 'step.cmu.ac.th',
+      scopes: ['openid', 'email'],
+      services: [],
+      credentialId: 'synthetic-credential',
+      clientId: '991643024129-1gd4866dn064tm72kjtavsu6qpgpa1hp.apps.googleusercontent.com',
+      paused: false,
+      revision: 1,
+    }),
+  );
+  db.close();
+
   await report.getByRole('radio', { name: 'ข้อเสนอแนะ' }).check();
   await report.getByRole('textbox').fill('อยากให้ปุ่มส่งออกอยู่ด้านบน');
   if (shots) await page.screenshot({ path: join(shots, 'report-light-1440.png') });
@@ -60,6 +86,8 @@ try {
   assert.match(asked, /ส่งเรื่องนี้ถึงผู้ดูแลแอป/);
   assert.match(asked, /พนักงานสังเคราะห์/);
   assert.match(asked, /script\.google\.com/);
+  assert.match(asked, /st••••@step\.cmu\.ac\.th/);
+  assert.match(asked, /บันทึกไว้คู่กับชื่อ/);
   // Cancelled: the form stays as typed, with no error.
   await expect(report).toBeVisible();
   await expect(report.getByRole('textbox')).toHaveValue('อยากให้ปุ่มส่งออกอยู่ด้านบน');
@@ -70,6 +98,7 @@ try {
   await send.click();
   await expect.poll(() => app.evaluate(() => globalThis.asked.length)).toBe(2);
   assert.doesNotMatch(await app.evaluate(() => globalThis.asked[1]), /พนักงานสังเคราะห์/);
+  assert.match(await app.evaluate(() => globalThis.asked[1]), /ไม่บันทึกไว้กับเรื่องนี้/);
   if (shots) {
     await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
     await page.screenshot({ path: join(shots, 'report-dark-1440.png') });

@@ -5,7 +5,9 @@ import { DEFAULT_SKILL_SUBMIT_URL, SKILL_SUBMIT_URL, feedbackSubmitUrl, parsePol
 import { submitFeedback, submitSkill, type FeedbackSubmission, type SkillSubmission } from '../electron/skill-submit';
 
 const url = 'https://script.google.com/macros/s/AKfycbSyntheticDeploymentId0123456789/exec';
-const submission: SkillSubmission & { appVersion: string } = {
+// Shaped like a Google ID token; the intake (scripts/skill-intake) verifies real ones with Google.
+const identity = 'eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxIn0.c3ludGhldGljLXNpZ25hdHVyZQ';
+const submission: SkillSubmission & { appVersion: string; identity: string } = {
   schema: 1,
   pack: { id: 'staff-pack', version: '1.0.0', digest: 'a'.repeat(64), skills: ['meeting-room-booking'] },
   review: { status: 'pass', findings: [] },
@@ -13,6 +15,7 @@ const submission: SkillSubmission & { appVersion: string } = {
   contributor: { name: 'พนักงานสังเคราะห์', team: 'ทีมทดสอบ', uploadedAt: '2026-10-16T00:00:00.000Z' },
   files: [{ path: 'SKILL.md', text: '# จองห้องประชุม' }],
   appVersion: '0.6.10',
+  identity,
 };
 
 test('the Skill intake address is an Apps Script web app set in policy, never anything else', () => {
@@ -50,7 +53,19 @@ test('a submission is posted as text and counts as accepted only with a referenc
   assert.equal(sent[0].init.redirect, 'follow');
   assert.match(String((sent[0].init.headers as any)['content-type']), /^text\/plain/);
   assert.equal(JSON.parse(sent[0].init.body).contributor.name, 'พนักงานสังเคราะห์');
-  await assert.rejects(submitSkill(url, submission, answer({ ok: false, error: 'LIMIT' })), /SKILL_SUBMIT_REJECTED/);
+  assert.equal(JSON.parse(sent[0].init.body).identity, identity);
+  await assert.rejects(submitSkill(url, submission, answer({ ok: false, error: 'INVALID' })), /SKILL_SUBMIT_REJECTED/);
+  await assert.rejects(submitSkill(url, submission, answer({ ok: false, error: 'IDENTITY' })), /SKILL_SUBMIT_SIGN_IN/);
+  await assert.rejects(submitSkill(url, submission, answer({ ok: false, error: 'SENDER_LIMIT' })), /SKILL_SUBMIT_LIMIT/);
+  await assert.rejects(submitSkill(url, submission, answer({ ok: false, error: 'LIMIT' })), /SKILL_SUBMIT_LIMIT/);
+  // Without the organization sign-in nothing is sent at all.
+  const before = sent.length;
+  for (const missing of [undefined, '', 'not-a-token'])
+    await assert.rejects(
+      submitSkill(url, { ...submission, identity: missing as any }, answer({ ok: true, id: 'x' })),
+      /SKILL_SUBMIT_SIGN_IN/,
+    );
+  assert.equal(sent.length, before);
   await assert.rejects(submitSkill(url, submission, answer('<html>sign in</html>')), /SKILL_SUBMIT_FAILED/);
   await assert.rejects(submitSkill(url, submission, answer({ ok: true, id: '<b>' })), /SKILL_SUBMIT_FAILED/);
   await assert.rejects(submitSkill(url, submission, answer({ ok: true, id: 'x' }, 500)), /SKILL_SUBMIT_FAILED/);
@@ -90,6 +105,7 @@ test('feedback is posted as text with its own error codes and a small size limit
     contributor: { name: '', team: '' },
     os: 'win32 x64',
     appVersion: '0.6.14',
+    identity,
   };
   let body = '';
   const ok = async (_: string, init: RequestInit) => {
@@ -103,6 +119,15 @@ test('feedback is posted as text with its own error codes and a small size limit
     submitFeedback(url, feedback, async () => new Response(JSON.stringify({ ok: false, error: 'INVALID' }))),
     /FEEDBACK_SUBMIT_REJECTED/,
   );
+  await assert.rejects(
+    submitFeedback(url, feedback, async () => new Response(JSON.stringify({ ok: false, error: 'IDENTITY' }))),
+    /FEEDBACK_SUBMIT_SIGN_IN/,
+  );
+  await assert.rejects(
+    submitFeedback(url, feedback, async () => new Response(JSON.stringify({ ok: false, error: 'SENDER_LIMIT' }))),
+    /FEEDBACK_SUBMIT_LIMIT/,
+  );
+  await assert.rejects(submitFeedback(url, { ...feedback, identity: '' }, ok), /FEEDBACK_SUBMIT_SIGN_IN/);
   await assert.rejects(submitFeedback('https://example.com/exec', feedback, ok), /FEEDBACK_SUBMIT_UNAVAILABLE/);
   await assert.rejects(submitFeedback(url, { ...feedback, answer: 'x'.repeat(21_000) }, ok), /FEEDBACK_SUBMIT_TOO_LARGE/);
 });
@@ -119,4 +144,18 @@ test('every main-process operation the window calls is allowed by the preload br
   const missing = [...called].filter(m => handled.has(m) && !allowed.has(m) && !pending.has(m));
   assert.deepEqual(missing, []);
   assert.ok(allowed.has('packPromote') && allowed.has('feedbackSend'));
+});
+
+test('both intake senders in the main process require the organization Google sign-in and send its token', () => {
+  const main = readFileSync(new URL('../electron/main.ts', import.meta.url), 'utf8');
+  for (const [op, code] of [
+    ['packPromote', 'SKILL_SUBMIT_SIGN_IN'],
+    ['feedbackSend', 'FEEDBACK_SUBMIT_SIGN_IN'],
+  ]) {
+    const body = main.slice(main.indexOf(`case '${op}':`), main.indexOf('case ', main.indexOf(`case '${op}':`) + 10));
+    assert.match(body, /organizationAccount\(\)/, op);
+    assert.match(body, new RegExp(`if \\(!account\\) throw new Error\\('${code}'\\)`), op);
+    assert.match(body, /google\.organizationIdentity\(account\.id/, op);
+    assert.match(body, /identity: proof/, op);
+  }
 });
