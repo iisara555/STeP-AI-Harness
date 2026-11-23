@@ -53,6 +53,8 @@ export type ProviderContext = {
   discard?: (chars: number) => void;
   onReasoning?: (text: string) => void;
   onUsage?: (usage: TokenCount) => void;
+  /** Text prompt allowance after the adapter's own instructions, for a full send. */
+  onFullPromptBudget?: (tokens: number) => void;
   onTransport?: (info: {
     mode: 'full' | 'delta';
     sentChars: number;

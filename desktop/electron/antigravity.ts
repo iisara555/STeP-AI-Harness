@@ -8,7 +8,7 @@ import { scrub, explainRuntimeFailure } from './diagnostics';
 import type { Connection, ModelOption, VisionInput } from '../src/types';
 import { providerSessionKey, type ProviderAdapter, type ProviderContext, type ProviderSession, type TokenCount } from './providers';
 import { combineUsage } from './usage';
-import { tokens } from './compact';
+import { ProviderPromptLimitError, tokens } from './compact';
 import { effortInModel } from './effort';
 import { jsonSchemaInstruction, strictJsonSchema } from './json-schema';
 import { AntigravityMcpBridge, isGovernedBridgeTool, type GovernedBridgeExecutor } from './antigravity-mcp-bridge';
@@ -720,8 +720,9 @@ export async function prewarmAntigravity(connection: Connection, context: Provid
 export const ANTIGRAVITY_FIRST_MESSAGE_TOKENS = 56_000;
 
 /** Refuses a whole-prompt send agy would cut; the host's CONTEXT_LIMIT handling compacts the prompt and retries. */
+const firstPromptBudget = (system: string | undefined) => Math.max(0, ANTIGRAVITY_FIRST_MESSAGE_TOKENS - tokens(system || ''));
 function checkFirstMessage(system: string | undefined, prompt: string) {
-  if (tokens((system || '') + prompt) > ANTIGRAVITY_FIRST_MESSAGE_TOKENS) throw new Error('CONTEXT_LIMIT');
+  if (tokens((system || '') + prompt) > ANTIGRAVITY_FIRST_MESSAGE_TOKENS) throw new ProviderPromptLimitError(firstPromptBudget(system));
 }
 
 export class AntigravityAdapter implements ProviderAdapter {
@@ -776,6 +777,7 @@ export class AntigravityAdapter implements ProviderAdapter {
       };
       let answer: string;
       try {
+        context.onFullPromptBudget?.(firstPromptBudget(attemptContext.system));
         // The tool turns of a run continue on one process. A structured request, a request with pictures (their files
         // and image server live only in that request's isolated home) and the recovery attempt run alone.
         answer =

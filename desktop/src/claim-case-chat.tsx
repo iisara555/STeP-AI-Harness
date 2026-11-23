@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUp, Check, ImagePlus, LoaderCircle, Paperclip, Plus, Square, X } from './icons';
 import { t } from './i18n';
+import { ContextWindowGauge } from './context-window-gauge';
 import { RichText } from './ui';
 import { errorText, explainError } from './messages';
 import { appendStream, composerRequest, discardStream, sendBlocker, STREAM_LIMIT, turnBreak } from './run-flow';
@@ -10,7 +11,7 @@ import { applyClaimSummary, type ClaimSummary } from './claim-interview';
 import { applyClaimUpdate, claimUpdateRows, pendingClaimUpdate, splitClaimReply, type ClaimUpdate } from './claim-case';
 import type { ReceiptPacket } from './receipt-packet';
 import { pendingReadings, readingLine, type ReadingBatch } from './evidence-reading';
-import type { Attachment, Session } from './types';
+import type { Attachment, RunEvent, Session } from './types';
 
 /** How the case chat reaches the AI; supplied by the workspace so the run stays out of the main chat. */
 export type CaseChatApi = CaseAiSource & {
@@ -32,7 +33,15 @@ type Props = {
   /** Sends a question into this case's chat with the case context and any attached files; false when it did not go out. */
   ask: (text: string, attachments?: string[]) => Promise<boolean>;
   call: (method: string, input?: unknown) => Promise<any>;
-  onEvent: (callback: (event: { type: string; text?: string; sessionId?: string; count?: number }) => void) => () => void;
+  onEvent: (
+    callback: (event: {
+      type: string;
+      text?: string;
+      sessionId?: string;
+      count?: number;
+      contextWindow?: RunEvent['contextWindow'];
+    }) => void,
+  ) => () => void;
   /** Changes the case the same way the form does, so it is saved and the evidence list follows. */
   onChange: (update: (packet: ReceiptPacket) => ReceiptPacket) => void;
   /** True while a proposal or a finished interview waits for the person, so the page keeps one primary action. */
@@ -276,6 +285,7 @@ export function ClaimCaseChat({
             }
           }}
         />
+        <ContextWindowGauge session={session} connectionId={ai.connection?.id} model={ai.currentModel} onEvent={onEvent} />
         {/* Laid out like the main chat: attach on the left, the AI and send on the right. */}
         <div className="case-composer-tools">
           <button

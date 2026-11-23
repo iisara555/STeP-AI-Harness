@@ -23,7 +23,7 @@ import { Store } from './store';
 import { ProviderSession, type ProviderAdapter, type ProviderContext, type TokenCount } from './providers';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
 import { usedWebSources, webSources } from '../src/web';
-import { brokenRequests, loopRequests, type LoopRequest } from '../src/tools';
+import { brokenRequests, loopRequests } from '../src/tools';
 import { speakingStyleRules } from '../src/speaking-styles';
 import {
   ToolLoop,
@@ -41,7 +41,8 @@ import { SUBAGENT_MAX_TURNS, SUBAGENT_TOOLS, subagentSystem } from './subagents'
 import type { ToolScope } from './tools';
 import { RETRYABLE_CODES, RETRY_DELAYS_MS, retryDelay } from './retry';
 import { section } from './prompt';
-import { CHECKPOINT_SYSTEM, compact, contextBudget, LOOP_FOLD_SHARE, promptTooLong, tokens } from './compact';
+import { CHECKPOINT_SYSTEM, compact, contextBudget, LOOP_FOLD_SHARE, promptTooLong, ProviderPromptLimitError, tokens } from './compact';
+import { ANTIGRAVITY_FIRST_MESSAGE_TOKENS } from './antigravity';
 import { mainLocale, tm } from './i18n';
 import { internalSystemFor, internalSystemRule } from './internal-systems';
 import { workflowRule } from './workflows';
@@ -755,9 +756,9 @@ export class WorkService {
     const hadTask = Boolean(session.originalQuery);
     const clarification = session.clarification;
     const stopped = ['error', 'interrupted', 'cancelled'].includes(session.status);
-    // What a stopped step had read is given back to this attempt once (ToolLoop seed), then forgotten.
-    const resume = stopped ? session.resumeReads : undefined;
-    delete session.resumeReads;
+    // Replay only static reads when the employee retries or explicitly continues the stopped task.
+    const resume = stopped && (options.retry || (policy.resume && !policy.inferred)) ? session.resumeReads : undefined;
+    if (!resume) delete session.resumeReads;
     // Stored data is re-read through the request parser, so only well-formed requests for known tools come back.
     const resumeSeed = resume
       ? loopRequests(
@@ -969,7 +970,6 @@ export class WorkService {
     // Each model step gets its own budget; high reasoning levels can take several minutes per step.
     // A model turn that completes is progress, so a long tool loop (an xhigh model reading Skills and references
     // turn after turn) restarts the budget for its next turn, up to STEP_PROGRESS_BUDGETS budgets per step.
-    let loopReads: { step: number; requests: LoopRequest[] } | undefined;
     let timedOut = false,
       timeout = setTimeout(() => {}, 0),
       stepLimit = Date.now() + STEP_PROGRESS_BUDGETS * this.stepTimeoutMs;
@@ -1647,25 +1647,49 @@ export class WorkService {
         trace.steps.push(stepTrace);
         // Compact against the connected model's own window, not one size for all.
         const budget = contextBudget(connection);
-        const compactPrompt = async (value: string, reactive = false) => {
+        let displayedBudget = connection.provider === 'antigravity' ? Math.min(budget, ANTIGRAVITY_FIRST_MESSAGE_TOKENS) : budget;
+        const measureContext = (inputTokens: number) => {
+          const reading = trace.contextWindow;
+          if (reading?.inputTokens === inputTokens && reading.budgetTokens === displayedBudget) return;
+          const contextWindow = {
+            inputTokens,
+            budgetTokens: displayedBudget,
+            connectionId: selectedConnection.id,
+            model: selectedConnection.model,
+            measuredAt: Date.now(),
+          };
+          trace.contextWindow = contextWindow;
+          this.emit({ sessionId: id, type: 'context-window', contextWindow });
+        };
+        // Allow for rounding the host system and provider prompt estimates separately.
+        const fullSendBudget = (hostSystem: string, promptBudget: number) =>
+          Math.min(budget, Math.max(1, tokens(hostSystem) + promptBudget - 1));
+        const compactPrompt = async (value: string, recovery?: { system: string; maxPromptTokens?: number }) => {
+          const recoverySystem = recovery?.system ?? system;
+          const inputBudget = recovery?.maxPromptTokens === undefined ? budget : fullSendBudget(recoverySystem, recovery.maxPromptTokens);
+          if (recovery?.maxPromptTokens !== undefined) displayedBudget = inputBudget;
           const result = await compact(value, {
             checkpoint: this.store.session(id).contextCheckpoint,
+            history: textOnly ? undefined : history,
             retain: checkpoint => {
               const current = this.store.session(id);
               current.contextCheckpoint = checkpoint;
               this.store.save(current);
             },
-            system,
-            budget,
+            system: recoverySystem,
+            budget: inputBudget,
             state: taskState(),
             signal: controller.signal,
-            reactive,
+            reactive: Boolean(recovery),
             privacy: value => {
               const scan = this.harness.privacy(value);
               if (scan.action === 'block-external' || typeof scan.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
               return scan.redactedText;
             },
-            hook: (event, before, after) => this.harness.compactHook?.(event, id, before, after) || Promise.resolve(),
+            hook: (event, before, after) => {
+              if (event === 'pre_compact') measureContext(before);
+              return this.harness.compactHook?.(event, id, before, after) || Promise.resolve();
+            },
             summarize: async data => {
               activity(tm('กำลังย่อบทสนทนาเก่า โดยเก็บสถานะงานไว้'));
               let counted: TokenCount = { input: 0, output: 0, total: 0 };
@@ -1716,6 +1740,7 @@ export class WorkService {
             current.compaction = { before: result.before, after: result.after, method: result.method, at: new Date().toISOString() };
             this.store.save(current);
           }
+          measureContext(result.after);
           return result.prompt;
         };
         prompt = await compactPrompt(prompt);
@@ -1769,6 +1794,8 @@ export class WorkService {
               ms: 0,
             };
             stepTrace.providerCalls!.push(call);
+            const measureAnswer = !search && !analysisImage;
+            if (measureAnswer) measureContext(call.inputEstimate);
             try {
               if (tokens(providerSystem + nextPrompt) > budget) throw new Error('CONTEXT_LIMIT');
               if (!search && (analysisImage || options.images?.length) && !this.harness.visionEnabled?.())
@@ -1782,6 +1809,12 @@ export class WorkService {
                 onTransport: info => {
                   call.transport = info;
                 },
+                onFullPromptBudget: measureAnswer
+                  ? promptBudget => {
+                      displayedBudget = fullSendBudget(providerSystem, promptBudget);
+                      measureContext(call.inputEstimate);
+                    }
+                  : undefined,
                 webSearch: search,
                 longFormTor: !search && !analysisImage && draftingTool?.id === 'tor',
                 session: search || analysisImage ? undefined : providerSession,
@@ -1851,7 +1884,10 @@ export class WorkService {
               if (!search && !controller.signal.aborted && !reactiveRetried && promptTooLong(error)) {
                 reactiveRetried = true;
                 retryCount++;
-                nextPrompt = await compactPrompt(nextPrompt, true);
+                nextPrompt = await compactPrompt(nextPrompt, {
+                  system: providerSystem,
+                  maxPromptTokens: error instanceof ProviderPromptLimitError ? error.maxPromptTokens : undefined,
+                });
                 arm();
                 continue;
               }
@@ -1965,9 +2001,7 @@ export class WorkService {
             deadline: () => this.writeNowRequests.has(id) || Date.now() >= stepLimit - this.stepTimeoutMs,
             finalTurn: reason =>
               activity(reason === 'deadline' ? tm('ใกล้หมดเวลา กำลังเขียนคำตอบจากที่อ่านมา') : tm('อ่านครบแล้ว กำลังเขียนคำตอบ')),
-            reads: requests => {
-              loopReads = requests.length ? { step: index, requests } : undefined;
-            },
+            checkpointReads: requests => this.store.saveResumeReads(id, { step: index, requests, at: new Date().toISOString() }),
             // A finished answer is checked while the tools are still at hand, so the AI fixes what a check finds itself.
             review: async (answer, signal) => {
               const text = sanitizeModelOutput(masked(answer)) || answer;
@@ -2089,7 +2123,6 @@ export class WorkService {
               stepTrace.loop = { ...bridgeLoop!.stats };
               return providerSession.closeAndWait();
             });
-          loopReads = undefined;
         } else result = await callProvider(prompt).finally(() => providerSession.closeAndWait());
         stepTrace.ms = Date.now() - stepStarted;
         if (stepUsage.total) stepTrace.usage = stepUsage;
@@ -2100,6 +2133,7 @@ export class WorkService {
         if (index < steps.length - 1) {
           const current = this.store.session(id);
           current.checkpoint = { key, done: index + 1, total: steps.length, handoff, sources, skillTitle, at: new Date().toISOString() };
+          delete current.resumeReads;
           this.store.save(current);
         }
       }
@@ -2266,6 +2300,7 @@ export class WorkService {
       session.routeKey = trace.route;
       delete session.checkpoint;
       delete session.lastRun;
+      delete session.resumeReads;
       if (usage.total) {
         const u = session.usage || { input: 0, output: 0, total: 0, runs: 0 };
         session.usage = { input: u.input + usage.input, output: u.output + usage.output, total: u.total + usage.total, runs: u.runs + 1 };
@@ -2313,7 +2348,6 @@ export class WorkService {
     } catch (error) {
       session = this.store.session(id);
       session.status = controller.signal.aborted && !timedOut ? 'cancelled' : 'error';
-      if (loopReads) session.resumeReads = { ...loopReads, at: new Date().toISOString() };
       const code = codeOf(error);
       const shown = timedOut ? 'RUN_TIMEOUT' : controller.signal.aborted ? 'CANCELLED' : code;
       const done = session.checkpoint?.done || 0;
