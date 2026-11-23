@@ -75,6 +75,7 @@ export function FeedbackDialog({
   onClose,
   onDone,
   onReport,
+  onRevise,
 }: {
   ask: FeedbackAsk;
   call: Call;
@@ -83,20 +84,37 @@ export function FeedbackDialog({
   onDone: (text: string) => void;
   /** Opens "แจ้งปัญหา / เสนอแนะ" for this answer instead; absent when IT turned it off. */
   onReport?: (text: string) => void;
+  /** Asks the AI to answer again with the note; absent while the task runs or where a new turn cannot start. */
+  onRevise?: (note: string) => Promise<void>;
 }) {
   const [text, setText] = useState(ask.text),
-    [scope, setScope] = useState<'private' | 'project'>('private');
-  const fix = ask.kind === 'fix';
+    [scope, setScope] = useState<'private' | 'project'>('private'),
+    [remember, setRemember] = useState(true);
+  const fix = ask.kind === 'fix',
+    note = text.trim(),
+    revise = fix && Boolean(onRevise && note);
   return (
     <ConfirmDialog
       title={fix ? t('คำตอบนี้ต้องแก้อะไร') : t('จำสิ่งนี้ไว้ใช้กับงานถัดไป')}
-      confirmLabel={fix ? t('ส่งความเห็น') : t('จำไว้')}
+      confirmLabel={fix ? (revise ? t('แก้คำตอบ') : t('ส่งความเห็น')) : t('จำไว้')}
       onCancel={onClose}
       onConfirm={async () => {
         try {
           if (fix) {
-            const result = await call('messageFeedback', { id: ask.sessionId, index: ask.index, rating: 'fix', note: text });
-            onDone(result?.proposed ? t('บันทึกแล้ว ข้อเสนอความจำรอคุณยืนยันในหน้าความจำ') : t('บันทึกว่าคำตอบนี้ต้องแก้'));
+            const result = await call('messageFeedback', {
+              id: ask.sessionId,
+              index: ask.index,
+              rating: 'fix',
+              note: text,
+              remember: Boolean(note) && remember,
+            });
+            const saved = result?.remembered ? t('จำไว้แล้ว ใช้กับคำขอแบบนี้ครั้งถัดไป') : '';
+            onDone(saved || (revise ? '' : t('บันทึกว่าคำตอบนี้ต้องแก้')));
+            onClose();
+            // The person asked for a better answer, so it is written now instead of waiting for the same request again.
+            // The dialog is already closed: the new answer streams in the task like any other turn.
+            if (revise) void onRevise!(note).catch(e => onDone(explainError(e)));
+            return;
           } else {
             if (!text.trim()) throw new Error('MEMORY_INVALID');
             await call('memorySave', {
@@ -116,10 +134,16 @@ export function FeedbackDialog({
       }}
     >
       {fix ? (
-        <label className="feedback-field">
-          {t('บอกสั้น ๆ ว่าควรแก้อะไร (ไม่บังคับ) เช่น “สรุปเป็นตาราง” หรือ “ใช้ภาษาทางการกว่านี้”')}
-          <textarea value={text} rows={3} maxLength={1000} onChange={e => setText(e.target.value)} />
-        </label>
+        <>
+          <label className="feedback-field">
+            {t('บอกสั้น ๆ ว่าควรแก้อะไร เช่น “สรุปเป็นตาราง” หรือ “ใช้ภาษาทางการกว่านี้”')}
+            <textarea value={text} rows={3} maxLength={1000} onChange={e => setText(e.target.value)} />
+          </label>
+          <label className="feedback-check">
+            <input type="checkbox" checked={remember} disabled={!note} onChange={e => setRemember(e.target.checked)} />
+            {t('จำไว้ใช้กับคำขอแบบนี้ครั้งถัดไป')}
+          </label>
+        </>
       ) : (
         <>
           <label className="feedback-field">
@@ -145,7 +169,7 @@ export function FeedbackDialog({
       )}
       <p className="small muted">
         {fix
-          ? t('ความเห็นพร้อมข้อความจะกลายเป็นข้อเสนอความจำ ต้องยืนยันก่อนใช้ ข้อความที่มีข้อมูลส่วนบุคคลจะไม่ถูกจำ')
+          ? t('เก็บในเครื่องนี้ ดูหรือลบได้ในหน้าความจำ ข้อความที่มีข้อมูลส่วนบุคคลจะไม่ถูกจำ')
           : t('เก็บในเครื่องนี้เท่านั้น ข้อความที่มีข้อมูลส่วนบุคคลหรือความลับจะไม่ถูกจำ')}
       </p>
     </ConfirmDialog>

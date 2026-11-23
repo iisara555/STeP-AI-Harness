@@ -2782,8 +2782,8 @@ export const en: Record<string, string> = {
   'ถามยืนยันเฉพาะเมื่อจำเป็น: ยังบล็อกรหัสผ่านและข้อมูลอ่อนไหวที่ระบุตัวบุคคล ปิดบังเลขบัตรประชาชน และถามทุกครั้งก่อนเครื่องมือที่มีผลจริง':
     'Confirmations only when needed: passwords and sensitive data that identify a person are blocked, national ID numbers are masked, and tools that change anything ask every time.',
   'ขอบคุณครับ บันทึกว่าคำตอบนี้ดี': 'Thanks, marked this answer as good',
-  'ความเห็นพร้อมข้อความจะกลายเป็นข้อเสนอความจำ ต้องยืนยันก่อนใช้ ข้อความที่มีข้อมูลส่วนบุคคลจะไม่ถูกจำ':
-    'A note becomes a memory proposal that you confirm before it is used. Notes with personal data are not remembered.',
+  'เก็บในเครื่องนี้ ดูหรือลบได้ในหน้าความจำ ข้อความที่มีข้อมูลส่วนบุคคลจะไม่ถูกจำ':
+    'Stored on this computer; view or delete it in Memory. Notes with personal data are not remembered.',
   คำตอบนี้ดี: 'This answer is good',
   คำตอบนี้ต้องแก้: 'This answer needs fixing',
   คำตอบนี้ต้องแก้อะไร: 'What should be fixed in this answer?',
@@ -2794,10 +2794,14 @@ export const en: Record<string, string> = {
   จำไว้: 'Remember',
   ดี: 'Good',
   ต้องแก้: 'Needs fixing',
-  'บอกสั้น ๆ ว่าควรแก้อะไร (ไม่บังคับ) เช่น “สรุปเป็นตาราง” หรือ “ใช้ภาษาทางการกว่านี้”':
-    'Say briefly what to fix (optional), such as “summarize as a table” or “use a more formal tone”',
+  'บอกสั้น ๆ ว่าควรแก้อะไร เช่น “สรุปเป็นตาราง” หรือ “ใช้ภาษาทางการกว่านี้”':
+    'Say briefly what to fix, such as “summarize as a table” or “use a more formal tone”',
+  จำไว้ใช้กับคำขอแบบนี้ครั้งถัดไป: 'Remember this for similar requests',
+  'จำไว้แล้ว ใช้กับคำขอแบบนี้ครั้งถัดไป': 'Remembered for similar requests',
+  แก้คำตอบ: 'Fix the answer',
+  'แก้คำตอบก่อนหน้าตามนี้: {0}': 'Revise the previous answer as follows: {0}',
+  '(คำตอบที่ขึ้นต้นว่า “{0}”)': '(the answer that starts “{0}”)',
   บันทึกว่าคำตอบนี้ต้องแก้: 'Marked this answer as needing fixes',
-  'บันทึกแล้ว ข้อเสนอความจำรอคุณยืนยันในหน้าความจำ': 'Saved. A memory proposal is waiting for you to confirm in Memory.',
   พื้นที่งานนี้: 'This workspace',
   'มีข้อเสนอความจำรอยืนยัน 20 รายการแล้ว กรุณายืนยันหรือปัดในหน้าความจำก่อน':
     '20 memory proposals are already waiting. Confirm or dismiss some in Memory first',

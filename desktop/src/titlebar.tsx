@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowDownToLine, ChevronDown, PanelLeft, PanelRight, RefreshCw, Search } from './icons';
+import { ArrowDownToLine, ChevronDown, MessageSquareWarning, PanelLeft, PanelRight, RefreshCw, Search } from './icons';
 import type { DesktopAPI, UpdateState } from './types';
 import { shortcutText, type CommandId } from './commands';
 import { t } from './i18n';
@@ -286,6 +286,16 @@ export function TitleBar({
           >
             <ArrowDownToLine size={13} />
             {t('ดาวน์โหลดเวอร์ชัน {0}', update.version || '')}
+          </button>
+        )}
+        {feedback && (
+          <button
+            className="icon titlebar-icon"
+            aria-label={t('แจ้งปัญหา / เสนอแนะ')}
+            title={t('แจ้งปัญหา / เสนอแนะ')}
+            onClick={() => run('feedback')}
+          >
+            <MessageSquareWarning size={16} />
           </button>
         )}
         {showRight && (

@@ -160,7 +160,7 @@ import { DesktopTools } from './tools';
 import { Questions } from './questions';
 import { CostLedger } from './cost';
 import { ProviderUsage, usageDashboard } from './provider-usage';
-import { Memories, safeMemory } from './memory';
+import { Memories, REVISE_REQUEST, safeMemory } from './memory';
 import { Learning } from './learning';
 import { MAINTENANCE_EVERY_MS, findMaintenance, mergeBoard, moveItem } from './maintenance';
 import { DRAFT_SYSTEM, draftInput, parseDrafts } from './learning-draft';
@@ -2681,7 +2681,8 @@ async function main() {
         await memories.remove(inputText(input.id, 60));
         return true;
       case 'messageFeedback': {
-        // Rates one answer. "Needs fixing" with a note also proposes a memory the person confirms later.
+        // Rates one answer. "Needs fixing" with a note and "remember" ticked saves it as a memory for similar requests;
+        // without the remember choice (older callers) the note becomes a proposal the person confirms later.
         const s = store.session(inputText(input.id, 60));
         const index = Number(input.index);
         const message = Number.isInteger(index) ? s.messages[index] : undefined;
@@ -2689,20 +2690,28 @@ async function main() {
         const rating = input.rating === 'good' || input.rating === 'fix' ? input.rating : undefined;
         if (input.rating !== null && !rating) throw new Error('INVALID_INPUT');
         const note = typeof input.note === 'string' ? input.note.slice(0, 1000).trim() : '';
-        // The proposal is checked first, so a refused note leaves the rating unchanged and the person can edit it.
-        if (rating === 'fix' && note && permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
-        const proposed = rating === 'fix' && note ? Boolean(memories.proposeFeedback(s.id, note)) : false;
+        const remember = rating === 'fix' && note ? (input.remember === undefined ? 'propose' : input.remember === true ? 'save' : '') : '';
+        // The memory is checked first, so a refused note leaves the rating unchanged and the person can edit it.
+        if (remember && permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
+        // The memory names the request this answer was for: the person's own request, not an earlier "fix it" turn.
+        const request = [...s.messages.slice(0, index)].reverse().find(m => m.role === 'user' && !REVISE_REQUEST.test(m.text))?.text || '';
+        const remembered = remember === 'save' ? Boolean(await memories.rememberFeedback(s.id, note, request)) : false;
+        const proposed = remember === 'propose' ? Boolean(memories.proposeFeedback(s.id, note)) : false;
         if (rating === 'fix' && note && message.feedback !== 'fix')
           try {
             learning.noteRepeat(note, 'fix');
           } catch (error) {
             diagnose('learning-usage-failed', { code: errorCode(error) });
           }
-        if (rating) message.feedback = rating;
-        else delete message.feedback;
-        store.save(s);
+        // Saving the memory waited, so the rating goes on the task as it is now, not the copy read before.
+        const current = remembered ? store.session(s.id) : s,
+          rated = current.messages[index];
+        if (!rated || rated.role !== 'assistant') throw new Error('INVALID_INPUT');
+        if (rating) rated.feedback = rating;
+        else delete rated.feedback;
+        store.save(current);
         emit({ sessionId: s.id, type: 'changed' });
-        return { rating: rating || null, proposed };
+        return { rating: rating || null, proposed, remembered };
       }
       case 'memoryDismiss':
         memories.dismiss(inputText(input.id, 60));
