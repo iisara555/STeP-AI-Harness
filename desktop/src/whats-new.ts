@@ -6,6 +6,12 @@ export type ReleaseNote = { version: string; items: () => string[] };
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '0.6.40',
+    items: () => [
+      t('เสนอ Skill ให้องค์กรและแจ้งปัญหา / เสนอแนะ ต้องเชื่อมบัญชี Google ขององค์กรก่อน เพื่อให้ผู้ดูแลมั่นใจว่าเป็นพนักงานจริง'),
+    ],
+  },
+  {
     version: '0.6.39',
     items: () => [
       t('ลบเรื่องเบิกจ่ายได้ และหน้าผู้ช่วยเบิกจ่ายตัวหนังสือน้อยลง ใช้ง่ายขึ้น'),
