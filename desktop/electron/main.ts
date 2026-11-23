@@ -3380,12 +3380,12 @@ async function main() {
           workspace = settings.workspace || data,
           id = inputText(input.id, 64);
         if (!url) throw new Error('SKILL_SUBMIT_UNAVAILABLE');
-        // The intake accepts only a verified organization Google account (its ID token), never a name typed here.
-        const account = organizationAccount();
-        if (!account) throw new Error('SKILL_SUBMIT_SIGN_IN');
         const credit = { name: settings.userName || '', team: settings.team || '' };
         const submission = promotionPayload(workspace, id, { credit });
         if (harness.privacy(JSON.stringify(submission.files)).action !== 'pass') throw new Error('SKILL_SUBMIT_PRIVACY');
+        // The intake accepts only a verified organization Google account (its ID token), never a name typed here.
+        const account = organizationAccount();
+        if (!account) throw new Error('SKILL_SUBMIT_SIGN_IN');
         const consent = await dialog.showMessageBox(window!, {
           type: 'question',
           buttons: [tm('ยกเลิก'), tm('ส่งให้ผู้ดูแลพิจารณา')],
@@ -3418,9 +3418,6 @@ async function main() {
         // goes before anything leaves the computer. No chat history, files or drafts are sent.
         const url = feedbackSubmitUrl(policyState.policy);
         if (!url) throw new Error('FEEDBACK_SUBMIT_UNAVAILABLE');
-        // Verified organization sign-in only; the account is recorded with the report only when the name is sent too.
-        const account = organizationAccount();
-        if (!account) throw new Error('FEEDBACK_SUBMIT_SIGN_IN');
         const category = FEEDBACK_CATEGORIES.find(c => c === input.category);
         const text = inputText(input.text, 2000).trim();
         if (!category || !text) throw new Error('FEEDBACK_INVALID');
@@ -3434,6 +3431,9 @@ async function main() {
         }
         // The full personal-data scan, even where policy checks.privacy is off: this text leaves the app for a shared sheet.
         if (privacy.evaluatePrivacyGate([text, answer || ''].join('\n')).action !== 'pass') throw new Error('FEEDBACK_PRIVACY');
+        // Verified organization sign-in only; the account is recorded with the report only when the name is sent too.
+        const account = organizationAccount();
+        if (!account) throw new Error('FEEDBACK_SUBMIT_SIGN_IN');
         const settings = store.settings();
         const contributor =
           input.includeName === true ? { name: settings.userName || '', team: settings.team || '' } : { name: '', team: '' };
