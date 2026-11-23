@@ -14,8 +14,12 @@ export const feedbackEn: Record<string, string> = {
   'ส่งถึงผู้ดูแลแล้ว เลขที่ {0} ขอบคุณที่ช่วยให้แอปดีขึ้นครับ': 'Sent to the admins, reference {0}. Thank you for helping improve the app',
   'คำตอบผิดหรือแอปมีปัญหา? แจ้งผู้ดูแลแอปแทน': 'Wrong answer or an app problem? Tell the app admins instead',
   ส่งเรื่องนี้ถึงผู้ดูแลแอป: 'Send this to the app admins',
-  'ระบบจะส่งข้อความของคุณ{0}{1} รุ่นแอป และระบบปฏิบัติการ ไปยังช่องทางรับความเห็นของผู้ดูแลที่ {2}\nไม่มีการส่งบทสนทนา ไฟล์ หรือร่างเอกสารอื่น':
-    'Your message{0}{1}, the app version and the operating system will be sent to the admins’ feedback intake at {2}.\nNo conversation, files or other drafts are sent.',
+  'ระบบจะส่งข้อความของคุณ{0}{1} รุ่นแอป และระบบปฏิบัติการ ไปยังช่องทางรับความเห็นของผู้ดูแลที่ {2}\nไม่มีการส่งบทสนทนา ไฟล์ หรือร่างเอกสารอื่น\n{3}':
+    'Your message{0}{1}, the app version and the operating system will be sent to the admins’ feedback intake at {2}.\nNo conversation, files or other drafts are sent.\n{3}',
+  'บัญชี Google ขององค์กร ({0}) ใช้ยืนยันว่าคุณเป็นพนักงาน และบันทึกไว้คู่กับชื่อ':
+    'Your organization Google account ({0}) verifies that you are staff and is recorded with your name.',
+  'บัญชี Google ขององค์กร ({0}) ใช้ยืนยันว่าคุณเป็นพนักงานเท่านั้น ไม่บันทึกไว้กับเรื่องนี้':
+    'Your organization Google account ({0}) only verifies that you are staff and is not recorded with this report.',
   ' คำตอบของ AI ที่แนบ': ', the attached AI answer',
   ' ชื่อผู้ส่ง ({0})': ', your name ({0})',
   ให้พนักงานแจ้งปัญหาและข้อเสนอแนะถึงผู้ดูแล: 'Let staff send problems and suggestions to admins',

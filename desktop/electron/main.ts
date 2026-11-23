@@ -3380,6 +3380,9 @@ async function main() {
           workspace = settings.workspace || data,
           id = inputText(input.id, 64);
         if (!url) throw new Error('SKILL_SUBMIT_UNAVAILABLE');
+        // The intake accepts only a verified organization Google account (its ID token), never a name typed here.
+        const account = organizationAccount();
+        if (!account) throw new Error('SKILL_SUBMIT_SIGN_IN');
         const credit = { name: settings.userName || '', team: settings.team || '' };
         const submission = promotionPayload(workspace, id, { credit });
         if (harness.privacy(JSON.stringify(submission.files)).action !== 'pass') throw new Error('SKILL_SUBMIT_PRIVACY');
@@ -3390,17 +3393,23 @@ async function main() {
           cancelId: 0,
           message: tm('เสนอ Skill นี้ให้องค์กรใช้'),
           detail: tm(
-            '{0}\nระบบจะส่งไฟล์ Skill {1} ไฟล์ ผลตรวจ จำนวนครั้งที่ใช้ และชื่อผู้เสนอ ({2}{3}) ไปยังช่องทางรับ Skill ของผู้ดูแลที่ {4}\nผู้ดูแลจะตรวจก่อนเผยแพร่ และเมื่อเผยแพร่ ชื่อของคุณจะแสดงเป็นผู้ร่วมสร้าง',
+            '{0}\nระบบจะส่งไฟล์ Skill {1} ไฟล์ ผลตรวจ จำนวนครั้งที่ใช้ ชื่อผู้เสนอ ({2}{3}) และบัญชี Google ขององค์กรที่ใช้ยืนยันตัวตน ({5}) ไปยังช่องทางรับ Skill ของผู้ดูแลที่ {4}\nผู้ดูแลจะตรวจก่อนเผยแพร่ และเมื่อเผยแพร่ ชื่อของคุณจะแสดงเป็นผู้ร่วมสร้าง',
             id,
             submission.files.length,
             submission.contributor.name,
             submission.contributor.team ? ' · ' + submission.contributor.team : '',
             new URL(url).host,
+            account.label,
           ),
         });
         if (consent.response !== 1) throw new Error('CANCELLED');
         if (identity !== phase4Identity()) throw new Error('POLICY_CHANGED');
-        const { reference } = await submitSkill(url, { ...submission, appVersion: app.getVersion() }, (u, init) => net.fetch(u, init));
+        const proof = await google.organizationIdentity(account.id, AbortSignal.timeout(30_000)).catch(() => {
+          throw new Error('SKILL_SUBMIT_SIGN_IN');
+        });
+        const { reference } = await submitSkill(url, { ...submission, appVersion: app.getVersion(), identity: proof }, (u, init) =>
+          net.fetch(u, init),
+        );
         return recordPromotion(workspace, id, { digest: submission.pack.digest, reference, credit });
       }
       case 'feedbackSend': {
@@ -3409,6 +3418,9 @@ async function main() {
         // goes before anything leaves the computer. No chat history, files or drafts are sent.
         const url = feedbackSubmitUrl(policyState.policy);
         if (!url) throw new Error('FEEDBACK_SUBMIT_UNAVAILABLE');
+        // Verified organization sign-in only; the account is recorded with the report only when the name is sent too.
+        const account = organizationAccount();
+        if (!account) throw new Error('FEEDBACK_SUBMIT_SIGN_IN');
         const category = FEEDBACK_CATEGORIES.find(c => c === input.category);
         const text = inputText(input.text, 2000).trim();
         if (!category || !text) throw new Error('FEEDBACK_INVALID');
@@ -3434,13 +3446,19 @@ async function main() {
           cancelId: 0,
           message: tm('ส่งเรื่องนี้ถึงผู้ดูแลแอป'),
           detail: tm(
-            'ระบบจะส่งข้อความของคุณ{0}{1} รุ่นแอป และระบบปฏิบัติการ ไปยังช่องทางรับความเห็นของผู้ดูแลที่ {2}\nไม่มีการส่งบทสนทนา ไฟล์ หรือร่างเอกสารอื่น',
+            'ระบบจะส่งข้อความของคุณ{0}{1} รุ่นแอป และระบบปฏิบัติการ ไปยังช่องทางรับความเห็นของผู้ดูแลที่ {2}\nไม่มีการส่งบทสนทนา ไฟล์ หรือร่างเอกสารอื่น\n{3}',
             answer ? tm(' คำตอบของ AI ที่แนบ') : '',
             contributor.name ? tm(' ชื่อผู้ส่ง ({0})', contributor.name + (contributor.team ? ' · ' + contributor.team : '')) : '',
             new URL(url).host,
+            contributor.name
+              ? tm('บัญชี Google ขององค์กร ({0}) ใช้ยืนยันว่าคุณเป็นพนักงาน และบันทึกไว้คู่กับชื่อ', account.label)
+              : tm('บัญชี Google ขององค์กร ({0}) ใช้ยืนยันว่าคุณเป็นพนักงานเท่านั้น ไม่บันทึกไว้กับเรื่องนี้', account.label),
           ),
         });
         if (consent.response !== 1) throw new Error('CANCELLED');
+        const proof = await google.organizationIdentity(account.id, AbortSignal.timeout(30_000)).catch(() => {
+          throw new Error('FEEDBACK_SUBMIT_SIGN_IN');
+        });
         return submitFeedback(
           url,
           {
@@ -3453,6 +3471,7 @@ async function main() {
             ...(errorCode ? { errorCode } : {}),
             os: process.platform + ' ' + process.arch,
             appVersion: app.getVersion(),
+            identity: proof,
           },
           (u, init) => net.fetch(u, init),
         );
