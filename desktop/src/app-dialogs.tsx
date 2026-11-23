@@ -6,7 +6,7 @@ import { FeedbackDialog, ReportDialog } from './feedback';
 import { Terms } from './terms';
 import { UsageDialog } from './usage';
 import { VaultPromptDialog } from './vault-prompt';
-import { connectionName, errorText, explainError } from './messages';
+import { CLAUDE_CODE, connectionName, errorText, explainError } from './messages';
 import { t } from './i18n';
 import type { AppView } from './use-workspace';
 import { lazyScreen } from './lazy-screen';
@@ -93,6 +93,23 @@ export function AppDialogs({ v }: { v: AppView }) {
     whatsNew,
     wizard,
   } = v;
+  /**
+   * "Needs fixing" with a note answers again in the same task, on its own AI, Skill and mode. Not offered while the
+   * task runs, in a disbursement-case chat (its own composer) or on a Claude Code handoff, where no turn starts here.
+   */
+  const reviseAnswer = (id: string, index: number) => {
+    const task = snapshot?.sessions.find(s => s.id === id);
+    if (!task || task.claimPacketId || ['running', 'queued'].includes(task.status) || connectionId === CLAUDE_CODE) return undefined;
+    const latest = task.messages.findLastIndex(m => m.role === 'assistant') === index;
+    const first = (task.messages[index]?.text.split('\n').find(line => line.trim()) || '').trim().slice(0, 80);
+    return (note: string) =>
+      start(id, t('แก้คำตอบก่อนหน้าตามนี้: {0}', note) + (latest || !first ? '' : '\n' + t('(คำตอบที่ขึ้นต้นว่า “{0}”)', first)), {
+        skill: task.skill,
+        mode: task.mode || (task.draft ? 'draft' : 'chat'),
+        coordinator: false,
+        sourceText: '',
+      });
+  };
   return (
     <>
       {usageOpen && api && <UsageDialog api={api} onClose={() => setUsageOpen(false)} onUpdated={() => void refresh()} />}
@@ -146,7 +163,8 @@ export function AppDialogs({ v }: { v: AppView }) {
           call={api.call}
           hasWorkspace={Boolean(snapshot?.settings.workspace)}
           onClose={() => setFeedbackAsk(null)}
-          onDone={text => notify(text, 'success')}
+          onDone={text => text && notify(text, 'success')}
+          onRevise={reviseAnswer(feedbackAsk.sessionId, feedbackAsk.index)}
           onReport={
             snapshot?.policy?.features.feedback === false
               ? undefined

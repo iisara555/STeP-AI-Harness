@@ -235,6 +235,10 @@ export const en: Record<string, string> = {
   กำลังเตรียมงาน: 'Preparing your task',
   'ข้อความที่ส่ง {0} tokens · คำตอบ {1} tokens จาก {2} ครั้ง': 'Input {0} tokens · Output {1} tokens from {2} calls',
   '{0} tokens': '{0} tokens',
+  หน้าต่างบริบท: 'Context window',
+  บริบทล่าสุด: 'Latest context',
+  '{0} จาก {1} โทเคนโดยประมาณ': 'About {0} of {1} tokens',
+  ประมาณจากข้อความล่าสุดที่เตรียมส่งทั้งชุด: 'Estimate for the latest full prompt',
   'ย่อข้อมูลประกอบแล้ว จาก {0} เหลือ {1} tokens (ประมาณการ)': 'Supporting context reduced from {0} to {1} tokens (estimated)',
   บันทึกและใช้ข้อมูลบัญชี: 'Save and use account credentials',
   'เลือก Skill และถามข้อมูลที่ขาดให้อัตโนมัติ': 'Choose a Skill and ask for missing details automatically',
@@ -1042,6 +1046,12 @@ export const en: Record<string, string> = {
     'An attached agency form is checked against the MIS quality register for its code and revision.',
   'ตรวจใบกำกับภาษี (เลขผู้เสียภาษี เลขที่ และ VAT) และเตือนเรื่องหัก ณ ที่จ่ายในใบสำคัญจ่าย':
     'Tax invoices are checked for the tax ID, number and VAT, and payment vouchers flag withholding to review.',
+  'งานยาวเก็บข้อกำหนดและตัวเลขสำคัญไว้เมื่อย่อบริบท และกดทำต่อได้หลังเปิดแอปใหม่':
+    'Long tasks keep key instructions and figures during compaction and can resume after reopening the app.',
+  'ดูปริมาณบริบทที่ใช้ข้างช่องพิมพ์ และดูโควตาคงเหลือของบัญชี Antigravity รุ่นที่รองรับ':
+    'See context usage beside the composer and remaining quota for supported Antigravity accounts.',
+  'กดแก้คำตอบเพื่อให้ AI ตอบใหม่ตามที่บอก และดูขั้นตอนที่ AI ใช้ตอบได้':
+    'Ask AI to revise an answer using your feedback and see the steps it took to answer.',
   'เสนอ Skill ให้องค์กรและแจ้งปัญหา / เสนอแนะ ต้องเชื่อมบัญชี Google ขององค์กรก่อน เพื่อให้ผู้ดูแลมั่นใจว่าเป็นพนักงานจริง':
     'Proposing a Skill and reporting a problem or idea now need your organization Google account connected, so admins know it comes from staff.',
   'ลบเรื่องเบิกจ่ายได้ และหน้าผู้ช่วยเบิกจ่ายตัวหนังสือน้อยลง ใช้ง่ายขึ้น':
@@ -2782,8 +2792,8 @@ export const en: Record<string, string> = {
   'ถามยืนยันเฉพาะเมื่อจำเป็น: ยังบล็อกรหัสผ่านและข้อมูลอ่อนไหวที่ระบุตัวบุคคล ปิดบังเลขบัตรประชาชน และถามทุกครั้งก่อนเครื่องมือที่มีผลจริง':
     'Confirmations only when needed: passwords and sensitive data that identify a person are blocked, national ID numbers are masked, and tools that change anything ask every time.',
   'ขอบคุณครับ บันทึกว่าคำตอบนี้ดี': 'Thanks, marked this answer as good',
-  'ความเห็นพร้อมข้อความจะกลายเป็นข้อเสนอความจำ ต้องยืนยันก่อนใช้ ข้อความที่มีข้อมูลส่วนบุคคลจะไม่ถูกจำ':
-    'A note becomes a memory proposal that you confirm before it is used. Notes with personal data are not remembered.',
+  'เก็บในเครื่องนี้ ดูหรือลบได้ในหน้าความจำ ข้อความที่มีข้อมูลส่วนบุคคลจะไม่ถูกจำ':
+    'Stored on this computer; view or delete it in Memory. Notes with personal data are not remembered.',
   คำตอบนี้ดี: 'This answer is good',
   คำตอบนี้ต้องแก้: 'This answer needs fixing',
   คำตอบนี้ต้องแก้อะไร: 'What should be fixed in this answer?',
@@ -2794,10 +2804,14 @@ export const en: Record<string, string> = {
   จำไว้: 'Remember',
   ดี: 'Good',
   ต้องแก้: 'Needs fixing',
-  'บอกสั้น ๆ ว่าควรแก้อะไร (ไม่บังคับ) เช่น “สรุปเป็นตาราง” หรือ “ใช้ภาษาทางการกว่านี้”':
-    'Say briefly what to fix (optional), such as “summarize as a table” or “use a more formal tone”',
+  'บอกสั้น ๆ ว่าควรแก้อะไร เช่น “สรุปเป็นตาราง” หรือ “ใช้ภาษาทางการกว่านี้”':
+    'Say briefly what to fix, such as “summarize as a table” or “use a more formal tone”',
+  จำไว้ใช้กับคำขอแบบนี้ครั้งถัดไป: 'Remember this for similar requests',
+  'จำไว้แล้ว ใช้กับคำขอแบบนี้ครั้งถัดไป': 'Remembered for similar requests',
+  แก้คำตอบ: 'Fix the answer',
+  'แก้คำตอบก่อนหน้าตามนี้: {0}': 'Revise the previous answer as follows: {0}',
+  '(คำตอบที่ขึ้นต้นว่า “{0}”)': '(the answer that starts “{0}”)',
   บันทึกว่าคำตอบนี้ต้องแก้: 'Marked this answer as needing fixes',
-  'บันทึกแล้ว ข้อเสนอความจำรอคุณยืนยันในหน้าความจำ': 'Saved. A memory proposal is waiting for you to confirm in Memory.',
   พื้นที่งานนี้: 'This workspace',
   'มีข้อเสนอความจำรอยืนยัน 20 รายการแล้ว กรุณายืนยันหรือปัดในหน้าความจำก่อน':
     '20 memory proposals are already waiting. Confirm or dismiss some in Memory first',

@@ -8,7 +8,7 @@ import { scrub, explainRuntimeFailure } from './diagnostics';
 import type { Connection, ModelOption, VisionInput } from '../src/types';
 import { providerSessionKey, type ProviderAdapter, type ProviderContext, type ProviderSession, type TokenCount } from './providers';
 import { combineUsage } from './usage';
-import { tokens } from './compact';
+import { ProviderPromptLimitError, tokens } from './compact';
 import { effortInModel } from './effort';
 import { jsonSchemaInstruction, strictJsonSchema } from './json-schema';
 import { AntigravityMcpBridge, isGovernedBridgeTool, type GovernedBridgeExecutor } from './antigravity-mcp-bridge';
@@ -720,8 +720,9 @@ export async function prewarmAntigravity(connection: Connection, context: Provid
 export const ANTIGRAVITY_FIRST_MESSAGE_TOKENS = 56_000;
 
 /** Refuses a whole-prompt send agy would cut; the host's CONTEXT_LIMIT handling compacts the prompt and retries. */
+const firstPromptBudget = (system: string | undefined) => Math.max(0, ANTIGRAVITY_FIRST_MESSAGE_TOKENS - tokens(system || ''));
 function checkFirstMessage(system: string | undefined, prompt: string) {
-  if (tokens((system || '') + prompt) > ANTIGRAVITY_FIRST_MESSAGE_TOKENS) throw new Error('CONTEXT_LIMIT');
+  if (tokens((system || '') + prompt) > ANTIGRAVITY_FIRST_MESSAGE_TOKENS) throw new ProviderPromptLimitError(firstPromptBudget(system));
 }
 
 export class AntigravityAdapter implements ProviderAdapter {
@@ -776,6 +777,7 @@ export class AntigravityAdapter implements ProviderAdapter {
       };
       let answer: string;
       try {
+        context.onFullPromptBudget?.(firstPromptBudget(attemptContext.system));
         // The tool turns of a run continue on one process. A structured request, a request with pictures (their files
         // and image server live only in that request's isolated home) and the recovery attempt run alone.
         answer =
@@ -1158,6 +1160,43 @@ export async function checkAntigravity(
   if (stamp) checked.set(executable, stamp + (textOnly ? TEXT_ONLY : ''));
   if (textOnly && needsMcp(needs)) throw new Error('ANTIGRAVITY_FEATURE_UNTESTED');
   return textOnly ? 'text' : 'full';
+}
+
+/**
+ * agy's own read-only `/usage` answer (print mode, agy 1.1.11+): one structured JSON payload with no agent turn, no
+ * model request and no tokens. It runs in the same isolated home as a chat, so only the account agy is signed in to
+ * is read; STeP never touches the OAuth token, the keyring or a local language server.
+ */
+export async function antigravityQuota(connection: Connection, context: Pick<ProviderContext, 'cwd' | 'env'>): Promise<unknown> {
+  if (connection.provider !== 'antigravity' || connection.mode !== 'subscription') throw new Error('INVALID_CONNECTION');
+  const home = await antigravityHome(context);
+  let clean = true;
+  try {
+    await checkAntigravity(connection.executable, home);
+    // The governed no-tool agent is named too, so even an agy that stopped answering `/usage` locally could not act.
+    const { output } = await runAntigravity(
+      connection.executable,
+      ['--agent', AGENT, '--print', '/usage', '--output-format', 'json', '--print-timeout', '30s'],
+      home,
+      { timeoutMs: 30_000 },
+    );
+    if (output.length > 65_536) throw new Error('USAGE_RESPONSE_INVALID');
+    const lines = output.split(/\r?\n/).filter(line => line.trim().startsWith('{'));
+    for (const candidate of [output.trim(), ...lines.reverse()]) {
+      try {
+        const value = JSON.parse(candidate);
+        if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+      } catch {
+        /* Try the next candidate line. */
+      }
+    }
+    throw new Error('USAGE_RESPONSE_INVALID');
+  } catch (error) {
+    clean = !(error as any)?.shutdownIncomplete;
+    throw error;
+  } finally {
+    if (clean) await home.close();
+  }
 }
 
 export async function antigravityModels(connection: Connection, context: Pick<ProviderContext, 'cwd' | 'env'>): Promise<ModelOption[]> {

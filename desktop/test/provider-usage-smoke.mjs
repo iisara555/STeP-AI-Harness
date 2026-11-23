@@ -8,8 +8,39 @@ import { join } from 'node:path';
 const home = await mkdtemp(join(tmpdir(), 'step-provider-usage-')),
   workspace = join(home, 'work'),
   executable = join(home, 'codex.mjs'),
-  log = join(home, 'requests.jsonl');
+  agyExecutable = join(home, 'agy.mjs'),
+  log = join(home, 'requests.jsonl'),
+  agyLog = join(home, 'agy-requests.jsonl');
 await mkdir(workspace);
+await writeFile(
+  agyExecutable,
+  `import {appendFileSync} from 'node:fs';
+const args = process.argv.slice(2);
+appendFileSync(${JSON.stringify(agyLog)}, JSON.stringify(args)+'\\n');
+if (args[0] === '--version') { console.log('1.3.2'); process.exit(0); }
+if (args.includes('/usage')) {
+  console.log(JSON.stringify({
+    status: 'SUCCESS',
+    num_turns: 0,
+    command: {
+      name: 'usage',
+      data: {
+        groups: [
+          {
+            name: 'Gemini Models',
+            buckets: [
+              { id: 'gemini-5h', window: '5h', remaining_fraction: 0.85 },
+              { id: 'gemini-weekly', window: 'weekly', remaining_fraction: 0.9 }
+            ]
+          }
+        ]
+      }
+    }
+  }));
+  process.exit(0);
+}
+process.exit(1);`,
+);
 await writeFile(
   executable,
   `import readline from 'node:readline';
@@ -46,6 +77,16 @@ put('connection', 'synthetic-codex', {
   customRuntime: true,
   ready: true,
   note: 'Synthetic',
+});
+put('connection', 'synthetic-antigravity', {
+  id: 'synthetic-antigravity',
+  provider: 'antigravity',
+  mode: 'subscription',
+  model: 'gemini-test',
+  executable: agyExecutable,
+  customRuntime: true,
+  ready: true,
+  note: 'Synthetic Antigravity',
 });
 put('connection', 'synthetic-api', {
   id: 'synthetic-api',
@@ -90,8 +131,10 @@ try {
   const dialog = page.getByRole('alertdialog', { name: 'การใช้งาน AI' });
   await expect(dialog).toContainText('75 token');
   const codex = dialog.locator('[data-usage-account="synthetic-codex"]');
+  const antigravity = dialog.locator('[data-usage-account="synthetic-antigravity"]');
   const api = dialog.locator('[data-usage-account="synthetic-api"]');
   await expect(codex).toContainText('ยังไม่ได้อ่านการใช้งานจากผู้ให้บริการ');
+  await expect(antigravity).toContainText('ยังไม่ได้อ่านการใช้งานจากผู้ให้บริการ');
   await expect(api).toContainText('ยังไม่มีช่องอ่านโควตาหรือเครดิตสำหรับการเชื่อมต่อนี้');
   await expect(api.getByRole('button', { name: 'รีเฟรชการใช้งาน' })).toHaveCount(0);
   await codex.getByRole('button', { name: 'รีเฟรชการใช้งาน' }).click();
@@ -101,6 +144,10 @@ try {
   await expect(codex).toContainText('70%');
   await expect(codex).toContainText('คงเหลือ 65%');
   await expect(codex).toContainText('คงเหลือ 30%');
+  await antigravity.getByRole('button', { name: 'รีเฟรชการใช้งาน' }).click();
+  await expect(antigravity).toContainText('Gemini Models');
+  await expect(antigravity).toContainText('คงเหลือ 85%');
+  await expect(antigravity).toContainText('คงเหลือ 90%');
   await expect(api).toContainText('ขาเข้า');
   await expect(codex).toContainText('12.5 credits');
   await expect(codex).toContainText('อัปเดต');
@@ -118,11 +165,20 @@ try {
   await expect(page.locator('[data-picker-quota="synthetic-codex"]')).toContainText('65%');
   await expect(page.locator('.quota-mini-pill')).toContainText('5H');
   await expect(page.locator('.quota-mini-pill')).toContainText('65%');
+  await page.getByLabel('เลือกบัญชี AI').selectOption('synthetic-antigravity');
+  await expect(page.locator('[data-picker-quota="synthetic-antigravity"]')).toContainText('85%');
+  await expect(page.locator('.quota-mini-pill')).toContainText('5H');
+  await expect(page.locator('.quota-mini-pill')).toContainText('85%');
   const calls = (await readFile(log, 'utf8')).trim().split('\n').map(JSON.parse);
   assert.equal(calls.filter(c => c.method === 'account/rateLimits/read').length, 1, 'one-minute cache avoids duplicate polling');
   assert.ok(
     calls.every(c => ['initialize', 'initialized', 'account/rateLimits/read'].includes(c.method)),
     'no generation or auth request',
+  );
+  const agyCalls = (await readFile(agyLog, 'utf8')).trim().split('\n').map(JSON.parse);
+  assert.ok(
+    agyCalls.some(args => args.includes('/usage')),
+    'agy /usage called',
   );
   const saved = new DatabaseSync(join(home, 'workspace.sqlite'));
   assert.equal(saved.prepare("SELECT count(*) AS count FROM records WHERE kind='usage-ledger'").get().count, 1);

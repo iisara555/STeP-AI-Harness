@@ -104,6 +104,11 @@ try {
     saved.thinking.steps.flatMap(step => step.notes.map(note => note.title)),
     ['ทบทวนโจทย์ของงาน', 'วางโครงข่าวประชาสัมพันธ์'],
   );
+  // The model call is a stage of its own and holds the reasoning it streamed; routine waits are not stages.
+  assert.deepEqual(
+    saved.thinking.steps.map(step => [step.title, step.notes.length]),
+    [['AI คิด', 2]],
+  );
   await page.reload();
   await expect(page.locator('article.message.assistant .thinking-panel summary')).toHaveText(/^แสดงความคิด/);
   // Tool stages read in the employee's words with an icon each, the file they used and how long they took.
@@ -140,6 +145,36 @@ try {
   await page.mouse.move(700, 600);
   await page.waitForTimeout(300);
   await page.screenshot({ path: join(shots, 'thinking-4-tools.png') });
+
+  // An AI that reports steps but not the words of its thinking (Antigravity) still shows its steps, and says why.
+  await app.evaluate(async ({ app }, id) => {
+    const { DatabaseSync } = process.mainModule.require('node:sqlite');
+    const db = new DatabaseSync(app.getPath('userData') + '/workspace.sqlite');
+    const row = db.prepare("SELECT value FROM records WHERE kind='session' AND id=?").get(id);
+    const session = JSON.parse(row.value);
+    session.messages.find(m => m.role === 'assistant').thinking = {
+      ms: 21000,
+      steps: [
+        { title: 'ใช้ Skill งานประชาสัมพันธ์', ms: 1000, notes: [] },
+        { title: 'AI คิด', ms: 18000, notes: [] },
+        { title: 'ตรวจคำตอบกับเอกสาร STeP', ms: 2000, notes: [] },
+      ],
+    };
+    db.prepare("UPDATE records SET value=? WHERE kind='session' AND id=?").run(JSON.stringify(session), id);
+    db.close();
+  }, session.id);
+  await page.reload();
+  const stepsOnly = page.locator('article.message.assistant .thinking-panel');
+  await stepsOnly.locator('summary').click();
+  await expect(stepsOnly.locator('.thinking-stage-title')).toHaveText([
+    'ใช้ Skill งานประชาสัมพันธ์1 วินาที',
+    'AI คิด18 วินาที',
+    'ตรวจคำตอบกับเอกสาร STeP2 วินาที',
+  ]);
+  await expect(stepsOnly.locator('.thinking-unsaid')).toHaveText('AI ที่เชื่อมอยู่ไม่ส่งข้อความความคิดออกมา จึงเห็นเฉพาะขั้นตอนที่ทำ');
+  await page.mouse.move(700, 600);
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: join(shots, 'thinking-5-steps-only.png') });
   assert.deepEqual(errors, []);
   console.log('Thinking smoke passed: live thinking, folded above the answer, opened, saved across a reload.');
 } finally {

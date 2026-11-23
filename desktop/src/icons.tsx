@@ -47,6 +47,7 @@ import {
   Megaphone as StillMegaphone,
   MessageCircleQuestion as StillMessageCircleQuestion,
   MessageSquare as StillMessageSquare,
+  MessageSquareWarning as StillMessageSquareWarning,
   Mic as StillMic,
   Minus as StillMinus,
   Monitor as StillMonitor,
@@ -213,6 +214,7 @@ export const Mail = /* @__PURE__ */ animated(StillMail, 'Mail', 'pulse');
 export const Megaphone = /* @__PURE__ */ animated(StillMegaphone, 'Megaphone', 'document');
 export const MessageCircleQuestion = /* @__PURE__ */ animated(StillMessageCircleQuestion, 'MessageCircleQuestion', 'pulse');
 export const MessageSquare = /* @__PURE__ */ animated(StillMessageSquare, 'MessageSquare', 'pulse');
+export const MessageSquareWarning = /* @__PURE__ */ animated(StillMessageSquareWarning, 'MessageSquareWarning', 'pulse');
 export const Mic = /* @__PURE__ */ animated(StillMic, 'Mic', 'turn');
 export const Minus = /* @__PURE__ */ animated(StillMinus, 'Minus', 'pulse');
 export const Monitor = /* @__PURE__ */ animated(StillMonitor, 'Monitor', 'pulse');

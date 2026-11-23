@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { join } from 'node:path';
 import { WorkService, type Harness } from '../electron/service';
 import { Store } from '../electron/store';
 import type { Connection } from '../src/types';
@@ -18,7 +20,7 @@ function fixture(reply: Reply) {
   const harness: Harness = {
     root: tmpdir(),
     route: async () => ({ routingContract: { mode: 'GENERAL', authority: { status: 'ALLOW' }, mandatoryReferences: [] } }),
-    contextPolicy: () => ({ history: 'ignore', carryover: false }),
+    contextPolicy: text => ({ history: 'ignore', carryover: false, resume: text === 'ต่อ' }),
     privacy: t => ({ action: 'pass', redactedText: t, findings: [] }),
     skillMetadata: async () => null,
     documentPrivacy: async () => null,
@@ -85,7 +87,13 @@ test('a task that stopped after reading gets its reads back on "ลองอี�
 });
 
 test('a finished task keeps nothing to resume', async () => {
-  const f = fixture((_p, turn) => (turn === 1 ? request('reference', 'qp-af-002') : 'Synthetic answer'));
+  const f = fixture((_p, turn) => {
+    if (turn === 1) return request('reference', 'qp-af-002');
+    const active = f.store.session(f.session.id);
+    assert.equal(active.status, 'running');
+    assert.equal(active.resumeReads?.requests[0].input, 'qp-af-002', 'the read is checkpointed before the final answer');
+    return 'Synthetic answer';
+  });
   try {
     await f.service.run(f.session.id, 'Synthetic request', '', true, undefined, 'chat');
     assert.equal(f.store.session(f.session.id).resumeReads, undefined);
@@ -133,5 +141,52 @@ test('typing "ต่อ" after a stop also gets the earlier reads back', async (
     assert.deepEqual(f.executed, ['qp-af-002', 'qp-af-002'], 'read once per attempt, by the host, not by a model turn');
   } finally {
     f.store.close();
+  }
+});
+
+test('a new task does not receive the stopped task’s saved reads', async () => {
+  const f = fixture((prompt, turn) => {
+    if (turn === 1) return request('reference', 'qp-af-002');
+    if (turn === 2) throw new Error('PROVIDER_QUOTA');
+    assert.doesNotMatch(prompt, /synthetic text of qp-af-002/);
+    return 'Synthetic answer to the new task';
+  });
+  try {
+    await f.service.run(f.session.id, 'Synthetic request', '', true, undefined, 'chat');
+    assert.ok(f.store.session(f.session.id).resumeReads);
+    await f.service.run(f.session.id, 'Write a separate meeting invitation', '', true, undefined, 'chat');
+    assert.equal(f.store.session(f.session.id).status, 'review');
+    assert.deepEqual(f.executed, ['qp-af-002']);
+  } finally {
+    f.store.close();
+  }
+});
+
+test('reopening the database marks active work interrupted and retains only the saved read requests', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'step-resume-reads-'));
+  try {
+    const path = join(dir, 'workspace.sqlite');
+    const active = new Store(path);
+    const session = active.create('c', 'cc');
+    session.status = 'running';
+    active.save(session);
+    const reads = {
+      step: 0,
+      requests: [{ tool: 'reference', input: 'qp-af-002' }],
+      at: new Date().toISOString(),
+    };
+    active.saveResumeReads(session.id, reads);
+    active.close();
+
+    const opened = new Store(path);
+    try {
+      const interrupted = opened.session(session.id);
+      assert.equal(interrupted.status, 'interrupted');
+      assert.deepEqual(interrupted.resumeReads, reads);
+    } finally {
+      opened.close();
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
   }
 });

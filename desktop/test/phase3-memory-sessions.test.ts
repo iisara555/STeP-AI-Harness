@@ -219,6 +219,43 @@ test('"needs fixing" notes become proposals the person confirms, never memories,
   store.close();
 });
 
+test('"needs fixing" with remember ticked saves the note tied to its request, once, and drops a private request', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'step-feedback-save-'));
+  const store = new Store(':memory:'),
+    policy = defaultPolicy();
+  store.put('settings', 'main', { workspace: '', team: 'cc' });
+  const memories = new Memories(store, home, () => policy, scan);
+  const saved = await memories.rememberFeedback(
+    's1',
+    'ใส่บทบาท เป้าหมาย และรูปแบบผลลัพธ์ในพรอมต์ให้ครบ',
+    'ช่วยเขียนพรอมต์สำหรับสร้างภาพโปสเตอร์งานประชุม\nรายละเอียดเพิ่มเติม',
+  );
+  assert.equal(saved.type, 'feedback');
+  assert.equal(saved.origin, 'feedback');
+  assert.equal(saved.name, 'ช่วยเขียนพรอมต์สำหรับสร้างภาพโปสเตอร์งานประชุม');
+  assert.equal(
+    saved.text,
+    'เมื่อขอเรื่อง “ช่วยเขียนพรอมต์สำหรับสร้างภาพโปสเตอร์งานประชุม” คำตอบเดิมต้องแก้: ใส่บทบาท เป้าหมาย และรูปแบบผลลัพธ์ในพรอมต์ให้ครบ',
+  );
+  assert.equal(memories.proposals().length, 0, 'the dialog was the confirmation: no second step in the memory page');
+  const again = await memories.rememberFeedback(
+    's1',
+    'ใส่บทบาท เป้าหมาย และรูปแบบผลลัพธ์ในพรอมต์ให้ครบ',
+    'ช่วยเขียนพรอมต์สำหรับสร้างภาพโปสเตอร์งานประชุม',
+  );
+  assert.equal(again.id, saved.id, 'the same correction is not saved twice');
+  // The same request asked again reaches the AI with the correction, ranked first among feedback.
+  const used = await memories.relevant('เขียนพรอมต์สร้างภาพโปสเตอร์งานประชุมให้หน่อย');
+  assert.equal(used[0]?.id, saved.id);
+  // A request with personal data is left out; the note alone is kept. A note with personal data is refused.
+  const plain = await memories.rememberFeedback('s1', 'ใช้ภาษาทางการกว่านี้', 'ส่งอีเมลถึง somchai@example.com เรื่องประชุม');
+  assert.equal(plain.text, 'ใช้ภาษาทางการกว่านี้');
+  assert.equal(plain.text.includes('somchai'), false);
+  await assert.rejects(memories.rememberFeedback('s1', 'ส่งให้ somchai@example.com ทุกครั้ง', 'เรื่องประชุม'), /MEMORY_PRIVACY_BLOCKED/);
+  assert.equal((await memories.list()).length, 2);
+  store.close();
+});
+
 test('a link above the memory folder (macOS /var → /private/var) is resolved, while links inside it are refused', async () => {
   // Reproduces macOS, where the temp and data folders sit below the /var symlink, on any platform.
   const real = await mkdtemp(join(tmpdir(), 'step-real-'));

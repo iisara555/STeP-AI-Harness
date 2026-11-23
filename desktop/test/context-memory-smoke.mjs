@@ -215,6 +215,12 @@ try {
   const source = state.sessions.find(s => s.id === 'source');
   assert.equal(source.compaction.method, 'summary');
   assert.ok(source.compaction.after < source.compaction.before);
+  const reading = source.runs.at(-1).contextWindow;
+  assert.ok(reading.inputTokens < reading.budgetTokens);
+  const contextGauge = page.locator('.composer').getByRole('meter', { name: 'หน้าต่างบริบท' });
+  await expect(contextGauge).toBeVisible();
+  await expect(contextGauge).toHaveAttribute('aria-valuenow', String(reading.inputTokens));
+  await expect(contextGauge).toHaveAttribute('aria-valuemax', String(reading.budgetTokens));
   assert.ok(source.loadedContext.includes('STEP.md'));
   assert.ok(source.loadedContext.includes('.step/output-styles/brief.md'));
   assert.ok(source.loadedContext.some(s => s.includes('Source preference')));
@@ -343,6 +349,11 @@ try {
   page = await child.firstWindow();
   page.on('pageerror', e => errors.push(e.message));
   await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.length).toBe(2);
+  const restoredCheckpoint = (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(
+    s => s.id === 'source',
+  ).contextCheckpoint;
+  assert.equal(restoredCheckpoint.format, 2);
+  assert.equal(restoredCheckpoint.prefixHash, source.contextCheckpoint.prefixHash);
   const resumed = await page.evaluate(id => window.step.call('sessionResume', { id }), fork.id);
   assert.ok(resumed.messages.length > 24);
   await page.getByRole('button', { name: 'ตัวเลือกงานนี้' }).click();
