@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsc --noEmit && node build.mjs",
     "start": "electron .",
-    "test": "tsx --test --test-concurrency=2 test/*.test.ts test/office-skill-benefit.test.mjs test/harness-parity.test.mjs",
+    "test": "tsx --test --test-concurrency=2 test/*.test.ts test/office-skill-benefit.test.mjs test/harness-parity.test.mjs test/release-artifacts.test.mjs",
     "test:installer": "node test/installer-upgrade-smoke.mjs",
     "test:receipt-packets": "node test/receipt-packet-smoke.mjs",
     "test:workspace-access": "node test/workspace-access-smoke.mjs",
