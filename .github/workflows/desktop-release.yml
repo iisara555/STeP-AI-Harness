@@ -1,190 +1,140 @@
-name: Build STeP Desktop installers
+name: Build and verify STeP Desktop Store submission
+run-name: Build STeP Desktop for Microsoft Store
 
-# Each installer is built on its own OS: Windows (NSIS .exe) and macOS (.dmg for Apple silicon).
-# Without the organisation's certificates the Mac apps are ad-hoc signed, which lets them
-# run after the user approves them once; with CSC_* and APPLE_* secrets they are signed and notarized.
-#
-# A `desktop-v<version>` tag, or a manual run with "publish" ticked (which creates that tag), also publishes: a release for that version, and the rolling `desktop-latest` release
-# that installed apps read as their update feed (package.json build.publish). Other runs only keep the files as
-# workflow artifacts.
+# This isolated branch uses the repository's existing registered manual workflow path.
 on:
   workflow_dispatch:
     inputs:
-      publish:
-        description: 'Publish this commit as desktop-v<package.json version> and update the in-app update feed'
-        type: boolean
-        default: false
-  push:
-    tags: ['desktop-v*']
+      identity_name:
+        description: 'Package/Identity/Name'
+        type: string
+        required: true
+      publisher:
+        description: 'Package/Identity/Publisher'
+        type: string
+        required: true
+      publisher_display_name:
+        description: 'Package/Properties/PublisherDisplayName'
+        type: string
+        required: true
 
 permissions:
   contents: read
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: windows-x64
-            os: windows-latest
-            script: dist:win
-            artifact: |
-              desktop/release/*.exe
-              desktop/release/*.exe.blockmap
-              desktop/release/latest.yml
-            feed: latest.yml
-          - name: macos-arm64
-            os: macos-latest
-            script: dist:mac
-            artifact: |
-              desktop/release/*.dmg
-              desktop/release/*.zip
-              desktop/release/*.blockmap
-              desktop/release/latest-mac.yml
-            feed: latest-mac.yml
-          # Intel Mac builds stopped after 0.5.35; `npm run dist:mac:x64` still builds one by hand.
-    runs-on: ${{ matrix.os }}
+  windows-msix:
+    runs-on: windows-2025
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: powershell
+        working-directory: desktop
     env:
       ELECTRON_MIRROR: https://cdn.npmmirror.com/binaries/electron/
       ELECTRON_BUILDER_BINARIES_MIRROR: https://cdn.npmmirror.com/binaries/electron-builder-binaries/
-    defaults:
-      run:
-        shell: bash
-        working-directory: desktop
+      STORE_SUBMISSION: 'true'
     steps:
       - uses: actions/checkout@v5
+      - name: Require the dedicated Store submission branch and Partner Center identity
+        if: env.STORE_SUBMISSION == 'true'
+        env:
+          STEP_MSIX_IDENTITY_NAME: ${{ inputs.identity_name }}
+          STEP_MSIX_PUBLISHER: ${{ inputs.publisher }}
+          STEP_MSIX_PUBLISHER_DISPLAY_NAME: ${{ inputs.publisher_DISPLAY_NAME }}
+        run: |
+          if ($env:GITHUB_REF -ne 'refs/heads/codex/desktop-store-submission-0.6.42') { throw 'Use the dedicated Store submission branch.' }
+          if (!$env:STEP_MSIX_IDENTITY_NAME -or !$env:STEP_MSIX_PUBLISHER -or !$env:STEP_MSIX_PUBLISHER_DISPLAY_NAME) {
+            throw 'Supply the three values from Product identity in Partner Center.'
+          }
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
           cache: npm
           cache-dependency-path: desktop/package-lock.json
       - run: npm ci
-      - run: npm run format:check
-      - run: npm test
-      - run: npm run build
-      # Electron downloads its binary on first use. Fetch it in its own step so a slow mirror cannot use up the first
-      # smoke's 45-second launch timeout (playwright resolves the binary inside launch).
-      - name: Download the Electron binary
-        if: runner.os == 'Windows'
-        run: node -e "require('electron')"
-      # Every PR already runs these on macOS (validate.yml desktop-macos-electron); only Windows runs them here.
-      - name: Verify chat and tools with a synthetic provider
-        if: runner.os == 'Windows'
-        run: npm run test:electron
-      - name: Build installer
+      - name: Build the Windows app
+        shell: bash
         env:
-          # Organization-wide Desktop app credentials: configured once by IT, built into main only.
-          STEP_GOOGLE_DESKTOP_CLIENT_JSON: ${{ secrets.GOOGLE_DESKTOP_CLIENT_JSON }}
-          # A published build must support the default work-account sign-in without employee JSON import.
-          STEP_REQUIRE_GOOGLE_DESKTOP_CLIENT: ${{ (startsWith(github.ref, 'refs/tags/') || inputs.publish) && 'true' || 'false' }}
-          # Public routing only. The Gemini key remains in Cloud Secret Manager.
+          STEP_GOOGLE_DESKTOP_CLIENT_JSON: ${{ github.ref == 'refs/heads/codex/desktop-store-submission-0.6.42' && secrets.GOOGLE_DESKTOP_CLIENT_JSON || '' }}
+          STEP_REQUIRE_GOOGLE_DESKTOP_CLIENT: ${{ env.STORE_SUBMISSION }}
           STEP_RECEIPT_CLOUD_URL: ${{ vars.STEP_RECEIPT_CLOUD_URL }}
           STEP_RECEIPT_CLOUD_MODEL: ${{ vars.STEP_RECEIPT_CLOUD_MODEL }}
-          # Public address of the organization AI gateway ("AI ขององค์กร"); the OpenRouter key stays on that server.
           STEP_ORGANIZATION_AI_URL: ${{ vars.STEP_ORGANIZATION_AI_URL }}
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          EXTRA=""
-          if [ -z "$CSC_LINK" ]; then
-            # Unset secrets arrive as empty strings, which electron-builder would treat as a certificate path.
-            unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
-            export CSC_IDENTITY_AUTO_DISCOVERY=false
-            if [ "$RUNNER_OS" = "macOS" ]; then EXTRA="-c.mac.identity=-"; fi
+          mkdir -p release/msix-verification
+          if ! (npm run build && ./node_modules/.bin/electron-builder --win --x64 --dir --publish never -c.directories.output=release/msix-stage) \
+            > release/msix-verification/build.log 2>&1; then
+            grep -E 'error TS[0-9]+|Error:|npm error|⨯' release/msix-verification/build.log | head -8 | while IFS= read -r line; do
+              printf '::error::%s\n' "$line"
+            done || true
+            cat release/msix-verification/build.log
+            exit 1
           fi
-          npm run ${{ matrix.script }} -- $EXTRA
-      - name: Check the update feed file was written
+          cat release/msix-verification/build.log
+      - name: Create the unsigned package
+        id: package
+        env:
+          STEP_MSIX_IDENTITY_NAME: ${{ inputs.identity_name }}
+          STEP_MSIX_PUBLISHER: ${{ inputs.publisher }}
+          STEP_MSIX_PUBLISHER_DISPLAY_NAME: ${{ inputs.publisher_DISPLAY_NAME }}
+        run: ./scripts/package-msix.ps1 -StoreSubmission:($env:STORE_SUBMISSION -eq 'true')
+      - name: Install, activate and check the package
+        timeout-minutes: 12
+        env:
+          STEP_MSIX_PACKAGE: ${{ steps.package.outputs.package }}
+          STEP_MSIX_KIT: ${{ steps.package.outputs.kit }}
+        run: ./test/verify-msix.ps1
+      - name: Verify the unsigned upload file and record its identity
+        env:
+          STEP_MSIX_PACKAGE: ${{ steps.package.outputs.package }}
+          STEP_MSIX_IDENTITY_NAME: ${{ inputs.identity_name }}
+          STEP_MSIX_PUBLISHER: ${{ inputs.publisher }}
+          STEP_MSIX_PUBLISHER_DISPLAY_NAME: ${{ inputs.publisher_display_name }}
         run: |
-          test -s "release/${{ matrix.feed }}"
-          grep -q "^version: $(node -p "require('./package.json').version")$" "release/${{ matrix.feed }}"
-      - name: Check the Mac disk image signature and first-open guide
-        if: runner.os == 'macOS'
-        run: |
-          DMG=$(ls release/*.dmg | head -1)
-          MNT=$(mktemp -d)
-          hdiutil attach "$DMG" -nobrowse -readonly -mountpoint "$MNT"
-          trap 'hdiutil detach "$MNT" -force || true' EXIT
-          # A broken signature makes macOS say the app "is damaged" instead of offering Open Anyway.
-          codesign --verify --deep --strict --verbose=2 "$MNT/STeP Desktop.app"
-          test -s "$MNT/อ่านก่อนเปิดครั้งแรก.html"
-      - name: Launch the packaged Mac app from the disk image
-        if: runner.os == 'macOS'
-        run: |
-          DMG=$(ls release/*.dmg | head -1)
-          MNT=$(mktemp -d)
-          hdiutil attach "$DMG" -nobrowse -readonly -mountpoint "$MNT"
-          trap 'hdiutil detach "$MNT" -force || true' EXIT
-          node test/packaged-launch-smoke.mjs "$MNT/STeP Desktop.app/Contents/MacOS/STeP Desktop"
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $package = $env:STEP_MSIX_PACKAGE
+          $archive = [IO.Compression.ZipFile]::OpenRead($package)
+          try {
+              if ($archive.GetEntry('AppxSignature.p7x')) { throw 'Expected an unsigned Store upload.' }
+              $reader = [IO.StreamReader]::new($archive.GetEntry('AppxManifest.xml').Open())
+              try { [xml]$manifest = $reader.ReadToEnd() } finally { $reader.Dispose() }
+          } finally {
+              $archive.Dispose()
+          }
+          $identity = $manifest.Package.Identity
+          $properties = $manifest.Package.Properties
+          if ($identity.Name -cne $env:STEP_MSIX_IDENTITY_NAME -or
+              $identity.Publisher -cne $env:STEP_MSIX_PUBLISHER -or
+              $properties.PublisherDisplayName -cne $env:STEP_MSIX_PUBLISHER_DISPLAY_NAME -or
+              $properties.DisplayName -cne 'STeP Desktop' -or
+              $identity.ProcessorArchitecture -cne 'x64') {
+              throw 'The upload manifest does not match the Partner Center product.'
+          }
+          $sha = (Get-FileHash $package -Algorithm SHA256).Hash.ToLowerInvariant()
+          $recorded = (Get-Content "$package.sha256" -Raw).Trim().Split(' ')[0]
+          if ($sha -cne $recorded) { throw 'The MSIX SHA-256 does not match.' }
+          $report = [ordered]@{
+              file = Split-Path $package -Leaf
+              displayName = $properties.DisplayName
+              name = $identity.Name
+              publisher = $identity.Publisher
+              publisherDisplayName = $properties.PublisherDisplayName
+              version = $identity.Version
+              architecture = $identity.ProcessorArchitecture
+              signed = $false
+              sha256 = $sha
+          } | ConvertTo-Json
+          $report | Set-Content 'release/msix-verification/store-upload.json' -Encoding utf8
+          Write-Host $report
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: step-desktop-${{ matrix.name }}
-          path: ${{ matrix.artifact }}
+          name: step-desktop-msix-verification
+          path: desktop/release/msix-verification/
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: step-desktop-msix-${{ steps.package.outputs.kind }}-unsigned
+          path: desktop/release/msix-output/
           if-no-files-found: error
-
-  publish:
-    # Only a version tag publishes; installed apps then find the new version in `desktop-latest`.
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/desktop-v') || inputs.publish
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: desktop/package-lock.json
-      - name: Install the merge script's dependencies
-        working-directory: desktop
-        env:
-          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-        run: npm ci --ignore-scripts
-      - uses: actions/download-artifact@v4
-        with:
-          path: built
-      - name: Check the tag matches the app version
-        id: version
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          VERSION="$(node -p "require('./desktop/package.json').version")"
-          TAG="desktop-v${VERSION}"
-          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "$TAG" ]; then
-            echo "Tag ${GITHUB_REF_NAME} does not match desktop/package.json version ${VERSION}"; exit 1
-          fi
-          # A version is published once: bump desktop/package.json for the next one.
-          if gh release view "$TAG" >/dev/null 2>&1; then echo "Release $TAG already exists"; exit 1; fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-      - name: Collect the release files
-        run: |
-          mkdir -p out
-          cp built/step-desktop-windows-x64/* out/
-          cp built/step-desktop-macos-arm64/* out/
-          ls -l out
-      - name: Publish the version and update the feed
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
-          TAG: ${{ steps.version.outputs.tag }}
-        run: |
-          NOTES="STeP Desktop ${VERSION} — what changed is in CHANGELOG.md. Installed apps update themselves from the desktop-latest release."
-          gh release create "$TAG" out/* --target "$GITHUB_SHA" --title "STeP Desktop ${VERSION}" --notes "$NOTES" --latest=false
-          if ! gh release view desktop-latest >/dev/null 2>&1; then
-            gh release create desktop-latest --target "$GITHUB_SHA" --latest=false --title "STeP Desktop · update feed" \
-              --notes "The update feed of the STeP Desktop app: always the newest version. Download installers from the desktop-v* releases."
-          fi
-          # New installers first, the feed files last, so an app never reads a feed whose files are not there yet.
-          gh release upload desktop-latest $(ls out/* | grep -v '\.yml$') --clobber
-          gh release upload desktop-latest out/latest.yml out/latest-mac.yml --clobber
-          for asset in $(gh release view desktop-latest --json assets -q '.assets[].name'); do
-            [ -e "out/$asset" ] || gh release delete-asset desktop-latest "$asset" --yes
-          done
