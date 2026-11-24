@@ -8,7 +8,9 @@ _Last updated: 2026-11-24_
 
 ## In flight
 
-- **Windows MSIX for Microsoft Store (2026-11-24)**. Added the Windows x64 packaging and installed-app smoke workflow, with the Store identity supplied by Partner Center. Store installs defer updates to Microsoft Store. Waits on IT: set the Store identity, verify employee profiles on a managed pilot PC, and submit through the organization's Partner Center. See [Desktop distribution](desktop-development.md#windows-msix-for-microsoft-store).
+- **Desktop installer preflight (2026-11-24)**: GitHub Actions checks Authenticode and Defender availability, verifies the Mac app and DMG trust results, and checks the updater metadata and artifact hashes before publishing the same files. A strict run requires trusted installers on both platforms. IT can enable it once signing and an active Defender runner are available.
+
+- **Windows MSIX for Microsoft Store (2026-11-24)**. The Windows x64 package built with the STeP Desktop Partner Center identity and passed installation, activation and synthetic legacy-profile checks. Windows App Certification Kit reported warnings. The package has been uploaded to the first Store draft. Store certification, a staff migration pilot and Entra setup for automated update submission remain open. See [Desktop distribution](desktop-development.md#windows-msix-for-microsoft-store).
 
 - **Desktop v0.6.42 prepared (2026-11-24)**: combines #402 and #403. The working line holds each label, the thinking panel keeps its stage titles, and partial headings and drafted text stay steady across tool turns. Four pencil marks follow thinking, reading, searching or tools, and writing. The changes have synthetic Electron coverage. Follow-up: verify a live Gemini run on Windows.
 
