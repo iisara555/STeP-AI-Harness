@@ -106,6 +106,14 @@ export class LineGateway {
     this.controllers = new Set();
     this.closed = false;
     if (
+      config.retentionDays !== undefined &&
+      (!Number.isInteger(config.retentionDays) ||
+        config.retentionDays < 1 ||
+        config.retentionDays > 365)
+    )
+      throw new Error("LINE_CONFIG_INVALID");
+    this.retentionDays = config.retentionDays ?? 30;
+    if (
       typeof config.secret !== "string" ||
       config.secret.length < 16 ||
       typeof config.token !== "string" ||
@@ -164,6 +172,47 @@ export class LineGateway {
           this.events.set(id, time);
     } catch {}
     this.assertPolicy();
+    this.pruneExpiredJobs();
+  }
+  pruneExpiredJobs(now = Date.now()) {
+    const cutoff = now - this.retentionDays * 86_400_000;
+    const jobsDir = join(this.config.storage, "jobs");
+    for (const f of readdirSync(jobsDir).filter((f) =>
+      /^[a-f0-9-]{36}\.json$/.test(f),
+    )) {
+      let j;
+      try {
+        j = JSON.parse(readFileSync(join(jobsDir, f), "utf8"));
+      } catch {
+        continue;
+      }
+      if (j.id + ".json" !== f) continue;
+      if (!["delivered", "blocked", "rejected"].includes(j.status)) continue;
+      const stamp = Date.parse(j.updatedAt || j.at);
+      if (Number.isFinite(stamp) && stamp < cutoff) {
+        try {
+          unlinkSync(join(jobsDir, f));
+        } catch {}
+        this.jobs.delete(j.id);
+      }
+    }
+    const sessionsDir = join(this.config.storage, "sessions");
+    for (const f of readdirSync(sessionsDir).filter((f) =>
+      /^[a-f0-9]{64}\.json$/.test(f),
+    )) {
+      let s;
+      try {
+        s = JSON.parse(readFileSync(join(sessionsDir, f), "utf8"));
+      } catch {
+        continue;
+      }
+      const stamp = Date.parse(s.at);
+      if (Number.isFinite(stamp) && stamp < cutoff) {
+        try {
+          unlinkSync(join(sessionsDir, f));
+        } catch {}
+      }
+    }
   }
   policy() {
     return this.deps.policy?.() || this.config.policy;
@@ -183,6 +232,7 @@ export class LineGateway {
     return p;
   }
   save(job) {
+    job.updatedAt = new Date().toISOString();
     this.atomic(
       join(this.config.storage, "jobs", job.id + ".json"),
       JSON.stringify(job),
@@ -208,7 +258,7 @@ export class LineGateway {
     if (this.jobs.size >= 150)
       for (const [id, job] of this.jobs) {
         if (
-          ["delivered", "blocked"].includes(job.status) &&
+          ["delivered", "blocked", "rejected"].includes(job.status) &&
           /^[a-f0-9-]{36}$/.test(id)
         ) {
           this.jobs.delete(id);
@@ -565,6 +615,65 @@ export class LineGateway {
       this.pump();
     }
   }
+  async reject(id, confirmation) {
+    const job = this.jobs.get(id);
+    if (
+      !job ||
+      !["review", "input-review", "needs-input", "interrupted"].includes(
+        job.status,
+      ) ||
+      confirmation?.confirmReject !== true
+    )
+      throw new Error("LINE_REJECT_APPROVAL_REQUIRED");
+    let reason = "";
+    if (confirmation.reason !== undefined) {
+      if (
+        typeof confirmation.reason !== "string" ||
+        confirmation.reason.length > 300
+      )
+        throw new Error("INVALID_INPUT");
+      reason = confirmation.reason.trim();
+      if (reason) clean(reason);
+    }
+    this.assertPolicy();
+    job.status = "rejected";
+    job.code = "LINE_OPERATOR_REJECTED";
+    if (reason) job.rejectReason = reason;
+    else delete job.rejectReason;
+    delete job.text;
+    delete job.query;
+    delete job.source;
+    delete job.answer;
+    delete job.documentReport;
+    delete job.readiness;
+    this.removeAttachment(job);
+    this.save(job);
+    return { status: job.status };
+  }
+  async resolveUnknown(id, confirmation) {
+    const job = this.jobs.get(id);
+    if (
+      !job ||
+      job.status !== "delivery-unknown" ||
+      !["confirmed-delivered", "cancelled"].includes(confirmation?.resolution)
+    )
+      throw new Error("LINE_RESOLUTION_REQUIRED");
+    this.assertPolicy();
+    job.status =
+      confirmation.resolution === "confirmed-delivered"
+        ? "delivered"
+        : "rejected";
+    job.resolvedCode = confirmation.resolution;
+    delete job.text;
+    delete job.query;
+    delete job.source;
+    delete job.answer;
+    delete job.documentReport;
+    delete job.readiness;
+    this.removeAttachment(job);
+    this.save(job);
+    return { status: job.status, resolution: confirmation.resolution };
+  }
   async approveDelivery(id, confirmation) {
     const job = this.jobs.get(id),
       user = job && this.user(job);
@@ -575,16 +684,27 @@ export class LineGateway {
       confirmation?.approveDelivery !== true
     )
       throw new Error("LINE_DELIVERY_APPROVAL_REQUIRED");
-    if (job.text.length > 25_000) throw new Error("LINE_DELIVERY_LIMIT");
+    const hasEdit = confirmation.editedText !== undefined;
+    if (hasEdit) {
+      if (
+        typeof confirmation.editedText !== "string" ||
+        !confirmation.editedText.trim()
+      )
+        throw new Error("LINE_DELIVERY_APPROVAL_REQUIRED");
+      if (confirmation.editedText.length > 25_000)
+        throw new Error("LINE_DELIVERY_LIMIT");
+    } else if (typeof job.text !== "string" || job.text.length > 25_000)
+      throw new Error("LINE_DELIVERY_LIMIT");
+    const outgoingText = hasEdit ? confirmation.editedText : job.text;
     const policy = this.assertPolicy();
     if (job.policyHash !== hash(JSON.stringify(policy)))
       throw new Error("POLICY_CHANGED");
-    clean(job.text);
+    clean(outgoingText);
     // Re-route the exact outgoing text. A draft cannot turn into an approval, procurement or submission.
     const routed = await (
       this.deps.route ||
       (await import("../../src/modules/router/service.js")).queryStepRouter
-    )(job.text, { team: user.team, workspace: this.config.workspace });
+    )(outgoingText, { team: user.team, workspace: this.config.workspace });
     const c = routed.routingContract;
     if (
       !c ||
@@ -600,6 +720,7 @@ export class LineGateway {
       job.policyHash !== hash(JSON.stringify(this.assertPolicy()))
     )
       throw new Error("POLICY_CHANGED");
+    if (hasEdit) job.editedByOperator = true;
     job.status = "delivering";
     this.save(job);
     try {
@@ -619,10 +740,10 @@ export class LineGateway {
             body: JSON.stringify({
               to: user.lineUserId,
               messages: Array.from(
-                { length: Math.ceil(job.text.length / 5000) },
+                { length: Math.ceil(outgoingText.length / 5000) },
                 (_, i) => ({
                   type: "text",
-                  text: job.text.slice(i * 5000, (i + 1) * 5000),
+                  text: outgoingText.slice(i * 5000, (i + 1) * 5000),
                 }),
               ),
             }),
@@ -647,6 +768,66 @@ export class LineGateway {
       this.save(job);
       throw new Error("LINE_DELIVERY_UNKNOWN");
     }
+  }
+  auditLog() {
+    const jobsDir = join(this.config.storage, "jobs");
+    const byId = new Map();
+    for (const f of readdirSync(jobsDir).filter((f) =>
+      /^[a-f0-9-]{36}\.json$/.test(f),
+    )) {
+      let j;
+      try {
+        j = JSON.parse(readFileSync(join(jobsDir, f), "utf8"));
+      } catch {
+        continue;
+      }
+      if (j.id + ".json" === f) byId.set(j.id, j);
+    }
+    for (const j of this.jobs.values()) byId.set(j.id, j);
+    return [...byId.values()]
+      .sort(
+        (a, b) =>
+          (Date.parse(b.updatedAt || b.at) || 0) -
+          (Date.parse(a.updatedAt || a.at) || 0),
+      )
+      .slice(0, 200)
+      .map((j) => ({
+        id: j.id,
+        employeeId: j.employeeId,
+        status: j.status,
+        messageType: j.messageType,
+        at: j.at,
+        updatedAt: j.updatedAt || j.at,
+        ...(j.code ? { code: j.code } : {}),
+        ...(j.route ? { route: j.route } : {}),
+        ...(j.answerCount ? { answerCount: j.answerCount } : {}),
+        ...(j.resolvedCode ? { resolvedCode: j.resolvedCode } : {}),
+        ...(j.rejectReason ? { rejectReason: j.rejectReason } : {}),
+        ...(j.editedByOperator ? { editedByOperator: true } : {}),
+      }));
+  }
+  health() {
+    let policyReady = false;
+    try {
+      this.assertPolicy();
+      policyReady = true;
+    } catch {}
+    const pendingCount = [...this.jobs.values()].filter((j) =>
+      [
+        "review",
+        "input-review",
+        "needs-input",
+        "delivery-unknown",
+        "interrupted",
+      ].includes(j.status),
+    ).length;
+    return {
+      ok: true,
+      policyReady,
+      pendingCount,
+      runningCount: this.running.size,
+      queueLength: this.queue.length,
+    };
   }
   authenticated(request) {
     const received = Buffer.from(String(request.headers.authorization || "")),
@@ -687,6 +868,26 @@ export class LineGateway {
                     "delivery-unknown",
                     "interrupted",
                   ].includes(j.status),
+                );
+              else if (req.method === "GET" && req.url === "/audit")
+                result = this.auditLog();
+              else if (req.method === "GET" && req.url === "/healthz")
+                result = this.health();
+              else if (
+                req.method === "POST" &&
+                /^\/reject\/[a-f0-9-]{36}$/.test(req.url)
+              )
+                result = await this.reject(
+                  req.url.split("/").at(-1),
+                  JSON.parse(raw.toString()),
+                );
+              else if (
+                req.method === "POST" &&
+                /^\/resolve-unknown\/[a-f0-9-]{36}$/.test(req.url)
+              )
+                result = await this.resolveUnknown(
+                  req.url.split("/").at(-1),
+                  JSON.parse(raw.toString()),
                 );
               else if (
                 req.method === "POST" &&
