@@ -3026,6 +3026,7 @@ export const en: Record<string, string> = {
   'กำลังตรวจหาอัปเดต…': 'Checking for updates…',
   'ตรวจหาอัปเดตไม่สำเร็จ ลองใหม่ภายหลัง': 'Could not check for updates; try again later',
   'องค์กรปิดการอัปเดตในแอป ติดต่อ IT เพื่อรับเวอร์ชันใหม่': 'Your organisation turned off in-app updates; ask IT for new versions',
+  'ตรวจหาอัปเดตได้ใน Microsoft Store': 'Check for updates in Microsoft Store',
   รุ่นทดสอบนี้ไม่อัปเดตตัวเอง: 'This development build does not update itself',
   'เป็นเวอร์ชันล่าสุดแล้ว ({0})': 'You have the latest version ({0})',
   'ตรวจหาอัปเดต · เวอร์ชัน {0}': 'Check for updates · version {0}',

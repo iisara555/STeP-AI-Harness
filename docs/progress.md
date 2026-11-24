@@ -8,6 +8,8 @@ _Last updated: 2026-11-24_
 
 ## In flight
 
+- **Windows MSIX for Microsoft Store (2026-11-24)**. Added the Windows x64 packaging and installed-app smoke workflow, with the Store identity supplied by Partner Center. Store installs defer updates to Microsoft Store. Waits on IT: set the Store identity, verify employee profiles on a managed pilot PC, and submit through the organization's Partner Center. See [Desktop distribution](desktop-development.md#windows-msix-for-microsoft-store).
+
 - **Desktop v0.6.42 prepared (2026-11-24)**: combines #402 and #403. The working line holds each label, the thinking panel keeps its stage titles, and partial headings and drafted text stay steady across tool turns. Four pencil marks follow thinking, reading, searching or tools, and writing. The changes have synthetic Electron coverage. Follow-up: verify a live Gemini run on Windows.
 
 - **Waiting marks per kind of work (2026-11-23, owner picked 1, 3, 9, 10 of ten pencil designs)**: the scribble beside the working line now follows the steady label (`src/waiting-kind.ts`): think = three pencil loops, read Skill/document = connect the dots, search/tool = inchworm, write = handwriting. Reduced motion keeps a 3x slower trace. Stacked on the flicker fix (needs its steady label). Design page: https://claude.ai/artifact/CeGFRsqKrbcvLvnUMZgfM6. Waits on the owner: review.
