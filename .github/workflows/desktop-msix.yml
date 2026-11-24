@@ -1,0 +1,92 @@
+name: Build and verify STeP Desktop MSIX
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/desktop-msix.yml'
+      - 'desktop/**'
+  workflow_dispatch:
+    inputs:
+      store_submission:
+        description: 'Build an unsigned Partner Center submission from main'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  windows-msix:
+    runs-on: windows-2025
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: powershell
+        working-directory: desktop
+    env:
+      ELECTRON_MIRROR: https://cdn.npmmirror.com/binaries/electron/
+      ELECTRON_BUILDER_BINARIES_MIRROR: https://cdn.npmmirror.com/binaries/electron-builder-binaries/
+      STORE_SUBMISSION: ${{ github.event_name == 'workflow_dispatch' && inputs.store_submission }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Require main and a complete Partner Center identity for a Store submission
+        if: env.STORE_SUBMISSION == 'true'
+        env:
+          STEP_MSIX_IDENTITY_NAME: ${{ vars.STEP_MSIX_IDENTITY_NAME }}
+          STEP_MSIX_PUBLISHER: ${{ vars.STEP_MSIX_PUBLISHER }}
+          STEP_MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.STEP_MSIX_PUBLISHER_DISPLAY_NAME }}
+        run: |
+          if ($env:GITHUB_REF -ne 'refs/heads/main') { throw 'Build Store submissions from main.' }
+          if (!$env:STEP_MSIX_IDENTITY_NAME -or !$env:STEP_MSIX_PUBLISHER -or !$env:STEP_MSIX_PUBLISHER_DISPLAY_NAME) {
+            throw 'Set the three STEP_MSIX_* repository variables using Product identity in Partner Center.'
+          }
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - name: Build the Windows app
+        shell: bash
+        env:
+          STEP_GOOGLE_DESKTOP_CLIENT_JSON: ${{ github.ref == 'refs/heads/main' && secrets.GOOGLE_DESKTOP_CLIENT_JSON || '' }}
+          STEP_REQUIRE_GOOGLE_DESKTOP_CLIENT: ${{ env.STORE_SUBMISSION }}
+          STEP_RECEIPT_CLOUD_URL: ${{ vars.STEP_RECEIPT_CLOUD_URL }}
+          STEP_RECEIPT_CLOUD_MODEL: ${{ vars.STEP_RECEIPT_CLOUD_MODEL }}
+          STEP_ORGANIZATION_AI_URL: ${{ vars.STEP_ORGANIZATION_AI_URL }}
+        run: |
+          mkdir -p release/msix-verification
+          if ! (npm run build && ./node_modules/.bin/electron-builder --win --x64 --dir --publish never -c.directories.output=release/msix-stage) \
+            > release/msix-verification/build.log 2>&1; then
+            grep -E 'error TS[0-9]+|Error:|npm error|⨯' release/msix-verification/build.log | head -8 | while IFS= read -r line; do
+              printf '::error::%s\n' "$line"
+            done || true
+            cat release/msix-verification/build.log
+            exit 1
+          fi
+          cat release/msix-verification/build.log
+      - name: Create the unsigned package
+        id: package
+        env:
+          STEP_MSIX_IDENTITY_NAME: ${{ vars.STEP_MSIX_IDENTITY_NAME }}
+          STEP_MSIX_PUBLISHER: ${{ vars.STEP_MSIX_PUBLISHER }}
+          STEP_MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.STEP_MSIX_PUBLISHER_DISPLAY_NAME }}
+        run: ./scripts/package-msix.ps1 -StoreSubmission:($env:STORE_SUBMISSION -eq 'true')
+      - name: Install, activate and check the package
+        timeout-minutes: 12
+        env:
+          STEP_MSIX_PACKAGE: ${{ steps.package.outputs.package }}
+          STEP_MSIX_KIT: ${{ steps.package.outputs.kit }}
+        run: ./test/verify-msix.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: step-desktop-msix-verification
+          path: desktop/release/msix-verification/
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: step-desktop-msix-${{ steps.package.outputs.kind }}-unsigned
+          path: desktop/release/msix-output/
+          if-no-files-found: error

@@ -58,7 +58,9 @@ export function TitleBar({
         : state.status === 'disabled'
           ? state.reason === 'UPDATE_POLICY_OFF'
             ? t('องค์กรปิดการอัปเดตในแอป ติดต่อ IT เพื่อรับเวอร์ชันใหม่')
-            : t('รุ่นทดสอบนี้ไม่อัปเดตตัวเอง')
+            : state.reason === 'UPDATE_MICROSOFT_STORE'
+              ? t('ตรวจหาอัปเดตได้ใน Microsoft Store')
+              : t('รุ่นทดสอบนี้ไม่อัปเดตตัวเอง')
           : state.status === 'none'
             ? t('เป็นเวอร์ชันล่าสุดแล้ว ({0})', state.current)
             : '',

@@ -374,8 +374,16 @@ async function main() {
   nativeTheme.themeSource = store.settings().theme;
   // Windows can use a notification shortcut's icon for every window sharing its identity. Development runs must
   // never register Electron.exe under the installed NSIS app's identity.
-  if (process.platform === 'win32') app.setAppUserModelId(app.isPackaged ? STARTUP_ITEM_NAME : `${STARTUP_ITEM_NAME}.development`);
-  const startup = new Startup(app, process.platform, app.isPackaged, process.execPath, Boolean(process.env.STEP_DESKTOP_TEST_HOME));
+  const storeInstall = process.platform === 'win32' && process.windowsStore;
+  if (process.platform === 'win32' && !storeInstall)
+    app.setAppUserModelId(app.isPackaged ? STARTUP_ITEM_NAME : `${STARTUP_ITEM_NAME}.development`);
+  const startup = new Startup(
+    app,
+    process.platform,
+    app.isPackaged && !storeInstall,
+    process.execPath,
+    Boolean(process.env.STEP_DESKTOP_TEST_HOME),
+  );
   // Development smoke tests drive the main window directly; STEP_DESKTOP_SPLASH=1 shows the loading window there too.
   const splash =
     !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME && process.env.STEP_DESKTOP_SPLASH !== '1' ? undefined : new Splash();
@@ -787,16 +795,18 @@ async function main() {
     };
   }
   // In-app updates (electron/updater.ts): only an installed build updates itself; the policy can turn it off.
-  const updates = new Updater(app.isPackaged ? autoUpdater : undefined, {
+  const updates = new Updater(app.isPackaged && !storeInstall ? autoUpdater : undefined, {
     current: app.getVersion(),
     platform: process.platform,
     disabledReason: !app.isPackaged
       ? 'UPDATE_DEV_BUILD'
       : !policyState.policy.features.autoUpdate
         ? 'UPDATE_POLICY_OFF'
-        : process.env.STEP_DISABLE_UPDATES === '1'
-          ? 'UPDATE_ENV_OFF'
-          : '',
+        : storeInstall
+          ? 'UPDATE_MICROSOFT_STORE'
+          : process.env.STEP_DISABLE_UPDATES === '1'
+            ? 'UPDATE_ENV_OFF'
+            : '',
     emit: update => emit({ sessionId: '', type: 'update', update }),
     log: diagnose,
     selfInstall: process.platform === 'darwin' ? macSelfInstall() : undefined,
