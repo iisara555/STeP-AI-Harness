@@ -19,28 +19,28 @@ const noteText = (note: SkillImportNote) =>
         ? t('มี Skill ชื่อเดียวกันอยู่แล้ว จึงตั้งชื่อเป็น {0}', note.name)
         : t('ใช้บรรทัดแรกของไฟล์เป็นคำอธิบาย Skill');
 /** The automated Standard v2 and safety report. Advice for the uploader and admin; it approves nothing. */
-function PackReview({ review }: { review: PackReviewResult }) {
-  const fails = review.findings.filter(f => f.level === 'fail').length;
+function PackReview({ review, adminApproved }: { review: PackReviewResult; adminApproved?: boolean }) {
+  const visible = adminApproved ? review.findings.filter(f => f.code !== 'safety.hooks') : review.findings;
+  const status = adminApproved ? (visible.some(f => f.level === 'fail') ? 'fail' : visible.length ? 'warn' : 'pass') : review.status;
+  const fails = visible.filter(f => f.level === 'fail').length;
   const label =
-    review.status === 'pass'
-      ? t(REVIEW_STATUS.pass)
-      : review.status === 'warn'
-        ? t(REVIEW_STATUS.warn, review.findings.length)
-        : t(REVIEW_STATUS.fail, fails);
+    status === 'pass' ? t(REVIEW_STATUS.pass) : status === 'warn' ? t(REVIEW_STATUS.warn, visible.length) : t(REVIEW_STATUS.fail, fails);
   return (
-    <details className={`pack-review ${review.status}`} open={review.status === 'fail'}>
+    <details className={`pack-review ${status}`} open={status === 'fail'}>
       <summary role="status">
-        {review.status === 'pass' ? '✓ ' : review.status === 'warn' ? '! ' : '✕ '}
+        {status === 'pass' ? '✓ ' : status === 'warn' ? '! ' : '✕ '}
         {label}
       </summary>
-      <ul>
-        {review.findings.map((f, i) => (
-          <li key={i} className={f.level === 'fail' ? 'error' : 'muted'}>
-            {f.area === 'safety' ? t('ความปลอดภัย') : t('มาตรฐาน')}
-            {f.file ? ` · ${f.file}${f.line ? ':' + f.line : ''}` : ''} — {t(f.template, ...f.args)}
-          </li>
-        ))}
-      </ul>
+      {visible.length > 0 && (
+        <ul>
+          {visible.map((f, i) => (
+            <li key={i} className={f.level === 'fail' ? 'error' : 'muted'}>
+              {f.area === 'safety' ? t('ความปลอดภัย') : t('มาตรฐาน')}
+              {f.file ? ` · ${f.file}${f.line ? ':' + f.line : ''}` : ''} — {t(f.template, ...f.args)}
+            </li>
+          ))}
+        </ul>
+      )}
     </details>
   );
 }
@@ -379,7 +379,8 @@ export function PacksDialog({
     }
   };
   const [creating, setCreating] = useState(false),
-    [fixing, setFixing] = useState('');
+    [fixing, setFixing] = useState(''),
+    [copied, setCopied] = useState('');
   const canCreate = importAllowed && features?.staffSkills !== false;
   const importSkill = async (kind: 'file' | 'folder') => {
     if (busy) return;
@@ -502,15 +503,25 @@ export function PacksDialog({
           <section key={p.id} className="pack-item">
             <strong>
               {p.id} · {p.enabled ? (p.personal ? t('ใช้เองบนเครื่องนี้') : t('เปิดใช้')) : t('ยังไม่ได้ใช้')}
+              {p.adminApproved ? ' · ' + t('รับรองโดยผู้ดูแล') : ''}
               {p.invalid ? t(' · ตรวจไฟล์ไม่ผ่าน') : ''}
             </strong>
+            {p.adminApproved && (p.hooks > 0 || (p.agents || []).length > 0) && (
+              <p className="small muted">
+                {p.hooks > 0 ? t('Hooks: {0} ({1})', p.hooksEnabled ? t('เปิดอยู่') : t('ปิดอยู่'), p.hooks) : ''}
+                {p.hooks > 0 && (p.agents || []).length > 0 ? ' · ' : ''}
+                {(p.agents || []).length > 0
+                  ? t('Agent templates: {0} ({1})', p.agentsEnabled ? t('เปิดอยู่') : t('ปิดอยู่'), p.agents.length)
+                  : ''}
+              </p>
+            )}
             {p.credit && (
               <p className="small">
                 {t('นำเข้าโดย {0}', p.credit.name)}
                 {p.credit.team ? ' · ' + p.credit.team : ''} · {shownDate(p.credit.uploadedAt)}
               </p>
             )}
-            {p.review && fixing !== p.id && <PackReview review={p.review} />}
+            {p.review && fixing !== p.id && <PackReview review={p.review} adminApproved={Boolean(p.adminApproved)} />}
             {fixing === p.id && connection && (
               <FixSkill
                 api={api}
@@ -598,6 +609,18 @@ export function PacksDialog({
                 digest {p.digest} · Hooks {p.hooks}
               </p>
               <div className="pack-file-actions">
+                {p.digest && (
+                  <button
+                    className="quiet"
+                    disabled={busy}
+                    onClick={() => {
+                      void navigator.clipboard?.writeText(p.digest);
+                      setCopied(p.id);
+                    }}
+                  >
+                    {copied === p.id ? t('คัดลอกแล้ว') : t('คัดลอก digest')}
+                  </button>
+                )}
                 <button className="quiet" disabled={busy || p.invalid} onClick={() => void act('packExport', { id: p.id })}>
                   {t('ส่งออกเป็นโฟลเดอร์ Skill')}
                 </button>

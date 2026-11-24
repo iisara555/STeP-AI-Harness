@@ -1,0 +1,24 @@
+[
+  {
+    "lineUserId": "U00000000000000000000000000000001",
+    "employeeId": "synthetic-emp-01",
+    "team": "cc",
+    "providerConsent": true,
+    "profile": {
+      "baseUrl": "https://ai.step.internal/ai/v1",
+      "protocol": "openai",
+      "model": "step-chat"
+    }
+  },
+  {
+    "lineUserId": "U00000000000000000000000000000002",
+    "employeeId": "synthetic-emp-02",
+    "team": "afp",
+    "providerConsent": true,
+    "profile": {
+      "baseUrl": "http://127.0.0.1:11434/v1",
+      "protocol": "openai",
+      "model": "qwen3.5:4b"
+    }
+  }
+]
