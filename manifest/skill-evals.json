@@ -83,7 +83,8 @@
     "thai-english-translation",
     "spreadsheet-work",
     "google-workspace",
-    "claims-case-expert"
+    "claims-case-expert",
+    "event-planner-pro"
   ],
   "note": "Many skills in needsDirectModelSideCoverage already have routing/authority regression tests. This list means they are not directly represented in pilot-30-v1 model-side benchmark.",
   "evalFiles": "evals/skills/<skill>.json",

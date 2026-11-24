@@ -1,0 +1,99 @@
+{
+  "skill": "event-planner-pro",
+  "version": 1,
+  "source": "synthetic-2026-11-25",
+  "note": "Routing runs in test/skill-evals.test.js. Model output assertions are not graded in CI. No real venue quote, budget approval, or attendee PII is used.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "วางแผนงานเป็นรายการลอย ๆ ขาด Contingency Reserve ที่แยกต่างหาก ไม่มีเกณฑ์ถ่วงน้ำหนักสถานที่ ขาดช่วง Crew Call/Load-Out ใน Run Sheet และไม่แยกสมมติฐานออกจากราคาหรืออำนาจอนุมัติจริง",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-full-event-plan",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยวางแผนจัดงานประชุมประจำปี 250 คนครบวงจร พร้อมงบประมาณจัดงาน Master Run Sheet และแผนสำรองหน้างาน",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "event-planner-pro"
+      },
+      "outputAssertions": [
+        "มี Phase 0 Event Charter, Budget ที่แยก Contingency Reserve 10%-15%, Master Run Sheet ตั้งแต่ Crew Call ถึง Load-Out และ Contingency Matrix",
+        "ติดป้าย PLANNING_ASSUMPTION กับตัวเลขงบและสมมติฐานที่ยังไม่มีใบเสนอราคา",
+        "ระบุ Human-Only Authority สำหรับการอนุมัติงบ สัญญา และการส่งข้อความจริง"
+      ]
+    },
+    {
+      "id": "positive-weighted-venue-and-checklists",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ขอ weighted venue selection matrix เทียบสถานที่จัดงาน 3 แห่ง พร้อม catering checklist และ post-event ROI",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "event-planner-pro"
+      },
+      "outputAssertions": [
+        "ใช้ตารางเกณฑ์ถ่วงน้ำหนัก 25/20/20/20/15% พร้อมจุดตรวจ Site Visit",
+        "แยก catering dietary checklist และกรอบประเมินผล T+1 ถึง T+14 วัน"
+      ]
+    },
+    {
+      "id": "anti-creative-concept-signature",
+      "dimension": "antiTrigger",
+      "team": "cc",
+      "prompt": "คิด Big idea สำหรับงาน STeP Innovation Day 3 แนวทาง พร้อมชื่องาน key message และ signature moment ที่คนจะจำได้",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "event-concept",
+        "notSkill": "event-planner-pro"
+      }
+    },
+    {
+      "id": "anti-draft-tor",
+      "dimension": "antiTrigger",
+      "team": "afp",
+      "prompt": "ร่าง TOR จ้างออแกไนเซอร์จัดงานนิทรรศการจากวัตถุประสงค์ ขอบเขต ผลส่งมอบ และเกณฑ์ตรวจรับนี้",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "tor-government-writing",
+        "notSkill": "event-planner-pro"
+      }
+    },
+    {
+      "id": "collision-stage-run-of-show",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "เขียนคิวเวทีพิธีเปิดนาทีต่อนาทีพร้อม cue sheet เสียงแสงจอและลำดับพิธีกร",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "event-run-of-show",
+        "notSkill": "event-planner-pro"
+      }
+    },
+    {
+      "id": "collision-project-proposal",
+      "dimension": "collision",
+      "team": "pm",
+      "prompt": "ร่างโครงการฝึกทักษะดิจิทัลจากต้นเรื่องนี้ จัดหลักการและเหตุผล วัตถุประสงค์ กิจกรรม งบประมาณ และตัวชี้วัด",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "project-plan",
+        "notSkill": "event-planner-pro"
+      }
+    },
+    {
+      "id": "missing-venue-and-budget-specs",
+      "dimension": "missingSource",
+      "team": "cc",
+      "prompt": "ช่วยวางแผนจัดงานสัมมนาใหญ่และเทียบสถานที่จัดงาน แต่ยังไม่ทราบจำนวนคน งบประมาณ และใบเสนอราคาสถานที่",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "event-planner-pro"
+      },
+      "outputAssertions": [
+        "ไม่แต่งคะแนน Site Visit หรือราคาสถานที่จริง ระบุ รอยืนยัน ในตาราง",
+        "แยกสมมติฐานฐานออกมาเป็นรายการ PLANNING_ASSUMPTION และ Open Items"
+      ]
+    }
+  ]
+}
