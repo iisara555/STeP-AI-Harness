@@ -15,7 +15,7 @@ const windowsInstaller = `STeP-Desktop-Setup-${version}.exe`;
 const macDmg = `STeP-Desktop-${version}-arm64.dmg`;
 const macZip = `STeP-Desktop-${version}-arm64.zip`;
 
-async function writeFeed(directory: string, feed: string, installers: string[]) {
+async function writeFeed(directory, feed, installers) {
   const files = await Promise.all(
     installers.map(async url => {
       const data = await readFile(join(directory, url));
@@ -25,7 +25,7 @@ async function writeFeed(directory: string, feed: string, installers: string[]) 
   await writeFile(join(directory, feed), yaml.dump({ version, files, path: files[0].url, sha512: files[0].sha512 }));
 }
 
-async function fixture(feed: string, installers: string[]) {
+async function fixture(feed, installers) {
   const directory = await mkdtemp(join(tmpdir(), 'step-release-artifacts-'));
   for (const filename of installers) {
     await writeFile(join(directory, filename), 'synthetic installer ' + filename);
