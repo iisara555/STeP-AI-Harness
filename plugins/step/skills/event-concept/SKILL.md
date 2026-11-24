@@ -1,293 +1,100 @@
 ---
 name: event-concept
 description: พัฒนาแนวคิด Event นิทรรศการ Booth หรือประสบการณ์ผู้เข้าชมของ STeP จากเป้าหมายโครงการ กลุ่มผู้ชม เนื้อหา พื้นที่ และข้อจำกัดที่ได้รับ ให้เป็น Concept Statement, Signature Moment (ถ้ามีพิธีการ/โมเมนต์สำคัญ), Visitor Journey และทิศทางองค์ประกอบพื้นที่ที่เชื่อมโยงกัน โดยไม่สร้างข้อกำหนด TOR งบประมาณ หรือข้อมูลพื้นที่ขึ้นเอง
-standardVersion: 2
+standardVersion: 3
 ---
 
 # Event Concept
 
 ## Purpose
 
-เปลี่ยนบริบทของโครงการให้เป็นแนวคิด Event ที่สามารถนำไปพัฒนาต่อด้าน Design, Content และ Spatial Experience ได้
+เปลี่ยนบริบทของโครงการให้เป็นแนวคิด Event ที่นำไปพัฒนาต่อด้าน Design, Content และ Spatial Experience (`Project Context → Concept → Visitor Experience → Spatial Direction`)
 
-Skill นี้ทำหน้าที่:
-
-**Project Context → Concept → Visitor Experience → Spatial Direction**
-
-เน้นความสัมพันธ์ระหว่าง:
-
-* เป้าหมายโครงการ
-* เนื้อหา
-* ผู้ชม
-* ประสบการณ์
-* พื้นที่
-* องค์ประกอบการสื่อสาร
-
-ไม่ใช่การตรวจ TOR อย่างเป็นทางการหรือการจัดทำแบบผลิตขั้นสุดท้าย
+Skill นี้ใช้พัฒนาธีมงาน โซนประสบการณ์ และ Signature Moment ของ STeP ไม่ใช่การวางงบประมาณ/จัดซื้อจัดจ้าง การตรวจ TOR หรือการแตกคิวเวทีรายนาที
 
 ## เมื่อควรใช้
 
-- ต้องออกแบบแนวคิดงาน event นิทรรศการ หรือบูธ
-- ต้องแปลงวัตถุประสงค์ของงานให้เป็นประสบการณ์ผู้เข้าชม
-- ต้องวางโซนกิจกรรมและทิศทางภาพก่อนผลิตจริง
+- ต้องออกแบบแนวคิดงาน Event นิทรรศการ หรือผังโซนบูธของ STeP
+- ต้องแปลงวัตถุประสงค์ของงานให้เป็น Visitor Journey และ Signature Moment
+- ต้องวางทิศทางภาพและพื้นที่เชื่อมโยงกันก่อนผลิตจริง
 
 **Anti-trigger:**
-- บรีฟงานออกแบบชิ้นงานเดี่ยว → `designer-brief`
-- ตรวจงานเทียบ brand → `step-brand`
-- ออกแบบการเรียนรู้หรืออบรม → `learning-designer`
-- ทำลำดับคิวเวที รันคิว หรือ sequence นาทีต่อนาที → `event-run-of-show`
+- วางแผนจัดงานครบวงจร เทียบสถานที่ถ่วงน้ำหนัก งบประมาณ Contingency และ Run Sheet รวม → `event-planner-pro` (หรือเฉพาะบรีฟชิ้นงานเดี่ยว → `designer-brief`)
+- ทำลำดับคิวเวที รันคิว จอ เสียง แสง รายวินาที → `event-run-of-show`
+- ตรวจงานเทียบ Brand CI → `step-brand`
+- ออกแบบหลักสูตรอบรมหรือกิจกรรมการเรียนรู้ → `learning-designer`
 
 ## Inputs
 
-อาจได้รับ:
-
-* Project brief
-* TOR
-* Site plan
-* Venue information
-* Content
-* Stakeholder objectives
-* Target audience
-* Brand direction
-* Budget range
-* Schedule
-* Reference
-* Existing design
-
-ใช้เฉพาะข้อมูลที่มีอยู่จริง
-
-หากข้อมูลสำคัญไม่มี ให้ระบุว่า `ยังไม่ระบุ`
+- อาจได้รับ: Project brief, TOR, Site plan, ข้อมูลสถานที่, เนื้อหา, เป้าหมายผู้มีส่วนได้ส่วนเสีย, Target audience, Brand direction, กรอบงบ, กำหนดการ, Reference
+- ใช้เฉพาะข้อมูลที่มีอยู่จริง; หากข้อมูลสำคัญไม่มีให้ระบุว่า `ยังไม่ระบุ` หรือ `รอยืนยัน`
 
 ## Source
 
-- ข้อมูลงานมาจาก **โจทย์และเอกสารที่ผู้ใช้ให้มา**
+- ข้อมูลงานมาจาก **โจทย์และเอกสารที่ผู้ใช้ให้มา** (แนวทางรายละเอียดอยู่ที่ `references/concept-and-spatial-guide.md`)
 - อัตลักษณ์องค์กรอ้างอิง `step-brand`
-- ข้อจำกัดด้านสถานที่ งบประมาณ และความปลอดภัย ต้องยืนยันกับเจ้าของงานและ IFU ก่อนใช้เป็นข้อกำหนด
+- ข้อจำกัดด้านสถานที่ งบประมาณ และความปลอดภัยต้องยืนยันกับเจ้าของงานและ IFU ก่อนใช้เป็นข้อกำหนด
 - แบบฟอร์มระบบคุณภาพที่ต้องยื่นจริงคือ **FM-CC-010** ดู [ทะเบียนเอกสารระบบคุณภาพ ทีม CC](../../docs/knowledge/cc-iso-document-register.md) · ดาวน์โหลดจาก **STeP : MIS** เท่านั้น ห้ามสร้างแบบฟอร์มขึ้นเอง และ **FM-CC-001 / FM-CC-003 / FM-CC-008 ยกเลิกแล้วตั้งแต่ 1 ก.ย. 2569**
 
 ## Workflow
 
-### 1. Understand Context
-
-สกัดข้อมูลเท่าที่มี:
-
-* เป้าหมายของโครงการ
-* ผู้ชมหลัก
-* Key message
-* สิ่งที่ต้องการให้ผู้ชมเข้าใจ
-* สิ่งที่ต้องการให้ผู้ชมทำต่อ
-* พื้นที่
-* ระยะเวลา
-* ข้อจำกัด
-* Requirement ที่ระบุไว้
-
-ไม่ตีความ Requirement ที่ไม่ชัดเป็นข้อบังคับใหม่
-
-### 2. Define Concept
-
-สร้าง `Concept Statement` ที่อธิบายแนวคิดหลักในหนึ่งประโยค
-
-Concept ต้อง:
-
-* เชื่อมกับเป้าหมายโครงการ
-* สื่อสารได้เข้าใจง่าย
-* นำไปใช้ต่อกับองค์ประกอบหลายประเภทได้
-* ไม่อ้างความสามารถหรือผลลัพธ์ที่โครงการไม่มีหลักฐานรองรับ
-
-จากนั้นอธิบาย `Concept Rationale` สั้น ๆ ว่าแนวคิดนี้มาจากอะไร
-
-### 3. Design the Signature Moment (เมื่องานมีพิธีการ พิธีเปิด หรือโมเมนต์สำคัญ)
-
-งาน event บางประเภท (พิธีเปิด งานเฉลิมฉลอง งานวัฒนธรรม งานส่งมอบ) ต้องการ **โมเมนต์เดียวที่ผู้ชมจดจำ** มากกว่าการไล่ตามกำหนดการ — ขั้นนี้ใช้เมื่อ Concept ต้องการจุดไคลแมกซ์เชิงสัญลักษณ์ที่ผูกกับ Concept Statement โดยตรง ไม่ใช่ทุกงานต้องมี ถ้า Concept ไม่ต้องการโมเมนต์แบบนี้ให้ข้ามไปข้อ 4
-
-แตกโมเมนต์เป็น 3 ส่วน เขียนเรียงตามลำดับเวลา:
-
-* **Trigger** — อะไรเป็นจุดเริ่มของโมเมนต์นี้ (เช่น ประธานมาถึงจุดที่กำหนด, ดนตรีเปลี่ยน, สัญญาณจาก show caller)
-* **Action** — ผู้เข้าร่วม/ตัวแทนทำอะไร ใช้วัตถุหรือสัญลักษณ์อะไร และวัตถุ/การกระทำนั้นเชื่อมกับ Concept Statement อย่างไร
-* **Outcome / Artifact** — จบโมเมนต์แล้วเหลืออะไร เช่น ของที่ระลึก สัญลักษณ์ที่ประกอบสำเร็จ ภาพที่ถูกบันทึก
-
-**แนวทางกระตุ้นไอเดีย** (เป็นตัวช่วยคิด ไม่ใช่ข้อเสนอสำเร็จรูป — ต้องปรับให้เข้ากับ Concept และบริบทจริงเสมอ):
-* การรวมชิ้นส่วนจากหลายแหล่ง/หลายกลุ่มให้กลายเป็นหนึ่งเดียว (สื่อถึงความเป็นเอกภาพจากความหลากหลาย)
-* การส่งต่อจากมือสู่มือ (สื่อถึงการสืบทอด ความต่อเนื่อง)
-* การใช้วัสดุ/หัตถกรรมท้องถิ่นที่มีนัยเชิงอัตลักษณ์ของพื้นที่นั้นจริง
-* การเปิด/จุด/ปลดสัญลักษณ์ร่วมกันโดยหลายคนพร้อมกัน (สื่อถึงการเริ่มต้นร่วมกัน)
-
-**ข้อควรระวัง**
-* ถ้าโมเมนต์เกี่ยวข้องกับพิธีกรรมทางศาสนา ธรรมเนียมราชสำนัก หรือประเพณีท้องถิ่นที่มีขั้นตอนกำกับ **ห้ามออกแบบขั้นตอนเอง** ต้องระบุว่าต้องยืนยันกับเจ้าของพิธี/ผู้รู้ท้องถิ่นก่อนเสมอ
-* ต้องพิจารณาข้อจำกัดสถานที่ (เช่น โบราณสถาน ห้ามตอกยึด ห้ามใช้ไฟ) ก่อนเสนอวัสดุ/วิธีการ ถ้ายังไม่ยืนยันให้ระบุเป็น `ข้อควรพิจารณา` ไม่ใช่ข้อสรุป
-* เสนอ Signature Moment ได้มากกว่า 1 ทางเลือก พร้อมข้อดี-ข้อจำกัดเทียบกัน ให้เจ้าของงานเลือก แทนที่จะฟันธงทางเดียว
-
-### 4. Define Visitor Experience
-
-แปลง Concept (รวม Signature Moment ถ้ามี) ให้เป็นลำดับประสบการณ์ของผู้ชม
-
-ใช้โครงสร้างเป็นแนวทาง เช่น:
-
-`Attract → Understand → Engage → Remember → Next Action`
-
-ปรับตามประเภทของ Event ได้
-
-ไม่จำเป็นต้องใช้ Journey เดียวกันทุกโครงการ
-
-สำหรับแต่ละช่วง ให้ระบุ:
-
-* ผู้ชมพบอะไร
-* ต้องเข้าใจอะไร
-* Interaction ที่เกิดขึ้น
-* ผลลัพธ์ที่ต้องการ
-
-### 5. Translate Into Experience Zones
-
-แปลง Visitor Journey เป็นองค์ประกอบพื้นที่เท่าที่จำเป็น เช่น:
-
-* Entrance
-* Orientation
-* Exhibition
-* Booth
-* Stage
-* Activity
-* Check-in
-* Consultation
-* Product display
-* Media
-* Exit / Call-to-action
-
-ไม่จำเป็นต้องมีทุกองค์ประกอบ
-
-เลือกเฉพาะที่รองรับ Concept และ Requirement
-
-### 6. Connect Visual & Spatial Direction
-
-กำหนดความสัมพันธ์ระหว่างองค์ประกอบ เช่น:
-
-* Key Visual
-* Graphic language
-* Spatial language
-* Material direction
-* Lighting character
-* Media
-* Signage
-* Interaction
-* Souvenir
-
-อธิบายว่าแต่ละองค์ประกอบสนับสนุน Concept อย่างไร
-
-หลีกเลี่ยงการเลือกองค์ประกอบเพียงเพราะดูสวย
-
-### 7. Consider Practical Constraints
-
-พิจารณาข้อจำกัดที่ต้นทางระบุ เช่น:
-
-* พื้นที่
-* จำนวนผู้ชม
-* งบประมาณ
-* ระยะเวลาติดตั้ง
-* การขนส่ง
-* Indoor / Outdoor
-* Accessibility
-* Existing structure
-* Venue restriction
-
-หากไม่มีข้อมูล ห้ามสร้างข้อจำกัดขึ้นเอง
-
-สามารถเสนอ `ข้อควรพิจารณา` เพิ่มเติมได้ แต่ต้องแยกออกจาก Requirement ที่ยืนยันแล้ว
+ดำเนินงานตามกรอบใน `references/concept-and-spatial-guide.md`:
+1. **Understand Context:** สกัดเป้าหมาย ผู้ชมหลัก Key message พื้นที่ ระยะเวลา และข้อจำกัดจากต้นทาง โดยไม่ตีความ Requirement ที่คลุมเครือเป็นข้อบังคับใหม่
+2. **Define Concept:** สร้าง `Concept Statement` 1 ประโยคที่เชื่อมเป้าหมาย สื่อสารชัด ขยายหลายสื่อได้ และไม่อ้างผลลัพธ์ที่ไร้หลักฐาน พร้อม `Concept Rationale` สั้น ๆ
+3. **Design Signature Moment (เฉพาะงานมีพิธีเปิด/โมเมนต์สำคัญ):** แตกเป็น `Trigger → Action → Outcome / Artifact` เสนอมากกว่า 1 ทางเลือกในตารางเทียบพร้อมข้อจำกัดและสิ่งที่ต้องยืนยันเสมอ (ห้ามคิดขั้นตอนพิธีกรรม/ประเพณีเอง)
+4. **Define Visitor Journey & Zones:** วางลำดับ เช่น `Attract → Understand → Engage → Remember → Next Action` แล้วแปลงเป็นโซนเท่าที่งานใช้จริง (เช่น Entrance, Orientation, Booth, Stage, Consultation, Exit)
+5. **Connect Visual/Spatial & Practical Constraints:** เชื่อม Key Visual แสง วัสดุ ป้าย สื่อ เข้ากับ Concept และแยก `Known Constraint` ออกจาก `Design Assumption`
 
 ## Output
 
-### Project Context
-
-* Project:
-* Objective:
-* Audience:
-* Key Message:
-* Venue / Site:
-* Known Constraints:
-* Information Missing:
-
-### Concept Statement
-
-ประโยคเดียวที่อธิบายแนวคิดหลัก
-
-### Concept Rationale
-
-อธิบายเหตุผลและความสัมพันธ์กับเป้าหมายของโครงการอย่างกระชับ
-
-### Signature Moment (ถ้ามี)
-
-ระบุเฉพาะเมื่อ Concept ต้องการโมเมนต์สัญลักษณ์ — ถ้าไม่มีให้ข้าม section นี้ ไม่ต้องเขียนว่า "ไม่มี"
-
-เสนอได้มากกว่า 1 ทางเลือกในตารางเดียวกัน:
-
-| ทางเลือก | Trigger | Action | Outcome / Artifact | ข้อดี | ข้อจำกัด / สิ่งที่ต้องยืนยัน |
-| ----- | ------- | ------ | ------------------- | ----- | ----------------------------- |
-
-### Visitor Journey
-
-| Stage | Visitor Experience | Message | Interaction | Intended Outcome |
-| ----- | ------------------ | ------- | ----------- | ---------------- |
-
-### Experience / Spatial Zones
-
-| Zone | Function | Visitor Experience | Connection to Concept |
-| ---- | -------- | ------------------ | --------------------- |
-
-### Visual & Spatial Direction
-
-ระบุเฉพาะองค์ประกอบที่เกี่ยวข้อง เช่น:
-
-* Visual language:
-* Spatial language:
-* Materials:
-* Lighting:
-* Media:
-* Signage:
-* Interaction:
-* Souvenir / Takeaway:
-
-พร้อมอธิบายเหตุผลสั้น ๆ
-
-### Practical Considerations
-
-| Issue | Known Constraint | Design Response |
-| ----- | ---------------- | --------------- |
-
-### Open Questions
-
-ระบุเฉพาะข้อมูลที่จำเป็นต่อการพัฒนา Concept ต่อ เช่น:
-
-* พื้นที่ยังไม่ยืนยัน
-* งบประมาณยังไม่ระบุ
-* Audience estimate ยังไม่มี
-* Requirement บางข้อยังตีความไม่ได้
+จัดโครงเป็นส่วนชัดเจน: `Project Context`, `Concept Statement`, `Concept Rationale`, `Signature Moment (ถ้ามี — ตารางหลายทางเลือก)`, `Visitor Journey`, `Experience / Spatial Zones`, `Visual & Spatial Direction`, `Practical Considerations`, และ `Open Questions`
+ดูตัวอย่างผลลัพธ์มาตรฐานได้ที่ `examples/good-event-concept.md`
 
 ## Authority
 
-AI ช่วยได้: เสนอแนวคิด โซนประสบการณ์ และทิศทางภาพ
-
-ต้องให้มนุษย์ตัดสิน:
-- การอนุมัติงบประมาณและการจัดซื้อจัดจ้างผู้ผลิต — `budget-allocation`, `procurement-approval`
-- การใช้พื้นที่และเงื่อนไขความปลอดภัย ซึ่งเป็นอำนาจของ IFU และเจ้าของสถานที่
-- การดัดแปลงอัตลักษณ์องค์กร — `brand-alteration`
+- **AI ช่วยได้:** เสนอแนวคิด ธีมงาน ทางเลือก Signature Moment โซนประสบการณ์ และทิศทางภาพ
+- **ต้องให้มนุษย์ตัดสิน (`human-approval-rule`):**
+  - การอนุมัติงบประมาณและการจัดซื้อจัดจ้างผู้ผลิต (`budget-allocation`, `procurement-approval`)
+  - การใช้พื้นที่ เงื่อนไขความปลอดภัย และแบบสถานที่ (อำนาจของ IFU และเจ้าของสถานที่)
+  - การดัดแปลงอัตลักษณ์องค์กร (`brand-alteration`) และขั้นตอนพิธีกรรม/ประเพณี (เจ้าของพิธี/ผู้รู้ท้องถิ่น)
 
 ## Handoff
 
-- บรีฟงานออกแบบชิ้นงาน → `designer-brief`
-- ตรวจงานเทียบ brand → `step-brand`
+- บรีฟออกแบบชิ้นงานรายชิ้น → `designer-brief`
+- แตกคิวเวทีรายนาที จอ/เสียง/แสง → `event-run-of-show`
+- ตรวจชิ้นงานเทียบ Brand → `step-brand`
 - สไลด์นำเสนอแนวคิด → `presentation-design`
-- แผนดำเนินงานและงวดงาน → `project-plan`
+- แผนงานและงวดงาน → `project-plan` · จัดซื้อจ้างออแกไนเซอร์ → `tor-government-writing`
 
-พร้อมส่งต่อเมื่อ: concept, visitor journey, โซนประสบการณ์ และข้อจำกัดที่ทราบถูกระบุครบ พร้อมรายการคำถามที่ยังค้าง
+พร้อมส่งต่อเมื่อ: Concept, Visitor Journey, โซนประสบการณ์ และข้อจำกัดที่ทราบถูกระบุครบ พร้อมรายการ Open Questions
 
 ## Guardrails
 
-* ห้ามสร้าง Requirement ที่ไม่มีในต้นทาง
-* ห้ามสร้างงบประมาณหรือขนาดพื้นที่ขึ้นเอง
-* ห้ามเปลี่ยน Reference ให้เป็น Requirement โดยอัตโนมัติ
-* ห้ามอ้างว่า Concept สอดคล้อง TOR หากยังไม่ได้ตรวจ TOR
-* ห้ามอ้างว่าวัสดุหรือโครงสร้างผลิตได้จริงโดยไม่มีข้อมูลเพียงพอ
-* แยก `Requirement` ออกจาก `Design Proposal`
-* แยก `Known Constraint` ออกจาก `Design Assumption`
-* ทุกองค์ประกอบควรมีเหตุผลเชื่อมกับ Concept, Audience หรือ Function
-* หากข้อมูลไม่พอ ให้คงความไม่แน่นอนไว้แทนการเดา
-* Signature Moment ที่เกี่ยวข้องกับพิธีกรรมทางศาสนา ธรรมเนียมราชสำนัก หรือประเพณีเฉพาะถิ่น ต้องระบุว่าต้องยืนยันกับเจ้าของพิธี/ผู้รู้ท้องถิ่นก่อนใช้จริงเสมอ ห้ามนำเสนอเป็นขั้นตอนที่ถูกต้องแล้ว
-* ห้ามเสนอ Signature Moment ทางเดียวโดยไม่มีข้อจำกัดกำกับ — ต้องมีอย่างน้อย "สิ่งที่ต้องยืนยัน" ต่อทุกทางเลือก
+- ห้ามสร้าง Requirement งบประมาณ หรือขนาดพื้นที่ที่ไม่มีในต้นทาง และห้ามเปลี่ยน Reference ให้เป็น Requirement โดยอัตโนมัติ
+- ห้ามอ้างว่า Concept สอดคล้อง TOR หรือวัสดุ/โครงสร้างผลิตได้จริงโดยไม่มีข้อมูลเพียงพอ
+- แยก `Requirement` ออกจาก `Design Proposal` และแยก `Known Constraint` ออกจาก `Design Assumption` เสมอ
+- Signature Moment ต้องมีอย่างน้อย "สิ่งที่ต้องยืนยัน" ต่อทุกทางเลือก และห้ามออกแบบพิธีกรรมศาสนา/ราชสำนัก/ท้องถิ่นเอง
+
+## Environment
+
+- ใช้งานได้ทั้งใน STeP Desktop และ Claude plugin ร่วมกับ `references/concept-and-spatial-guide.md` และ `examples/good-event-concept.md`
+- ไม่ต้องใช้เครื่องมือภายนอกหรือรหัสลับ; หากมีไฟล์แนบที่มีข้อมูลบุคคลให้ผ่าน Privacy Gate ก่อนเสมอ
+
+## Pitfalls
+
+- เสนอ Signature Moment เพียงทางเลือกเดียวที่ต้องตอกยึดหรือใช้ไฟในพื้นที่ห้ามใช้ → ให้เสนอ ≥ 2 ทางเลือกและติดป้ายรอ IFU/สถานที่ยืนยันเสมอ
+- จัดโซนมากเกินพื้นที่จริงทั้งที่ต้นทางไม่ต้องการ → เลือกเฉพาะโซนที่รองรับ Journey และ Requirement จริงเท่านั้น
+- คิดแนวคิดสวยแต่ไม่มี Next Action ชัดให้ผู้ชมทำต่อหลังจบงาน → ต้องระบุ Intended Outcome ของช่วง Exit เสมอ
+
+## Verification
+
+- ตรวจด้วย `node scripts/validate-repo.js` (Standard v3, ไม่มี emoji) และผ่าน `reviewPack()`
+- ตรวจ routing 4 มิติใน `evals/skills/event-concept.json` ผ่าน `npm test`
+- ก่อนนำไปผลิตจริง ต้องยืนยันขนาดพื้นที่ ความปลอดภัย กับ IFU และกรอก **FM-CC-010** จาก STeP : MIS
+
+## Maintenance
+
+อัปเดตล่าสุด: 2026-11-25
+
+- เจ้าของเนื้อหา: ทีม CC (`../../manifest/skills.yaml`, stage `pilot`)
+- แก้ Skill นี้เมื่อกระบวนการจัดงานของทีม CC, ทะเบียน `../../docs/knowledge/cc-iso-document-register.md`, หรือขอบเขตเทียบกับ `event-run-of-show` เปลี่ยน แล้วอัปเดตวันที่ข้างต้นทันที

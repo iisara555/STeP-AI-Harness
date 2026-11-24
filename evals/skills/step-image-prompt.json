@@ -1,0 +1,74 @@
+{
+  "skill": "step-image-prompt",
+  "version": 1,
+  "source": "synthetic-2026-11-25",
+  "note": "Routing runs in test/skill-evals.test.js. Model output assertions are not graded in CI. No real CI change or fabricated metric is generated.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "เขียน prompt ลอย ๆ โดยไม่มี Prompt Spec 14 ช่อง ไม่เช็ก Capability Gate ของเครื่องมือ ใส่ข้อความไทยหรือโลโก้ให้ AI วาดเอง และถมสีเหลืองทั้งภาพ",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-tech-hero-prompt",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยทำ prompt ภาพสมจริงแบบ photorealistic technology hero สำหรับประชาสัมพันธ์ STeP",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "step-image-prompt"
+      },
+      "outputAssertions": [
+        "แสดงทั้ง Prompt Spec และ Rendered Prompt พร้อม Renderer/Ratio metadata",
+        "เว้น TEXT_SPACE และใส่โลโก้กับข้อความภาษาไทยไว้ใน EXCLUDE"
+      ]
+    },
+    {
+      "id": "positive-reference-edit",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ขอ prompt สร้างภาพจาก reference นี้ ให้รักษา composition แล้วปรับเป็น STeP brand",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "step-image-prompt"
+      },
+      "outputAssertions": [
+        "ตรวจ Capability Gate ว่ารับภาพได้หรือไม่และแยก MUST_KEEP / CHANGE_ONLY หรือ Keep/Adapt/Avoid"
+      ]
+    },
+    {
+      "id": "anti-presentation-slides",
+      "dimension": "antiTrigger",
+      "team": "cc",
+      "prompt": "ช่วยจัดโครง Presentation นี้ให้ message ชัดและทำสไลด์นำเสนอผู้บริหาร 10 หน้า",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "presentation-design",
+        "notSkill": "step-image-prompt"
+      }
+    },
+    {
+      "id": "collision-creative-direction",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ช่วยวางแผน creative direction และ visual hammer ให้โปสเตอร์ใหม่ งานเดิมยังดู AI เกินไป",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "creative-art-director",
+        "notSkill": "step-image-prompt"
+      }
+    },
+    {
+      "id": "missing-target-tool-family",
+      "dimension": "missingSource",
+      "team": "cc",
+      "prompt": "ขอ prompt รูปโปสเตอร์งานสัมมนาจาก reference image โดยยังไม่บอกเครื่องมือปลายทางและสัดส่วนภาพ",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "step-image-prompt"
+      },
+      "outputAssertions": [
+        "ใช้ Family A ชั่วคราวพร้อมแจ้ง assumption และถามยืนยันว่ารองรับ image input หรือไม่โดยไม่แกล้งเห็นภาพที่ไม่ได้รับมา"
+      ]
+    }
+  ]
+}
