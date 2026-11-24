@@ -14,11 +14,18 @@ on:
         description: 'Publish this commit as desktop-v<package.json version> and update the in-app update feed'
         type: boolean
         default: false
+      require_trusted_installers:
+        description: 'Require valid Windows Authenticode, a clean Defender scan, and Apple notarization'
+        type: boolean
+        default: false
   push:
     tags: ['desktop-v*']
 
 permissions:
   contents: read
+
+env:
+  STEP_DESKTOP_REQUIRE_TRUSTED_INSTALLERS: ${{ vars.STEP_DESKTOP_REQUIRE_TRUSTED_INSTALLERS == 'true' || inputs.require_trusted_installers == true }}
 
 jobs:
   build:
@@ -33,7 +40,6 @@ jobs:
               desktop/release/*.exe
               desktop/release/*.exe.blockmap
               desktop/release/latest.yml
-            feed: latest.yml
           - name: macos-arm64
             os: macos-latest
             script: dist:mac
@@ -42,7 +48,6 @@ jobs:
               desktop/release/*.zip
               desktop/release/*.blockmap
               desktop/release/latest-mac.yml
-            feed: latest-mac.yml
           # Intel Mac builds stopped after 0.5.35; `npm run dist:mac:x64` still builds one by hand.
     runs-on: ${{ matrix.os }}
     env:
@@ -85,32 +90,71 @@ jobs:
           STEP_ORGANIZATION_AI_URL: ${{ vars.STEP_ORGANIZATION_AI_URL }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          WIN_CSC_LINK: ${{ runner.os == 'Windows' && secrets.WIN_CSC_LINK || '' }}
+          WIN_CSC_KEY_PASSWORD: ${{ runner.os == 'Windows' && secrets.WIN_CSC_KEY_PASSWORD || '' }}
+          MAC_CSC_LINK: ${{ runner.os == 'macOS' && secrets.MAC_CSC_LINK || '' }}
+          MAC_CSC_KEY_PASSWORD: ${{ runner.os == 'macOS' && secrets.MAC_CSC_KEY_PASSWORD || '' }}
+          APPLE_ID: ${{ runner.os == 'macOS' && secrets.APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ runner.os == 'macOS' && secrets.APPLE_TEAM_ID || '' }}
         run: |
-          EXTRA=""
+          EXTRA=()
+          if [ "$RUNNER_OS" = "Windows" ] && [ -n "$WIN_CSC_LINK" ]; then
+            export CSC_LINK="$WIN_CSC_LINK" CSC_KEY_PASSWORD="$WIN_CSC_KEY_PASSWORD"
+          elif [ "$RUNNER_OS" = "macOS" ] && [ -n "$MAC_CSC_LINK" ]; then
+            export CSC_LINK="$MAC_CSC_LINK" CSC_KEY_PASSWORD="$MAC_CSC_KEY_PASSWORD"
+          fi
+          unset WIN_CSC_LINK WIN_CSC_KEY_PASSWORD MAC_CSC_LINK MAC_CSC_KEY_PASSWORD
           if [ -z "$CSC_LINK" ]; then
             # Unset secrets arrive as empty strings, which electron-builder would treat as a certificate path.
             unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
             export CSC_IDENTITY_AUTO_DISCOVERY=false
-            if [ "$RUNNER_OS" = "macOS" ]; then EXTRA="-c.mac.identity=-"; fi
+            if [ "$RUNNER_OS" = "macOS" ]; then EXTRA+=("-c.mac.identity=-"); fi
+          elif [ "$RUNNER_OS" = "macOS" ] && [ -n "$APPLE_ID" ] && [ -n "$APPLE_APP_SPECIFIC_PASSWORD" ] && [ -n "$APPLE_TEAM_ID" ]; then
+            EXTRA+=("-c.dmg.sign=true")
           fi
-          npm run ${{ matrix.script }} -- $EXTRA
-      - name: Check the update feed file was written
-        run: |
-          test -s "release/${{ matrix.feed }}"
-          grep -q "^version: $(node -p "require('./package.json').version")$" "release/${{ matrix.feed }}"
-      - name: Check the Mac disk image signature and first-open guide
+          npm run ${{ matrix.script }} -- "${EXTRA[@]}"
+      - name: Prepare installer reports
+        run: mkdir -p release-preflight
+      - name: Notarize and staple the signed Mac disk image
         if: runner.os == 'macOS'
+        timeout-minutes: 30
+        env:
+          STEP_DESKTOP_APPLE_NOTARIZATION_CONFIGURED: ${{ (secrets.MAC_CSC_LINK != '' || secrets.CSC_LINK != '') && secrets.APPLE_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          DMG=$(ls release/*.dmg | head -1)
-          MNT=$(mktemp -d)
-          hdiutil attach "$DMG" -nobrowse -readonly -mountpoint "$MNT"
-          trap 'hdiutil detach "$MNT" -force || true' EXIT
-          # A broken signature makes macOS say the app "is damaged" instead of offering Open Anyway.
-          codesign --verify --deep --strict --verbose=2 "$MNT/STeP Desktop.app"
-          test -s "$MNT/อ่านก่อนเปิดครั้งแรก.html"
+          if [ "$STEP_DESKTOP_APPLE_NOTARIZATION_CONFIGURED" != true ]; then
+            printf '{"submission":"not configured"}\n' > release-preflight/apple-notarization.json
+            echo "Apple signing credentials are not configured. The preflight report will show the ticket status."
+            exit 0
+          fi
+          VERSION=$(node -p "require('./package.json').version")
+          DMG="release/STeP-Desktop-${VERSION}-arm64.dmg"
+          NOTARY_RESULT="$RUNNER_TEMP/step-desktop-notary.json"
+          printf '{"submission":"failed or interrupted"}\n' > release-preflight/apple-notarization.json
+          xcrun notarytool submit "$DMG" --apple-id "$APPLE_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" --wait --output-format json > "$NOTARY_RESULT"
+          node --input-type=module -e 'import {readFileSync} from "node:fs"; if (JSON.parse(readFileSync(process.argv[1], "utf8")).status !== "Accepted") throw new Error("Apple did not accept the DMG"); console.log("Apple notarization: Accepted")' "$NOTARY_RESULT"
+          printf '{"submission":"Accepted"}\n' > release-preflight/apple-notarization.json
+          xcrun stapler staple "$DMG"
+          node scripts/release-artifacts.mjs refresh-dmg macos-arm64 release
+      - name: Check the Windows installer with Authenticode and Defender
+        if: runner.os == 'Windows'
+        timeout-minutes: 20
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          ./scripts/release-preflight-windows.ps1 -Installer "release/STeP-Desktop-Setup-$version.exe" `
+            -ApplicationDirectory release/win-unpacked -Report release-preflight/windows.json
+      - name: Check the Mac disk image with Gatekeeper and stapler
+        if: runner.os == 'macOS'
+        env:
+          STEP_DESKTOP_APPLE_NOTARIZATION_CONFIGURED: ${{ (secrets.MAC_CSC_LINK != '' || secrets.CSC_LINK != '') && secrets.APPLE_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          bash scripts/release-preflight-mac.sh "release/STeP-Desktop-${VERSION}-arm64.dmg" release-preflight/macos.json
       - name: Launch the packaged Mac app from the disk image
         if: runner.os == 'macOS'
         run: |
@@ -119,6 +163,14 @@ jobs:
           hdiutil attach "$DMG" -nobrowse -readonly -mountpoint "$MNT"
           trap 'hdiutil detach "$MNT" -force || true' EXIT
           node test/packaged-launch-smoke.mjs "$MNT/STeP Desktop.app/Contents/MacOS/STeP Desktop"
+      - name: Check updater sizes and checksums and record the installer manifest
+        run: node scripts/release-artifacts.mjs record "${{ matrix.name }}" release release-preflight/manifest.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: step-desktop-preflight-${{ matrix.name }}
+          path: desktop/release-preflight/
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:
           name: step-desktop-${{ matrix.name }}
@@ -166,6 +218,10 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
       - name: Collect the release files
         run: |
+          for PLATFORM in windows-x64 macos-arm64; do
+            node desktop/scripts/release-artifacts.mjs verify "$PLATFORM" \
+              "built/step-desktop-$PLATFORM" "built/step-desktop-preflight-$PLATFORM/manifest.json"
+          done
           mkdir -p out
           cp built/step-desktop-windows-x64/* out/
           cp built/step-desktop-macos-arm64/* out/

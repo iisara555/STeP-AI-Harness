@@ -8,6 +8,8 @@ _Last updated: 2026-11-24_
 
 ## In flight
 
+- **Desktop installer preflight (2026-11-24)**: GitHub Actions checks Authenticode and Defender availability, verifies the Mac app and DMG trust results, and checks the updater metadata and artifact hashes before publishing the same files. A strict run requires trusted installers on both platforms. IT can enable it once signing and an active Defender runner are available.
+
 - **Desktop v0.6.42 prepared (2026-11-24)**: combines #402 and #403. The working line holds each label, the thinking panel keeps its stage titles, and partial headings and drafted text stay steady across tool turns. Four pencil marks follow thinking, reading, searching or tools, and writing. The changes have synthetic Electron coverage. Follow-up: verify a live Gemini run on Windows.
 
 - **Waiting marks per kind of work (2026-11-23, owner picked 1, 3, 9, 10 of ten pencil designs)**: the scribble beside the working line now follows the steady label (`src/waiting-kind.ts`): think = three pencil loops, read Skill/document = connect the dots, search/tool = inchworm, write = handwriting. Reduced motion keeps a 3x slower trace. Stacked on the flicker fix (needs its steady label). Design page: https://claude.ai/artifact/CeGFRsqKrbcvLvnUMZgfM6. Waits on the owner: review.
