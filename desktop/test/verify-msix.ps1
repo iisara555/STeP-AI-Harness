@@ -16,9 +16,11 @@ $cert = $null
 $installed = $null
 $appProcess = $null
 try {
+    Write-Host 'Preparing the legacy STeP Desktop profile.'
     node test/msix-smoke.mjs legacy
     if ($LASTEXITCODE -ne 0) { throw 'Could not prepare the legacy Desktop profile.' }
 
+    Write-Host 'Signing the ephemeral package copy.'
     Copy-Item $package $testPackage
     $cert = New-SelfSignedCertificate -Subject $identity.Publisher -Type CodeSigningCert -HashAlgorithm SHA256 `
         -CertStoreLocation 'Cert:\CurrentUser\My' -NotAfter (Get-Date).AddDays(1)
@@ -27,6 +29,7 @@ try {
     Import-Certificate -FilePath $publicCert -CertStoreLocation 'Cert:\LocalMachine\TrustedPeople' | Out-Null
     & $signtool sign /fd SHA256 /sha1 $cert.Thumbprint $testPackage
     if ($LASTEXITCODE -ne 0) { throw 'Test package signing failed.' }
+    Write-Host 'Installing the signed test copy.'
     Add-AppxPackage -Path $testPackage
     $installed = Get-AppxPackage -Name $identity.Name
     if (!$installed -or $installed.Version.ToString() -ne $identity.Version) { throw 'The expected MSIX version was not installed.' }
@@ -56,6 +59,7 @@ public static class PackageActivation {
 '@
     $appId = "$($installed.PackageFamilyName)!$($manifest.Package.Applications.Application.Id)"
     $port = Get-Random -Minimum 41000 -Maximum 49000
+    Write-Host "Activating $appId from the Windows package registration."
     $appProcess = [PackageActivation]::Start($appId, "--remote-debugging-port=$port")
     try {
         node test/msix-smoke.mjs msix $port
@@ -70,6 +74,7 @@ public static class PackageActivation {
         'Windows App Certification Kit is unavailable on this runner.' | Set-Content "$reports\certification-status.txt"
         Write-Warning 'Windows App Certification Kit is unavailable. Run it on a Windows client before Store submission.'
     } else {
+        Write-Host 'Running Windows App Certification Kit.'
         Push-Location $kit
         try {
             $reset = Start-Process $appcert -ArgumentList 'reset' -Wait -PassThru

@@ -73,6 +73,7 @@ jobs:
           STEP_MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.STEP_MSIX_PUBLISHER_DISPLAY_NAME }}
         run: ./scripts/package-msix.ps1 -StoreSubmission:($env:STORE_SUBMISSION -eq 'true')
       - name: Install, activate and check the package
+        timeout-minutes: 12
         env:
           STEP_MSIX_PACKAGE: ${{ steps.package.outputs.package }}
           STEP_MSIX_KIT: ${{ steps.package.outputs.kit }}

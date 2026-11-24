@@ -93,7 +93,7 @@ $manifest = @"
 $packageDir = New-Item 'release/msix-output' -ItemType Directory -Force
 $kind = if ($StoreSubmission) { 'Store' } else { 'Preview' }
 $package = Join-Path $packageDir.FullName "STeP-Desktop-$kind-$($app.version)-x64.msix"
-& "$($sdk.FullName)\x64\MakeAppx.exe" pack /o /h SHA256 /d $stage /p $package
+& "$($sdk.FullName)\x64\MakeAppx.exe" pack /o /h SHA256 /d $stage /p $package | Select-Object -Last 20
 if ($LASTEXITCODE -ne 0) { throw "MakeAppx failed with exit code $LASTEXITCODE" }
 $hash = (Get-FileHash $package -Algorithm SHA256).Hash.ToLowerInvariant()
 "$hash  $(Split-Path $package -Leaf)" | Set-Content "$package.sha256" -Encoding Ascii

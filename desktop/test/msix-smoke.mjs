@@ -6,6 +6,12 @@ import { mainWindow } from './main-window.mjs';
 
 const settings = { team: '', assistant: 'MSIX migration fixture', theme: 'light' };
 const taskTitle = 'Synthetic task from the EXE installation';
+globalThis
+  .setTimeout(() => {
+    console.error(`MSIX ${process.argv[2]} smoke exceeded its deadline`);
+    process.exit(1);
+  }, 150000)
+  .unref();
 
 if (process.argv[2] === 'legacy') {
   const env = { ...process.env, STEP_DISABLE_UPDATES: '1' };
@@ -29,6 +35,7 @@ if (process.argv[2] === 'legacy') {
     );
     const snapshot = await page.evaluate(() => window.step.call('snapshot'));
     assert.ok(snapshot.sessions.some(session => session.title === taskTitle));
+    console.log('Saved a synthetic task and settings in the legacy profile.');
   } finally {
     await legacy.close();
   }
