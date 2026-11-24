@@ -3495,4 +3495,10 @@ export const en: Record<string, string> = {
   'ตัวอย่าง: เตือนให้ตรวจเอกสารก่อนส่ง': 'Example: a reminder to check a document before sending',
   'พักหรือกลับมาใช้ทุกบัญชีในแอปนี้ · ไม่ออกจากระบบ AI และไม่เปลี่ยนสิทธิ์ที่ Google':
     'Pause or resume every account in this app · does not sign out of AI or change Google permissions',
+  รับรองโดยผู้ดูแล: 'Admin-approved',
+  'Hooks: {0} ({1})': 'Hooks: {0} ({1})',
+  'Agent templates: {0} ({1})': 'Agent templates: {0} ({1})',
+  เปิดอยู่: 'On',
+  ปิดอยู่: 'Off',
+  'คัดลอก digest': 'Copy digest',
 };

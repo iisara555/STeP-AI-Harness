@@ -163,3 +163,34 @@ test('the board adds new problems, closes solved ones and reopens a "done" item 
   assert.throws(() => moveItem(clean, exp.id, 'deleted' as any, []), /INVALID_INPUT/);
   assert.equal(defaultPolicy().features.maintenance, true);
 });
+
+test('admin-approved packs ignore safety.hooks in maintenance while still flagging other findings or personal packs', () => {
+  const found = kinds(
+    input({
+      packs: [
+        {
+          id: 'org-gov',
+          enabled: true,
+          personal: false,
+          adminApproved: true,
+          review: { status: 'fail', findings: [{ code: 'safety.hooks' }] },
+        },
+        {
+          id: 'org-bad',
+          enabled: true,
+          personal: false,
+          adminApproved: true,
+          review: { status: 'fail', findings: [{ code: 'safety.hooks' }, { code: 'standard.description' }] },
+        },
+        {
+          id: 'personal-hooks',
+          enabled: true,
+          personal: true,
+          adminApproved: false,
+          review: { status: 'fail', findings: [{ code: 'safety.hooks' }] },
+        },
+      ],
+    }),
+  );
+  assert.deepEqual(found, ['pack-review:pack:org-bad', 'pack-review:pack:personal-hooks']);
+});
