@@ -20,6 +20,17 @@ const storage = resolve(
     process.env.STEP_LINE_STORAGE || "./.step/line-private",
   ),
   workspace = resolve(process.env.STEP_LINE_WORKSPACE || process.cwd());
+const retentionRaw = process.env.STEP_LINE_RETENTION_DAYS;
+let retentionDays;
+if (retentionRaw !== undefined && retentionRaw !== "") {
+  retentionDays = Number(retentionRaw);
+  if (
+    !Number.isInteger(retentionDays) ||
+    retentionDays < 1 ||
+    retentionDays > 365
+  )
+    throw new Error("LINE_RETENTION_INVALID");
+}
 const users = () => {
   if (
     !trustedManagedPolicyPath(allowlist) ||
@@ -38,6 +49,7 @@ const gateway = new LineGateway(
     providerKey: process.env.STEP_LINE_PROVIDER_KEY,
     storage,
     workspace,
+    ...(retentionDays !== undefined ? { retentionDays } : {}),
   },
   {
     policy: () => readManagedPolicy(),
