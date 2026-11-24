@@ -16,7 +16,7 @@ if (process.argv[2] === 'legacy') {
     timeout: 90000,
   });
   try {
-    assert.equal(await legacy.evaluate(() => process.windowsStore), false);
+    assert.ok(!(await legacy.evaluate(() => process.windowsStore)));
     const page = await mainWindow(legacy, 90000);
     await page.evaluate(
       async ({ settings, taskTitle }) => {

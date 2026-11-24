@@ -47,6 +47,7 @@ jobs:
           cache-dependency-path: desktop/package-lock.json
       - run: npm ci
       - name: Build the Windows app
+        shell: bash
         env:
           STEP_GOOGLE_DESKTOP_CLIENT_JSON: ${{ github.ref == 'refs/heads/main' && secrets.GOOGLE_DESKTOP_CLIENT_JSON || '' }}
           STEP_REQUIRE_GOOGLE_DESKTOP_CLIENT: ${{ env.STORE_SUBMISSION }}
@@ -54,9 +55,16 @@ jobs:
           STEP_RECEIPT_CLOUD_MODEL: ${{ vars.STEP_RECEIPT_CLOUD_MODEL }}
           STEP_ORGANIZATION_AI_URL: ${{ vars.STEP_ORGANIZATION_AI_URL }}
         run: |
-          npm run build
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npx --no-install electron-builder --win --x64 --dir --publish never -c.directories.output=release/msix-stage
+          mkdir -p release/msix-verification
+          if ! (npm run build && ./node_modules/.bin/electron-builder --win --x64 --dir --publish never -c.directories.output=release/msix-stage) \
+            > release/msix-verification/build.log 2>&1; then
+            grep -E 'error TS[0-9]+|Error:|npm error|⨯' release/msix-verification/build.log | head -8 | while IFS= read -r line; do
+              printf '::error::%s\n' "$line"
+            done || true
+            cat release/msix-verification/build.log
+            exit 1
+          fi
+          cat release/msix-verification/build.log
       - name: Create the unsigned package
         id: package
         env:

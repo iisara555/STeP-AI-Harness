@@ -78,6 +78,12 @@ public static class PackageActivation {
             if ($result.ExitCode -ne 0 -or !(Test-Path "$reports\certification.xml")) {
                 throw "Windows App Certification Kit did not pass ($($result.ExitCode)). See the verification artifact."
             }
+            [xml]$report = Get-Content "$reports\certification.xml" -Raw
+            $summary = $report.SelectSingleNode('//*[@OVERALL_RESULT]')
+            if (!$summary -or $summary.OVERALL_RESULT -notin @('PASS', 'WARNING') -or $summary.PARTIAL_RUN -eq 'TRUE') {
+                throw 'Windows App Certification Kit did not report a complete pass. See the verification artifact.'
+            }
+            Write-Host "Windows App Certification Kit result: $($summary.OVERALL_RESULT)"
         } finally {
             Pop-Location
         }
