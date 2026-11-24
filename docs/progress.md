@@ -4,9 +4,11 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-23_
+_Last updated: 2026-11-24_
 
 ## In flight
+
+- **Desktop v0.6.42 prepared (2026-11-24)**: combines #402 and #403. The working line holds each label, the thinking panel keeps its stage titles, and partial headings and drafted text stay steady across tool turns. Four pencil marks follow thinking, reading, searching or tools, and writing. The changes have synthetic Electron coverage. Follow-up: verify a live Gemini run on Windows.
 
 - **Waiting marks per kind of work (2026-11-23, owner picked 1, 3, 9, 10 of ten pencil designs)**: the scribble beside the working line now follows the steady label (`src/waiting-kind.ts`): think = three pencil loops, read Skill/document = connect the dots, search/tool = inchworm, write = handwriting. Reduced motion keeps a 3x slower trace. Stacked on the flicker fix (needs its steady label). Design page: https://claude.ai/artifact/CeGFRsqKrbcvLvnUMZgfM6. Waits on the owner: review.
 - **Thinking panel and status line flicker (2026-11-23, owner report on v0.6.40; merged with the 0.6.41 "AI คิด" stages)**: while the AI prepared an answer the working line swapped "กำลังเตรียมคำตอบ" / "กำลังเขียนคำตอบ" / the tool stage within a second on every tool turn, the last stage title was hidden from both the panel and the line, a Gemini heading still arriving showed raw `**`, and the drafting mode cleared streamed words at every tool turn. Fixed in the renderer (`useSteadyLabel` holds a label 1.5 s, the panel hides the last title only while the line names it, `settledNotes`) and main (per-turn status carries `turn`). New `test/thinking-steady-smoke.mjs` records every frame in chat and drafting modes. Waits on the owner: review, then ship in the next Desktop release.
