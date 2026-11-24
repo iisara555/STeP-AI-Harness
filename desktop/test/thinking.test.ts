@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { THINKING_CHARS, ThinkingLog, savedThinking, splitThoughts } from '../src/thinking';
+import { THINKING_CHARS, ThinkingLog, savedThinking, settledNotes, splitThoughts } from '../src/thinking';
 
 test('reasoning splits into thoughts at bold heading lines, plain reasoning stays one thought', () => {
   assert.deepEqual(
@@ -58,4 +58,17 @@ test('saved thinking from an older or edited record shows only well-formed parts
       steps: [{ title: 'ค้นเว็บ', ms: 1200, notes: [{ text: 'ok' }] }],
     },
   );
+});
+
+test('live thoughts hold back a heading still being typed, so its stars never flash on screen', () => {
+  assert.deepEqual(settledNotes([{ title: 'ทบทวนโจทย์', text: 'ตรวจกลุ่มเป้าหมาย\n\n**ตรวจเอก' }]), [
+    { title: 'ทบทวนโจทย์', text: 'ตรวจกลุ่มเป้าหมาย' },
+  ]);
+  assert.deepEqual(settledNotes([{ title: 'ทบทวนโจทย์', text: 'ตรวจกลุ่มเป้าหมาย\n*' }]), [
+    { title: 'ทบทวนโจทย์', text: 'ตรวจกลุ่มเป้าหมาย' },
+  ]);
+  // A thought that is only the unfinished heading waits whole; a finished heading or inline bold stays.
+  assert.deepEqual(settledNotes([{ text: 'ก่อนหน้า' }, { text: '**วางโครง' }]), [{ text: 'ก่อนหน้า' }]);
+  assert.deepEqual(settledNotes([{ text: 'คิดเรื่อง **สำคัญ** ก่อน' }]), [{ text: 'คิดเรื่อง **สำคัญ** ก่อน' }]);
+  assert.deepEqual(settledNotes([]), []);
 });

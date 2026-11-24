@@ -612,6 +612,8 @@ export type RunEvent = {
   quiet?: boolean;
   /** For status and activity: the stage this starts in the answer's thinking, when it is named apart from the status text. */
   stage?: string;
+  /** For status: another model turn of the same step (after a tool result), not a new step. */
+  turn?: boolean;
   /** For discard: how many characters of the streamed answer to take back. */
   count?: number;
   trace?: RunTrace;

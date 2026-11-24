@@ -478,11 +478,12 @@ export function useWorkspace() {
           if (event.type === 'plan') setPlan((event.plan || []).map(step => ({ ...step, state: 'pending' })));
           if (event.type === 'step' && event.index !== undefined)
             setPlan(steps => steps.map((step, i) => (i === event.index ? { ...step, state: event.state || step.state } : step)));
-          // Each draft step rewrites the whole draft, so a new step replaces the streamed text. In chat the text of every
-          // turn stays on screen while the assistant works (as in Claude, ChatGPT and Cursor), each turn after the last.
+          // Each draft step rewrites the whole draft, so a new step replaces the streamed text. In chat, and between the
+          // model turns of one draft step, the text of every turn stays on screen while the assistant works (as in Claude,
+          // ChatGPT and Cursor), each turn after the last: clearing it at every turn made the words blink away and back.
           if (event.type === 'status') {
             setProgress(errorText[event.text || ''] || event.text || '');
-            setStream(sessionMode.current === 'draft' ? '' : turnBreak);
+            setStream(sessionMode.current === 'draft' && !event.turn ? '' : turnBreak);
           }
         }
         if (event.type === 'changed') {

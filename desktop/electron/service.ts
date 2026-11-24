@@ -989,12 +989,13 @@ export class WorkService {
     // ("preparing the answer") that says nothing about how the answer was reached, so it is not kept as a stage.
     // A `stage` names the step in the thinking ("AI คิด") when the live status line says it another way ("กำลังเตรียมคำตอบ").
     const thinking = new ThinkingLog();
-    type Thought = { quiet?: boolean; stage?: string };
-    const record = (message: string, { quiet, stage }: Thought) => {
+    // `turn` marks another model turn of the same step, so the window keeps what that step already streamed.
+    type Thought = { quiet?: boolean; stage?: string; turn?: boolean };
+    const record = (message: string, { quiet, stage, turn }: Thought) => {
       if (stage) thinking.step(stage);
       else if (quiet) thinking.turn();
       else thinking.step(message);
-      return { ...(quiet && !stage ? { quiet } : {}), ...(stage ? { stage } : {}) };
+      return { ...(quiet && !stage ? { quiet } : {}), ...(stage ? { stage } : {}), ...(turn ? { turn } : {}) };
     };
     const status = (message: string, thought: Thought = {}) =>
       this.emit({ sessionId: id, type: 'status', text: message, ...record(message, thought) });
@@ -1814,7 +1815,7 @@ export class WorkService {
                 throw new Error('VISION_DISABLED');
               stepTrace.promptChars = Math.max(stepTrace.promptChars, nextPrompt.length);
               // Each model call is a stage of its own, so the reasoning it streams sits under it.
-              if (!search) status(tm('กำลังเตรียมคำตอบ'), { stage: tm('AI คิด') });
+              if (!search) status(tm('กำลังเตรียมคำตอบ'), { stage: tm('AI คิด'), turn: true });
               checkAbort();
               const answer = await selectedRuntime.adapter.run(nextPrompt, connection, {
                 ...selectedRuntime.context,

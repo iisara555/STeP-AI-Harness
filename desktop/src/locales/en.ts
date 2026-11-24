@@ -1046,6 +1046,10 @@ export const en: Record<string, string> = {
     'An attached agency form is checked against the MIS quality register for its code and revision.',
   'ตรวจใบกำกับภาษี (เลขผู้เสียภาษี เลขที่ และ VAT) และเตือนเรื่องหัก ณ ที่จ่ายในใบสำคัญจ่าย':
     'Tax invoices are checked for the tax ID, number and VAT, and payment vouchers flag withholding to review.',
+  'สัญลักษณ์รอเปลี่ยนตามงานที่ AI กำลังทำ ทั้งคิด อ่าน ค้นหา และเขียนคำตอบ':
+    'The waiting mark follows what AI is doing: thinking, reading, searching, or writing an answer.',
+  'สถานะระหว่างรออ่านง่ายขึ้น และข้อความร่างที่แสดงแล้วไม่หายเมื่อ AI เรียกเครื่องมือ':
+    'Status updates are easier to follow, and streamed draft text stays visible when AI uses a tool.',
   'งานยาวเก็บข้อกำหนดและตัวเลขสำคัญไว้เมื่อย่อบริบท และกดทำต่อได้หลังเปิดแอปใหม่':
     'Long tasks keep key instructions and figures during compaction and can resume after reopening the app.',
   'ดูปริมาณบริบทที่ใช้ข้างช่องพิมพ์ และดูโควตาคงเหลือของบัญชี Antigravity รุ่นที่รองรับ':

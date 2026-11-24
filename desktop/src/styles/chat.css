@@ -297,11 +297,6 @@
     padding-top: var(--space-5);
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .thinking-scribble .scribble-stroke {
-    animation: scribble-trace 7.2s linear infinite !important;
-  }
-}
 /* The AI's thinking above its answer (src/thinking-panel.tsx): one quiet line, opened to a rail of stages and thoughts. */
 .thinking-panel {
   margin: 0 0 var(--space-3);

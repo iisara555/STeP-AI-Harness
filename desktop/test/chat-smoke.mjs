@@ -201,13 +201,15 @@ try {
   await page.getByText('Web Search อัตโนมัติ · ค้นแหล่งข้อมูลล่าสุดก่อนตอบ', { exact: true }).waitFor();
   await page.keyboard.press('Enter');
   await page.getByText('กำลังค้นเว็บ', { exact: true }).waitFor();
-  // Hand-drawn threads move while the provider is busy, including a gentler reduced-motion mode.
+  // A hand-drawn mark moves while the provider is busy, its kind following the status line (searching here), including a
+  // gentler reduced-motion mode.
   const scribble = page.locator('.activity .thinking-scribble');
   await expect(scribble).toHaveAttribute('aria-hidden', 'true');
-  await expect(scribble.locator('path')).toHaveCount(3);
+  await expect(scribble).toHaveAttribute('data-kind', 'search');
+  await expect(scribble.locator('path.scribble-ink')).toHaveCount(1);
   assert.equal(await scribble.locator('svg').getAttribute('width'), '18');
   const normalMotion = await scribble
-    .locator('path')
+    .locator('path.scribble-ink')
     .first()
     .evaluate(el => {
       const motion = el.getAnimations()[0];
@@ -223,13 +225,13 @@ try {
   assert.equal(normalMotion.fill, 'none');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const reducedMotion = await scribble
-    .locator('path')
+    .locator('path.scribble-ink')
     .first()
     .evaluate(el => ({
       name: getComputedStyle(el).animationName,
       duration: parseFloat(getComputedStyle(el).animationDuration),
     }));
-  assert.equal(reducedMotion.name, 'scribble-trace');
+  assert.match(reducedMotion.name, /scribble-crawl/);
   assert.ok(reducedMotion.duration > normalMotion.duration, 'reduced motion must slow the tracing');
   assert.equal(await scribble.locator('g').evaluate(el => getComputedStyle(el).animationName), 'none');
   await page.emulateMedia({ reducedMotion: null });
