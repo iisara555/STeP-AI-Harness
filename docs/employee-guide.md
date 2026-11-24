@@ -1,6 +1,6 @@
 # คู่มือการใช้งาน STeP AI สำหรับพนักงาน
 
-คู่มือนี้อธิบายการใช้ STeP Skills ผ่านโปรแกรม AI ที่องค์กรอนุมัติและเปิดโฟลเดอร์งานของ Harness สำหรับการติดตั้ง เชื่อมต่อ AI และอัปเดต **แอป STeP Desktop** ให้เริ่มจาก [คู่มือ STeP Desktop](../desktop/README.md) ถ้ายังไม่ได้ติดตั้งชุด Skills ให้เริ่มจาก [START-HERE.md](../START-HERE.md)
+คู่มือฉบับเต็มสำหรับพนักงานที่ใช้ STeP Skills ผ่านโปรแกรม AI ที่องค์กรอนุมัติและเปิดโฟลเดอร์งานของ Harness สำหรับการติดตั้ง เชื่อมต่อ AI และอัปเดต **แอป STeP Desktop** ให้เริ่มจาก [คู่มือ STeP Desktop](https://github.com/iisara555/STeP-AI-Harness/blob/main/desktop/README.md) ถ้ายังไม่ได้ติดตั้งชุด Skills ให้เริ่มจาก [START-HERE.md](../START-HERE.md)
 
 ## สรุปวิธีใช้ใน 30 วินาที
 

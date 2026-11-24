@@ -10,13 +10,13 @@
 
 ภาพใช้ข้อมูลตัวอย่าง หน้าจอและตัวเลือกอาจต่างตามรุ่นและการตั้งค่าขององค์กร
 
-**รุ่นที่เผยแพร่ล่าสุด** [STeP Desktop v0.6.42](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.42) ดูสิ่งที่เปลี่ยนในแต่ละรุ่นที่ [CHANGELOG](../CHANGELOG.md#desktop-v0642-2026-11-24)
+**รุ่นที่เผยแพร่ล่าสุด** [**STeP Desktop v0.6.42**](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.42) ดูสิ่งที่เปลี่ยนในแต่ละรุ่นที่ [CHANGELOG](../CHANGELOG.md#desktop-v0642-2026-11-24)
 
 ## เริ่มใช้งาน
 
 ### ติดตั้งให้ตรงกับเครื่อง
 
-เริ่มจากลิงก์ที่ผู้ดูแลแจ้งในช่องทางภายใน เช่น Google Space ขององค์กร ไฟล์ที่เผยแพร่จาก GitHub อยู่ใน [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v)
+เริ่มจากตัวติดตั้งที่ผู้ดูแลอนุมัติและแจกผ่านช่องทางภายใน เช่น Google Space ขององค์กร ไฟล์ที่เผยแพร่จาก GitHub อยู่ใน [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v)
 
 | เครื่องที่ใช้ | ไฟล์ที่เลือก | วิธีติดตั้ง |
 | --- | --- | --- |
