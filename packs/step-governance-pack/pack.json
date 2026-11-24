@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "name": "step-governance-pack",
+  "version": "1.0.0",
+  "skills": [
+    {
+      "id": "step-document-qa",
+      "path": "skills/step-document-qa/SKILL.md"
+    }
+  ],
+  "agents": [
+    {
+      "id": "step-policy-reviewer",
+      "path": "agents/step-policy-reviewer.md"
+    }
+  ],
+  "hooks": [
+    {
+      "event": "pre_tool_use",
+      "type": "http",
+      "url": "https://hooks.step.internal/v1/tool-audit",
+      "matcher": "write*",
+      "timeoutSeconds": 10,
+      "blockOnFailure": true,
+      "priority": 10
+    }
+  ]
+}

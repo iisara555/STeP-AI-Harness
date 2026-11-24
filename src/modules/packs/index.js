@@ -217,6 +217,7 @@ export function validatePack(manifest, files) {
         "type",
         "command",
         "url",
+        "matcher",
         "timeoutSeconds",
         "blockOnFailure",
         "priority",
@@ -227,7 +228,9 @@ export function validatePack(manifest, files) {
       !Number.isInteger(h.timeoutSeconds) ||
       h.timeoutSeconds < 1 ||
       h.timeoutSeconds > 60 ||
-      !Number.isInteger(h.priority || 0)
+      !Number.isInteger(h.priority ?? 0) ||
+      (h.matcher !== undefined &&
+        (typeof h.matcher !== "string" || !/^[a-zA-Z0-9_*?:-]{1,200}$/.test(h.matcher)))
     )
       throw new Error("PACK_HOOK_INVALID");
     if (
@@ -732,12 +735,40 @@ export function packAsset(workspace, id, assetId, kind, policy) {
     digest: p.digest,
   };
 }
+export function inspectPackSource(sourceDir) {
+  const files = tree(resolve(sourceDir));
+  if (!files.has("pack.json")) throw new Error("PACK_NAME_REQUIRED");
+  let manifest;
+  try {
+    manifest = JSON.parse(files.get("pack.json").toString("utf8"));
+  } catch {
+    throw new Error("PACK_MANIFEST_INVALID");
+  }
+  validatePack(manifest, files);
+  return {
+    id: manifest.name,
+    version: manifest.version,
+    digest: digest(files),
+    manifest,
+    review: reviewPack(manifest, files),
+    skills: manifest.skills,
+    agents: manifest.agents || [],
+    hooks: manifest.hooks || [],
+    fileCount: files.size,
+  };
+}
 export function enabledPackHooks(workspace, policy) {
   // Disabled packs cannot supply hooks; do not touch a stale or unavailable workspace just to confirm that.
   if (policy?.features?.skillPacks !== true) return [];
   return listPacks(workspace, policy)
     .filter((p) => p.enabled && p.hooksEnabled)
-    .flatMap((p) => read(workspace, p.id).manifest.hooks || []);
+    .flatMap((p) =>
+      (read(workspace, p.id).manifest.hooks || []).map((h) => ({
+        ...h,
+        priority: Number.isInteger(h.priority) ? h.priority : 0,
+        ...(h.type === "http" ? { headers: {} } : {}),
+      })),
+    );
 }
 export { reviewPack, REVIEW_MESSAGES, STANDARD_HEADINGS };
 export function exportPack(

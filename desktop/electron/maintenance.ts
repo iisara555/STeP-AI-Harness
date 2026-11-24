@@ -17,7 +17,14 @@ const DAY = 86400_000,
   SIMILAR = 0.8,
   KEEP_CLOSED = 100;
 
-type PackSummary = { id: string; enabled?: boolean; invalid?: boolean; review?: { status: string; findings?: unknown[] } };
+type PackSummary = {
+  id: string;
+  enabled?: boolean;
+  invalid?: boolean;
+  personal?: boolean;
+  adminApproved?: boolean;
+  review?: { status: string; findings?: { code?: string }[] };
+};
 export type MaintenanceInput = {
   memories: MemoryEntry[];
   lessons: LearnedLesson[];
@@ -95,8 +102,13 @@ export function findMaintenance(input: MaintenanceInput): MaintenanceFinding[] {
     if (!pack.enabled && !pack.invalid) continue;
     const target = `pack:${pack.id}`;
     if (pack.invalid) add({ kind: 'pack-invalid', area: 'skill', targets: [target], name: pack.id });
-    else if (pack.review && pack.review.status !== 'pass')
-      add({ kind: 'pack-review', area: 'skill', targets: [target], name: pack.id, count: pack.review.findings?.length || 0 });
+    else if (pack.review && pack.review.status !== 'pass') {
+      const findings = pack.review.findings || [];
+      const adminOrgPack = Boolean(pack.adminApproved && !pack.personal);
+      const relevant = adminOrgPack ? findings.filter(f => f?.code !== 'safety.hooks') : findings;
+      if (relevant.length || (!findings.length && !adminOrgPack))
+        add({ kind: 'pack-review', area: 'skill', targets: [target], name: pack.id, count: relevant.length });
+    }
   }
   return found;
 }
