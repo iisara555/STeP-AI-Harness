@@ -20,7 +20,7 @@
 | การเงินและพัสดุ (AFP) | [แนวปฏิบัติงาน AFP](afp-operational-circulars.md) | Lead Time, หมวดค่าใช้จ่าย, E-Signature |
 | | [ลำดับชั้นระเบียบการเงินและพัสดุ](afp-regulation-hierarchy.md) | ระเบียบใดใช้ก่อนหลัง (ฉบับทำงาน ไม่ใช่ตัวระเบียบ) |
 | | ระเบียบปฏิบัติงาน AFP | [QP-AF-001](qp-af-001.md) จัดซื้อจัดจ้าง · [QP-AF-002](qp-af-002.md) ตรวจสอบและจำหน่ายพัสดุ · [QP-AF-003](qp-af-003.md) ยืมเงินและสำรองจ่าย · [QP-AF-004](qp-af-004.md) จ่ายเงิน |
-| ระบบคุณภาพ (ISO 9001) | [ทะเบียนเอกสารระบบคุณภาพ ISO จาก STeP MIS](mis-iso-document-register.md) | เลขที่ REV วันที่บังคับใช้ และสถานะของ QM / QP / WI / FM / SD ทุกทีม (สร้างด้วย `scripts/generate-mis-iso-register.mjs`) |
+| ระบบคุณภาพ (ISO 9001) | [ทะเบียนเอกสารระบบคุณภาพ ISO จาก STeP MIS](mis-iso-document-register.md) | ภาพสถานะจาก MIS ณ 10 ต.ค. 2569 แสดง REV วันที่บังคับใช้ และสถานะของ QM / QP / WI / FM / SD ให้ตรวจฉบับที่ใช้จริงใน MIS |
 | | [ทะเบียนเอกสารระบบคุณภาพ ทีม CC](cc-iso-document-register.md) | รหัสเอกสาร QP / WI / FM ของทีม CC และแบบฟอร์มที่ยกเลิก |
 | | [Master Document List ฉบับทำงาน](qms-working-master-list.md) | ตัวชี้ไปทะเบียน MIS และ QP ที่ Skill อ้างอิง |
 | | [แผนที่ ISO 9001:2015 กับเอกสาร STeP](qms-working-reference.md) | แผนที่ข้อกำหนด ISO ไปยังเอกสาร STeP (ใช้คู่กับคู่มือคุณภาพ) |

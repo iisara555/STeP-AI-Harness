@@ -19,6 +19,8 @@
 | เอกสาร | ใช้เมื่อ |
 | --- | --- |
 | [คู่มือ STeP Desktop](../desktop/README.md) | ติดตั้ง เชื่อมต่อ AI ทำงาน อัปเดต และถอนการติดตั้ง |
+| [การแจกแอปและตรวจตัวติดตั้ง](desktop-development.md#distribution) | ผู้ดูแลสร้าง EXE, DMG หรือ MSIX ตรวจลายเซ็น และเตรียมส่ง Microsoft Store |
+| [งานยาวและการกลับมาทำต่อ](desktop-long-tasks.md) | ดูการย่อบริบทและวิธีทำงานต่อเมื่อแอปหรือบริการ AI สะดุด |
 | [คู่มือการใช้งาน STeP AI สำหรับพนักงาน](employee-guide.md) | ใช้ STeP Skills ผ่านโปรแกรม AI ที่มีอยู่ |
 | [ติดตั้งโปรแกรม AI](ai-app-setup.md) | เครื่องยังไม่มีโปรแกรม AI สำหรับเปิดโฟลเดอร์ STeP AI |
 | [เชื่อม Gemini ผ่าน Antigravity](antigravity-connect-th.md) | เชื่อมบัญชี Google ใน STeP Desktop |
@@ -27,7 +29,7 @@
 | [กล่องบทเรียน (Learning Inbox)](desktop-learning.md) | ตรวจและอนุมัติบทเรียนที่ AI เสนอจากงานจริง |
 | [ตรวจไฟล์ก่อนแนบให้ AI](privacy-preflight.md) | ตรวจข้อมูลอ่อนไหวก่อนแนบเอกสาร |
 | [STeP Desktop managed policy](desktop-policy.md) | ผู้ดูแลกำหนดบริการ AI ฟังก์ชัน และการตรวจข้อมูลให้ทั้งเครื่อง |
-| [Google Workspace connector](google-workspace-connector.md) | เชื่อม Google Workspace (เลือกใช้ แยกจากแอป) |
+| [การเชื่อม Google Workspace ใน Desktop](vault-workspace-implementation.md) | เชื่อมบัญชีงาน เลือกบริการ และดูสิทธิ์ที่ผู้ดูแลตั้ง |
 | [Pilot 22 กันยายน 2569](pilot-runbook.md), [Pilot Operations](pilot-operations.md) | ดำเนินการทดลองใช้กับพนักงาน |
 | [เริ่ม Demo AFP](afp-demo-start.md), [คู่มือเดิน Demo](afp-demo-run-sheet.md), [แนวคิดสาธิต](afp-demo-concepts.md), [ทะเบียนแหล่งอ้างอิงสาธิต](afp-demo-source-register.md) | สาธิตงาน AFP ด้วยข้อมูลตัวอย่าง |
 
@@ -53,11 +55,11 @@
 
 **STeP Desktop**
 
-- [แบบระบบตรวจใบเสร็จใหม่](receipt-review-redesign.md) — ต้นแบบ 3 คำตอบ, preprocessing/grouping และเกณฑ์ benchmark; [บริการ Gemini OCR กลาง](../gateway/receipt/README.md) เพิ่มใน source แล้ว ยังไม่ deploy
+- [แบบระบบตรวจใบเสร็จใหม่](receipt-review-redesign.md) — ต้นแบบ 3 คำตอบ, preprocessing/grouping และเกณฑ์ benchmark; [บริการ Gemini OCR กลาง](../gateway/receipt/README.md) เอกสารตั้งค่าบริการและตรวจความพร้อมก่อนเปิดใช้
 - [Vault and Google Workspace implementation](vault-workspace-implementation.md) - employee flow, managed configuration, operation limits, local verification and remaining live/packaged gates
 
-- [Vault design handoff — username/password และ API key](desktop-vault-design.md) — แบบเสนอและแผน P0–P3 สำหรับพัฒนาต่อ ยังไม่มีฟีเจอร์ในแอป
-- [Employee Google Workspace connection and service access](desktop-google-workspace-design.md) - account connection, Google service capabilities, OAuth/admin controls and G0-G3 acceptance; design only
+- [Vault design handoff — username/password และ API key](desktop-vault-design.md) — บันทึกแบบเสนอและแผน P0–P3 ข้อมูลการใช้งานปัจจุบันอยู่ในคู่มือการติดตั้ง Vault ด้านบน
+- [Employee Google Workspace connection and service access](desktop-google-workspace-design.md) - แบบเสนอและเกณฑ์ทดสอบ G0–G3 ดูการใช้งานที่ส่งมอบในคู่มือการเชื่อม Google Workspace ด้านบน
 - [Governed tool loop](desktop-tool-loop.md), [Native workflows](desktop-workflows.md), [Context, memory and sessions](desktop-context-memory.md)
 - [Coordinator, scheduled drafts, MCP and autopilot](desktop-automation.md), [Agent Browser](desktop-browser-agent.md), [Interface language](desktop-i18n.md)
 - [Providers, command surfaces and LINE gateway](desktop-phase5.md), [Scoped consent](desktop-phase6.md), [Security review 2026-10-06](desktop-security-review.md)
@@ -67,7 +69,7 @@
 
 - [Pilot 30 งาน](pilot-30-task-test.md), [ผลฝั่งโมเดลรอบ 1](pilot-30-model-side-results-2026-09-19.md), [Pilot Readiness Audit](pilot-readiness-audit.md)
 - [Tool usability evaluation](tool-usability-eval.md), [ประเมิน Office Skills ด้วย ChatGPT/Codex](cloud-model-eval-setup.md)
-- [UX audit 2026-10-01](ux-audit-2026-10-01.md), [ผลแก้ UX audit](ux-audit-fixes-2026-10-01.md), [UI review 0.5.31](desktop-ui-review-0.5.31.md), [Runtime structure review](refactor-review.md)
+- [UX audit 2026-10-01](ux-audit-2026-10-01.md), [ผลแก้ UX audit](ux-audit-fixes-2026-10-01.md), [บันทึกการตรวจ UI รุ่น 0.5.31](desktop-ui-review-0.5.31.md), [Runtime structure review](refactor-review.md)
 - [Graphify developer workflow](graphify-development.md), [OpenHarness handoff](openharness-handoff.md), [OpenHarness parity](openharness-parity.md)
 
 **ลิขสิทธิ์ของบุคคลที่สาม:** [ภาพตราครุฑ](third-party-notices/thai-garuda.md), [Claude Thai Skills (MIT)](third-party-notices/claude-thai-skills-MIT.txt), [โลโก้ผู้ให้บริการ AI (Lobe Icons, MIT)](third-party-notices/lobe-icons-MIT.txt)
