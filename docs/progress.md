@@ -8,6 +8,8 @@ _Last updated: 2026-11-24_
 
 ## In flight
 
+- **STeP Organization MCP Server (`gateway/mcp`, 2026-11-24)**: added a zero-dependency Node.js MCP server (`gateway/mcp/service.js`, `run.js`) supporting both Streamable HTTP (`POST /mcp`, Bearer auth ≥ 32 chars, no redirects, 64 KB request / 180 KB response caps, metadata-only audits) and Stdio transports (`2025-11-25` protocol), with three initial read-only catalog tools (`step_mis_lookup`, `step_afp_check_category`, `step_doc_catalog` in `gateway/mcp/tools/step-catalog.js`) and admin policy setup scripts (`scripts/pilot/configure-mcp.ps1`, `.sh`). Tested with `test/mcp-server.test.js` and `desktop/test/mcp-server-integration.test.ts` against the real Desktop `Mcp` client. Remains for owner/IT: host `--serve` behind TLS/Tailscale without redirects, add internal system tools via `registerTool()`, and apply `configure-mcp` on pilot devices (`features.mcp` stays off by default).
+
 - **Desktop README and guide refresh (2026-11-24)**. Replaced the tracked employee screenshots with synthetic v0.6.42 captures. The employee guides now describe supported GitHub installers, Microsoft Store updates and long-task recovery. The MIS register remains the dated source extract and current revisions are checked in MIS.
 
 - **Desktop installer preflight (2026-11-24)**: GitHub Actions checks Authenticode and Defender availability, verifies the Mac app and DMG trust results, and checks the updater metadata and artifact hashes before publishing the same files. A strict run requires trusted installers on both platforms. IT can enable it once signing and an active Defender runner are available.
