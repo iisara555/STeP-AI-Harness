@@ -1,7 +1,11 @@
 import { providerUsage, type TokenCount } from '../../src/modules/providers/usage.js';
 import type { ProviderAdapter, ProviderContext } from './providers';
 import { providerSessionKey } from './provider-session-key';
+import { ProviderPromptLimitError, tokens } from './compact';
 import type { Connection } from '../src/types';
+
+const MAX_GEMINI_API_PROMPT_CHARS = 400_000;
+const SAFE_GEMINI_API_PROMPT_CHARS = 360_000;
 
 type CacheEntry = { expires: number; pending: Promise<string | undefined> };
 // Server resources expire after five minutes. Only opaque identities/resource names stay in host memory.
@@ -141,7 +145,11 @@ export class GeminiApiAdapter implements ProviderAdapter {
       if (bytes > 4_000_000 || imageBytes > 12_000_000) throw new Error('ATTACH_TOO_LARGE');
     }
     const model = connection.model.replace(/^models\//, '');
-    if (!/^gemini-[a-zA-Z0-9._-]{1,120}$/.test(model) || prompt.length > 400_000) throw new Error('INVALID_INPUT');
+    if (!/^gemini-[a-zA-Z0-9._-]{1,120}$/.test(model)) throw new Error('INVALID_INPUT');
+    if (prompt.length > MAX_GEMINI_API_PROMPT_CHARS) {
+      const maxPromptTokens = Math.max(1, Math.floor((tokens(prompt) * SAFE_GEMINI_API_PROMPT_CHARS) / prompt.length));
+      throw new ProviderPromptLimitError(maxPromptTokens, true);
+    }
     if (context.signal.aborted) throw new Error('CANCELLED');
     // Main sets this only for non-packaged synthetic tests, just as it does for Gemini CLI.
     if (context.geminiBaseUrl) {

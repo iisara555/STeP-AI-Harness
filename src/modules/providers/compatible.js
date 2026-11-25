@@ -1,7 +1,9 @@
 import { providerUsage } from "./usage.js";
-// Error bodies are untrusted and may contain private text. Inspect only a bounded structured code/type.
+// Error bodies are untrusted and may contain private text. Inspect only a bounded structured code/type
+// and test message against static limit patterns without returning or logging raw text.
 async function failureCode(response) {
   let code = "";
+  let message = "";
   if (response.body) {
     const reader = response.body.getReader();
     try {
@@ -16,10 +18,18 @@ async function failureCode(response) {
         body += decoder.decode(part.value, { stream: true });
       }
       if (bytes <= 8192) {
-        const error = JSON.parse(body)?.error;
+        const parsed = JSON.parse(body);
+        const error = parsed?.error;
         code = [error?.code, error?.type]
           .filter((v) => typeof v === "string")
           .join(" ");
+        const rawMessage =
+          typeof error?.message === "string"
+            ? error.message
+            : typeof parsed?.message === "string"
+              ? parsed.message
+              : "";
+        message = rawMessage.slice(0, 500);
       }
     } catch {
     } finally {
@@ -35,7 +45,12 @@ async function failureCode(response) {
     )
   )
     return "PROVIDER_QUOTA";
-  if (/\b(context_length_exceeded|prompt_too_long)\b/.test(code))
+  if (
+    /\b(context_length_exceeded|prompt_too_long)\b/.test(code) ||
+    /(?:context.{0,25}(?:length|window|limit|exceed)|(?:prompt|input|request|message).{0,25}(?:too long|too large|exceed|token limit)|maximum.{0,20}(?:context|tokens?)|too many tokens)/i.test(
+      message,
+    )
+  )
     return "PROMPT_TOO_LONG";
   return response.status === 429
     ? "PROVIDER_RATE_LIMIT"
@@ -115,9 +130,9 @@ export async function compatibleRun(
   context = {},
   fetcher = fetch,
 ) {
+  if (typeof prompt !== "string") throw new Error("INVALID_INPUT");
+  if (prompt.length > 400_000) throw new Error("PROMPT_TOO_LONG");
   if (
-    typeof prompt !== "string" ||
-    prompt.length > 400_000 ||
     !profile.model ||
     profile.model.length > 160 ||
     (profile.maxOutputTokens !== undefined &&

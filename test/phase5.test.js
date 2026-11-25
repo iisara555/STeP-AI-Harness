@@ -195,6 +195,41 @@ test("compatible profiles deny unapproved, credential-bearing and remote plainte
     /INVALID_INPUT/,
   );
   await assert.rejects(
+    compatibleRun("a".repeat(400_001), profile, {}, fetcher),
+    /PROMPT_TOO_LONG/,
+  );
+  for (const errorBody of [
+    {
+      error: {
+        type: "invalid_request_error",
+        message: "This model's maximum context length is 128000 tokens.",
+      },
+    },
+    {
+      error: {
+        type: "invalid_request_error",
+        message: "prompt is too long: 140000 tokens > 128000 maximum",
+      },
+    },
+    {
+      message: "Input length exceeds context window limit",
+    },
+  ]) {
+    await assert.rejects(
+      compatibleRun(
+        "Text",
+        profile,
+        {},
+        async () =>
+          new Response(JSON.stringify(errorBody), {
+            status: 400,
+            headers: { "content-type": "application/json" },
+          }),
+      ),
+      /PROMPT_TOO_LONG/,
+    );
+  }
+  await assert.rejects(
     compatibleRun("Text", profile, { webSearch: true }, fetcher),
     /CAPABILITY_UNSUPPORTED/,
   );

@@ -115,7 +115,10 @@ export type CompactOptions = {
   hook?: (event: 'pre_compact' | 'post_compact', before: number, after: number) => Promise<void>;
 };
 export class ProviderPromptLimitError extends Error {
-  constructor(readonly maxPromptTokens: number) {
+  constructor(
+    readonly maxPromptTokens: number,
+    readonly promptOnly = false,
+  ) {
     super('CONTEXT_LIMIT');
   }
 }

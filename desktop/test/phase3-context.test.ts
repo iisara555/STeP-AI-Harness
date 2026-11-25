@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { compact, contextBudget, CONTEXT_TOKENS, MAX_CONTEXT_TOKENS, ProviderPromptLimitError, tokens } from '../electron/compact';
 import { ANTIGRAVITY_FIRST_MESSAGE_TOKENS } from '../electron/antigravity';
+import { CompatibleAdapter } from '../electron/providers';
 import { documentRequest } from '../src/document-tools';
 import { section, fence } from '../electron/prompt';
 import { WorkService, type Harness } from '../electron/service';
@@ -574,6 +575,90 @@ test('Antigravity reactive recovery demotes or shortens organization_knowledge w
     assert.ok(seenPrompts[1].includes('ข้อมูลต้นเรื่องที่ห้ามตัดทอน'), 'must retain protected source_document verbatim');
     assert.ok(seenPrompts[1].includes('Compacted from full document to matched excerpts') || seenPrompts[1].includes('Excerpt shortened'));
     assert.ok(seenPrompts[1].length < seenPrompts[0].length);
+  } finally {
+    store.close();
+  }
+});
+
+test('CompatibleAdapter converts 400k+ prompts to promptOnly limit errors and WorkService recomputes prompt-only budget after system slimming', async () => {
+  let fetches = 0;
+  const compatible = new CompatibleAdapter(async () => {
+    fetches++;
+    return new Response('unexpected', { status: 500 });
+  });
+  let caught: unknown;
+  try {
+    await compatible.run(
+      'a'.repeat(400_001),
+      { id: 'c', provider: 'compatible', baseUrl: 'https://api.example.invalid/v1', model: 'gpt-5', ready: true } as Connection,
+      { cwd: tmpdir(), env: {}, emit: () => {}, signal: new AbortController().signal },
+    );
+  } catch (error) {
+    caught = error;
+  }
+  assert.ok(caught instanceof ProviderPromptLimitError);
+  assert.equal(caught.promptOnly, true);
+  assert.ok(caught.maxPromptTokens > 0);
+  assert.equal(fetches, 0);
+
+  const store = new Store(':memory:');
+  try {
+    store.put('connection', 'c', { id: 'c', provider: 'gemini', mode: 'api', model: 'gemini-2.5-flash', ready: true } as Connection);
+    const session = store.create('c', 'cc');
+    // Keep total input (~140k) under Gemini's 160k proactive budget while exceeding 400k chars on turn 1.
+    session.messages = Array.from({ length: 6 }, (_, i) => ({
+      role: i % 2 ? 'assistant' : 'user',
+      text: 'Long ASCII turn ' + 'a'.repeat(67_500),
+      at: new Date().toISOString(),
+    }));
+    store.save(session);
+    const harness: Harness = {
+      root: repoRoot,
+      route: (q, opts) => routing.queryStepRouter(q, { autoRoute: false, authorityChecks: true, ...opts }),
+      contextPolicy: boundary.classifyContextPolicy,
+      privacy: privacy.evaluatePrivacyGate,
+      skillMetadata: async id => {
+        const meta = await routing.loadSkillContextMetadata(id);
+        return { ...meta, mandatoryReferences: await routing.loadDocumentContextMetadata(meta.mandatory) };
+      },
+      documentCatalog: () => routing.loadDocumentCatalog(),
+      catalog: () => catalog.loadSkillCatalog(repoRoot),
+      documentPrivacy: async () => null,
+      nextOutput: async () => null,
+    };
+    const seenPrompts: string[] = [];
+    const seenSystems: string[] = [];
+    const service = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: repoRoot, env: {} },
+        adapter: {
+          run: async (prompt, _connection, context) => {
+            if (context.system?.startsWith('Summarize')) return 'Checkpoint summary.';
+            seenPrompts.push(prompt);
+            seenSystems.push(context.system || '');
+            if (prompt.length > 400_000) {
+              const safeTokens = Math.max(1, Math.floor((tokens(prompt) * 360_000) / prompt.length));
+              throw new ProviderPromptLimitError(safeTokens, true);
+            }
+            return '<document_draft>\n# หนังสือสังเคราะห์\n\nสรุปร่างหนังสือเรียบร้อย\n</document_draft>\n<document_review>ตรวจข้อมูลสังเคราะห์แล้ว</document_review>';
+          },
+        },
+      }),
+      () => {},
+    );
+    const initial = documentRequest('letter', { subject: 'ขอเชิญประชุมสังเคราะห์' });
+    await service.run(session.id, initial.text, initial.sourceText, true, undefined, 'draft', undefined, [], {
+      documentTool: 'letter',
+      fromConversation: true,
+    });
+    const done = store.session(session.id);
+    assert.equal(seenPrompts.length, 2, `${done.status}: ${done.messages.at(-1)?.text}`);
+    assert.ok(seenPrompts[0].length > 400_000);
+    assert.ok(seenPrompts[1].length <= 400_000, 'prompt length must drop below 400k chars even when system shrinks');
+    assert.ok(tokens(seenSystems[1]) < tokens(seenSystems[0]), 'core-only system should slim supplemental references');
+    assert.equal(done.status, 'review', done.messages.at(-1)?.text);
   } finally {
     store.close();
   }

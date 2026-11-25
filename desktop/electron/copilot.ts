@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import type { ProviderAdapter, ProviderContext } from './providers';
 import { providerSessionKey, recoverSessionTurn, retainedSdkError, type ProviderSession } from './providers';
+import { explainRuntimeFailure } from './diagnostics';
 import { jsonSchemaInstruction } from './json-schema';
 import type { Connection, ModelOption } from '../src/types';
 
@@ -149,10 +150,10 @@ export class CopilotAdapter implements ProviderAdapter {
       if (context.signal.aborted) throw new Error('CANCELLED');
       if (timedOut) throw new Error('PROVIDER_TIMEOUT');
       if (text.length > 200_000) throw new Error('PROVIDER_OUTPUT_LIMIT');
-      const message = (error as Error).message;
-      throw new Error(
-        ['PROVIDER_OUTPUT_LIMIT', 'PROVIDER_TOOL_DENIED', 'CANCELLED'].includes(message) ? message : 'COPILOT_REQUEST_FAILED',
-      );
+      const message = error instanceof Error ? error.message : String(error ?? '');
+      if (['PROVIDER_OUTPUT_LIMIT', 'PROVIDER_TOOL_DENIED', 'CANCELLED'].includes(message)) throw new Error(message);
+      const explained = explainRuntimeFailure([message]);
+      throw new Error(explained || 'COPILOT_REQUEST_FAILED');
     } finally {
       clearTimeout(timer);
       context.signal.removeEventListener('abort', stop);

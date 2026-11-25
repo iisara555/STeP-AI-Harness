@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { GeminiApiAdapter } from '../electron/gemini-api';
 import { GeminiAdapter, type ProviderContext, type TokenCount } from '../electron/providers';
+import { ProviderPromptLimitError } from '../electron/compact';
 import type { Connection } from '../src/types';
 
 const connection = {
@@ -308,4 +309,26 @@ test('cancelling a cache waiter stops immediately without cancelling the shared 
   resolveCache(Response.json({ name: 'cachedContents/shared' }));
   assert.equal(await owner, 'Done');
   assert.equal(generation, 1);
+});
+
+test('GeminiApiAdapter rejects prompts above 400k chars as recoverable ProviderPromptLimitError before calling fetch', async () => {
+  let calls = 0;
+  const adapter = new GeminiApiAdapter(
+    (async () => {
+      calls++;
+      return stream();
+    }) as typeof fetch,
+    new Map(),
+  );
+  let caught: unknown;
+  try {
+    await adapter.run('a'.repeat(400_001), connection, context({ system: 'Standing rules' }));
+  } catch (error) {
+    caught = error;
+  }
+  assert.ok(caught instanceof ProviderPromptLimitError);
+  assert.equal(caught.message, 'CONTEXT_LIMIT');
+  assert.equal(caught.promptOnly, true);
+  assert.ok(caught.maxPromptTokens > 0);
+  assert.equal(calls, 0);
 });

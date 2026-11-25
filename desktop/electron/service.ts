@@ -2052,12 +2052,13 @@ export class WorkService {
                 reactiveRetried = true;
                 retryCount++;
                 const beforeAttempt = tokens(providerSystem + nextPrompt);
-                const transportTotalBudget =
+                const computeTransportTotalBudget = () =>
                   error instanceof ProviderPromptLimitError
                     ? error.maxPromptTokens > 0
                       ? fullSendBudget(providerSystem, error.maxPromptTokens)
                       : Math.min(budget, Math.max(1, firstBudget - 2500))
                     : budget;
+                let transportTotalBudget = computeTransportTotalBudget();
                 if (!analysisImage) {
                   const slim = buildSystem('core-only');
                   if (tokens(slim.system) < tokens(activeSystem.system)) {
@@ -2066,6 +2067,9 @@ export class WorkService {
                     stepTrace.systemChars = activeSystem.system.length;
                     stepTrace.references = activeSystem.loadedPaths.slice(0, 20);
                     providerSystem = activeSystem.system + (partialTor ? PARTIAL_TOR_NOTE : '');
+                    if (error instanceof ProviderPromptLimitError && error.promptOnly) {
+                      transportTotalBudget = computeTransportTotalBudget();
+                    }
                   }
                   if (
                     tokens(providerSystem + nextPrompt) > transportTotalBudget &&
