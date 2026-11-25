@@ -458,3 +458,69 @@ test('organization knowledge chat without deliverable cues skips LLM selector ca
     f.store.close();
   }
 });
+
+test('connected Google Workspace summary reaches the system prompt directly without forcing /google-workspace or loading Skill prose', async () => {
+  const f = fixture(undefined, {
+    googleWorkspaceSummary: () => ({
+      enabled: true,
+      vaultSuspended: false,
+      accounts: [{ label: 'ko••••@step.cmu.ac.th (1)', services: ['gmail-read', 'drive', 'sheets'] }],
+    }),
+  });
+  try {
+    await f.service.run(f.session.id, 'ช่วยสรุปข้อมูลไฟล์ในโปรเจกต์ให้หน่อย', '', true, undefined, 'chat');
+    const answerCall = f.calls.find(c => !c.selection)!;
+    assert.match(answerCall.system, /Google Workspace is connected and ready for direct google_workspace tool calls/);
+    assert.match(answerCall.system, /ko••••@step\.cmu\.ac\.th \(1\): gmail-read, drive, sheets/);
+    assert.doesNotMatch(answerCall.system, /<skill_instructions>[\s\S]*# STeP Google Workspace/);
+  } finally {
+    f.store.close();
+  }
+});
+
+test('WorkService records patched files in assistant message written list', async () => {
+  const store = new Store(':memory:');
+  store.put('settings', 'main', { workspace: tmpdir(), team: 'cc' });
+  store.put('connection', 'c', { id: 'c', provider: 'openai', model: 'fixture', ready: true });
+  let turn = 0;
+  const harness: Harness = {
+    root,
+    hybridSkillSelection: () => false,
+    route: (q, opts) => routing.queryStepRouter(q, { autoRoute: false, authorityChecks: true, disableMemory: true, ...opts }),
+    contextPolicy: boundary.classifyContextPolicy,
+    privacy: privacy.evaluatePrivacyGate,
+    skillMetadata: async id => ({ ...(await routing.loadSkillContextMetadata(id)), mandatoryReferences: [] }),
+    catalog: skills.createSkillCatalog(root),
+    documentCatalog: routing.loadDocumentCatalog,
+    documentPrivacy: async () => null,
+    nextOutput: async () => null,
+    toolLoop: () => true,
+    tools: async () => ({
+      enabled: () => true,
+      check: async () => {},
+      readOnly: () => false,
+      execute: async () => ({ id: 'chg-1', path: 'src/app.ts', status: 'applied' }),
+      outgoing: async s => s,
+    }),
+  };
+  const service = new WorkService(
+    store,
+    harness,
+    async () => ({
+      context: { cwd: tmpdir(), env: {} },
+      adapter: {
+        run: async () =>
+          ++turn === 1 ? '```step-tool\n{"tool":"patch","input":"src/app.ts","args":{"old_string":"a","new_string":"b"}}\n```' : 'patched',
+      },
+    }),
+    () => {},
+  );
+  const session = store.create('c', 'cc');
+  try {
+    await service.run(session.id, 'แก้โค้ด src/app.ts', '', true, undefined, 'chat');
+    const saved = store.session(session.id);
+    assert.deepEqual(saved.messages.at(-1)?.written, [{ path: 'src/app.ts', id: 'chg-1', status: 'applied' }]);
+  } finally {
+    store.close();
+  }
+});

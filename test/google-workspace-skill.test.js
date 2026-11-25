@@ -54,7 +54,17 @@ test('native Workspace reference/checker covers the shipped operation catalog', 
 });
 
 test('Forms and Apps Script account operations route to the native Workspace Skill', async () => {
-  for (const prompt of ['สร้างแบบสอบถามใน Google Forms', 'อ่านคำตอบ Google Forms', 'แก้โค้ดโปรเจ็กต์ Apps Script', 'รันฟังก์ชันใน Apps Script', 'จัดรูปแบบตารางใน Google Sheets']) {
+  for (const prompt of [
+    'สร้างแบบสอบถามใน Google Forms',
+    'อ่านคำตอบ Google Forms',
+    'แก้โค้ดโปรเจ็กต์ Apps Script',
+    'รันฟังก์ชันใน Apps Script',
+    'จัดรูปแบบตารางใน Google Sheets',
+    'เช็ก Gmail ล่าสุด',
+    'เปิด Google Sheet นี้หน่อย https://docs.google.com/spreadsheets/d/abc',
+    'ดึงไฟล์จาก Google Drive',
+    'ลงนัดประชุมพรุ่งนี้ 10 โมง',
+  ]) {
     const routed = await queryStepRouter(prompt, { team: 'cc', cluster: '' });
     assert.equal(routed.routingContract?.skill, 'google-workspace', prompt);
   }

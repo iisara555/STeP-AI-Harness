@@ -403,3 +403,21 @@ test('code_references searches code files only and reports when its 30-file limi
     await f.close();
   }
 });
+
+test('nested new-subdirectory staging/apply works while symlink and sensitive nested ancestors stay blocked', async () => {
+  const f = await fixture(),
+    outside = await mkdtemp(join(tmpdir(), 'step-nested-outside-'));
+  try {
+    await symlink(outside, join(f.root, 'escape'), process.platform === 'win32' ? 'junction' : 'dir');
+    await mkdir(join(f.root, '.ssh'));
+    await assert.rejects(f.tools.path('escape/nested/tool.js', true), /INVALID_PATH/);
+    await assert.rejects(f.tools.path('.ssh/nested/config', true), /INVALID_PATH/);
+
+    const c = await f.tools.stage('tools/calc/index.html', '<html><body><h1>Calculator</h1></body></html>');
+    await f.tools.apply(c.id);
+    assert.match(await readFile(join(f.root, 'tools/calc/index.html'), 'utf8'), /Calculator/);
+  } finally {
+    await f.close();
+    await rm(outside, { recursive: true, force: true });
+  }
+});

@@ -2133,3 +2133,19 @@ test('tool_describe browser_control carries the full browser rules the system pr
     await rm(f.root, { recursive: true, force: true });
   }
 });
+
+test('artifact_save accepts both args.content and top-level content', async () => {
+  const f = await fixture('ask');
+  try {
+    const saved = (await f.tools.execute(
+      { tool: 'artifact_save', input: 'mini-tool', content: '<h1>Tool</h1>', args: { title: 'Mini Tool', kind: 'html' } },
+      f.scope,
+    )) as any;
+    assert.equal(saved.id, 'mini-tool');
+    assert.equal(saved.version, 1);
+    const read = f.workbench.getArtifact(f.scope.sessionId, 'mini-tool');
+    assert.equal(read?.content, '<h1>Tool</h1>');
+  } finally {
+    await f.workbench.close();
+  }
+});

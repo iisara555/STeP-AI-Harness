@@ -973,6 +973,19 @@ async function main() {
         : undefined,
     url => shell.openExternal(url),
   );
+  harness.googleWorkspaceSummary = () => {
+    const enabled = Boolean(
+      policyState.policy.features.googleWorkspace &&
+      policyState.policy.googleWorkspace &&
+      !policyState.policy.credentialStorage?.sharedDevice,
+    );
+    const st = google.state();
+    return {
+      enabled,
+      vaultSuspended: st.vaultSuspended,
+      accounts: st.accounts.filter(a => !a.paused && !a.reauth).map(a => ({ label: a.label, services: a.services })),
+    };
+  };
   const googleContext = (signal = new AbortController().signal, after = async () => {}, sessionId?: string) => {
     const identity = phase4Identity(),
       policy = policyState.policy;
