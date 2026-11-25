@@ -313,7 +313,7 @@ test('reactive compaction trims accumulated tool turns and conversation_files wh
   );
 });
 
-test('reactive fallback trims memory/preferences and shortens organization_knowledge bodies while keeping IDs and headings', async () => {
+test('reactive compaction trims memory and preferences but keeps organization evidence verbatim', async () => {
   const knowledge =
     '[afp-procurement-policy] แนวปฏิบัติจัดซื้อจัดจ้าง\n§ ทั้งฉบับ\n' +
     'เนื้อหาระเบียบสังเคราะห์ '.repeat(2600) +
@@ -331,28 +331,24 @@ test('reactive fallback trims memory/preferences and shortens organization_knowl
     section('current_message', 'ขอเพิ่ม Foamboard 150x75 cm'),
   ].join('\n\n');
 
-  // Non-reactive compaction with allowKnowledgeFallback disabled never trims <organization_knowledge>.
-  await assert.rejects(
-    compact(
-      prompt,
-      options(async () => 'unused', { budget: 2600, reactive: false, allowKnowledgeFallback: false }),
-    ),
-    /CONTEXT_LIMIT/,
-  );
-
-  // Reactive compaction trims memory/preferences first and then shortens <organization_knowledge> bodies, keeping headers and sources.
+  const budget = tokens(knowledge) + 800;
   const recovered = await compact(
     prompt,
-    options(async () => 'unused', { budget: 2600, reactive: true }),
+    options(async () => 'unused', { budget, reactive: true }),
   );
-  assert.ok(recovered.after <= 2600);
+  assert.ok(recovered.after <= budget);
+  assert.ok(recovered.prompt.includes('Compacted memory/preferences'));
   assert.ok(recovered.prompt.includes('MUST_KEEP_SOURCE_EXACT'));
   assert.ok(recovered.prompt.includes('MUST_KEEP_DRAFT_EXACT'));
   assert.ok(recovered.prompt.includes('MUST_KEEP_REQUEST_EXACT'));
-  assert.ok(recovered.prompt.includes('[afp-procurement-policy] แนวปฏิบัติจัดซื้อจัดจ้าง'));
-  assert.ok(recovered.prompt.includes('§ ทั้งฉบับ'));
-  assert.ok(recovered.prompt.includes('[hr-service-channels] ช่องทางติดต่อ HR'));
-  assert.ok(recovered.prompt.includes('reference(input=ID, args.section=heading)'));
+  assert.ok(recovered.prompt.includes(section('organization_knowledge', knowledge)));
+  await assert.rejects(
+    compact(
+      prompt,
+      options(async () => 'unused', { budget: 2600, reactive: true }),
+    ),
+    /CONTEXT_LIMIT/,
+  );
 });
 
 test('preserveUserFacts spreads remaining budget fairly across captured user requests omitted by the summary', () => {

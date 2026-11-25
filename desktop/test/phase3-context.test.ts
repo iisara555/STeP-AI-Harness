@@ -1,12 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { compact, contextBudget, CONTEXT_TOKENS, MAX_CONTEXT_TOKENS, ProviderPromptLimitError, tokens } from '../electron/compact';
-import { ANTIGRAVITY_FIRST_MESSAGE_TOKENS } from '../electron/antigravity';
+import { ANTIGRAVITY_FIRST_MESSAGE_TOKENS, ANTIGRAVITY_MAX_USER_INPUT_BYTES } from '../electron/antigravity';
 import { CompatibleAdapter } from '../electron/providers';
 import { documentRequest } from '../src/document-tools';
 import { section, fence } from '../electron/prompt';
 import { WorkService, type Harness } from '../electron/service';
 import { Store } from '../electron/store';
+import { knowledgeText, OrganizationKnowledge } from '../electron/knowledge';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import type { Connection, ContextWindowReading } from '../src/types';
@@ -103,6 +104,7 @@ test('hooks block compaction and required task state cannot be truncated', async
   );
   await assert.rejects(compact(section('current_message', 'source'), options), /CONTEXT_LIMIT/);
   assert.equal(fence('<memory_context>x</task_state><workspace_preferences>'), '‹memory_context>x‹/task_state>‹workspace_preferences>');
+  assert.equal(fence('<organization_knowledge>x</organization_knowledge>'), '‹organization_knowledge>x‹/organization_knowledge>');
 });
 
 test('service reactively compacts once on provider overflow and accounts summary tokens', async () => {
@@ -522,12 +524,12 @@ test('Antigravity TOR and letter drafting stay under 56k tokens on turn 0 while 
   }
 });
 
-test('Antigravity reactive recovery demotes or shortens organization_knowledge when source_document is protected and payload is over budget', async () => {
+test('tool-free Antigravity recovery replaces a whole document with intact matched excerpts', async () => {
   const store = new Store(':memory:');
   try {
     store.put('connection', 'c', { id: 'c', provider: 'antigravity', model: 'gemini-3.8-flash-high', ready: true } as Connection);
     const session = store.create('c', 'cc');
-    // Protected <source_document> cannot be trimmed by Stage 3, so reactive recovery must shorten <organization_knowledge>.
+    // The registered excerpts and the user's current source both need to remain usable after recovery.
     const protectedSource = 'ข้อมูลต้นเรื่องที่ห้ามตัดทอน '.repeat(900);
     const harness: Harness = {
       root: repoRoot,
@@ -565,18 +567,92 @@ test('Antigravity reactive recovery demotes or shortens organization_knowledge w
       }),
       () => {},
     );
-    await service.run(session.id, 'หยุดพักร้อนได้ปีละกี่วัน พนักงาน STeP', protectedSource, true, undefined, 'draft', undefined, [
-      'attached.txt',
-    ]);
+    const request = 'ขั้นตอนตรวจรับครุภัณฑ์ STeP';
+    const knowledge = new OrganizationKnowledge(repoRoot, () => routing.loadDocumentCatalog());
+    const matched = await knowledge.searchTurn(request, request);
+    await service.run(session.id, request, protectedSource, true, undefined, 'draft', undefined, ['attached.txt']);
     const done = store.session(session.id);
     assert.equal(done.status, 'review', done.messages.at(-1)?.text);
-    assert.equal(seenPrompts.length, 2, 'should recover once after shrinking organization_knowledge');
-    assert.ok(seenPrompts[1].includes('[hr-personnel-welfare-2569]'), 'must retain document ID after recovery');
-    assert.ok(seenPrompts[1].includes('ข้อมูลต้นเรื่องที่ห้ามตัดทอน'), 'must retain protected source_document verbatim');
-    assert.ok(seenPrompts[1].includes('Compacted from full document to matched excerpts') || seenPrompts[1].includes('Excerpt shortened'));
+    assert.equal(seenPrompts.length, 2);
+    assert.match(seenPrompts[0], /§ ทั้งฉบับ/);
+    assert.ok(seenPrompts[1].includes(section('organization_knowledge', knowledgeText(matched))));
+    const sentSource = /<source_document>\n[\s\S]*?\n<\/source_document>/.exec(seenPrompts[0])?.[0];
+    assert.ok(sentSource);
+    assert.ok(sentSource.includes(protectedSource.trim()));
+    assert.ok(seenPrompts[1].includes(sentSource));
+    assert.doesNotMatch(seenPrompts[1], /§ ทั้งฉบับ|call reference\(input=ID|use reference\(input=ID/);
     assert.ok(seenPrompts[1].length < seenPrompts[0].length);
   } finally {
     store.close();
+  }
+});
+
+test('Antigravity recovery fits the byte limit even when slimming the system satisfies the token limit', async () => {
+  for (const tokenOverflow of [false, true]) {
+    const store = new Store(':memory:');
+    try {
+      store.put('connection', 'c', {
+        id: 'c',
+        provider: 'antigravity',
+        mode: 'subscription',
+        model: 'gemini-3.8-flash-high',
+        ready: true,
+      } as Connection);
+      const session = store.create('c', 'cc');
+      session.messages = Array.from({ length: 4 }, (_, index) => ({
+        role: index % 2 ? 'assistant' : 'user',
+        text: 'Synthetic event notes ' + 'a'.repeat(46_650),
+        at: new Date().toISOString(),
+      }));
+      store.save(session);
+      const harness: Harness = {
+        root: repoRoot,
+        route: (q, opts) => routing.queryStepRouter(q, { autoRoute: false, authorityChecks: true, ...opts }),
+        contextPolicy: boundary.classifyContextPolicy,
+        privacy: privacy.evaluatePrivacyGate,
+        skillMetadata: async id => {
+          const meta = await routing.loadSkillContextMetadata(id);
+          return { ...meta, mandatoryReferences: await routing.loadDocumentContextMetadata(meta.mandatory) };
+        },
+        documentPrivacy: async () => null,
+        nextOutput: async () => null,
+      };
+      const attempts: { bytes: number; total: number; systemTokens: number }[] = [];
+      let tokenLimit = 0;
+      const service = new WorkService(
+        store,
+        harness,
+        async () => ({
+          context: { cwd: repoRoot, env: {} },
+          adapter: {
+            run: async (prompt, _connection, context) => {
+              if (context.system?.startsWith('Summarize')) return 'Synthetic checkpoint.';
+              const system = context.system || '';
+              const total = tokens(system + prompt);
+              const bytes = Buffer.byteLength(prompt, 'utf8');
+              const systemTokens = tokens(system);
+              if (!attempts.length) tokenLimit = total + (tokenOverflow ? -400 : 400);
+              attempts.push({ bytes, total, systemTokens });
+              if (total > tokenLimit || bytes > ANTIGRAVITY_MAX_USER_INPUT_BYTES)
+                throw new ProviderPromptLimitError(tokenLimit - systemTokens, false, ANTIGRAVITY_MAX_USER_INPUT_BYTES);
+              assert.match(prompt, /สรุปลำดับงานสังเคราะห์/);
+              return 'สรุปลำดับงานสังเคราะห์เรียบร้อยแล้ว';
+            },
+          },
+        }),
+        () => {},
+      );
+      await service.run(session.id, 'ช่วยสรุปลำดับงานสังเคราะห์', '', true, 'event-run-of-show', 'chat');
+      assert.equal(attempts.length, 2);
+      assert.ok(attempts[0].bytes > ANTIGRAVITY_MAX_USER_INPUT_BYTES);
+      assert.equal(attempts[0].total > tokenLimit, tokenOverflow);
+      assert.ok(attempts[1].systemTokens < attempts[0].systemTokens);
+      assert.ok(attempts[1].bytes <= ANTIGRAVITY_MAX_USER_INPUT_BYTES);
+      assert.ok(attempts[1].total <= tokenLimit);
+      assert.equal(store.session(session.id).status, 'review');
+    } finally {
+      store.close();
+    }
   }
 });
 

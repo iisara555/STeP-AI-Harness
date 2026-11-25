@@ -1113,7 +1113,7 @@ export class WorkService {
       const initialFirstBudget =
         connection.provider === 'antigravity' ? Math.min(initialBudget, ANTIGRAVITY_FIRST_MESSAGE_TOKENS) : initialBudget;
       const wholeKnowledgeBudget = draftingTool ? Math.floor(initialFirstBudget / 8) : Math.floor(initialFirstBudget / 4);
-      const given: KnowledgeSection[] =
+      let given: KnowledgeSection[] =
         knowledge && known.length ? await knowledge.whole(known, wholeKnowledgeBudget).catch(() => known) : known;
       // A request to work in STeP MIS is done in the STeP Browser, not answered from the web or memory.
       const internal = knowledgeTurn
@@ -1808,18 +1808,10 @@ export class WorkService {
         // Allow for rounding the host system and provider prompt estimates separately.
         const fullSendBudget = (hostSystem: string, promptBudget: number) =>
           Math.min(budget, Math.max(1, tokens(hostSystem) + promptBudget - 1));
-        const compactPrompt = async (
-          value: string,
-          recovery?: { system: string; totalBudget?: number; maxPromptTokens?: number; allowKnowledgeFallback?: boolean },
-        ) => {
+        const compactPrompt = async (value: string, recovery?: { system: string; totalBudget: number; maxPromptBytes?: number }) => {
           const recoverySystem = recovery?.system ?? activeSystem.system;
-          const inputBudget =
-            recovery?.totalBudget !== undefined
-              ? Math.min(budget, Math.max(1, recovery.totalBudget))
-              : recovery?.maxPromptTokens === undefined
-                ? budget
-                : fullSendBudget(recoverySystem, recovery.maxPromptTokens);
-          if (recovery?.totalBudget !== undefined || recovery?.maxPromptTokens !== undefined) displayedBudget = inputBudget;
+          const inputBudget = recovery ? Math.min(budget, Math.max(1, recovery.totalBudget)) : budget;
+          if (recovery) displayedBudget = inputBudget;
           const result = await compact(value, {
             checkpoint: this.store.session(id).contextCheckpoint,
             history: textOnly ? undefined : history,
@@ -1833,7 +1825,7 @@ export class WorkService {
             state: taskState(),
             signal: controller.signal,
             reactive: Boolean(recovery),
-            allowKnowledgeFallback: Boolean(recovery?.allowKnowledgeFallback ?? recovery),
+            maxPromptBytes: recovery?.maxPromptBytes,
             privacy: value => {
               const scan = this.harness.privacy(value);
               if (scan.action === 'block-external' || typeof scan.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
@@ -2064,6 +2056,8 @@ export class WorkService {
                 reactiveRetried = true;
                 retryCount++;
                 const beforeAttempt = tokens(providerSystem + nextPrompt);
+                const maxPromptBytes = error instanceof ProviderPromptLimitError ? error.maxPromptBytes : undefined;
+                const fitsBytes = () => maxPromptBytes === undefined || Buffer.byteLength(nextPrompt, 'utf8') <= maxPromptBytes;
                 const computeTransportTotalBudget = () =>
                   error instanceof ProviderPromptLimitError
                     ? error.maxPromptTokens > 0
@@ -2084,21 +2078,24 @@ export class WorkService {
                     }
                   }
                   if (
-                    tokens(providerSystem + nextPrompt) > transportTotalBudget &&
+                    (!fitsBytes() || tokens(providerSystem + nextPrompt) > transportTotalBudget) &&
                     known.length &&
                     given.some(k => k.heading === WHOLE_DOCUMENT)
                   ) {
-                    nextPrompt = nextPrompt.replace(/<organization_knowledge>\n[\s\S]*?\n<\/organization_knowledge>/, () =>
-                      section(
-                        'organization_knowledge',
-                        knowledgeText(known) +
-                          '\n\n[Compacted from full document to matched excerpts to fit context budget; use reference(input=ID, args.action=outline) or reference(input=ID, args.section=heading) if another section is needed.]',
-                      ),
-                    );
+                    const whole = section('organization_knowledge', knowledgeText(given));
+                    const matched = section('organization_knowledge', knowledgeText(known));
+                    if (
+                      tokens(matched) < tokens(whole) &&
+                      Buffer.byteLength(matched) <= Buffer.byteLength(whole) &&
+                      nextPrompt.includes(whole)
+                    ) {
+                      nextPrompt = nextPrompt.replace(whole, () => matched);
+                      given = known;
+                    }
                   }
                 }
                 const afterPreShrink = tokens(providerSystem + nextPrompt);
-                if (afterPreShrink <= transportTotalBudget && afterPreShrink < beforeAttempt) {
+                if (fitsBytes() && afterPreShrink <= transportTotalBudget && afterPreShrink < beforeAttempt) {
                   displayedBudget = transportTotalBudget;
                   measureContext(afterPreShrink);
                   const current = this.store.session(id);
@@ -2115,7 +2112,7 @@ export class WorkService {
                 nextPrompt = await compactPrompt(nextPrompt, {
                   system: providerSystem,
                   totalBudget: transportTotalBudget,
-                  allowKnowledgeFallback: true,
+                  maxPromptBytes,
                 });
                 arm();
                 continue;

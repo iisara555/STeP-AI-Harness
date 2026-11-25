@@ -714,7 +714,7 @@ export async function prewarmAntigravity(connection: Connection, context: Provid
 /**
  * Largest first message of an agy conversation, in estimated tokens of system + prompt. On 2026-11-18 the owner's
  * diagnostics showed agy keeping only about 45–47k Gemini tokens of a longer first message, without an error: the
- * newest request at its end never reached the model. Later turns of a kept conversation are not cut. The host estimate
+ * newest request at its end never reached the model. Kept conversations send only the new message. The host estimate
  * runs 1.3–2× above Gemini's own count, so this stays under that cut; a longer first message is compacted first.
  */
 export const ANTIGRAVITY_FIRST_MESSAGE_TOKENS = 56_000;
@@ -727,13 +727,16 @@ export const ANTIGRAVITY_MAX_USER_INPUT_BYTES = 186_000;
 
 /** Refuses a whole-prompt send agy would cut; the host's CONTEXT_LIMIT handling compacts the prompt and retries. */
 const firstPromptBudget = (system: string | undefined) => Math.max(0, ANTIGRAVITY_FIRST_MESSAGE_TOKENS - tokens(system || ''));
-function checkFirstMessage(system: string | undefined, prompt: string) {
-  if (tokens((system || '') + prompt) > ANTIGRAVITY_FIRST_MESSAGE_TOKENS) throw new ProviderPromptLimitError(firstPromptBudget(system));
-  const promptBytes = Buffer.byteLength(prompt, 'utf8');
-  if (promptBytes > ANTIGRAVITY_MAX_USER_INPUT_BYTES) {
-    const promptTokens = tokens(prompt);
-    const byteLimitedPromptTokens = Math.max(1, Math.floor((promptTokens * ANTIGRAVITY_MAX_USER_INPUT_BYTES) / promptBytes) - 1);
-    throw new ProviderPromptLimitError(Math.min(firstPromptBudget(system), byteLimitedPromptTokens));
+function checkFirstMessage(system: string | undefined, prompt: string, prefix = '') {
+  if (
+    tokens((system || '') + prompt) > ANTIGRAVITY_FIRST_MESSAGE_TOKENS ||
+    Buffer.byteLength(prompt, 'utf8') > ANTIGRAVITY_MAX_USER_INPUT_BYTES
+  ) {
+    throw new ProviderPromptLimitError(
+      firstPromptBudget((system || '') + prefix),
+      false,
+      ANTIGRAVITY_MAX_USER_INPUT_BYTES - Buffer.byteLength(prefix, 'utf8'),
+    );
   }
 }
 
@@ -743,7 +746,6 @@ export class AntigravityAdapter implements ProviderAdapter {
   private bridged = new WeakSet<ProviderSession>();
   constructor(private timeoutMs = 600_000) {}
   async run(text: string, connection: Connection, context: ProviderContext) {
-    const prompt = context.images?.length ? `${IMAGE_TURN_NOTE(context.images.length)}\n\n${text}` : text;
     const deadline = Date.now() + this.timeoutMs;
     const timeout = AbortSignal.timeout(this.timeoutMs);
     const signal = AbortSignal.any([context.signal, timeout]);
@@ -795,12 +797,12 @@ export class AntigravityAdapter implements ProviderAdapter {
         answer =
           attempt === 0 && context.session && !context.jsonSchema && !context.images?.length
             ? await this.conversationTurn(
-                prompt,
+                text,
                 connection,
                 { ...attemptContext, emit, discard: context.discard ? discard : undefined },
                 deadline,
               )
-            : await this.runOnce(prompt, connection, { ...attemptContext, session: undefined, emit }, deadline, attempt === 0);
+            : await this.runOnce(text, connection, { ...attemptContext, session: undefined, emit }, deadline, attempt === 0);
         if (signal.aborted) throw new Error(context.signal.aborted ? 'CANCELLED' : 'PROVIDER_TIMEOUT');
       } catch (error) {
         if (shown) discard(shown);
@@ -851,9 +853,11 @@ export class AntigravityAdapter implements ProviderAdapter {
   }
 
   /** One process, one message, stdin closed after it; success needs a validated result and exit 0. */
-  private async runOnce(prompt: string, connection: Connection, context: ProviderContext, deadline: number, useSchema: boolean) {
+  private async runOnce(text: string, connection: Connection, context: ProviderContext, deadline: number, useSchema: boolean) {
     this.check(connection, context);
-    checkFirstMessage(context.system, prompt);
+    const prefix = context.images?.length ? `${IMAGE_TURN_NOTE(context.images.length)}\n\n` : '';
+    const prompt = prefix + text;
+    checkFirstMessage(context.system, prompt, prefix);
     const home = await antigravityHome(context);
     let clean = true;
     let conversation = '';
@@ -1026,6 +1030,11 @@ export class AntigravityAdapter implements ProviderAdapter {
   ) {
     const fresh = !held.turns;
     const input = fresh ? prompt : context.followUpDelta || prompt.slice(held.sent.length);
+    if (!fresh && Buffer.byteLength(input, 'utf8') > ANTIGRAVITY_MAX_USER_INPUT_BYTES) {
+      // Compaction can restart the conversation, so don't replay a turn after a native bridge call reached the host.
+      const allowRecovery = !context.session || !this.bridged.has(context.session);
+      throw new ProviderPromptLimitError(firstPromptBudget(context.system), false, ANTIGRAVITY_MAX_USER_INPUT_BYTES, allowRecovery);
+    }
     context.onTransport?.({
       mode: fresh ? 'full' : 'delta',
       sentChars: input.length,
