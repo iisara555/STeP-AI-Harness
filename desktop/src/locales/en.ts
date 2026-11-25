@@ -1046,6 +1046,10 @@ export const en: Record<string, string> = {
     'An attached agency form is checked against the MIS quality register for its code and revision.',
   'ตรวจใบกำกับภาษี (เลขผู้เสียภาษี เลขที่ และ VAT) และเตือนเรื่องหัก ณ ที่จ่ายในใบสำคัญจ่าย':
     'Tax invoices are checked for the tax ID, number and VAT, and payment vouchers flag withholding to review.',
+  'แก้ปัญหาแชตยาวบน Antigravity ติด CONTEXT_LIMIT ระหว่างเรียกเครื่องมือหลายรอบ โดยคงบริบทงานและไฟล์ตั้งต้นได้ต่อเนื่องขึ้น':
+    'Fixed long Antigravity chats hitting CONTEXT_LIMIT during multi-turn tool calls while preserving the task brief and starter files.',
+  'เพิ่ม Skill จัดงานอีเวนต์ 2 ชุดใหม่ (วางแผนผลิตงานครบวงจรและจัดงานอย่างยั่งยืน/ลดโลกร้อน) พร้อมยกระดับ Skill งานสร้างสรรค์และอีเวนต์อีก 5 ชุดเป็นมาตรฐาน v3':
+    'Added two new event planning Skills (full-cycle event production and sustainable/low-carbon events) and upgraded five Creative and Event Skills to Standard v3.',
   'สัญลักษณ์รอเปลี่ยนตามงานที่ AI กำลังทำ ทั้งคิด อ่าน ค้นหา และเขียนคำตอบ':
     'The waiting mark follows what AI is doing: thinking, reading, searching, or writing an answer.',
   'สถานะระหว่างรออ่านง่ายขึ้น และข้อความร่างที่แสดงแล้วไม่หายเมื่อ AI เรียกเครื่องมือ':

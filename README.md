@@ -10,7 +10,7 @@
 
 **STeP Desktop** คือหน้าจอทำงานหลักของ STeP AI สำหรับพนักงาน STeP / RSP North ใช้ภาษาไทยได้ ไม่ต้องจำชื่อ Skill หรือพิมพ์คำสั่งติดตั้งเอง ภาพในหน้านี้ใช้ข้อมูลตัวอย่าง หน้าจอจริงอาจต่างตามรุ่นและการตั้งค่าขององค์กร
 
-**รุ่นที่เผยแพร่ล่าสุด** [**STeP Desktop v0.6.42**](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.42) บรรทัดสถานะแสดงว่า AI กำลังคิด อ่าน ค้น หรือเขียน ร่างที่กำลังพิมพ์ต่อเนื่องขึ้น และงานยาวมีตัวบอกปริมาณบริบทพร้อมให้กลับมาทำต่อได้ ดูรายละเอียดใน [CHANGELOG](CHANGELOG.md#desktop-v0642-2026-11-24)
+**รุ่นที่เผยแพร่ล่าสุด** [**STeP Desktop v0.6.43**](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.43) แก้ปัญหาแชตยาวบน Antigravity ติด `CONTEXT_LIMIT` ระหว่างเรียกเครื่องมือหลายรอบ เพิ่ม Skill จัดงานอีเวนต์และจัดงานอย่างยั่งยืน พร้อมยกระดับ Skill งานสร้างสรรค์อีก 5 ชุดเป็นมาตรฐาน v3 ดูรายละเอียดใน [CHANGELOG](CHANGELOG.md#desktop-v0643-2026-11-25)
 
 ## ทำอะไรได้บ้าง
 
@@ -186,6 +186,6 @@ AI ช่วยเตรียมงานให้ตรวจต่อ ส่�
 
 ประวัติการเปลี่ยนแปลงของแต่ละรุ่นอยู่ใน [CHANGELOG](CHANGELOG.md)
 
-รุ่นที่เผยแพร่ล่าสุด [STeP Desktop v0.6.42](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.42) และ [**Harness v0.7.7**](https://github.com/iisara555/STeP-AI-Harness/releases/tag/v0.7.7) การใช้งานในหน่วยงานให้ยึดรุ่นที่ผู้ดูแลอนุมัติ
+รุ่นที่เผยแพร่ล่าสุด [STeP Desktop v0.6.43](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.43) และ [**Harness v0.7.7**](https://github.com/iisara555/STeP-AI-Harness/releases/tag/v0.7.7) การใช้งานในหน่วยงานให้ยึดรุ่นที่ผู้ดูแลอนุมัติ
 
 โค้ดเผยแพร่ภายใต้ [MIT License](LICENSE) ไฟล์บุคคลที่สามมีเงื่อนไขของตน เช่น [ภาพตราครุฑ](docs/third-party-notices/thai-garuda.md) Repository นี้เป็น public จึงไม่ใช่ที่เก็บเอกสารภายในหรือข้อมูลของผู้ใช้
