@@ -449,6 +449,48 @@ skills:
           authority: procurement-approval
           description: การคัดเลือกผู้รับจ้างระบบแสงเสียง จอ LED หรือออแกไนเซอร์
 
+  - name: event-planner-pro
+    cluster: market-creative
+    domain: creative
+    processId: creative.event
+    teams:
+      primary: [cc]
+      consumers: [crm, eic, imo, nmco, ga]
+    description: วางแผนจัดงาน Event แบบครบวงจร ตั้งแต่ Event Charter คัดเลือกสถานที่แบบถ่วงน้ำหนัก งบประมาณพร้อม Contingency Reserve ไทม์ไลน์ถอยหลัง Checklists ตาราง Master Run Sheet แผนสำรอง และประเมินผล ROI หลังจบงาน
+    intent: [create, plan, draft, evaluate]
+    triggers: [event-planner-pro, event planner, event planning, event producer, master run sheet, run sheet, venue selection matrix, weighted venue, contingency reserve, contingency matrix, catering checklist, dietary accommodation, post-event roi, vip green room, crew call, load-in, load-out, วางแผนจัดงาน, แผนจัดงาน, แผนงานอีเวนต์, แผนจัดงานครบวงจร, คัดเลือกสถานที่จัดงาน, เทียบสถานที่จัดงาน, งบประมาณจัดงาน, ไทม์ไลน์ถอยหลังจัดงาน, แผนสำรองหน้างาน, ลิสต์อุปกรณ์หน้างาน]
+    paths: ["**/event-plan*/**", "**/venue-matrix/**", "**/production-plan/**"]
+    fileTypes: [pdf, xlsx, csv, docx, md]
+    requires: [event_goal, audience_profile, budget_or_pax]
+    scope:
+      allow:
+        - สร้าง Event Charter, Weighted Venue Selection Matrix, กรอบงบประมาณแบบ PLANNING_ASSUMPTION, Backward Timeline, Master Run Sheet, AV/Catering/VIP Checklists, แผนสำรอง และกรอบ ROI
+      escalate:
+        event_concept_and_zoning:
+          skill: event-concept
+          description: ต้องการออกแบบคอนเซ็ปต์งาน ผังบูธ หรือ Signature Moment ของ STeP
+        stage_cue_sequence:
+          skill: event-run-of-show
+          description: ต้องการแตกคิวเวที จอ เสียง แสง รายวินาทีจาก Agenda จริงของ STeP
+        venue_and_av_procurement:
+          skill: tor-government-writing
+          description: ต้องการร่าง TOR จ้างสถานที่หรือออแกไนเซอร์ตามระเบียบพัสดุ
+        official_invitation:
+          skill: thai-official-documents
+          description: ต้องการร่างหนังสือเชิญ VIP หรือบันทึกข้อความทางการ
+        pii_attendee_list:
+          skill: data-privacy-compliance
+          description: เอกสารมีรายชื่อ เบอร์โทร เลขบัตร หรือข้อมูลแพ้อาหารส่วนบุคคล
+      human_only:
+        budget_and_contract_approval:
+          role: authorized-signatory
+          authority: procurement-approval
+          description: การอนุมัติงบประมาณ ลงนามสัญญาสถานที่/ผู้รับจ้าง และจัดซื้อจัดจ้าง
+        vip_protocol_and_comms:
+          role: authorized-signatory
+          authority: official-signing
+          description: ลำดับเกียรติ การเชิญ VIP การส่งข้อความจริงถึงผู้เข้าร่วม และคำสั่งด้านความปลอดภัยหน้างาน
+
   - name: sustainable-event
     cluster: market-creative
     domain: creative
@@ -458,7 +500,7 @@ skills:
       consumers: [crm, eic, imo, ga, ifu]
     description: วางแผน ออกแบบ ตรวจเช็ก และสรุปรายงานการจัดงานอย่างยั่งยืนและลดโลกร้อน (Sustainable / Low-Carbon Event) ครอบคลุมแนวทางพื้นฐาน 25 ข้อ ห่วงโซ่อุปทาน 9 หมวด คาร์บอนฟุตพรินท์งาน และรายงานผลกระทบ TSEMS
     intent: [plan, create, review, check, report, summarize, evaluate]
-    triggers: [จัดงานอย่างยั่งยืน, การจัดงานอย่างยั่งยืน, จัดงานสีเขียว, จัดงานรักษ์โลก, จัดงานลดโลกร้อน, การจัดงานแบบลดโลกร้อน, จัดสัมมนาอย่างยั่งยืน, งานสัมมนาสีเขียว, อีเวนต์อย่างยั่งยืน, อีเวนต์สีเขียว, อีเวนต์รักษ์โลก, นิทรรศการอย่างยั่งยืน, sustainable event, green event, green meeting, low carbon event, low-carbon event, carbon neutral event, carbon reduction event, net-zero event, net zero event, zero waste event, mice sustainability, จัดงานไมซ์อย่างยั่งยืน, iso 20121, tsems, t-cop, คาร์บอนฟุตพรินท์งาน, คาร์บอนฟุตพรินท์ของงาน, คาร์บอนงานอีเวนต์, คำนวณคาร์บอน, ชดเชยคาร์บอนงาน, ลดโลกร้อนงานอีเวนต์, ลดขยะงานอีเวนต์, ลดขยะงานสัมมนา, ขยะอาหารในงาน, food waste งาน, esg งานอีเวนต์, esg จัดงาน, sdgs จัดงาน, รายงานความยั่งยืนของงาน]
+    triggers: [วางแผนจัดงานอย่างยั่งยืน, วางแผนการจัดงานอย่างยั่งยืน, วางแผนจัดงานสีเขียว, วางแผนการจัดงานแบบลดโลกร้อน, จัดงานอย่างยั่งยืน, การจัดงานอย่างยั่งยืน, จัดงานสีเขียว, จัดงานรักษ์โลก, จัดงานลดโลกร้อน, การจัดงานแบบลดโลกร้อน, จัดสัมมนาอย่างยั่งยืน, งานสัมมนาสีเขียว, อีเวนต์อย่างยั่งยืน, อีเวนต์สีเขียว, อีเวนต์รักษ์โลก, นิทรรศการอย่างยั่งยืน, sustainable event, green event, green meeting, low carbon event, low-carbon event, carbon neutral event, carbon reduction event, net-zero event, net zero event, zero waste event, mice sustainability, จัดงานไมซ์อย่างยั่งยืน, iso 20121, tsems, t-cop, คาร์บอนฟุตพรินท์งาน, คาร์บอนฟุตพรินท์ของงาน, คาร์บอนงานอีเวนต์, คำนวณคาร์บอน, ชดเชยคาร์บอนงาน, ลดโลกร้อนงานอีเวนต์, ลดขยะงานอีเวนต์, ลดขยะงานสัมมนา, ขยะอาหารในงาน, food waste งาน, esg งานอีเวนต์, esg จัดงาน, sdgs จัดงาน, รายงานความยั่งยืนของงาน]
     paths: ["**/sustainable-event/**", "**/green-event/**", "**/tsems/**", "**/carbon-event/**"]
     fileTypes: [md, docx, xlsx, pdf, pptx]
     requires: [event_scope, sustainability_goal]

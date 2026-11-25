@@ -255,3 +255,175 @@ test('the compaction budget follows the connected model, within bounds', async (
   assert.equal((await compact(prompt, { ...options, budget: contextBudget({ provider: 'claude', model: '' }) })).method, 'none');
   assert.notEqual((await compact(prompt, { ...options, budget: CONTEXT_TOKENS })).method, 'none');
 });
+
+test('tool loop adopts compacted prompt so kept provider sessions continue with delta turns', async () => {
+  const store = new Store(':memory:');
+  try {
+    store.put('connection', 'c', { id: 'c', provider: 'antigravity', model: 'gemini-pro', ready: true } as Connection);
+    const session = store.create('c', 'cc');
+    session.messages = Array.from({ length: 8 }, (_, i) => ({
+      role: i % 2 ? 'assistant' : 'user',
+      text: 'Earlier turn ' + 'ก'.repeat(16_000),
+      at: new Date().toISOString(),
+    }));
+    store.save(session);
+    const harness: Harness = {
+      root: tmpdir(),
+      route: async () => ({ routingContract: { mode: 'GENERAL', authority: { status: 'ALLOW' }, mandatoryReferences: [] } }),
+      contextPolicy: () => ({ history: 'ignore', carryover: false }),
+      privacy: privacy.evaluatePrivacyGate,
+      skillMetadata: async () => null,
+      documentPrivacy: async () => null,
+      nextOutput: async () => null,
+      toolLoop: () => true,
+      tools: async () => ({
+        enabled: () => true,
+        check: async () => {},
+        readOnly: () => true,
+        execute: async req => ({ file: req.input, content: 'ข้อมูลผลลัพธ์ '.repeat(400) }),
+        outgoing: async text => text,
+      }),
+    };
+    let heldSession: unknown;
+    let heldSent = '';
+    let summaries = 0;
+    let summariesAfterFirstAnswer = 0;
+    let prefixResets = 0;
+    let toolTurns = 0;
+    const transports: string[] = [];
+    const transportRules = 'Transport instructions. '.repeat(80);
+    const service = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: tmpdir(), env: {} },
+        adapter: {
+          run: async (prompt, _connection, context) => {
+            if (context.system?.startsWith('Summarize')) {
+              summaries++;
+              if (toolTurns > 0) summariesAfterFirstAnswer++;
+              return 'Checkpoint summary.';
+            }
+            const transportSystem = (context.system || '') + transportRules;
+            const reuse = Boolean(context.session && heldSession === context.session && heldSent && prompt.startsWith(heldSent));
+            if (!reuse) {
+              if (heldSession === context.session && heldSent) prefixResets++;
+              transports.push('full');
+              const maxPromptTokens = 56_000 - tokens(transportSystem);
+              context.onFullPromptBudget?.(maxPromptTokens);
+              if (tokens(transportSystem + prompt) > 56_000) throw new ProviderPromptLimitError(maxPromptTokens);
+            } else {
+              transports.push('delta');
+            }
+            heldSession = context.session;
+            heldSent = prompt;
+            if (toolTurns < 3) {
+              const idx = toolTurns++;
+              return `\`\`\`step-tool\n{"tool":"files","input":"doc-${idx}.txt"}\n\`\`\``;
+            }
+            return 'Done';
+          },
+        },
+      }),
+      () => {},
+    );
+    await service.run(session.id, 'สรุปข้อมูลทั้งหมด', '', true, undefined, 'chat');
+    assert.ok(summaries >= 1);
+    assert.equal(summariesAfterFirstAnswer, 0);
+    assert.equal(prefixResets, 0);
+    assert.equal(toolTurns, 3);
+    assert.deepEqual(transports, ['full', 'full', 'delta', 'delta', 'delta']);
+    assert.equal(store.session(session.id).status, 'review');
+  } finally {
+    store.close();
+  }
+});
+
+test('reactive compaction recovers when a kept session resets after large tool turns', async () => {
+  const store = new Store(':memory:');
+  try {
+    store.put('connection', 'c', { id: 'c', provider: 'antigravity', model: 'gemini-pro', ready: true } as Connection);
+    const session = store.create('c', 'cc');
+    session.messages = Array.from({ length: 4 }, (_, i) => ({
+      role: i % 2 ? 'assistant' : 'user',
+      text: 'Earlier turn ' + 'ก'.repeat(4_000),
+      at: new Date().toISOString(),
+    }));
+    session.files = [
+      { name: 'first-file.txt', text: 'ส่วนต้น '.repeat(2_200), at: new Date().toISOString() },
+      { name: 'latest-file.txt', text: 'ข้อมูลล่าสุด '.repeat(2_200), at: new Date().toISOString() },
+    ];
+    store.save(session);
+    const harness: Harness = {
+      root: tmpdir(),
+      route: async () => ({ routingContract: { mode: 'GENERAL', authority: { status: 'ALLOW' }, mandatoryReferences: [] } }),
+      contextPolicy: () => ({ history: 'ignore', carryover: false }),
+      privacy: privacy.evaluatePrivacyGate,
+      skillMetadata: async () => null,
+      documentPrivacy: async () => null,
+      nextOutput: async () => null,
+      toolLoop: () => true,
+      tools: async () => ({
+        enabled: () => true,
+        check: async () => {},
+        readOnly: () => true,
+        execute: async req => ({ file: req.input, content: 'ผลลัพธ์ขนาดใหญ่ '.repeat(2_500) }),
+        outgoing: async text => text,
+      }),
+    };
+    let heldSession: unknown;
+    let heldSent = '';
+    let toolTurns = 0;
+    let droppedOnce = false;
+    let reactiveTriggeredOnReset = false;
+    const transports: string[] = [];
+    const transportRules = 'Transport instructions. '.repeat(80);
+    const service = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: tmpdir(), env: {} },
+        adapter: {
+          run: async (prompt, _connection, context) => {
+            if (context.system?.startsWith('Summarize')) return 'Checkpoint summary.';
+            if (toolTurns === 3 && !droppedOnce) {
+              droppedOnce = true;
+              heldSent = '';
+            }
+            const transportSystem = (context.system || '') + transportRules;
+            const reuse = Boolean(context.session && heldSession === context.session && heldSent && prompt.startsWith(heldSent));
+            if (!reuse) {
+              transports.push('full');
+              const maxPromptTokens = 56_000 - tokens(transportSystem);
+              context.onFullPromptBudget?.(maxPromptTokens);
+              if (tokens(transportSystem + prompt) > 56_000) {
+                if (droppedOnce) reactiveTriggeredOnReset = true;
+                throw new ProviderPromptLimitError(maxPromptTokens);
+              }
+            } else {
+              transports.push('delta');
+            }
+            heldSession = context.session;
+            heldSent = prompt;
+            if (toolTurns < 4) {
+              const idx = toolTurns++;
+              return `\`\`\`step-tool\n{"tool":"reference","input":"doc-${idx}"}\n\`\`\``;
+            }
+            assert.ok(prompt.includes('first-file.txt'));
+            assert.ok(prompt.includes('latest-file.txt'));
+            return 'Recovered and done';
+          },
+        },
+      }),
+      () => {},
+    );
+    await service.run(session.id, 'อ่านไฟล์ทั้งหมดแล้วสรุป', '', true, undefined, 'chat');
+    assert.equal(droppedOnce, true);
+    assert.equal(reactiveTriggeredOnReset, true);
+    assert.equal(toolTurns, 4);
+    assert.equal(transports.at(-1), 'delta');
+    assert.equal(store.session(session.id).status, 'review');
+  } finally {
+    store.close();
+  }
+});

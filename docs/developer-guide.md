@@ -10,11 +10,11 @@ This guide references Harness source **v0.7.7** and STeP Desktop **v0.6.42**.
 | --- | --- |
 | ทีม | **22 ทีม** |
 | กลุ่ม routing | **5 กลุ่ม** |
-| Skills | **56 Skills** |
+| Skills | **57 Skills** |
 | Playbooks | **5 Playbooks** |
 | Actions | **4 Actions** |
 
-Router มีเส้นทางเลือก Skill 55 รายการ ส่วน `step-router` เป็น routing/orchestration Skill
+Router มีเส้นทางเลือก Skill 56 รายการ ส่วน `step-router` เป็น routing/orchestration Skill
 
 ต้นทาง: [Skills](../manifest/skills.yaml) · [Router index](../manifest/router-index.yaml) · [Playbooks](../manifest/playbooks.yaml) · [Actions](../manifest/actions.yaml)
 

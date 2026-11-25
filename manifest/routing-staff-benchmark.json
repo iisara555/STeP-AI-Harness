@@ -116,6 +116,12 @@
       "ช่วยทำ cue sheet เสียงแสงจอ",
       "ทำกำหนดการเวทีพร้อมคิวพิธีกร"
     ],
+    "event-planner-pro": [
+      "ช่วยวางแผนจัดงานประชุมประจำปีครบวงจร พร้อมงบประมาณจัดงานและแผนสำรองหน้างาน",
+      "ขอ weighted venue selection matrix เทียบสถานที่จัดงาน 3 แห่ง พร้อมเกณฑ์ load-in และ load-out",
+      "ช่วยวางแผน Master Run Sheet พร้อม catering checklist และ VIP Green Room สำหรับงานสัมมนา",
+      "วางแผน event planning พร้อมไทม์ไลน์ถอยหลังจัดงาน Contingency Reserve และ post-event ROI"
+    ],
     "presentation-design": [
       "ทำสไลด์นำเสนอผู้บริหาร 10 หน้า",
       "ออกแบบ pitch deck ให้สตาร์ทอัพ",

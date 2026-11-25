@@ -1,0 +1,74 @@
+{
+  "skill": "creative-art-director",
+  "version": 1,
+  "source": "synthetic-2026-11-25",
+  "note": "Routing runs in test/skill-evals.test.js. Model output assertions are not graded in CI. No real campaign approval or CI alteration is used.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "ตอบเป็นคำ adjective กว้าง ๆ เช่น modern/premium โดยขาด Design Intent, Visual Hammer และการตรวจ Anti-AI-Slop",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-direction-visual-hammer",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยวางแผน creative direction และ visual hammer ให้แคมเปญนี้ งานเดิมยังดู AI slop เกินไป",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "creative-art-director"
+      },
+      "outputAssertions": [
+        "มี CREATIVE DIRECTION ครบ Intent, Audience -> Feeling, Personality 3 คำ, Visual Hammer, Design Language และ Avoid",
+        "ระบุ Brand Strength (STRONG/BALANCED/LIGHT) และ NEXT PRODUCTION STEP ที่ชัดเจน"
+      ]
+    },
+    {
+      "id": "positive-design-critique",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยตรวจ art direction และ critique direction ของแคมเปญนี้ งานดู AI slop ควรวางทิศทางใหม่ทางไหนดี",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "creative-art-director"
+      },
+      "outputAssertions": [
+        "ประเมินแบบ Keep / Fix First / Direction ตามเกณฑ์ Intent และ Anti-AI-Slop Review"
+      ]
+    },
+    {
+      "id": "anti-generate-image-prompt",
+      "dimension": "antiTrigger",
+      "team": "cc",
+      "prompt": "ขอ prompt สร้างภาพ photorealistic technology hero สำหรับแบนเนอร์เว็บ STeP",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "step-image-prompt",
+        "notSkill": "creative-art-director"
+      }
+    },
+    {
+      "id": "collision-designer-brief",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ช่วยจัดทำ Designer Brief สำหรับงาน Open House พร้อมแยก Deliverable และ Asset ที่ยังขาด",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "designer-brief",
+        "notSkill": "creative-art-director"
+      }
+    },
+    {
+      "id": "missing-brief-context",
+      "dimension": "missingSource",
+      "team": "cc",
+      "prompt": "ช่วยวางทิศทางภาพรวมงานออกแบบและ visual hammer แต่ยังไม่ทราบกลุ่มผู้ชม เป้าหมาย และ format ชิ้นงาน",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "creative-art-director"
+      },
+      "outputAssertions": [
+        "ไม่สรุป brand hierarchy เองและถามเฉพาะคำถามสำคัญ หรือแยกสมมติฐานที่ระบุ รอยืนยัน"
+      ]
+    }
+  ]
+}

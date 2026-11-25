@@ -18,8 +18,8 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     const integrity = await loadAndValidateManifests(resolve('manifest'));
     assert.equal(integrity.valid, true, integrity.errors.join('\n'));
     assert.equal(integrity.summary.teamsCount, 22);
-    assert.equal(integrity.summary.skillsCount, 56);
-    assert.equal(integrity.summary.routerSkillsCount, 55);
+    assert.equal(integrity.summary.skillsCount, 57);
+    assert.equal(integrity.summary.routerSkillsCount, 56);
     assert.equal(integrity.summary.clustersCount, 5);
     assert.equal(integrity.summary.playbooksCount, 5);
   });
@@ -34,7 +34,7 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     );
     const routerSkills = extractRouterSkills(routerText);
 
-    assert.equal(routerSkills.length, 55);
+    assert.equal(routerSkills.length, 56);
     for (const skill of routerSkills) {
       assert.ok(skill.cluster, `${skill.name} has no cluster`);
       assert.ok(
@@ -283,12 +283,12 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     assert.ok(imageSkill.includes('ห้าม hard-code ชื่อรุ่นโมเดลเป็น Capability Gate'));
   });
 
-  await t.test('step-image-prompt follows Standard v2 structure and meeting summary stays QMS-independent', async () => {
+  await t.test('step-image-prompt follows Standard v3 structure and meeting summary stays QMS-independent', async () => {
     const imageSkill = await readFile('skills/creative/step-image-prompt/SKILL.md', 'utf-8');
     const skillsManifest = await readFile('manifest/skills.yaml', 'utf-8');
     const routerIndex = await readFile('manifest/router-index.yaml', 'utf-8');
 
-    assert.ok(imageSkill.includes('standardVersion: 2'));
+    assert.ok(imageSkill.includes('standardVersion: 3'));
     for (const heading of [
       '## Purpose',
       '## เมื่อควรใช้',

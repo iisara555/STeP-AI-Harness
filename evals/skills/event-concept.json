@@ -1,0 +1,75 @@
+{
+  "skill": "event-concept",
+  "version": 1,
+  "source": "synthetic-2026-11-25",
+  "note": "Routing runs in test/skill-evals.test.js. Model output assertions are not graded in CI. No real venue safety sign-off or budget is fabricated.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "เสนอไอเดียลอย ๆ ไม่เชื่อม Visitor Journey เป็นโซนพื้นที่ ไม่เสนอ Signature Moment หลายทางเลือกพร้อมข้อจำกัด และสร้างงบหรือขนาดพื้นที่สมมติเอง",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-big-idea-signature",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "คิด Big idea สำหรับงาน STeP Innovation Day 3 แนวทาง พร้อมชื่องาน key message และ signature moment ที่คนจะจำได้",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "event-concept"
+      },
+      "outputAssertions": [
+        "มี Concept Statement, Rationale และตาราง Signature Moment มากกว่า 1 ทางเลือกพร้อม Trigger/Action/Outcome",
+        "ระบุสิ่งที่ต้องยืนยันกับเจ้าของงานหรือ IFU ในทุกทางเลือก"
+      ]
+    },
+    {
+      "id": "positive-exhibition-zoning",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยออกแบบคอนเซ็ปต์งานนิทรรศการและผังบูธ พร้อมเส้นทางเดินผู้เข้าร่วมสำหรับงานเปิดบ้าน",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "event-concept"
+      },
+      "outputAssertions": [
+        "เชื่อม Visitor Journey ไปยังโซนประสบการณ์เท่าที่จำเป็นโดยไม่แต่งขนาดพื้นที่จริง"
+      ]
+    },
+    {
+      "id": "anti-run-of-show",
+      "dimension": "antiTrigger",
+      "team": "cc",
+      "prompt": "ช่วยจัดทำรันคิวเวทีจากกำหนดการนี้ แยกคิวจอ คิวเสียง และคนรับผิดชอบแต่ละคิว",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "event-run-of-show",
+        "notSkill": "event-concept"
+      }
+    },
+    {
+      "id": "collision-designer-brief",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ทำบรีฟให้ดีไซเนอร์ออกแบบโปสเตอร์งานสัมมนา พร้อมตรวจ asset ที่มีแล้วและที่ยังขาด",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "designer-brief",
+        "notSkill": "event-concept"
+      }
+    },
+    {
+      "id": "missing-venue-and-budget",
+      "dimension": "missingSource",
+      "team": "cc",
+      "prompt": "ออกแบบธีมงานนิทรรศการและโซนบูธให้หน่อย แต่ยังไม่ทราบขนาดพื้นที่ งบประมาณ และจำนวนผู้เข้าร่วม",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "event-concept"
+      },
+      "outputAssertions": [
+        "ระบุ ยังไม่ระบุ หรือ รอยืนยัน ใน Project Context และ Open Questions แทนการเดาขนาดพื้นที่หรืองบประมาณ",
+        "ระบุ FM-CC-010 จาก STeP : MIS และการยืนยันพื้นที่กับ IFU"
+      ]
+    }
+  ]
+}

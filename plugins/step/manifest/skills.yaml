@@ -340,6 +340,26 @@ skills:
       mandatory: [step-writing-rule, human-approval-rule, data-classification-rule]
       optional: [naming-convention-rule, step-brand-ci-guideline]
 
+  event-planner-pro:
+    owner: cc
+    version: 0.1.0
+    domain: [creative]
+    process: [creative.event]
+    service: [creative-marketing]
+    path: skills/creative/event-planner-pro/SKILL.md
+    description: วางแผนจัดงาน Event แบบครบวงจร ตั้งแต่ Event Charter คัดเลือกสถานที่แบบถ่วงน้ำหนัก งบประมาณพร้อม Contingency Reserve ไทม์ไลน์ถอยหลัง Checklists ตาราง Master Run Sheet แผนสำรอง และประเมินผล ROI หลังจบงาน
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: []
+      reviewedAt: "2026-11-25"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: draft
+    references:
+      mandatory: [step-writing-rule, human-approval-rule, data-classification-rule]
+      optional: [step-brand-ci-guideline]
+
   sustainable-event:
     owner: cc
     version: 0.1.0
