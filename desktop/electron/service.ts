@@ -1548,6 +1548,7 @@ export class WorkService {
           !target && !options.isolatedQuestion && !textOnly && !options.draftOnly && this.harness.tools && this.harness.toolLoop?.(),
         );
         const scopedToolInstructions = toolsEnabled ? this.harness.toolInstructions?.() : undefined;
+        let preloadedResource: InstructionItem | undefined;
         if (!textOnly && skillPath && !general && !draftingTool) {
           const skillBundle = await selectSkillBundle(
             this.harness.root,
@@ -1570,7 +1571,7 @@ export class WorkService {
             });
           if (skillBundle?.preloadedText) {
             const preloadLabel = skillBundle.preloadedPaths.join(', ') || 'skill-preloaded-resources';
-            instructionItems.push({
+            preloadedResource = {
               path: preloadLabel,
               label: preloadLabel,
               text: skillBundle.preloadedText,
@@ -1580,7 +1581,8 @@ export class WorkService {
                 ? `skill(input="${skillId}", args={"resources":${JSON.stringify(skillBundle.preloadedPaths)}})`
                 : undefined,
               includeInSources: false,
-            });
+            };
+            instructionItems.push(preloadedResource);
           }
         }
         // The Web tab's rules go only to conversations that show web-page work; others get a pointer to tool_describe.
@@ -1681,7 +1683,19 @@ export class WorkService {
                 ].join('\n'),
               ]
             : [];
-          const selectedInstructions = [...included.map(item => item.text), ...deferredBlock].filter(Boolean);
+          const preloadWasDeferred = preloadedResource && deferred.includes(preloadedResource);
+          const selectedInstructions = [
+            ...included.map(item =>
+              preloadWasDeferred && item.label === 'skill-resource-manifest'
+                ? item.text
+                    .split('\n')
+                    .filter(line => !line.startsWith('Resources marked [PRELOADED]'))
+                    .map(line => line.replace(/ \[PRELOADED\]$/, ''))
+                    .join('\n')
+                : item.text,
+            ),
+            ...deferredBlock,
+          ].filter(Boolean);
           const system = [...systemPrefix, selectedInstructions.length && section('skill_instructions', selectedInstructions.join('\n\n'))]
             .filter(Boolean)
             .join('\n\n');

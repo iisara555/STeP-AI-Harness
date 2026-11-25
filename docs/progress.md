@@ -50,6 +50,8 @@ _Last updated: 2026-11-25_
 
 ## Latest release
 
+- **Desktop v0.6.44 prepared (2026-11-25)**. Includes #418 with Antigravity UTF-8 and token limits, intact STeP evidence on retry, compatible provider rate-limit handling and chronological checkpoint requests. Harness remains 0.7.7. Live Antigravity acceptance remains open. PRs #419–#421 remain in review.
+
 - **Desktop v0.6.43 prepared (2026-11-25)**: combines #415 (Antigravity `CONTEXT_LIMIT` multi-turn compaction/session fix), #414 (MIS access & internal channels guidance), #412 (new `event-planner-pro` draft Skill), #413 (5 Creative & Event Skills upgraded to Standard v3), and #416 (new `sustainable-event` draft Skill; 57 Skills / 56 router entries total). Harness remains 0.7.7. Merge after exact-head CI passes, then publish via `desktop-release.yml` on `main` with `publish=true`. Live Antigravity verification and CC/QS review of draft event Skills remain open above.
 - **Desktop v0.6.42 published (2026-11-24)**. Waiting marks follow thinking, reading, searching or writing. Status labels and streamed draft text stay steady across tool turns. Synthetic Windows and macOS checks passed. A live Gemini run on Windows remains open. [Release](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.42)
 - **Desktop v0.6.41 published (2026-11-23)**. Adds long-task recovery, the context gauge, Antigravity quota reporting and overflow retry, immediate answer correction and the Windows development icon fix. Live Antigravity checks on the employee PC remain open. [Release](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.41)

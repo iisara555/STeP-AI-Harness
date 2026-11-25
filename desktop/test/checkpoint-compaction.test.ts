@@ -351,6 +351,17 @@ test('reactive compaction trims memory and preferences but keeps organization ev
   );
 });
 
+test('an earlier user request repeated later stays after the instruction it supersedes', () => {
+  const formal = 'Please return to a formal and consistently professional tone throughout the proposal.';
+  const friendly = 'Please change the tone throughout the proposal so it feels informal and friendly.';
+  const facts = preserveUserFacts(
+    [formal, friendly, formal].map(text => ({ role: 'user', text })),
+    '',
+    300,
+  );
+  assert.ok(facts.includes(`- ${friendly}\n- ${formal}`));
+});
+
 test('preserveUserFacts spreads remaining budget fairly across captured user requests omitted by the summary', () => {
   const turns = [
     {

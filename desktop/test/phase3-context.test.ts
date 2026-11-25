@@ -617,7 +617,7 @@ test('Antigravity recovery fits the byte limit even when slimming the system sat
         documentPrivacy: async () => null,
         nextOutput: async () => null,
       };
-      const attempts: { bytes: number; total: number; systemTokens: number }[] = [];
+      const attempts: { bytes: number; total: number; systemTokens: number; preloaded: boolean }[] = [];
       let tokenLimit = 0;
       const service = new WorkService(
         store,
@@ -632,7 +632,7 @@ test('Antigravity recovery fits the byte limit even when slimming the system sat
               const bytes = Buffer.byteLength(prompt, 'utf8');
               const systemTokens = tokens(system);
               if (!attempts.length) tokenLimit = total + (tokenOverflow ? -400 : 400);
-              attempts.push({ bytes, total, systemTokens });
+              attempts.push({ bytes, total, systemTokens, preloaded: system.includes('[PRELOADED]') });
               if (total > tokenLimit || bytes > ANTIGRAVITY_MAX_USER_INPUT_BYTES)
                 throw new ProviderPromptLimitError(tokenLimit - systemTokens, false, ANTIGRAVITY_MAX_USER_INPUT_BYTES);
               assert.match(prompt, /สรุปลำดับงานสังเคราะห์/);
@@ -647,6 +647,8 @@ test('Antigravity recovery fits the byte limit even when slimming the system sat
       assert.ok(attempts[0].bytes > ANTIGRAVITY_MAX_USER_INPUT_BYTES);
       assert.equal(attempts[0].total > tokenLimit, tokenOverflow);
       assert.ok(attempts[1].systemTokens < attempts[0].systemTokens);
+      assert.equal(attempts[0].preloaded, true);
+      assert.equal(attempts[1].preloaded, false);
       assert.ok(attempts[1].bytes <= ANTIGRAVITY_MAX_USER_INPUT_BYTES);
       assert.ok(attempts[1].total <= tokenLimit);
       assert.equal(store.session(session.id).status, 'review');

@@ -6,6 +6,10 @@ export type ReleaseNote = { version: string; items: () => string[] };
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '0.6.44',
+    items: () => [t('Antigravity ตรวจขนาดข้อความก่อนส่ง และเก็บข้อความอ้างอิงจากเอกสาร STeP ไว้เมื่อย่อบริบท')],
+  },
+  {
     version: '0.6.43',
     items: () => [
       t('แก้ปัญหาแชตยาวบน Antigravity ติด CONTEXT_LIMIT ระหว่างเรียกเครื่องมือหลายรอบ โดยคงบริบทงานและไฟล์ตั้งต้นได้ต่อเนื่องขึ้น'),

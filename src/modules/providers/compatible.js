@@ -45,6 +45,8 @@ async function failureCode(response) {
     )
   )
     return "PROVIDER_QUOTA";
+  if (response.status === 429) return "PROVIDER_RATE_LIMIT";
+  if (response.status >= 500) return "PROVIDER_UNAVAILABLE";
   if (
     /\b(context_length_exceeded|prompt_too_long)\b/.test(code) ||
     /(?:context.{0,25}(?:length|window|limit|exceed)|(?:prompt|input|request|message).{0,25}(?:too long|too large|exceed|token limit)|maximum.{0,20}(?:context|tokens?)|too many tokens)/i.test(
@@ -52,11 +54,7 @@ async function failureCode(response) {
     )
   )
     return "PROMPT_TOO_LONG";
-  return response.status === 429
-    ? "PROVIDER_RATE_LIMIT"
-    : response.status >= 500
-      ? "PROVIDER_UNAVAILABLE"
-      : "PROVIDER_REQUEST_FAILED";
+  return "PROVIDER_REQUEST_FAILED";
 }
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 function imageParts(images, protocol) {
@@ -265,7 +263,7 @@ export async function compatibleRun(
     if (
       sentReasoningEffort &&
       attempt === 0 &&
-      response.status === 400 &&
+      [400, 422].includes(response.status) &&
       code === "PROVIDER_REQUEST_FAILED"
     ) {
       delete body.reasoning_effort;

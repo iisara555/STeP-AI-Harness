@@ -229,6 +229,17 @@ test("compatible profiles deny unapproved, credential-bearing and remote plainte
       /PROMPT_TOO_LONG/,
     );
   }
+  for (const [status, message, expected] of [
+    [429, "Input token limit exceeded for this minute", /PROVIDER_RATE_LIMIT/],
+    [503, "Request exceeds temporary gateway capacity", /PROVIDER_UNAVAILABLE/],
+  ]) {
+    await assert.rejects(
+      compatibleRun("Text", profile, {}, async () =>
+        Response.json({ error: { message } }, { status }),
+      ),
+      expected,
+    );
+  }
   await assert.rejects(
     compatibleRun("Text", profile, { webSearch: true }, fetcher),
     /CAPABILITY_UNSUPPORTED/,
@@ -249,7 +260,7 @@ test("compatible profiles deny unapproved, credential-bearing and remote plainte
               message: "Unknown parameter: reasoning_effort",
             },
           }),
-          { status: 400, headers: { "content-type": "application/json" } },
+          { status: 422, headers: { "content-type": "application/json" } },
         );
       }
       return new Response(

@@ -158,17 +158,17 @@ export function preserveUserFacts(turns: HistoryTurn[], summary: string, limit: 
   // Spread any remaining budget fairly across distinct substantive user requests (first + up to 5 recent),
   // mirroring agy's CaptureUserRequests so short follow-ups do not shrink a detailed initial instruction.
   const requirementSet = new Set(requirements);
-  const rawRequests: string[] = [];
-  const seenRequests = new Set<string>();
+  const rawRequests = new Set<string>();
   for (const turn of turns) {
     if (turn.role !== 'user') continue;
     const trimmed = turn.text.trim();
-    if (trimmed.length < 8 || seenRequests.has(trimmed) || requirementSet.has(trimmed) || summary.includes(trimmed)) continue;
-    seenRequests.add(trimmed);
-    rawRequests.push(trimmed);
+    if (trimmed.length < 8 || requirementSet.has(trimmed) || summary.includes(trimmed)) continue;
+    rawRequests.delete(trimmed);
+    rawRequests.add(trimmed);
   }
-  if (rawRequests.length) {
-    const picked = rawRequests.length <= 6 ? rawRequests : [rawRequests[0], ...rawRequests.slice(-5)];
+  if (rawRequests.size) {
+    const requests = [...rawRequests];
+    const picked = requests.length <= 6 ? requests : [requests[0], ...requests.slice(-5)];
     const label = 'Earlier user requests (verbatim excerpts; apply later changes):';
     const remaining = limit - tokens(sections.join('\n\n') + (sections.length ? '\n\n' : '') + label + '\n- ');
     if (remaining > 32) {
