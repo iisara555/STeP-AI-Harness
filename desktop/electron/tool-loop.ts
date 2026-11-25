@@ -477,7 +477,12 @@ export class ToolLoop {
    * Run the task. `seed` holds static reads from an earlier attempt that stopped: they run first, through the same gates,
    * consent and masking as any request, without a model turn, so a resumed task does not spend turns reading them again.
    */
-  async run(prompt: string, provider: (prompt: string) => Promise<string>, signal: AbortSignal, seed: LoopRequest[] = []) {
+  async run(
+    prompt: string,
+    provider: (prompt: string, onSent?: (prompt: string) => void) => Promise<string>,
+    signal: AbortSignal,
+    seed: LoopRequest[] = [],
+  ) {
     let history = '';
     this.running = signal;
     this.bridged = 0;
@@ -538,7 +543,16 @@ export class ToolLoop {
           finish('deadline', FINAL_TURN);
         }
         const next = prompt + history;
-        const result = await provider(next);
+        let sent = next;
+        const result = await provider(next, actual => {
+          sent = actual;
+        });
+        // Adopt a compacted prompt as the loop's new base so kept provider sessions keep matching by prefix.
+        if (sent !== next) {
+          prompt = sent;
+          history = '';
+          foldedAt = 0;
+        }
         // Adapters may stream independently; reject oversized completed replies before parsing or effects.
         if (result.length > MAX_REPLY_CHARS) throw new Error('PROVIDER_OUTPUT_LIMIT');
         const requests = loopRequests(result);

@@ -128,6 +128,181 @@ const render = (items: Part[]) => items.map(p => section(p.tag, p.text)).join('\
 const preview = (text: string, limit: number) =>
   text.length > limit ? text.slice(0, limit) + '\n[Compacted preview; full content remains in local session/tool cache.]' : text;
 
+const PROTECTED_TAGS = new Set([
+  'routing_contract',
+  'task_state',
+  'current_message',
+  'earlier_request',
+  'revision_requests',
+  'source_document',
+  'current_draft',
+  'organization_knowledge',
+  'web_evidence',
+]);
+
+function dedupeOutside(raw: string) {
+  const seen = new Set<string>();
+  const lines: string[] = [];
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    lines.push(line);
+  }
+  return lines.join('\n');
+}
+
+function shortenToolResultText(text: string, limitChars: number, id?: string) {
+  if (text.length <= limitChars) return text;
+  const note = id
+    ? `\n[Compacted preview; call read_remaining with id ${id} for full output.]`
+    : '\n[Compacted preview; full content remains in local session/tool cache.]';
+  return text.slice(0, Math.max(0, limitChars)) + note;
+}
+
+function rewriteToolResults(body: string, limitChars: number) {
+  try {
+    const results = JSON.parse(body);
+    if (!Array.isArray(results)) return body;
+    return JSON.stringify(
+      results.map(r =>
+        r && typeof r === 'object' && typeof r.text === 'string'
+          ? { ...r, text: shortenToolResultText(r.text, limitChars, typeof r.id === 'string' ? r.id : undefined) }
+          : r,
+      ),
+    ).replace(/</g, '\\u003c');
+  } catch {
+    return body;
+  }
+}
+
+function maxToolResultTextLength(partsList: Part[]) {
+  let max = 0;
+  for (const p of partsList) {
+    if (p.tag !== 'tool_results') continue;
+    try {
+      const rows = JSON.parse(p.text);
+      if (!Array.isArray(rows)) continue;
+      for (const r of rows) if (r && typeof r.text === 'string' && r.text.length > max) max = r.text.length;
+    } catch {
+      /* Ignore non-JSON tool_results. */
+    }
+  }
+  return max;
+}
+
+/**
+ * Staged fallback trimming for tight prompt budgets (e.g., Antigravity's 56k first-message limit after a session reset).
+ * Never shortens protected task/governance/source tags or the `<conversation_files>` inventory.
+ */
+function trimToFit(items: Part[], limit: number, buildFor: (parts: Part[]) => string, system: string): Part[] {
+  const sizeOf = (list: Part[]) => tokens(system + buildFor(list));
+  if (sizeOf(items) <= limit) return items;
+
+  let work = items.map(p => ({ ...p }));
+
+  // Stage 1: Earlier tool turns (keep latest <tool_history> and <tool_results> intact first).
+  const lastHistoryIdx = work.map(p => p.tag).lastIndexOf('tool_history');
+  const lastResultIdx = work.map(p => p.tag).lastIndexOf('tool_results');
+  for (const [index, p] of work.entries()) {
+    if (PROTECTED_TAGS.has(p.tag)) continue;
+    if (p.tag === 'tool_history' && index !== lastHistoryIdx) p.text = preview(p.text, 250);
+    if (p.tag === 'tool_results' && index !== lastResultIdx) p.text = rewriteToolResults(p.text, 120);
+  }
+  if (sizeOf(work) <= limit) return work;
+
+  const resultIndices = work.flatMap((p, i) => (p.tag === 'tool_results' ? [i] : []));
+  if (resultIndices.length > 2) {
+    const secondLastResultIdx = resultIndices[resultIndices.length - 2];
+    const keepFrom =
+      secondLastResultIdx > 0 && work[secondLastResultIdx - 1].tag === 'tool_history' ? secondLastResultIdx - 1 : secondLastResultIdx;
+    const firstToolIdx = work.findIndex(p => p.tag === 'tool_history' || p.tag === 'tool_results');
+    const droppedTurns = resultIndices.filter(i => i < keepFrom).length;
+    const kept: Part[] = [];
+    for (const [index, p] of work.entries()) {
+      if (index === firstToolIdx) {
+        kept.push({
+          tag: 'tool_history',
+          text: JSON.stringify({
+            omittedEarlierToolTurns: droppedTurns,
+            note: 'Earlier tool turns compacted; cached outputs remain available via read_remaining.',
+          }),
+        });
+      }
+      if ((p.tag === 'tool_history' || p.tag === 'tool_results') && index < keepFrom) continue;
+      kept.push(p);
+    }
+    work = kept;
+    if (sizeOf(work) <= limit) return work;
+  }
+
+  // Stage 2: Latest tool turn(s).
+  for (const p of work) {
+    if (p.tag === 'tool_history') p.text = preview(p.text, 500);
+  }
+  if (sizeOf(work) <= limit) return work;
+
+  const maxRowLen = maxToolResultTextLength(work);
+  if (maxRowLen > 0) {
+    const withResultCap = (cap: number) => work.map(p => (p.tag === 'tool_results' ? { ...p, text: rewriteToolResults(p.text, cap) } : p));
+    if (sizeOf(withResultCap(0)) <= limit) {
+      let low = 0;
+      let high = maxRowLen;
+      while (low < high) {
+        const mid = Math.ceil((low + high) / 2);
+        if (sizeOf(withResultCap(mid)) <= limit) low = mid;
+        else high = mid - 1;
+      }
+      return withResultCap(low);
+    }
+    work = withResultCap(0);
+  }
+
+  // Stage 3: <conversation_files> only (never <source_document>), preserving chunk 0 (the file inventory).
+  const filePart = work.find(p => p.tag === 'conversation_files');
+  if (!filePart || !filePart.text) return work;
+  const chunks = filePart.text.split(/\n--- /);
+  if (chunks.length < 2) return work;
+
+  for (let i = 1; i < chunks.length - 1; i++) {
+    const nl = chunks[i].indexOf('\n');
+    chunks[i] = nl === -1 ? chunks[i] : chunks[i].slice(0, nl + 1) + preview(chunks[i].slice(nl + 1), 300);
+  }
+  filePart.text = chunks.join('\n--- ');
+  if (sizeOf(work) <= limit) return work;
+
+  const lastIdx = chunks.length - 1;
+  const lastChunk = chunks[lastIdx];
+  const nl = lastChunk.indexOf('\n');
+  const lastHeader = nl === -1 ? lastChunk : lastChunk.slice(0, nl + 1);
+  const lastBody = nl === -1 ? '' : lastChunk.slice(nl + 1);
+  const setLastCap = (cap: number) => {
+    const nextChunks = [...chunks];
+    nextChunks[lastIdx] = lastHeader + preview(lastBody, cap);
+    filePart.text = nextChunks.join('\n--- ');
+  };
+  setLastCap(0);
+  if (sizeOf(work) > limit && chunks.length > 2) {
+    for (let i = 1; i < chunks.length - 1; i++) {
+      const idx = chunks[i].indexOf('\n');
+      chunks[i] = idx === -1 ? chunks[i] : chunks[i].slice(0, idx);
+    }
+    setLastCap(0);
+  }
+  if (sizeOf(work) <= limit && lastBody.length > 0) {
+    let low = 0;
+    let high = lastBody.length;
+    while (low < high) {
+      const mid = Math.ceil((low + high) / 2);
+      setLastCap(mid);
+      if (sizeOf(work) <= limit) low = mid;
+      else high = mid - 1;
+    }
+    setLastCap(low);
+  }
+  return work;
+}
+
 /**
  * The checkpoint a summary call writes, as fixed sections (learned from OpenCode's structured compaction). A fixed shape
  * keeps what document and finance work depends on (exact figures, regulation clauses, the employee's instructions) from
@@ -172,8 +347,8 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
   await options.hook?.('pre_compact', before, before);
   let items = parts(prompt).filter(p => p.tag !== 'task_state');
   const target = options.reactive ? Math.min(budget, before - 1) : budget;
-  // Keep non-tagged host text verbatim (including retrieval citation requirements).
-  const outside = prompt.replace(/<([a-z_]+)>\n[\s\S]*?\n<\/\1>/g, '').trim();
+  // Keep unique non-tagged host text verbatim (including retrieval citation requirements) while dropping repeated loop lines.
+  const outside = dedupeOutside(prompt.replace(/<([a-z_]+)>\n[\s\S]*?\n<\/\1>/g, '').trim());
   const lastResult = items.map(p => p.tag).lastIndexOf('tool_results');
   for (const [index, p] of items.entries()) {
     if (p.tag === 'conversation_files') {
@@ -193,7 +368,8 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
       }
     }
   }
-  const build = () => render(items) + '\n\n' + outside + '\n\n' + section('task_state', options.state);
+  const buildFor = (list: Part[]) => render(list) + '\n\n' + outside + '\n\n' + section('task_state', options.state);
+  const build = () => buildFor(items);
   let value = build();
   let method: CompactResult['method'] = 'micro';
   let checkpoint: SummaryCheckpoint | undefined;
@@ -209,12 +385,17 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
       // Rebuild the summary once. The full, masked history keeps checkpoint hashes stable across tool turns.
       items = items.filter(part => part.tag !== 'context_summary');
       conversation.text = '[]';
+      const minHistoryRoom = Math.min(3000, Math.floor(target * 0.25));
+      if (target - tokens(options.system + build()) < minHistoryRoom) {
+        items = trimToFit(items, Math.max(0, target - minHistoryRoom), buildFor, options.system);
+      }
+      const trimmedConversation = items.find(part => part.tag === 'conversation')!;
       const roomForHistory = target - tokens(options.system + build());
       if (roomForHistory <= 0) throw new Error('CONTEXT_LIMIT');
 
       const recentCount = Math.min(2, messages.length);
       let cut = messages.length - recentCount;
-      conversation.text = JSON.stringify(messages.slice(cut));
+      trimmedConversation.text = JSON.stringify(messages.slice(cut));
       let room = Math.min(Math.floor(budget * RECENT_SHARE), RECENT_TOKENS, target - SUMMARY_RESERVE - tokens(options.system + build()));
       while (cut > 1) {
         const size = tokens(JSON.stringify(messages[cut - 1]));
@@ -259,15 +440,19 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
       }
 
       const recent = messages.slice(cut);
-      conversation.text = JSON.stringify(recent);
+      trimmedConversation.text = JSON.stringify(recent);
       value = build();
       if (recent.length && tokens(options.system + value) > target) {
-        conversation.text = '[]';
+        trimmedConversation.text = '[]';
         const recentBudget = target - tokens(options.system + build());
-        conversation.text = JSON.stringify(recentPreview(recent, recentBudget));
+        trimmedConversation.text = JSON.stringify(recentPreview(recent, recentBudget));
         value = build();
       }
     }
+  }
+  if (tokens(options.system + value) > target) {
+    items = trimToFit(items, target, buildFor, options.system);
+    value = build();
   }
   const after = tokens(options.system + value);
   if (after > budget || (options.reactive && after >= before)) throw new Error('CONTEXT_LIMIT');

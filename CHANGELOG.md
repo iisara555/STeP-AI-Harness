@@ -6,6 +6,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Desktop: แก้ปัญหา `CONTEXT_LIMIT` ระหว่างการทำงานหลายรอบบน Antigravity เมื่อแชตมีประวัติหรือไฟล์สะสมเกินเพดานข้อความแรก โดยให้รอบเครื่องมือใช้ข้อความที่ย่อแล้วเป็นฐานต่อเนื่องไม่หลุด session ทุกรอบ และย่อผลเครื่องมือเก่า/ไฟล์แนบในแชตเพิ่มเติมเมื่อจำเป็นโดยคงคำขอ ไฟล์ตั้งต้น และรหัสอ้างอิงไว้ครบ
 - Desktop distribution: GitHub Actions checks Windows and macOS installer trust and integrity before publishing. A separate workflow builds and tests the Windows x64 MSIX for submission through Partner Center.
 - Developer tooling: เพิ่ม Skill และตัวตรวจข้อมูลออฟไลน์เพื่อทบทวนรายการนำเข้าจาก MIS, Gmail และ Google Sheets ก่อนอัปเดตคลังความรู้
 - อัปเดตบน Windows ครั้งแรกหลังย้ายตัวอัปเดตไปโฟลเดอร์ `Tools` ไม่ขึ้นข้อความ "The batch file cannot be found." ตอนปิดหน้าต่างอีก ไฟล์ `Update-STeP-AI` เดิมที่หน้าแรกจะพาไปตัวอัปเดตใหม่ และถูกลบให้เองในการอัปเดตครั้งถัดไป

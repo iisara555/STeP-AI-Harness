@@ -1766,7 +1766,13 @@ export class WorkService {
         // step_host bridge; each call runs through the same tool loop, gates and masking as a step-tool request.
         let bridgeLoop: ToolLoop | undefined;
         const bridgeOn = connection.provider === 'antigravity' && Boolean(this.harness.antigravityBridge?.());
-        const callProvider = async (nextPrompt: string, selectedRuntime = runtime, search = false, analysisImage?: VisionInput) => {
+        const callProvider = async (
+          nextPrompt: string,
+          selectedRuntime = runtime,
+          search = false,
+          analysisImage?: VisionInput,
+          onSent?: (prompt: string) => void,
+        ) => {
           if (!search && !analysisImage) nextPrompt = await compactPrompt(nextPrompt);
           const originalPrompt = nextPrompt;
           const continueTor = !search && !analysisImage && draftingTool?.id === 'tor' && connection.maxOutputTokens === undefined;
@@ -1878,7 +1884,10 @@ export class WorkService {
               if (search && (searchFailed || !completed || !answer.trim())) throw new Error('WEB_SEARCH_UNAVAILABLE');
               if (partialTor && repeatedTorContinuation(partialTor, answer)) throw new Error('DOCUMENT_OUTPUT_INVALID');
               call.outcome = 'completed';
-              if (!search && !analysisImage) progressed();
+              if (!search && !analysisImage) {
+                if (!partialTor) onSent?.(nextPrompt);
+                progressed();
+              }
               return partialTor + answer;
             } catch (error) {
               call.outcome = 'error';
@@ -2132,7 +2141,12 @@ export class WorkService {
             },
           });
           result = await bridgeLoop
-            .run(prompt, next => callProvider(next), controller.signal, resume?.step === index ? resumeSeed : [])
+            .run(
+              prompt,
+              (next, onSent) => callProvider(next, runtime, false, undefined, onSent),
+              controller.signal,
+              resume?.step === index ? resumeSeed : [],
+            )
             .finally(() => {
               stepTrace.loop = { ...bridgeLoop!.stats };
               return providerSession.closeAndWait();
