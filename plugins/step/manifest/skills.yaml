@@ -340,6 +340,26 @@ skills:
       mandatory: [step-writing-rule, human-approval-rule, data-classification-rule]
       optional: [naming-convention-rule, step-brand-ci-guideline]
 
+  sustainable-event:
+    owner: cc
+    version: 0.1.0
+    domain: [creative]
+    process: [creative.event]
+    service: [creative-marketing]
+    path: skills/creative/sustainable-event/SKILL.md
+    description: วางแผน ออกแบบ ตรวจเช็ก และสรุปรายงานการจัดงานอย่างยั่งยืนและลดโลกร้อน (Sustainable / Low-Carbon Event) ตามกรอบ TBL, UN SDGs, BCG/ESG, แนวทางพื้นฐาน 25 ข้อ, การคุมห่วงโซ่อุปทาน 9 หมวด, การเก็บข้อมูลคาร์บอน 3 Scope และรายงานผลกระทบ TSEMS โดยไม่เดาค่า Emission Factor หรือรับรองความยั่งยืนแทนผู้มีอำนาจ
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: []
+      reviewedAt: "2026-11-25"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: draft
+    references:
+      mandatory: [step-writing-rule, human-approval-rule, data-classification-rule]
+      optional: []
+
   presentation-design:
     owner: cc
     version: 2.0.0

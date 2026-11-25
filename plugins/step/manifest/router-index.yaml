@@ -449,6 +449,59 @@ skills:
           authority: procurement-approval
           description: การคัดเลือกผู้รับจ้างระบบแสงเสียง จอ LED หรือออแกไนเซอร์
 
+  - name: sustainable-event
+    cluster: market-creative
+    domain: creative
+    processId: creative.event
+    teams:
+      primary: [cc]
+      consumers: [crm, eic, imo, ga, ifu]
+    description: วางแผน ออกแบบ ตรวจเช็ก และสรุปรายงานการจัดงานอย่างยั่งยืนและลดโลกร้อน (Sustainable / Low-Carbon Event) ครอบคลุมแนวทางพื้นฐาน 25 ข้อ ห่วงโซ่อุปทาน 9 หมวด คาร์บอนฟุตพรินท์งาน และรายงานผลกระทบ TSEMS
+    intent: [plan, create, review, check, report, summarize, evaluate]
+    triggers: [จัดงานอย่างยั่งยืน, การจัดงานอย่างยั่งยืน, จัดงานสีเขียว, จัดงานรักษ์โลก, จัดงานลดโลกร้อน, การจัดงานแบบลดโลกร้อน, จัดสัมมนาอย่างยั่งยืน, งานสัมมนาสีเขียว, อีเวนต์อย่างยั่งยืน, อีเวนต์สีเขียว, อีเวนต์รักษ์โลก, นิทรรศการอย่างยั่งยืน, sustainable event, green event, green meeting, low carbon event, low-carbon event, carbon neutral event, carbon reduction event, net-zero event, net zero event, zero waste event, mice sustainability, จัดงานไมซ์อย่างยั่งยืน, iso 20121, tsems, t-cop, คาร์บอนฟุตพรินท์งาน, คาร์บอนฟุตพรินท์ของงาน, คาร์บอนงานอีเวนต์, คำนวณคาร์บอน, ชดเชยคาร์บอนงาน, ลดโลกร้อนงานอีเวนต์, ลดขยะงานอีเวนต์, ลดขยะงานสัมมนา, ขยะอาหารในงาน, food waste งาน, esg งานอีเวนต์, esg จัดงาน, sdgs จัดงาน, รายงานความยั่งยืนของงาน]
+    paths: ["**/sustainable-event/**", "**/green-event/**", "**/tsems/**", "**/carbon-event/**"]
+    fileTypes: [md, docx, xlsx, pdf, pptx]
+    requires: [event_scope, sustainability_goal]
+    scope:
+      allow:
+        - ร่างนโยบายและแผนจัดงานอย่างยั่งยืนตามกรอบ TBL, UN SDGs, BCG/ESG และแนวทางพื้นฐาน 25 ข้อ
+        - จัดทำเช็กลิสต์คุมห่วงโซ่อุปทาน 8 ขั้น สถานที่/ที่พัก Design for All การเดินทาง อาหารและภูมิแพ้ นิทรรศการ และความเสี่ยง CSR
+        - จัดลำดับมาตรการด้วย Cost vs. Impact Matrix และเตรียมตารางเก็บข้อมูลคาร์บอน Scope 1/2/3 หรือ 5 หมวดลดการปล่อย
+        - ร่างโครงสร้างรายงานผลกระทบหลังงาน 3 มิติตามกรอบ TSEMS พร้อมระบุช่องว่างข้อมูลที่ต้องยืนยัน
+      escalate:
+        event_concept_and_theme:
+          skill: event-concept
+          description: ต้องการออกแบบธีมงาน Big Idea ผังบูธ และเส้นทางผู้เข้าร่วมโดยรวม
+        stage_sequence_and_cues:
+          skill: event-run-of-show
+          description: ต้องการทำตารางรันคิวเวที ลำดับคิวแสง เสียง จอ นาทีต่อนาที
+        formal_procurement_tor:
+          skill: tor-government-writing
+          description: ต้องการร่างเอกสาร TOR จัดซื้อจัดจ้างสถานที่ ออแกไนเซอร์ หรือบริการจัดเลี้ยงตามระเบียบพัสดุ
+        pr_copy_and_captions:
+          skill: step-writing
+          description: ต้องการเขียนข่าวประชาสัมพันธ์ จดหมายเชิญ หรือแคปชันสื่อสารทั่วไป
+        attendee_health_or_travel_pii:
+          skill: data-privacy-compliance
+          description: เอกสารมีข้อมูลส่วนบุคคล รายชื่อผู้แพ้อาหาร หรือข้อมูลการเดินทางรายบุคคลที่ต้องคัดกรอง PDPA
+      human_only:
+        sustainability_budget_and_offsets:
+          role: afp-finance-head
+          authority: budget-allocation
+          description: การอนุมัติงบประมาณจัดงานหรืองบซื้อคาร์บอนเครดิตเพื่อชดเชยการปล่อยก๊าซเรือนกระจก
+        green_vendor_selection:
+          role: procurement-committee
+          authority: procurement-approval
+          description: การคัดเลือกหรือตัดสินผู้รับจ้างสถานที่ จัดเลี้ยง หรือออแกไนเซอร์
+        official_sustainability_claim:
+          role: authorized-signatory
+          authority: official-signing
+          description: การประกาศนโยบายอย่างเป็นทางการ การยื่นขอรับรอง Carbon Neutral / TSEMS / ISO 20121 หรือการเผยแพร่คำรับรองในนามหน่วยงาน
+        csr_and_contract_liability:
+          role: human-legal-officer
+          authority: legal-advice
+          description: การพิจารณาข้อกฎหมาย สัญญาค่าปรับผู้รับจ้าง ความรับผิดจากกิจกรรม CSR หรือการบริจาคอาหารส่วนเกิน
+
   - name: presentation-design
     cluster: market-creative
     domain: creative

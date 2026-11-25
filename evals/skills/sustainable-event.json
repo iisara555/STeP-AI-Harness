@@ -1,0 +1,80 @@
+{
+  "skill": "sustainable-event",
+  "version": 1,
+  "source": "authored-2026-11-25-from-tceb-mice-sustainability-curriculum",
+  "note": "Routing expectations run in test/skill-evals.test.js. outputAssertions are graded on model output (with Skill vs without Skill); they are not run in CI.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "ให้คำแนะนำทั่วไปอย่างผิวเผิน เช่น ลดพลาสติกหรือแยกขยะ โดยไม่ครอบคลุมแนวทางพื้นฐาน 25 ข้อ การคุมผู้ให้บริการ 8 ขั้นใน RFP/BEO เกณฑ์ Design for All การจัดการภูมิแพ้อาหาร 6 ขั้น การจัดลำดับด้วย Cost vs. Impact Matrix สับสนระดับ Carbon Reduction / Carbon Neutral / Net-Zero Event (เสี่ยง greenwashing) และมักเดาค่า Emission Factor เองแทนการติดป้าย NEED-SOURCE",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "se-pos-plan",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยวางแผนจัดงานอย่างยั่งยืนสำหรับสัมมนา 200 คน พร้อมเช็กลิสต์ลดขยะและนโยบายสีเขียว",
+      "expect": { "mode": "SKILL", "skill": "sustainable-event", "tier": "HIGH" },
+      "outputAssertions": [
+        "เสนอระดับความยั่งยืนที่เหมาะสมพร้อมแยก Fact / Assumption / Missing Data ชัดเจน",
+        "ครอบคลุม Event Sustainability Policy Statement (อย่างน้อย 5 พันธกิจ), UN SDGs/ESG, แนวทางพื้นฐาน 25 ข้อ และลำดับขั้นการจัดการขยะ",
+        "จัดลำดับความสำคัญด้วย Cost vs. Impact Matrix และระบุเงื่อนไขคุมผู้ให้บริการ (RFP/BEO), การจัดการภูมิแพ้อาหาร 6 ขั้น และจุดอนุมัติของมนุษย์"
+      ]
+    },
+    {
+      "id": "se-pos-carbon-tsems",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยทำตารางเก็บข้อมูลคาร์บอนฟุตพรินท์ของงานและสรุปรายงานความยั่งยืนของงานแบบ TSEMS",
+      "expect": { "mode": "SKILL", "skill": "sustainable-event", "tier": "HIGH" },
+      "outputAssertions": [
+        "แยกตารางเก็บข้อมูลกิจกรรมตาม 5 หมวดลดการปล่อยของ TCEB หรือ Scope 1/2/3 ตามแนวทาง อบก./HCMI พร้อมหน่วยวัดและผู้รับผิดชอบ",
+        "ไม่แต่งค่า Emission Factor เอง โดยติดป้าย NEED-SOURCE และชี้ไปยังพอร์ทัล TCEB/อบก.",
+        "จัดโครงสร้างรายงานผลกระทบ 3 มิติแบบ TSEMS (คาร์บอน/สิ่งแวดล้อม สังคม เศรษฐกิจ) และระวัง PDPA สำหรับข้อมูลเดินทาง/อาหาร"
+      ]
+    },
+    {
+      "id": "se-anti-concept",
+      "dimension": "antiTrigger",
+      "team": "cc",
+      "prompt": "ช่วยออกแบบคอนเซ็ปต์งานเปิดบ้าน STeP พร้อมธีมงานและผังบูธ",
+      "expect": { "mode": "SKILL", "skill": "event-concept", "notSkill": "sustainable-event" },
+      "why": "การออกแบบธีมงานและผังบูธทั่วไปโดยไม่ได้ระบุโจทย์ความยั่งยืนต้องอยู่ที่ event-concept"
+    },
+    {
+      "id": "se-anti-ros",
+      "dimension": "antiTrigger",
+      "team": "cc",
+      "prompt": "ช่วยจัดทำรันคิวเวทีงานเปิดตัวโครงการ แยกคิวจอ คิวเสียง และเวลาแต่ละช่วง",
+      "expect": { "mode": "SKILL", "skill": "event-run-of-show", "notSkill": "sustainable-event" },
+      "why": "การจัดทำรันคิวเวทีและคิวแสงเสียงเป็นงานของ event-run-of-show"
+    },
+    {
+      "id": "se-col-tor",
+      "dimension": "collision",
+      "team": "pm",
+      "prompt": "ช่วยร่าง TOR จ้างเหมาจัดสัมมนา 200 คน พร้อมเกณฑ์ตรวจรับพัสดุ",
+      "expect": { "mode": "SKILL", "skill": "tor-government-writing", "notSkill": "sustainable-event" },
+      "why": "การร่างเอกสารจัดซื้อจัดจ้าง TOR ตามระเบียบพัสดุต้องไปที่ tor-government-writing"
+    },
+    {
+      "id": "se-col-iso9001",
+      "dimension": "collision",
+      "team": "qs",
+      "prompt": "ช่วยตรวจเตรียมเอกสาร audit ISO 9001 ของทีมก่อนวันตรวจระบบคุณภาพ",
+      "expect": { "mode": "SKILL", "skill": "iso9001-audit-readiness", "notSkill": "sustainable-event" },
+      "why": "การเตรียมความพร้อมตรวจประเมิน ISO 9001 องค์กรต้องไปที่ iso9001-audit-readiness"
+    },
+    {
+      "id": "se-miss-ef-netzero",
+      "dimension": "missingSource",
+      "team": "cc",
+      "prompt": "ช่วยวิเคราะห์และคำนวณคาร์บอนฟุตพรินท์ของงานสัมมนา 300 คน พร้อมประเมินราคาซื้อคาร์บอนเครดิตเพื่อประกาศเป็น Net-Zero Event",
+      "expect": { "mode": "SKILL", "skill": "sustainable-event" },
+      "outputAssertions": [
+        "ระบุ NEED-SOURCE สำหรับค่า Emission Factor, ปริมาณ kWh/เดินทางจริง และราคาคาร์บอนเครดิตปัจจุบัน โดยไม่แต่งตัวเลข",
+        "เตือนความต่างของ 4 ระดับและข้อจำกัดของ Net-Zero Event (7 ก๊าซ) ตามแนวทาง อบก. เพื่อป้องกัน Greenwashing",
+        "ระบุชัดเจนว่าการอนุมัติงบซื้อคาร์บอนเครดิตและการรับรองผลเป็นอำนาจของมนุษย์และหน่วยรับรองภายนอก"
+      ]
+    }
+  ]
+}

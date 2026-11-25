@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Skills: เพิ่ม Skill `sustainable-event` (Standard v3, สถานะ `draft`) สำหรับทีม CC และผู้จัดงาน STeP ครอบคลุมการวางแผนจัดงานอย่างยั่งยืนและลดโลกร้อนตามแนวทางพื้นฐาน 25 ข้อ การคุมผู้ให้บริการ 9 หมวด 8 ขั้น เกณฑ์ Design for All การจัดการขยะอาหารและภูมิแพ้ 6 ขั้น Cost vs. Impact Matrix ตารางเก็บข้อมูลคาร์บอน 3 Scope / 5 หมวดลดการปล่อย และแม่แบบรายงานผลกระทบ TSEMS 3 มิติ พร้อมตัวอย่างและชุด eval 4 มิติ
+
 - Desktop distribution: GitHub Actions checks Windows and macOS installer trust and integrity before publishing. A separate workflow builds and tests the Windows x64 MSIX for submission through Partner Center.
 - Developer tooling: เพิ่ม Skill และตัวตรวจข้อมูลออฟไลน์เพื่อทบทวนรายการนำเข้าจาก MIS, Gmail และ Google Sheets ก่อนอัปเดตคลังความรู้
 - อัปเดตบน Windows ครั้งแรกหลังย้ายตัวอัปเดตไปโฟลเดอร์ `Tools` ไม่ขึ้นข้อความ "The batch file cannot be found." ตอนปิดหน้าต่างอีก ไฟล์ `Update-STeP-AI` เดิมที่หน้าแรกจะพาไปตัวอัปเดตใหม่ และถูกลบให้เองในการอัปเดตครั้งถัดไป

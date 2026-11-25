@@ -4,9 +4,11 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-24_
+_Last updated: 2026-11-25_
 
 ## In flight
+
+- **Add `sustainable-event` built-in Skill (Standard v3, `draft`, `skills/creative/sustainable-event/`, 2026-11-25)**: synthesized from TCEB / MICE sustainability, ESG, and low-carbon event methodology into original Thai instructions without copying copyrighted source text or hard-coding mutable emission factors. Covers Triple Bottom Line, UN SDGs, BCG/ESG, 5+1 planning, 25 basic guidelines (A–G), 7-step material/waste hierarchy, 8-step supply chain control across 9 vendor categories, Design for All / venue / F&B / 6-step food-allergen & 6 CSR risk checks, Cost vs. Impact 2x2 prioritization, 4 low-carbon levels, Scope 1/2/3 & 5-category avoidance activity logs (`NEED-SOURCE` for live EFs/prices via TCEB/TGO portals), TSEMS 3-pillar reporting templates, worked synthetic example, and 4-dimension evals (`evals/skills/sustainable-event.json`, `manifest/routing-staff-benchmark.json`). Registered under `cc` owner with `qs` reviewer (`stage: draft`); awaits CC/QS review and live model-side grading before promotion to `pilot`.
 
 - **LINE Gateway hardening and standalone Operator UI (`gateway/line`, 2026-11-24)**: added operator `POST /reject/<id>` (with Privacy Gate reason checks and attachment cleanup), `POST /resolve-unknown/<id>` for `delivery-unknown` closure without resending, `editedText` delivery re-checking (Privacy Gate + Authority Router), metadata-only `GET /audit`, `GET /healthz`, and configurable retention cleanup (`STEP_LINE_RETENTION_DAYS`, default 30d) in `gateway/line/service.js` and `run.js`. Added zero-dependency loopback Operator UI (`gateway/line/operator-ui.js`, `operator-app.js`, `operator-ui.css` on `127.0.0.1:8789`) with `HttpOnly; SameSite=Strict` cookie sessions, CSRF/Origin guards, strict CSP, Thai review queues for all five pending states + audit history, deployment docs (`gateway/line/README.md`, `allowlist.example.json`), and admin policy scripts (`scripts/pilot/enable-line-gateway.ps1`/`.sh`). Tested with `test/phase5.test.js` and `test/line-operator.test.js`. Remains for owner/IT: provision real LINE OA channel, reverse proxy (`POST /webhook` only), enroll real employee allowlist, and accept live delivery (`features.lineGateway` stays off by default).
 
