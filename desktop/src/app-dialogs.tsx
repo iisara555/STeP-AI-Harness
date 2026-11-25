@@ -1,6 +1,8 @@
 import { ApprovalDialog } from './approval';
 import { ArtifactDialog } from './artifacts-list';
 import { Check, ShieldCheck, X } from './icons';
+import { computeDraftDiff } from './draft-diff';
+import { DraftDiffView } from './draft-diff-view';
 import { CommandPalette, ConfirmDialog, RichText, Toasts } from './ui';
 import { FeedbackDialog, ReportDialog } from './feedback';
 import { Terms } from './terms';
@@ -332,38 +334,46 @@ export function AppDialogs({ v }: { v: AppView }) {
             </p>
           </ConfirmDialog>
         ))}
-      {replacingDraft && (
-        <ConfirmDialog
-          title={t('ใช้ข้อเสนอ AI แทนร่างปัจจุบัน?')}
-          confirmLabel={t('ยืนยันใช้ร่างนี้')}
-          focusCancel
-          onCancel={() => setReplacingDraft(null)}
-          onConfirm={async () => {
-            setDraftAcceptPending(true);
-            try {
-              await api.call('accept', {
-                id: replacingDraft.id,
-                proposalId: replacingDraft.proposalId,
-                replaceRevision: replacingDraft.revision,
-              });
-              setReplacingDraft(null);
-              await refresh();
-            } finally {
-              setDraftAcceptPending(false);
-            }
-          }}
-        >
-          <p>{t('ร่างปัจจุบันเปลี่ยนไปหลังจาก AI เริ่มร่าง ตรวจทั้งสองฉบับก่อนยืนยัน ฉบับปัจจุบันจะเก็บไว้ในประวัติเวอร์ชัน')}</p>
-          <details>
-            <summary>{t('อ่านร่างปัจจุบัน')}</summary>
-            <RichText text={replacingDraft.draft || t('ยังไม่มีเนื้อหาในร่างปัจจุบัน')} />
-          </details>
-          <details>
-            <summary>{t('อ่านข้อเสนอจาก AI')}</summary>
-            <RichText text={replacingDraft.proposal} />
-          </details>
-        </ConfirmDialog>
-      )}
+      {replacingDraft &&
+        (() => {
+          const diff = computeDraftDiff(replacingDraft.draft, replacingDraft.proposal);
+          return (
+            <ConfirmDialog
+              title={t('ใช้ข้อเสนอ AI แทนร่างปัจจุบัน?')}
+              confirmLabel={t('ยืนยันใช้ร่างนี้')}
+              focusCancel
+              onCancel={() => setReplacingDraft(null)}
+              onConfirm={async () => {
+                setDraftAcceptPending(true);
+                try {
+                  await api.call('accept', {
+                    id: replacingDraft.id,
+                    proposalId: replacingDraft.proposalId,
+                    replaceRevision: replacingDraft.revision,
+                  });
+                  setReplacingDraft(null);
+                  await refresh();
+                } finally {
+                  setDraftAcceptPending(false);
+                }
+              }}
+            >
+              <p>{t('ร่างปัจจุบันเปลี่ยนไปหลังจาก AI เริ่มร่าง ตรวจทั้งสองฉบับก่อนยืนยัน ฉบับปัจจุบันจะเก็บไว้ในประวัติเวอร์ชัน')}</p>
+              <details open>
+                <summary>{t('จุดที่ต่างจากร่างปัจจุบัน (+{0} / -{1})', diff.added, diff.removed)}</summary>
+                <DraftDiffView before={replacingDraft.draft} after={replacingDraft.proposal} />
+              </details>
+              <details>
+                <summary>{t('อ่านร่างปัจจุบัน')}</summary>
+                <RichText text={replacingDraft.draft || t('ยังไม่มีเนื้อหาในร่างปัจจุบัน')} />
+              </details>
+              <details>
+                <summary>{t('อ่านข้อเสนอจาก AI')}</summary>
+                <RichText text={replacingDraft.proposal} />
+              </details>
+            </ConfirmDialog>
+          );
+        })()}
       {removing && (
         <ConfirmDialog
           title={t('ลบงานนี้?')}

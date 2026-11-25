@@ -61,6 +61,103 @@
   font-size: var(--text-sm);
   margin-top: var(--space-2);
 }
+.proposal-prompt {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.proposal-view-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+.proposal-toggle-buttons {
+  display: flex;
+  gap: var(--space-1);
+}
+.proposal-toggle-buttons button {
+  padding: var(--pad-control-sm);
+  font-size: var(--text-xs);
+}
+.proposal-toggle-buttons button[aria-pressed='true'] {
+  background: var(--selected);
+  border-color: var(--line-strong);
+  font-weight: 600;
+}
+.diff-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.diff-plus {
+  color: var(--diff-added);
+  font-weight: 600;
+}
+.diff-minus {
+  color: var(--danger);
+  font-weight: 600;
+}
+.draft-diff {
+  margin-top: var(--space-1-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  overflow: auto;
+  max-height: 28vh;
+  font-size: var(--text-xs);
+  line-height: 1.55;
+}
+.draft-diff-sep {
+  padding: 2px var(--space-2-5);
+  background: var(--surface);
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-xs);
+}
+.draft-diff-hunk + .draft-diff-hunk .draft-diff-sep {
+  border-top: 1px solid var(--line);
+}
+.draft-diff-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1-5);
+  padding: 1px var(--space-2-5);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.draft-diff-line.add {
+  background: color-mix(in srgb, var(--diff-added) 12%, transparent);
+  color: var(--text);
+}
+.draft-diff-line.remove {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--text);
+}
+.draft-diff-line.add .draft-diff-marker {
+  color: var(--diff-added);
+  font-weight: 700;
+}
+.draft-diff-line.remove .draft-diff-marker {
+  color: var(--danger);
+  font-weight: 700;
+}
+.draft-diff-marker {
+  flex-shrink: 0;
+  width: 1ch;
+  user-select: none;
+  color: var(--muted);
+}
+.draft-diff-text {
+  flex: 1;
+  min-width: 0;
+}
+.draft-diff-empty {
+  margin: var(--space-1-5) 0;
+}
 .plan-card {
   list-style: none;
   margin: var(--space-3) 0 var(--space-1);

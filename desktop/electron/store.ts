@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
-import type { Session, Connection, Settings } from '../src/types';
+import type { Connection, DraftMeta, Session, Settings } from '../src/types';
 import { documentText, markdownDocument, validateDocument, documentImageIds } from '../src/draft';
 import { parseDocumentOutput } from '../src/document-output';
 import { resolvePresentation } from '../src/document-presentation';
@@ -149,9 +149,14 @@ export class Store {
     const session = this.session(id),
       version = session.versions.find(v => v.revision === revision);
     if (!version) throw new Error('VERSION_NOT_FOUND');
+    const restoredMeta: DraftMeta = {
+      origin: 'restore',
+      ...(version.label ? { label: version.label } : {}),
+      restoredFrom: version.restoredFrom ?? version.revision,
+    };
     const sameDocument =
       !version.documentTool || (version.documentTool === session.documentTool && version.documentVariant === session.documentVariant);
-    if (sameDocument) return this.edit(id, version.text, session.revision, version.document, version.presentation || {});
+    if (sameDocument) return this.edit(id, version.text, session.revision, version.document, version.presentation || {}, restoredMeta);
     if (['running', 'queued'].includes(session.status)) throw new Error('RUN_ALREADY_ACTIVE');
     if (version.document)
       for (const key of documentImageIds(validateDocument(version.document))) {
@@ -159,6 +164,7 @@ export class Store {
       }
     this.shelveDocument(session);
     session.draft = version.text;
+    session.draftMeta = restoredMeta;
     if (version.document) session.document = version.document;
     if (version.presentation) session.presentation = version.presentation;
     session.documentTool = version.documentTool;
@@ -196,18 +202,38 @@ export class Store {
           (version.documentTool === session.documentTool && version.documentVariant === session.documentVariant && !version.task)
         )
           Object.assign(version, kind, { task });
-    const keep = (text: string, document: Session['document']) => {
-      session.versions.push({ revision: session.revision, text, document, presentation: session.presentation, ...kind, task, at });
+    const keep = (text: string, document: Session['document'], meta?: DraftMeta) => {
+      session.versions.push({
+        revision: session.revision,
+        text,
+        document,
+        presentation: session.presentation,
+        ...kind,
+        ...(meta?.origin ? { origin: meta.origin } : {}),
+        ...(meta?.label ? { label: meta.label } : {}),
+        ...(meta?.restoredFrom !== undefined ? { restoredFrom: meta.restoredFrom } : {}),
+        task,
+        at,
+      });
       session.revision++;
     };
-    if (session.draft.trim() || session.document) keep(session.draft, session.document);
+    if (session.draft.trim() || session.document)
+      keep(session.draft, session.document, {
+        origin: session.draftMeta?.origin ?? 'shelved',
+        ...(session.draftMeta?.label ? { label: session.draftMeta.label } : {}),
+        ...(session.draftMeta?.restoredFrom !== undefined ? { restoredFrom: session.draftMeta.restoredFrom } : {}),
+      });
     const pending = session.proposals.at(-1);
     if (pending?.text.trim()) {
       const output = session.documentTool ? parseDocumentOutput(pending.text, session.documentTool) : { draft: pending.text };
-      keep(output.draft, pending.document || markdownDocument(output.draft));
+      keep(output.draft, pending.document || markdownDocument(output.draft), {
+        origin: 'ai',
+        ...(pending.prompt ? { label: pending.prompt } : {}),
+      });
     }
     session.draft = '';
     session.proposals = [];
+    delete session.draftMeta;
     delete session.document;
     delete session.presentation;
     delete session.documentReview;
@@ -299,7 +325,7 @@ export class Store {
       )
       .run(JSON.stringify(reads), id);
   }
-  edit(id: string, text: string, baseRevision: number, document?: unknown, presentation?: unknown) {
+  edit(id: string, text: string, baseRevision: number, document?: unknown, presentation?: unknown, meta?: DraftMeta) {
     const session = this.session(id);
     if (session.revision !== baseRevision) throw new Error('DRAFT_CONFLICT');
     const normalized = document === undefined ? undefined : validateDocument(document);
@@ -337,11 +363,15 @@ export class Store {
         presentation: session.presentation,
         ...(session.documentTool ? { documentTool: session.documentTool } : {}),
         ...(session.documentVariant ? { documentVariant: session.documentVariant } : {}),
+        ...(session.draftMeta?.origin ? { origin: session.draftMeta.origin } : {}),
+        ...(session.draftMeta?.label ? { label: session.draftMeta.label } : {}),
+        ...(session.draftMeta?.restoredFrom !== undefined ? { restoredFrom: session.draftMeta.restoredFrom } : {}),
         at: new Date().toISOString(),
       });
       session.draft = text;
       session.document = normalized;
       session.presentation = appearance;
+      session.draftMeta = meta ?? { origin: 'manual' };
       session.revision++;
       this.save(session);
     }
@@ -360,6 +390,8 @@ export class Store {
       output.draft,
       replaceRevision ?? proposal.baseRevision,
       proposal.document || markdownDocument(output.draft),
+      undefined,
+      { origin: 'ai', ...(proposal.prompt ? { label: proposal.prompt } : {}) },
     );
     const review = [proposal.review, output.review].filter(Boolean).join('\n\n');
     if (review) edited.documentReview = { text: review, revision: edited.revision };
@@ -377,16 +409,28 @@ export class Store {
     const session = this.session(id),
       message = Number.isInteger(index) ? session.messages[index] : undefined;
     if (!message || message.role !== 'assistant' || message.draftSummary) throw new Error('MESSAGE_NOT_FOUND');
-    if (!session.documentTool) return this.edit(id, message.text, session.revision, markdownDocument(message.text));
+    const prevUser = session.messages
+      .slice(0, index)
+      .reverse()
+      .find(m => m.role === 'user')?.text;
+    const prompt = prevUser ? prevUser.replace(/\s+/g, ' ').trim().slice(0, 120) : undefined;
+    if (!session.documentTool)
+      return this.edit(id, message.text, session.revision, markdownDocument(message.text), undefined, {
+        origin: 'ai',
+        ...(prompt ? { label: prompt } : {}),
+      });
     const output = parseDocumentOutput(message.text, session.documentTool);
-    session.proposals.push({
-      id: randomUUID(),
-      text: output.draft,
-      ...(output.review ? { review: output.review } : {}),
-      baseRevision: session.revision,
-      sources: session.sources || [],
-      at: new Date().toISOString(),
-    });
+    session.proposals = [
+      {
+        id: randomUUID(),
+        text: output.draft,
+        ...(output.review ? { review: output.review } : {}),
+        baseRevision: session.revision,
+        ...(prompt ? { prompt } : {}),
+        sources: session.sources || [],
+        at: new Date().toISOString(),
+      },
+    ];
     this.save(session);
     return session;
   }

@@ -69,6 +69,7 @@ import {
   Receipt as StillReceipt,
   ReceiptText as StillReceiptText,
   RefreshCw as StillRefreshCw,
+  RotateCcw as StillRotateCcw,
   RotateCw as StillRotateCw,
   Save as StillSave,
   ScanText as StillScanText,
@@ -236,6 +237,7 @@ export const Power = /* @__PURE__ */ animated(StillPower, 'Power', 'pulse');
 export const Receipt = /* @__PURE__ */ animated(StillReceipt, 'Receipt', 'document');
 export const ReceiptText = /* @__PURE__ */ animated(StillReceiptText, 'ReceiptText', 'document');
 export const RefreshCw = /* @__PURE__ */ animated(StillRefreshCw, 'RefreshCw', 'refresh');
+export const RotateCcw = /* @__PURE__ */ animated(StillRotateCcw, 'RotateCcw', 'left');
 export const RotateCw = /* @__PURE__ */ animated(StillRotateCw, 'RotateCw', 'refresh');
 export const Save = /* @__PURE__ */ animated(StillSave, 'Save', 'down');
 export const ScanText = /* @__PURE__ */ animated(StillScanText, 'ScanText', 'pulse');
