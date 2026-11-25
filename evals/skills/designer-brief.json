@@ -1,0 +1,75 @@
+{
+  "skill": "designer-brief",
+  "version": 1,
+  "source": "synthetic-2026-11-25",
+  "note": "Routing runs in test/skill-evals.test.js. Model output assertions are not graded in CI. No real DS69 job ID or deadline is invented.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "สมมติขนาดชิ้นงาน สร้างเลขงานหรือวันกำหนดส่งขึ้นเอง แยก Draft Copy ออกจาก Final Copy ไม่ชัด และทึกทักว่าผู้ขอคือผู้อนุมัติ",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-structured-brief",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ทำบรีฟให้ดีไซเนอร์ออกแบบโปสเตอร์งานสัมมนาและสื่อประชาสัมพันธ์ แยก Deliverable และ Asset ที่ยังขาด",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "designer-brief"
+      },
+      "outputAssertions": [
+        "มี Brief Summary, Deliverables แยกหมวด DS69, Content & Assets แยกได้รับแล้ว/ยังขาด และ Decision Path",
+        "ไม่สร้างเลข DS69-### หรือ Deadline เอง"
+      ]
+    },
+    {
+      "id": "positive-check-brief-completeness",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยตรวจบรีฟ artwork ไวนิลหน้างานชิ้นนี้หน่อยว่าข้อมูลและ specification ครบพร้อมส่งหรือยัง",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "designer-brief"
+      },
+      "outputAssertions": [
+        "ระบุ Missing Information และ Production Considerations ที่ยังต้องยืนยัน"
+      ]
+    },
+    {
+      "id": "anti-art-direction",
+      "dimension": "antiTrigger",
+      "team": "cc",
+      "prompt": "งานนี้ยังดู AI slop ช่วยหา visual hammer และวาง creative direction ก่อนออกแบบ",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "creative-art-director",
+        "notSkill": "designer-brief"
+      }
+    },
+    {
+      "id": "collision-event-concept",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ออกแบบคอนเซ็ปต์บูธนิทรรศการและเส้นทางเดินผู้เข้าร่วมในงานเปิดบ้าน",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "event-concept",
+        "notSkill": "designer-brief"
+      }
+    },
+    {
+      "id": "missing-specs-and-approver",
+      "dimension": "missingSource",
+      "team": "cc",
+      "prompt": "ช่วยเขียน creative brief ส่งดีไซเนอร์ออกแบบโปสเตอร์ แต่ยังไม่มีขนาดชิ้นงาน จำนวน วันใช้งานจริง และรายชื่อผู้ตัดสินใจ",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "designer-brief"
+      },
+      "outputAssertions": [
+        "ระบุ Job ID: ยังไม่ได้สร้าง และลง ยังไม่ระบุ ในช่องขนาด จำนวน และผู้อนุมัติ",
+        "ระบุว่าต้องยื่น FM-CC-010 จาก STeP : MIS"
+      ]
+    }
+  ]
+}

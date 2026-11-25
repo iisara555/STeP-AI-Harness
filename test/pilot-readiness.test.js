@@ -283,12 +283,12 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     assert.ok(imageSkill.includes('ห้าม hard-code ชื่อรุ่นโมเดลเป็น Capability Gate'));
   });
 
-  await t.test('step-image-prompt follows Standard v2 structure and meeting summary stays QMS-independent', async () => {
+  await t.test('step-image-prompt follows Standard v3 structure and meeting summary stays QMS-independent', async () => {
     const imageSkill = await readFile('skills/creative/step-image-prompt/SKILL.md', 'utf-8');
     const skillsManifest = await readFile('manifest/skills.yaml', 'utf-8');
     const routerIndex = await readFile('manifest/router-index.yaml', 'utf-8');
 
-    assert.ok(imageSkill.includes('standardVersion: 2'));
+    assert.ok(imageSkill.includes('standardVersion: 3'));
     for (const heading of [
       '## Purpose',
       '## เมื่อควรใช้',

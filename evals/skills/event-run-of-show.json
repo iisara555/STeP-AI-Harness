@@ -1,0 +1,75 @@
+{
+  "skill": "event-run-of-show",
+  "version": 1,
+  "source": "synthetic-2026-11-25",
+  "note": "Routing runs in test/skill-evals.test.js. Model output assertions are not graded in CI. No PII or fabricated VIP sequence is released.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "สร้างตารางกำหนดการแบบ block รวม ไม่แตกเป็นคิวแยก lane จอ/เสียง/แสง/เวที ไม่มีคอลัมน์ Lead รายคิว ไม่กระทบยอดเวลาเทียบกับ block และแอบแต่งชื่อคนหรือรหัส AV",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-build-stage-cues",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยสร้างรันคิวเวทีและ sequence เวทีจากกำหนดการนี้ แยกคิวจอ คิวเสียง คิวไฟ และ Lead รายคิว",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "event-run-of-show"
+      },
+      "outputAssertions": [
+        "แตกคิวเป็น 1 action ต่อแถว มี lane จอ เสียง แสง เวที Lead และ Basis",
+        "รวมเวลาแต่ละ block ตรงและระบุ Open Items / Cue Enums เป็น รอยืนยัน"
+      ]
+    },
+    {
+      "id": "positive-review-existing-sequence",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยตรวจ sequence เวทีนี้ว่าเวลารวมไม่ตรงตรงไหน คิวไหนยังไม่มีคนรับผิดชอบ",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "event-run-of-show"
+      },
+      "outputAssertions": [
+        "รายงานสรุปสถานะ Sequence และ Findings พร้อมกติกาและความรุนแรงก่อนเสนอฉบับแก้"
+      ]
+    },
+    {
+      "id": "anti-event-concept",
+      "dimension": "antiTrigger",
+      "team": "cc",
+      "prompt": "ช่วยออกแบบคอนเซ็ปต์งานนิทรรศการและผังบูธ พร้อมเส้นทางเดินผู้เข้าร่วม",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "event-concept",
+        "notSkill": "event-run-of-show"
+      }
+    },
+    {
+      "id": "collision-tor-av-procurement",
+      "dimension": "collision",
+      "team": "afp",
+      "prompt": "ร่าง TOR จ้างทีมแสงเสียงและจอ LED จากวัตถุประสงค์ ขอบเขต ผลส่งมอบ และเกณฑ์ตรวจรับนี้",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "tor-government-writing",
+        "notSkill": "event-run-of-show"
+      }
+    },
+    {
+      "id": "missing-av-and-lead-details",
+      "dimension": "missingSource",
+      "team": "cc",
+      "prompt": "ช่วยเขียน cue sheet และลำดับเวทีพิธีเปิดช่วงเช้า 09:00-10:00 น. แต่ยังไม่มีชื่อประธาน รายชื่อไฟล์ VTR และรหัส Scene จากทีม AV",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "event-run-of-show"
+      },
+      "outputAssertions": [
+        "ตั้งค่า รอยืนยัน สำหรับชื่อประธาน ไฟล์ VTR รหัส Scene และ Lead แทนการแต่งขึ้นเอง",
+        "ระบุว่าลำดับเกียรติ VIP และคำกล่าวเปิดงานเป็น Human-Only (official-signing)"
+      ]
+    }
+  ]
+}
