@@ -154,5 +154,45 @@ export function preserveUserFacts(turns: HistoryTurn[], summary: string, limit: 
     }
     if (selected.length) sections.push(label + '\n- ' + [selected[0], ...selected.slice(1).reverse()].join('\n- '));
   }
+
+  // Spread any remaining budget fairly across distinct substantive user requests (first + up to 5 recent),
+  // mirroring agy's CaptureUserRequests so short follow-ups do not shrink a detailed initial instruction.
+  const requirementSet = new Set(requirements);
+  const rawRequests: string[] = [];
+  const seenRequests = new Set<string>();
+  for (const turn of turns) {
+    if (turn.role !== 'user') continue;
+    const trimmed = turn.text.trim();
+    if (trimmed.length < 8 || seenRequests.has(trimmed) || requirementSet.has(trimmed) || summary.includes(trimmed)) continue;
+    seenRequests.add(trimmed);
+    rawRequests.push(trimmed);
+  }
+  if (rawRequests.length) {
+    const picked = rawRequests.length <= 6 ? rawRequests : [rawRequests[0], ...rawRequests.slice(-5)];
+    const label = 'Earlier user requests (verbatim excerpts; apply later changes):';
+    const remaining = limit - tokens(sections.join('\n\n') + (sections.length ? '\n\n' : '') + label + '\n- ');
+    if (remaining > 32) {
+      const overheadPerItem = tokens('\n- ');
+      let pool = Math.max(0, remaining - picked.length * overheadPerItem);
+      const indexed = picked.map((text, idx) => ({ idx, text, need: tokens(text) }));
+      const allocations = new Array<string>(picked.length).fill('');
+      const byShortest = [...indexed].sort((a, b) => a.need - b.need);
+      let leftCount = byShortest.length;
+      for (const item of byShortest) {
+        const fairShare = Math.floor(pool / leftCount);
+        const share = Math.min(item.need, fairShare);
+        if (share >= 12) {
+          const excerpt = fitText(item.text, share, value => value, ' … ');
+          if (excerpt) {
+            allocations[item.idx] = excerpt;
+            pool -= Math.min(pool, tokens(excerpt));
+          }
+        }
+        leftCount--;
+      }
+      const finalItems = allocations.filter(Boolean);
+      if (finalItems.length) sections.push(label + '\n- ' + finalItems.join('\n- '));
+    }
+  }
   return sections.join('\n\n');
 }

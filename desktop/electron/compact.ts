@@ -107,6 +107,8 @@ export type CompactOptions = {
   state: string;
   budget?: number;
   reactive?: boolean;
+  /** Allow reactive last-resort shortening of <organization_knowledge> bodies while keeping document IDs and headings. */
+  allowKnowledgeFallback?: boolean;
   signal: AbortSignal;
   summarize: (data: string) => Promise<string>;
   privacy: (text: string) => string;
@@ -133,6 +135,8 @@ const PROTECTED_TAGS = new Set([
   'task_state',
   'current_message',
   'earlier_request',
+  'request',
+  'latest_message',
   'revision_requests',
   'source_document',
   'current_draft',
@@ -191,11 +195,46 @@ function maxToolResultTextLength(partsList: Part[]) {
   return max;
 }
 
+const KNOWLEDGE_SHORTEN_NOTE = '\n[Excerpt shortened to fit context budget; call reference(input=ID, args.section=heading) for full text.]';
+
+function shortenKnowledgeText(body: string, bodyLimitChars: number) {
+  const chunks = body.split('\n\n---\n\n');
+  return chunks
+    .map(chunk => {
+      const lines = chunk.split('\n');
+      const headerCount = lines.length >= 2 && lines[1].startsWith('§ ') ? 2 : 1;
+      const header = lines.slice(0, headerCount).join('\n');
+      const content = lines.slice(headerCount).join('\n');
+      if (content.length <= bodyLimitChars) return chunk;
+      const clipped = bodyLimitChars > 0 ? '\n' + content.slice(0, bodyLimitChars) : '';
+      return header + clipped + KNOWLEDGE_SHORTEN_NOTE;
+    })
+    .join('\n\n---\n\n');
+}
+
+function maxKnowledgeBodyLength(body: string) {
+  let max = 0;
+  for (const chunk of body.split('\n\n---\n\n')) {
+    const lines = chunk.split('\n');
+    const headerCount = lines.length >= 2 && lines[1].startsWith('§ ') ? 2 : 1;
+    const contentLen = lines.slice(headerCount).join('\n').length;
+    if (contentLen > max) max = contentLen;
+  }
+  return max;
+}
+
 /**
  * Staged fallback trimming for tight prompt budgets (e.g., Antigravity's 56k first-message limit after a session reset).
- * Never shortens protected task/governance/source tags or the `<conversation_files>` inventory.
+ * Never shortens protected task/governance/source tags (`allowKnowledgeFallback` permits last-resort body trimming on
+ * `<organization_knowledge>` while preserving document IDs and section headings) or the `<conversation_files>` inventory.
  */
-function trimToFit(items: Part[], limit: number, buildFor: (parts: Part[]) => string, system: string): Part[] {
+function trimToFit(
+  items: Part[],
+  limit: number,
+  buildFor: (parts: Part[]) => string,
+  system: string,
+  allowKnowledgeFallback = false,
+): Part[] {
   const sizeOf = (list: Part[]) => tokens(system + buildFor(list));
   if (sizeOf(items) <= limit) return items;
 
@@ -260,46 +299,93 @@ function trimToFit(items: Part[], limit: number, buildFor: (parts: Part[]) => st
 
   // Stage 3: <conversation_files> only (never <source_document>), preserving chunk 0 (the file inventory).
   const filePart = work.find(p => p.tag === 'conversation_files');
-  if (!filePart || !filePart.text) return work;
-  const chunks = filePart.text.split(/\n--- /);
-  if (chunks.length < 2) return work;
+  if (filePart && filePart.text) {
+    const chunks = filePart.text.split(/\n--- /);
+    if (chunks.length >= 2) {
+      for (let i = 1; i < chunks.length - 1; i++) {
+        const nl = chunks[i].indexOf('\n');
+        chunks[i] = nl === -1 ? chunks[i] : chunks[i].slice(0, nl + 1) + preview(chunks[i].slice(nl + 1), 300);
+      }
+      filePart.text = chunks.join('\n--- ');
+      if (sizeOf(work) <= limit) return work;
 
-  for (let i = 1; i < chunks.length - 1; i++) {
-    const nl = chunks[i].indexOf('\n');
-    chunks[i] = nl === -1 ? chunks[i] : chunks[i].slice(0, nl + 1) + preview(chunks[i].slice(nl + 1), 300);
+      const lastIdx = chunks.length - 1;
+      const lastChunk = chunks[lastIdx];
+      const nl = lastChunk.indexOf('\n');
+      const lastHeader = nl === -1 ? lastChunk : lastChunk.slice(0, nl + 1);
+      const lastBody = nl === -1 ? '' : lastChunk.slice(nl + 1);
+      const setLastCap = (cap: number) => {
+        const nextChunks = [...chunks];
+        nextChunks[lastIdx] = lastHeader + preview(lastBody, cap);
+        filePart.text = nextChunks.join('\n--- ');
+      };
+      setLastCap(0);
+      if (sizeOf(work) > limit && chunks.length > 2) {
+        for (let i = 1; i < chunks.length - 1; i++) {
+          const idx = chunks[i].indexOf('\n');
+          chunks[i] = idx === -1 ? chunks[i] : chunks[i].slice(0, idx);
+        }
+        setLastCap(0);
+      }
+      if (sizeOf(work) <= limit && lastBody.length > 0) {
+        let low = 0;
+        let high = lastBody.length;
+        while (low < high) {
+          const mid = Math.ceil((low + high) / 2);
+          setLastCap(mid);
+          if (sizeOf(work) <= limit) low = mid;
+          else high = mid - 1;
+        }
+        setLastCap(low);
+      }
+      if (sizeOf(work) <= limit) return work;
+    }
   }
-  filePart.text = chunks.join('\n--- ');
-  if (sizeOf(work) <= limit) return work;
 
-  const lastIdx = chunks.length - 1;
-  const lastChunk = chunks[lastIdx];
-  const nl = lastChunk.indexOf('\n');
-  const lastHeader = nl === -1 ? lastChunk : lastChunk.slice(0, nl + 1);
-  const lastBody = nl === -1 ? '' : lastChunk.slice(nl + 1);
-  const setLastCap = (cap: number) => {
-    const nextChunks = [...chunks];
-    nextChunks[lastIdx] = lastHeader + preview(lastBody, cap);
-    filePart.text = nextChunks.join('\n--- ');
-  };
-  setLastCap(0);
-  if (sizeOf(work) > limit && chunks.length > 2) {
-    for (let i = 1; i < chunks.length - 1; i++) {
-      const idx = chunks[i].indexOf('\n');
-      chunks[i] = idx === -1 ? chunks[i] : chunks[i].slice(0, idx);
+  // Stage 4: Recalled <memory_context> and <workspace_preferences>.
+  for (const tag of ['memory_context', 'workspace_preferences'] as const) {
+    const part = work.find(p => p.tag === tag);
+    if (!part?.text) continue;
+    const original = part.text;
+    part.text = '[Compacted memory/preferences to fit context budget.]';
+    if (sizeOf(work) <= limit) {
+      let low = 0;
+      let high = original.length;
+      while (low < high) {
+        const mid = Math.ceil((low + high) / 2);
+        part.text = mid === 0 ? '[Compacted memory/preferences to fit context budget.]' : preview(original, mid);
+        if (sizeOf(work) <= limit) low = mid;
+        else high = mid - 1;
+      }
+      part.text = low === 0 ? '[Compacted memory/preferences to fit context budget.]' : preview(original, low);
+      return work;
     }
-    setLastCap(0);
   }
-  if (sizeOf(work) <= limit && lastBody.length > 0) {
-    let low = 0;
-    let high = lastBody.length;
-    while (low < high) {
-      const mid = Math.ceil((low + high) / 2);
-      setLastCap(mid);
-      if (sizeOf(work) <= limit) low = mid;
-      else high = mid - 1;
+
+  // Stage 5: Reactive last-resort shortening of <organization_knowledge> bodies, preserving doc IDs and section headings.
+  if (allowKnowledgeFallback) {
+    const knowledgePart = work.find(p => p.tag === 'organization_knowledge');
+    if (knowledgePart?.text) {
+      const original = knowledgePart.text;
+      const maxLen = maxKnowledgeBodyLength(original);
+      if (maxLen > 0) {
+        knowledgePart.text = shortenKnowledgeText(original, 0);
+        if (sizeOf(work) <= limit) {
+          let low = 0;
+          let high = maxLen;
+          while (low < high) {
+            const mid = Math.ceil((low + high) / 2);
+            knowledgePart.text = shortenKnowledgeText(original, mid);
+            if (sizeOf(work) <= limit) low = mid;
+            else high = mid - 1;
+          }
+          knowledgePart.text = shortenKnowledgeText(original, low);
+          return work;
+        }
+      }
     }
-    setLastCap(low);
   }
+
   return work;
 }
 
@@ -377,6 +463,7 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
     for (const part of items) if (part.tag === 'tool_history') part.text = preview(part.text, 1500);
     value = build();
   }
+  const allowKnowledgeFallback = options.allowKnowledgeFallback ?? Boolean(options.reactive);
   if (options.reactive || tokens(options.system + value) > target) {
     const conversation = items.find(part => part.tag === 'conversation');
     const inlineSummary = items.findLast(part => part.tag === 'context_summary');
@@ -387,7 +474,7 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
       conversation.text = '[]';
       const minHistoryRoom = Math.min(3000, Math.floor(target * 0.25));
       if (target - tokens(options.system + build()) < minHistoryRoom) {
-        items = trimToFit(items, Math.max(0, target - minHistoryRoom), buildFor, options.system);
+        items = trimToFit(items, Math.max(0, target - minHistoryRoom), buildFor, options.system, allowKnowledgeFallback);
       }
       const trimmedConversation = items.find(part => part.tag === 'conversation')!;
       const roomForHistory = target - tokens(options.system + build());
@@ -432,7 +519,7 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
           checkpoint = { format: CHECKPOINT_FORMAT, covered: earlier.length, prefixHash: signature(earlier), text: summary };
         }
         const displaySummary = checkpointText(summary, Math.min(CHECKPOINT_TOKENS, Math.floor(roomForHistory / 2)));
-        const facts = preserveUserFacts(earlier, displaySummary, Math.min(650, Math.floor(roomForHistory / 5)));
+        const facts = preserveUserFacts(earlier, displaySummary, Math.min(1200, Math.floor(roomForHistory / 4)));
         const context = [displaySummary, facts ? options.privacy(facts) : ''].filter(Boolean).join('\n\n');
         if (!context) throw new Error('CONTEXT_LIMIT');
         items.push({ tag: 'context_summary', text: context });
@@ -451,7 +538,7 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
     }
   }
   if (tokens(options.system + value) > target) {
-    items = trimToFit(items, target, buildFor, options.system);
+    items = trimToFit(items, target, buildFor, options.system, allowKnowledgeFallback);
     value = build();
   }
   const after = tokens(options.system + value);

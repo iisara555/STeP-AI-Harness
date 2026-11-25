@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CHECKPOINT_SYSTEM, compact, missingFigures } from '../electron/compact';
+import { CHECKPOINT_SYSTEM, compact, missingFigures, tokens } from '../electron/compact';
+import { preserveUserFacts } from '../electron/checkpoint';
 import { section } from '../electron/prompt';
 import type { SummaryCheckpoint } from '../src/types';
 
@@ -310,4 +311,64 @@ test('reactive compaction trims accumulated tool turns and conversation_files wh
     ),
     /CONTEXT_LIMIT/,
   );
+});
+
+test('reactive fallback trims memory/preferences and shortens organization_knowledge bodies while keeping IDs and headings', async () => {
+  const knowledge =
+    '[afp-procurement-policy] แนวปฏิบัติจัดซื้อจัดจ้าง\n§ ทั้งฉบับ\n' +
+    'เนื้อหาระเบียบสังเคราะห์ '.repeat(2600) +
+    '\n\n---\n\n[hr-service-channels] ช่องทางติดต่อ HR\n§ ช่องทางหลัก\n' +
+    'รายละเอียดช่องทางติดต่อ '.repeat(600);
+  const prompt = [
+    section('routing_contract', '{"mode":"SKILL","skill":"tor-government-writing"}'),
+    section('conversation', '[]'),
+    section('memory_context', 'ความจำสังเคราะห์ '.repeat(1200)),
+    section('workspace_preferences', 'กติกาพื้นที่งานสังเคราะห์ '.repeat(900)),
+    section('organization_knowledge', knowledge),
+    section('source_document', 'MUST_KEEP_SOURCE_EXACT'),
+    section('current_draft', 'MUST_KEEP_DRAFT_EXACT'),
+    section('request', 'MUST_KEEP_REQUEST_EXACT'),
+    section('current_message', 'ขอเพิ่ม Foamboard 150x75 cm'),
+  ].join('\n\n');
+
+  // Non-reactive compaction with allowKnowledgeFallback disabled never trims <organization_knowledge>.
+  await assert.rejects(
+    compact(
+      prompt,
+      options(async () => 'unused', { budget: 2600, reactive: false, allowKnowledgeFallback: false }),
+    ),
+    /CONTEXT_LIMIT/,
+  );
+
+  // Reactive compaction trims memory/preferences first and then shortens <organization_knowledge> bodies, keeping headers and sources.
+  const recovered = await compact(
+    prompt,
+    options(async () => 'unused', { budget: 2600, reactive: true }),
+  );
+  assert.ok(recovered.after <= 2600);
+  assert.ok(recovered.prompt.includes('MUST_KEEP_SOURCE_EXACT'));
+  assert.ok(recovered.prompt.includes('MUST_KEEP_DRAFT_EXACT'));
+  assert.ok(recovered.prompt.includes('MUST_KEEP_REQUEST_EXACT'));
+  assert.ok(recovered.prompt.includes('[afp-procurement-policy] แนวปฏิบัติจัดซื้อจัดจ้าง'));
+  assert.ok(recovered.prompt.includes('§ ทั้งฉบับ'));
+  assert.ok(recovered.prompt.includes('[hr-service-channels] ช่องทางติดต่อ HR'));
+  assert.ok(recovered.prompt.includes('reference(input=ID, args.section=heading)'));
+});
+
+test('preserveUserFacts spreads remaining budget fairly across captured user requests omitted by the summary', () => {
+  const turns = [
+    {
+      role: 'user',
+      text: 'ขอร่าง TOR จ้างจัดบูธนิทรรศการและป้ายตั้งโต๊ะ พร้อมระบบลงทะเบียนหน้างานและไฟส่องสว่าง ' + 'รายละเอียดสังเคราะห์ '.repeat(35),
+    },
+    { role: 'user', text: 'เพิ่มปลั๊กพ่วง 4 จุด' },
+    { role: 'user', text: 'ขอเพิ่ม Foamboard ติด Sticker รายชื่อหน่วยงาน ติดหน้าโต๊ะ 150x75 cm' },
+  ];
+  const facts = preserveUserFacts(turns, '## Goal\nDraft event TOR.', 520);
+  assert.match(facts, /Earlier user requests \(verbatim excerpts; apply later changes\):/);
+  assert.ok(facts.includes('เพิ่มปลั๊กพ่วง 4 จุด'));
+  assert.ok(facts.includes('ขอเพิ่ม Foamboard ติด Sticker รายชื่อหน่วยงาน ติดหน้าโต๊ะ 150x75 cm'));
+  // Because short requests only consume what they need, the longer initial request receives more than an equal 1/3 slice.
+  const firstExcerpt = facts.split('\n').find(line => line.includes('ขอร่าง TOR จ้างจัดบูธนิทรรศการ')) || '';
+  assert.ok(tokens(firstExcerpt) > 120, `expected initial request to keep >120 tokens, got ${tokens(firstExcerpt)}`);
 });

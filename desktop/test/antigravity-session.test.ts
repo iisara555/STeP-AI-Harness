@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import {
   AntigravityAdapter,
   ANTIGRAVITY_FIRST_MESSAGE_TOKENS,
+  ANTIGRAVITY_MAX_USER_INPUT_BYTES,
   prewarmAntigravity,
   antigravitySpareCount,
   closeAntigravitySpares,
@@ -590,6 +591,24 @@ test('the real-agy bridge probe passes against a CLI that applies agy permission
     assert.equal(report.bridge.pass, true, JSON.stringify(report));
     assert.equal(report.nativeRead.pass, true);
     assert.equal(report.toolLoop.pass, true, JSON.stringify(report.toolLoop));
+  } finally {
+    await f.session.closeAndWait();
+    await f.close();
+  }
+});
+
+test('a pure ASCII/JSON first message over agy’s 192 KB UserInputStep cap is refused before starting agy', async () => {
+  const f = await fixture();
+  try {
+    const adapter = new AntigravityAdapter();
+    const oversizedAscii = 'field '.repeat(31_500);
+    assert.ok(Buffer.byteLength(oversizedAscii, 'utf8') > ANTIGRAVITY_MAX_USER_INPUT_BYTES);
+    assert.ok(tokens(f.context.system + oversizedAscii) <= ANTIGRAVITY_FIRST_MESSAGE_TOKENS);
+    await assert.rejects(
+      adapter.run(oversizedAscii, f.connection, f.context),
+      error => promptTooLong(error) && error instanceof ProviderPromptLimitError && error.maxPromptTokens < tokens(oversizedAscii),
+    );
+    assert.equal((await f.calls()).filter(c => c.start).length, 0);
   } finally {
     await f.session.closeAndWait();
     await f.close();

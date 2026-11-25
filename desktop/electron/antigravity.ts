@@ -718,11 +718,23 @@ export async function prewarmAntigravity(connection: Connection, context: Provid
  * runs 1.3–2× above Gemini's own count, so this stays under that cut; a longer first message is compacted first.
  */
 export const ANTIGRAVITY_FIRST_MESSAGE_TOKENS = 56_000;
+/**
+ * agy's TrajectoryConversionConfig.MaxTokensPerUserInputStep is 64,000 with EstimateTokenCounter = ceil(utf8Bytes / 3.0),
+ * silently truncating any single user message above 192,000 UTF-8 bytes. Keep a safety margin so English/JSON prompts
+ * under 56k host tokens cannot be silently truncated either.
+ */
+export const ANTIGRAVITY_MAX_USER_INPUT_BYTES = 186_000;
 
 /** Refuses a whole-prompt send agy would cut; the host's CONTEXT_LIMIT handling compacts the prompt and retries. */
 const firstPromptBudget = (system: string | undefined) => Math.max(0, ANTIGRAVITY_FIRST_MESSAGE_TOKENS - tokens(system || ''));
 function checkFirstMessage(system: string | undefined, prompt: string) {
   if (tokens((system || '') + prompt) > ANTIGRAVITY_FIRST_MESSAGE_TOKENS) throw new ProviderPromptLimitError(firstPromptBudget(system));
+  const promptBytes = Buffer.byteLength(prompt, 'utf8');
+  if (promptBytes > ANTIGRAVITY_MAX_USER_INPUT_BYTES) {
+    const promptTokens = tokens(prompt);
+    const byteLimitedPromptTokens = Math.max(1, Math.floor((promptTokens * ANTIGRAVITY_MAX_USER_INPUT_BYTES) / promptBytes) - 1);
+    throw new ProviderPromptLimitError(Math.min(firstPromptBudget(system), byteLimitedPromptTokens));
+  }
 }
 
 export class AntigravityAdapter implements ProviderAdapter {

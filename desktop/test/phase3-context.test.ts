@@ -1,12 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { compact, contextBudget, CONTEXT_TOKENS, MAX_CONTEXT_TOKENS, ProviderPromptLimitError, tokens } from '../electron/compact';
+import { ANTIGRAVITY_FIRST_MESSAGE_TOKENS } from '../electron/antigravity';
+import { documentRequest } from '../src/document-tools';
 import { section, fence } from '../electron/prompt';
 import { WorkService, type Harness } from '../electron/service';
 import { Store } from '../electron/store';
+import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import type { Connection, ContextWindowReading } from '../src/types';
 const privacy: any = await import('../../src/modules/privacy/index.js');
+const routing: any = await import('../../src/modules/router/service.js');
+const boundary: any = await import('../../src/modules/router/task-boundary.js');
+const catalog: any = await import('../../src/modules/skills/catalog.js');
+const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 
 test('canonical estimator counts Thai and preserves short prompts exactly', async () => {
   assert.ok(tokens('ก'.repeat(100)) > tokens('a'.repeat(100)));
@@ -423,6 +430,150 @@ test('reactive compaction recovers when a kept session resets after large tool t
     assert.equal(toolTurns, 4);
     assert.equal(transports.at(-1), 'delta');
     assert.equal(store.session(session.id).status, 'review');
+  } finally {
+    store.close();
+  }
+});
+
+test('Antigravity TOR and letter drafting stay under 56k tokens on turn 0 while OpenAI keeps all supplemental references', async () => {
+  for (const [provider, docId] of [
+    ['antigravity', 'tor'],
+    ['antigravity', 'letter'],
+    ['openai', 'tor'],
+  ] as const) {
+    const store = new Store(':memory:');
+    try {
+      store.put('connection', 'c', {
+        id: 'c',
+        provider,
+        model: provider === 'antigravity' ? 'gemini-3.8-flash-high' : 'gpt-5-codex',
+        ready: true,
+      } as Connection);
+      const session = store.create('c', 'cc');
+      session.draft = '# ร่างเอกสารสังเคราะห์\n\n## 1. ความเป็นมา\n\n' + 'รายละเอียดขอบเขตงานสังเคราะห์ '.repeat(500);
+      store.save(session);
+      const harness: Harness = {
+        root: repoRoot,
+        route: (q, opts) => routing.queryStepRouter(q, { autoRoute: false, authorityChecks: true, ...opts }),
+        contextPolicy: boundary.classifyContextPolicy,
+        privacy: privacy.evaluatePrivacyGate,
+        skillMetadata: async id => {
+          const meta = await routing.loadSkillContextMetadata(id);
+          return { ...meta, mandatoryReferences: await routing.loadDocumentContextMetadata(meta.mandatory) };
+        },
+        documentCatalog: () => routing.loadDocumentCatalog(),
+        catalog: () => catalog.loadSkillCatalog(repoRoot),
+        documentPrivacy: async () => null,
+        nextOutput: async () => null,
+        toolLoop: () => true,
+        tools: async () => ({
+          enabled: () => true,
+          check: async () => {},
+          readOnly: () => true,
+          execute: async () => '',
+          outgoing: async s => s,
+        }),
+      };
+      let seenSystem = '';
+      let seenPrompt = '';
+      const service = new WorkService(
+        store,
+        harness,
+        async () => ({
+          context: { cwd: repoRoot, env: {} },
+          adapter: {
+            run: async (prompt, _connection, context) => {
+              const transportSystem = (context.system || '') + 'Transport header. '.repeat(80);
+              const maxPrompt = ANTIGRAVITY_FIRST_MESSAGE_TOKENS - tokens(transportSystem);
+              if (provider === 'antigravity' && tokens(transportSystem + prompt) > ANTIGRAVITY_FIRST_MESSAGE_TOKENS) {
+                throw new ProviderPromptLimitError(Math.max(0, maxPrompt));
+              }
+              seenSystem = context.system || '';
+              seenPrompt = prompt;
+              return '<document_draft>\n# ร่างเอกสารสังเคราะห์\n\nอัปเดต Foamboard 150x75 cm แล้ว\n</document_draft>\n<document_review>ตรวจข้อมูลสังเคราะห์แล้ว</document_review>';
+            },
+          },
+        }),
+        () => {},
+      );
+      const initial = documentRequest(docId, { [docId === 'tor' ? 'title' : 'subject']: 'จ้างจัดนิทรรศการสังเคราะห์' });
+      await service.run(session.id, initial.text, initial.sourceText, true, undefined, 'draft', undefined, [], {
+        documentTool: docId,
+      });
+      if (docId === 'tor') {
+        assert.equal(store.session(session.id).status, 'review', provider);
+        store.accept(session.id, store.session(session.id).proposals.at(-1)!.id);
+        await service.run(session.id, 'ขอเพิ่ม Foamboard ติด Sticker รายชื่อหน่วยงาน ติดหน้าโต๊ะ 150x75 cm', '', true, undefined, 'draft');
+      }
+      const done = store.session(session.id);
+      assert.equal(done.status, 'review', `${provider}/${docId}: ${done.messages.at(-1)?.text}`);
+      assert.ok(seenSystem.includes('<document_tool_contract>'));
+      assert.ok(seenPrompt.includes('จ้างจัดนิทรรศการสังเคราะห์'));
+      if (provider === 'antigravity') {
+        assert.ok(tokens(seenSystem + seenPrompt) <= ANTIGRAVITY_FIRST_MESSAGE_TOKENS);
+        assert.ok(seenSystem.includes('<deferred_skill_references>'), 'supplemental references should be deferred to fit Antigravity');
+      } else {
+        assert.ok(!seenSystem.includes('<deferred_skill_references>'), 'OpenAI should keep all supplemental references inline');
+      }
+    } finally {
+      store.close();
+    }
+  }
+});
+
+test('Antigravity reactive recovery demotes or shortens organization_knowledge when source_document is protected and payload is over budget', async () => {
+  const store = new Store(':memory:');
+  try {
+    store.put('connection', 'c', { id: 'c', provider: 'antigravity', model: 'gemini-3.8-flash-high', ready: true } as Connection);
+    const session = store.create('c', 'cc');
+    // Protected <source_document> cannot be trimmed by Stage 3, so reactive recovery must shorten <organization_knowledge>.
+    const protectedSource = 'ข้อมูลต้นเรื่องที่ห้ามตัดทอน '.repeat(900);
+    const harness: Harness = {
+      root: repoRoot,
+      route: (q, opts) => routing.queryStepRouter(q, { autoRoute: false, authorityChecks: true, ...opts }),
+      contextPolicy: boundary.classifyContextPolicy,
+      privacy: privacy.evaluatePrivacyGate,
+      skillMetadata: async id => {
+        const meta = await routing.loadSkillContextMetadata(id);
+        return { ...meta, mandatoryReferences: await routing.loadDocumentContextMetadata(meta.mandatory) };
+      },
+      documentCatalog: () => routing.loadDocumentCatalog(),
+      catalog: () => catalog.loadSkillCatalog(repoRoot),
+      documentPrivacy: async () => null,
+      nextOutput: async () => null,
+    };
+    const seenPrompts: string[] = [];
+    let attemptLimit = 0;
+    const service = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: repoRoot, env: {} },
+        adapter: {
+          run: async (prompt, _connection, context) => {
+            seenPrompts.push(prompt);
+            const total = tokens((context.system || '') + prompt);
+            if (!attemptLimit) {
+              attemptLimit = total - 800;
+              throw new ProviderPromptLimitError(Math.max(0, attemptLimit - tokens(context.system || '')));
+            }
+            if (total > attemptLimit) throw new ProviderPromptLimitError(Math.max(0, attemptLimit - tokens(context.system || '')));
+            return 'สรุปตามเอกสารระเบียบสวัสดิการสังเคราะห์เรียบร้อยแล้วครับ';
+          },
+        },
+      }),
+      () => {},
+    );
+    await service.run(session.id, 'หยุดพักร้อนได้ปีละกี่วัน พนักงาน STeP', protectedSource, true, undefined, 'draft', undefined, [
+      'attached.txt',
+    ]);
+    const done = store.session(session.id);
+    assert.equal(done.status, 'review', done.messages.at(-1)?.text);
+    assert.equal(seenPrompts.length, 2, 'should recover once after shrinking organization_knowledge');
+    assert.ok(seenPrompts[1].includes('[hr-personnel-welfare-2569]'), 'must retain document ID after recovery');
+    assert.ok(seenPrompts[1].includes('ข้อมูลต้นเรื่องที่ห้ามตัดทอน'), 'must retain protected source_document verbatim');
+    assert.ok(seenPrompts[1].includes('Compacted from full document to matched excerpts') || seenPrompts[1].includes('Excerpt shortened'));
+    assert.ok(seenPrompts[1].length < seenPrompts[0].length);
   } finally {
     store.close();
   }
