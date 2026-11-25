@@ -233,6 +233,36 @@ test("compatible profiles deny unapproved, credential-bearing and remote plainte
     compatibleRun("Text", profile, { webSearch: true }, fetcher),
     /CAPABILITY_UNSUPPORTED/,
   );
+  const effortBodies = [];
+  const summary = await compatibleRun(
+    "Summarize",
+    profile,
+    { effort: "low" },
+    async (_url, init) => {
+      const parsed = JSON.parse(init.body);
+      effortBodies.push(parsed);
+      if (effortBodies.length === 1) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              type: "invalid_request_error",
+              message: "Unknown parameter: reasoning_effort",
+            },
+          }),
+          { status: 400, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response(
+        sse({ choices: [{ delta: { content: "Short checkpoint" } }] }) +
+          "data: [DONE]\n\n",
+        { headers: { "content-type": "text/event-stream" } },
+      );
+    },
+  );
+  assert.equal(summary, "Short checkpoint");
+  assert.equal(effortBodies.length, 2);
+  assert.equal(effortBodies[0].reasoning_effort, "low");
+  assert.equal("reasoning_effort" in effortBodies[1], false);
 });
 test("compatible transport sends pictures as content parts and names a model that cannot read them", async () => {
   const profile = {

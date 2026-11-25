@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { WorkService, type Harness } from '../electron/service';
-import { autoEffort, auxiliaryConnection, effortInModel, modelOption, taskSize, type TaskSignals } from '../electron/effort';
+import { autoEffort, auxiliaryConnection, effortInModel, modelOption, summaryEffort, taskSize, type TaskSignals } from '../electron/effort';
 import { defaultPolicy } from '../electron/policy';
 import { Store } from '../electron/store';
 import type { Connection } from '../src/types';
@@ -140,4 +140,23 @@ test('a run sends the level picked by task size, and the employee’s own choice
 
   const off = await effortsFor({ text: 'สวัสดีครับ', mode: 'chat', auto: false });
   assert.deepEqual(off.sent, [undefined], 'policy autoEffort: false keeps the model default');
+});
+
+test('summaryEffort picks low effort consistently across supported providers', () => {
+  assert.equal(summaryEffort({ provider: 'antigravity', model: 'gemini-3.8-flash' }), 'low');
+  assert.equal(summaryEffort({ provider: 'antigravity', model: 'gemini-3.8-flash-low' }), undefined);
+  assert.equal(summaryEffort({ provider: 'antigravity', model: 'gemini-3.8-flash-high' }), undefined);
+  assert.equal(summaryEffort({ provider: 'openai', model: 'gpt-5', models: [{ id: 'gpt-5', label: 'GPT-5', efforts: LEVELS }] }), 'low');
+  assert.equal(
+    summaryEffort({ provider: 'claude', model: 'claude-sonnet', models: [{ id: 'claude-sonnet', label: 'Sonnet', efforts: LEVELS }] }),
+    'low',
+  );
+  assert.equal(summaryEffort({ provider: 'copilot', model: 'o3', models: [{ id: 'o3', label: 'o3', efforts: LEVELS }] }), 'low');
+  assert.equal(summaryEffort({ provider: 'copilot', model: 'gpt-4o', models: [{ id: 'gpt-4o', label: '4o' }] }), undefined);
+  assert.equal(summaryEffort({ provider: 'gemini', mode: 'api', model: 'gemini-2.5-flash' }), 'low');
+  assert.equal(summaryEffort({ provider: 'gemini', mode: 'api', model: 'models/gemini-3-flash' }), 'low');
+  assert.equal(summaryEffort({ provider: 'gemini', mode: 'api', model: 'gemini-2.0-flash' }), undefined);
+  assert.equal(summaryEffort({ provider: 'gemini', mode: 'oauth', model: 'gemini-2.5-pro' }), undefined);
+  assert.equal(summaryEffort({ provider: 'compatible', protocol: 'openai', model: 'deepseek-reasoner' }), 'low');
+  assert.equal(summaryEffort({ provider: 'compatible', protocol: 'anthropic', model: 'claude-sonnet' }), undefined);
 });

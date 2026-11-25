@@ -332,3 +332,22 @@ test('GeminiApiAdapter rejects prompts above 400k chars as recoverable ProviderP
   assert.ok(caught.maxPromptTokens > 0);
   assert.equal(calls, 0);
 });
+
+test('GeminiApiAdapter sets low thinkingBudget on 2.5 and low thinkingLevel on 3+ when effort is low', async () => {
+  const bodies: any[] = [];
+  const adapter = new GeminiApiAdapter(
+    (async (url: any, init: any) => {
+      if (String(url).endsWith('/cachedContents')) return Response.json({ name: 'cachedContents/low-effort' });
+      bodies.push(JSON.parse(init.body));
+      return stream();
+    }) as typeof fetch,
+    new Map(),
+  );
+  await adapter.run('Summarize', { ...connection, model: 'gemini-2.5-flash' }, context({ effort: 'low' }));
+  await adapter.run('Summarize', { ...connection, model: 'gemini-3-flash' }, context({ effort: 'low' }));
+  assert.equal(bodies.length, 2);
+  assert.equal(bodies[0].generationConfig.thinkingConfig.thinkingBudget, 512);
+  assert.equal(bodies[0].generationConfig.thinkingConfig.thinkingLevel, undefined);
+  assert.equal(bodies[1].generationConfig.thinkingConfig.thinkingLevel, 'LOW');
+  assert.equal(bodies[1].generationConfig.thinkingConfig.thinkingBudget, undefined);
+});

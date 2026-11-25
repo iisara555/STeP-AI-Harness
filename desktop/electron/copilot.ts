@@ -29,6 +29,7 @@ export class CopilotAdapter implements ProviderAdapter {
     const started = Date.now();
     if (!context.key) throw new Error('COPILOT_LOGIN_REQUIRED');
     if (context.images?.length || context.webSearch) throw new Error('PROVIDER_CAPABILITY_UNSUPPORTED');
+    if (context.effort && !['low', 'medium', 'high', 'xhigh', 'max'].includes(context.effort)) throw new Error('INVALID_INPUT');
     if (context.signal.aborted) throw new Error('CANCELLED');
     const holder = context.session;
     const identity = providerSessionKey(connection, context);
@@ -102,6 +103,7 @@ export class CopilotAdapter implements ProviderAdapter {
       session ||= await client.createSession({
         sessionId: randomUUID(),
         ...(connection.model ? { model: connection.model } : {}),
+        ...(context.effort ? { reasoningEffort: context.effort as any } : {}),
         availableTools: [],
         excludedTools: ['builtin:*', 'mcp:*', 'custom:*'],
         tools: [],
@@ -183,7 +185,24 @@ export async function copilotModels(context: Pick<ProviderContext, 'cwd' | 'env'
   const timeout = setTimeout(() => void client.forceStop().catch(() => {}), 30_000);
   try {
     await client.start();
-    return (await client.listModels()).slice(0, 100).map(m => ({ id: m.id, label: m.name || m.id }));
+    return (await client.listModels()).slice(0, 100).map(m => {
+      const efforts =
+        m.capabilities?.supports?.reasoningEffort && Array.isArray(m.supportedReasoningEfforts)
+          ? m.supportedReasoningEfforts
+              .filter((id): id is NonNullable<typeof id> => typeof id === 'string' && /^[a-z]+$/.test(id))
+              .slice(0, 10)
+              .map(id => ({ id }))
+          : [];
+      const defaultEffort =
+        typeof m.defaultReasoningEffort === 'string' && efforts.some(e => e.id === m.defaultReasoningEffort)
+          ? m.defaultReasoningEffort
+          : undefined;
+      return {
+        id: m.id,
+        label: m.name || m.id,
+        ...(efforts.length ? { efforts, ...(defaultEffort ? { defaultEffort } : {}) } : {}),
+      };
+    });
   } catch {
     throw new Error('MODEL_LIST_UNAVAILABLE');
   } finally {

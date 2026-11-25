@@ -52,12 +52,10 @@ export function effortInModel(model?: string) {
 }
 
 /**
- * The connection for the first Skill selection attempt. agy takes no `--effort` with an id that names its level, so for
- * `gemini-3.8-flash-medium` (or -high, -xhigh, -max) it is the same model's `-low` id when agy lists it; otherwise the
- * connection is unchanged. The caller asks the chosen model again when the -low reply is malformed or fails. Only Skill
- * selection is measured (eval:selection, 2026-11-01); the answer, summary, check and repair keep the chosen model.
- * Other providers keep the chosen model too (owner, 2026-11-01): Haiku against Sonnet picked no Skill faster and gave
- * one more general request a Skill, and OpenAI's mini and Gemini's Flash-Lite wait for their own eval:selection run.
+ * The connection for Skill selection and checkpoint summarization. agy takes no `--effort` with an id that names its level,
+ * so for `gemini-3.8-flash-medium` (or -high, -xhigh, -max) it is the same model's `-low` id when agy lists it; otherwise the
+ * connection is unchanged. Callers fall back to the chosen model when the `-low` reply fails. Answers, answer checks, and
+ * repairs keep the chosen model.
  */
 export function auxiliaryConnection<T extends Pick<Connection, 'model' | 'models'> & { provider?: Connection['provider'] }>(
   connection: T,
@@ -66,6 +64,22 @@ export function auxiliaryConnection<T extends Pick<Connection, 'model' | 'models
   const base = /^(.+)-(?:medium|high|xhigh|max)$/.exec(connection.model || '')?.[1];
   const low = base && `${base}-low`;
   return low && connection.models?.some(m => m.id === low) ? { ...connection, model: low } : connection;
+}
+
+/** Low reasoning effort for checkpoint summarization across every provider that accepts a low setting. */
+export function summaryEffort(
+  connection: Pick<Connection, 'provider' | 'model' | 'models' | 'protocol'> & { mode?: Connection['mode'] },
+): string | undefined {
+  if (connection.provider === 'antigravity') return effortInModel(connection.model) ? undefined : 'low';
+  if (connection.provider === 'openai' || connection.provider === 'claude' || connection.provider === 'copilot') {
+    return autoEffort(modelOption(connection)?.efforts, 'small');
+  }
+  if (connection.provider === 'gemini') {
+    const model = String(connection.model || '').replace(/^models\//, '');
+    return connection.mode === 'api' && /^gemini-(?:2\.5|[3-9])/.test(model) ? 'low' : undefined;
+  }
+  if (connection.provider === 'compatible') return (connection.protocol ?? 'openai') === 'openai' ? 'low' : undefined;
+  return undefined;
 }
 
 const ANTIGRAVITY_DEFAULT_EFFORTS: EffortOption[] = [{ id: 'low' }, { id: 'medium' }, { id: 'high' }];

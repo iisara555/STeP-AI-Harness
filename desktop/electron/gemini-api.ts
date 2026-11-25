@@ -167,6 +167,16 @@ export class GeminiApiAdapter implements ProviderAdapter {
     const base = (context.geminiBaseUrl || 'https://generativelanguage.googleapis.com').replace(/\/$/, '') + '/v1beta';
     // Gemini returns its thought summaries only when asked, and only thinking models (2.5 and later) accept the request.
     const thoughts = Boolean(context.onReasoning && !context.jsonSchema && !context.receiptOcr && /^gemini-(?:2\.5|[3-9])/.test(model));
+    const thinkingBudget = context.effort === 'low' && !context.receiptOcr && /^gemini-2\.5/.test(model) ? 512 : undefined;
+    const thinkingLevel = context.effort === 'low' && !context.receiptOcr && /^gemini-[3-9]/.test(model) ? 'LOW' : undefined;
+    const thinkingConfig =
+      thoughts || thinkingBudget !== undefined || thinkingLevel
+        ? {
+            ...(thoughts ? { includeThoughts: true } : {}),
+            ...(thinkingBudget !== undefined ? { thinkingBudget } : {}),
+            ...(thinkingLevel ? { thinkingLevel } : {}),
+          }
+        : undefined;
     const signal = AbortSignal.any([context.signal, AbortSignal.timeout(600_000)]);
     const cached = context.receiptOcr
       ? { name: undefined, status: 'bypassed' as const }
@@ -198,10 +208,10 @@ export class GeminiApiAdapter implements ProviderAdapter {
                 ],
               },
             ],
-            ...(connection.maxOutputTokens || context.jsonSchema || thoughts
+            ...(connection.maxOutputTokens || context.jsonSchema || thinkingConfig
               ? {
                   generationConfig: {
-                    ...(thoughts ? { thinkingConfig: { includeThoughts: true } } : {}),
+                    ...(thinkingConfig ? { thinkingConfig } : {}),
                     ...(connection.maxOutputTokens ? { maxOutputTokens: connection.maxOutputTokens } : {}),
                     ...(context.receiptOcr ? { maxOutputTokens: Math.min(connection.maxOutputTokens || 16_384, 16_384) } : {}),
                     // Receipt extraction supplies the native schema; all responses still pass the host's parser.

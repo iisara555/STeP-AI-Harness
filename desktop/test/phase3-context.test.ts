@@ -663,3 +663,104 @@ test('CompatibleAdapter converts 400k+ prompts to promptOnly limit errors and Wo
     store.close();
   }
 });
+
+test('WorkService always summarizes at low effort (including Antigravity -low fallback) even when high effort or autoEffort off is set', async () => {
+  const store = new Store(':memory:');
+  try {
+    store.put('connection', 'c', {
+      id: 'c',
+      provider: 'antigravity',
+      model: 'gemini-3.8-flash-high',
+      ready: true,
+      models: [
+        { id: 'gemini-3.8-flash-low', label: 'Flash Low' },
+        { id: 'gemini-3.8-flash-high', label: 'Flash High' },
+      ],
+    } as Connection);
+    const session = store.create('c', 'cc');
+    session.effort = 'high';
+    session.messages = Array.from({ length: 8 }, (_, i) => ({
+      role: i % 2 ? 'assistant' : 'user',
+      text: 'Long turn ' + 'ก'.repeat(28_000),
+      at: new Date().toISOString(),
+    }));
+    store.save(session);
+    const harness: Harness = {
+      root: repoRoot,
+      route: async () => ({ routingContract: { mode: 'GENERAL', authority: { status: 'ALLOW' }, mandatoryReferences: [] } }),
+      contextPolicy: boundary.classifyContextPolicy,
+      privacy: privacy.evaluatePrivacyGate,
+      skillMetadata: async () => null,
+      documentPrivacy: async () => null,
+      nextOutput: async () => null,
+      autoEffort: () => false,
+    };
+    const summaryCalls: string[] = [];
+    const service = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: repoRoot, env: {} },
+        adapter: {
+          run: async (_prompt, connection, context) => {
+            if (context.system?.startsWith('Summarize')) {
+              summaryCalls.push(connection.model || '');
+              if (connection.model === 'gemini-3.8-flash-low') throw new Error('MODEL_NOT_AVAILABLE');
+              return 'Fallback checkpoint summary.';
+            }
+            return 'Done';
+          },
+        },
+      }),
+      () => {},
+    );
+    await service.run(session.id, 'Continue work', '', true, undefined, 'chat');
+    assert.ok(summaryCalls.length >= 2 && summaryCalls.length % 2 === 0);
+    for (let i = 0; i < summaryCalls.length; i += 2) {
+      assert.deepEqual(summaryCalls.slice(i, i + 2), ['gemini-3.8-flash-low', 'gemini-3.8-flash-high']);
+    }
+    assert.equal(store.session(session.id).status, 'review');
+
+    // Also verify non-suffixed / OpenAI models always summarize with effort='low' regardless of session effort & autoEffort=false.
+    store.put('connection', 'o', {
+      id: 'o',
+      provider: 'openai',
+      model: 'gpt-5',
+      ready: true,
+      models: [{ id: 'gpt-5', label: 'GPT-5', efforts: [{ id: 'low' }, { id: 'high' }] }],
+    } as Connection);
+    const openAiSession = store.create('o', 'cc');
+    openAiSession.effort = 'high';
+    openAiSession.messages = Array.from({ length: 12 }, (_, i) => ({
+      role: i % 2 ? 'assistant' : 'user',
+      text: 'Long turn ' + 'ก'.repeat(35_000),
+      at: new Date().toISOString(),
+    }));
+    store.save(openAiSession);
+    const openAiSummaryEfforts: (string | undefined)[] = [];
+    const answerEfforts: (string | undefined)[] = [];
+    const openAiService = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: repoRoot, env: {} },
+        adapter: {
+          run: async (_prompt, _connection, context) => {
+            if (context.system?.startsWith('Summarize')) {
+              openAiSummaryEfforts.push(context.effort);
+              return 'OpenAI checkpoint.';
+            }
+            answerEfforts.push(context.effort);
+            return 'Done';
+          },
+        },
+      }),
+      () => {},
+    );
+    await openAiService.run(openAiSession.id, 'Continue work', '', true, undefined, 'chat');
+    assert.ok(openAiSummaryEfforts.length >= 1 && openAiSummaryEfforts.every(e => e === 'low'));
+    assert.deepEqual(answerEfforts, ['high']);
+  } finally {
+    store.close();
+  }
+});

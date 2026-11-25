@@ -674,3 +674,37 @@ test('Copilot maps SDK context-limit errors to PROMPT_TOO_LONG without blind ses
   assert.equal(calls, 2);
   await session.closeAndWait();
 });
+
+test('Copilot passes low reasoningEffort to createSession when context.effort is low', async () => {
+  const seenOptions: any[] = [];
+  const copilotConnection = { id: 'c', provider: 'copilot', mode: 'oauth', model: 'o3' } as Connection;
+  const adapter = new CopilotAdapter(
+    () =>
+      ({
+        start: async () => {},
+        forceStop: async () => {},
+        deleteSession: async () => {},
+        createSession: async (options: any) => {
+          seenOptions.push(options);
+          return {
+            sessionId: 's-low',
+            sendAndWait: async () => {
+              options.onEvent({ type: 'assistant.message_delta', data: { deltaContent: 'Summary' } });
+              return { data: { content: 'Summary' } };
+            },
+          };
+        },
+      }) as any,
+  );
+  const reply = await adapter.run('Summarize', copilotConnection, {
+    cwd: tmpdir(),
+    env: {},
+    key: 'gho_synthetic',
+    system: 'Rules',
+    effort: 'low',
+    emit: () => {},
+    signal: new AbortController().signal,
+  });
+  assert.equal(reply, 'Summary');
+  assert.equal(seenOptions[0].reasoningEffort, 'low');
+});

@@ -55,7 +55,7 @@ import { extractStructuredJson } from './json-schema';
 import { selectSkillBundle } from './skill-resources';
 import { sanitizeModelOutput, evaluateOutputQuality, buildRepairPrompt } from './output-quality';
 import { SKILL_REVIEW_SCHEMA, SKILL_REVIEW_SYSTEM, parseSkillReview, qualityFeedback, skillChecklist } from './answer-review';
-import { autoEffort, auxiliaryConnection, modelOption, taskSize } from './effort';
+import { autoEffort, auxiliaryConnection, modelOption, summaryEffort, taskSize } from './effort';
 import { selfContainedText } from './text-intent';
 import { selectDiscovery } from './discovery';
 import { highConfidenceSkill, prepareSkillSelection, shouldRunModelSkillSelection } from './skill-selection';
@@ -1845,47 +1845,59 @@ export class WorkService {
             },
             summarize: async data => {
               activity(tm('กำลังย่อบทสนทนาเก่า โดยเก็บสถานะงานไว้'));
-              let counted: TokenCount = { input: 0, output: 0, total: 0 };
               const summarySystem = CHECKPOINT_SYSTEM;
               const summaryPrompt = section('conversation', data);
-              const calledAt = Date.now();
-              const call: ProviderCallTrace = {
-                ...promptMetrics(summarySystem, summaryPrompt),
-                kind: 'summary',
-                outcome: 'running',
-                ms: 0,
-              };
-              stepTrace.providerCalls!.push(call);
-              try {
-                checkAbort();
-                const result = await runtime.adapter.run(summaryPrompt, connection, {
-                  ...runtime.context,
-                  signal: controller.signal,
-                  system: summarySystem,
-                  effort: autoEffort(modelOption(selectedConnection)?.efforts, 'small'),
-                  emit: delta => {
-                    if (delta && call.ttftMs === undefined) call.ttftMs = Date.now() - calledAt;
-                  },
-                  onTransport: info => {
-                    call.transport = info;
-                  },
-                  onUsage: count => {
-                    counted = combineUsage(counted, count, 'max');
-                  },
-                });
-                call.outcome = 'completed';
-                return result;
-              } catch (error) {
-                call.outcome = 'error';
-                call.code = codeOf(error);
-                throw error;
-              } finally {
-                call.ms = Date.now() - calledAt;
-                if (counted.total) call.usage = counted;
-                usage = combineUsage(usage, counted);
-                stepUsage = combineUsage(stepUsage, counted);
-                recordUsage(counted);
+              const lowFirst = auxiliaryConnection(connection);
+              const attempts = lowFirst.model !== connection.model ? [lowFirst, connection] : [connection];
+              for (const [index, attemptConnection] of attempts.entries()) {
+                const last = index === attempts.length - 1;
+                let counted: TokenCount = { input: 0, output: 0, total: 0 };
+                const calledAt = Date.now();
+                const call: ProviderCallTrace = {
+                  ...promptMetrics(summarySystem, summaryPrompt),
+                  kind: 'summary',
+                  outcome: 'running',
+                  ms: 0,
+                };
+                stepTrace.providerCalls!.push(call);
+                try {
+                  checkAbort();
+                  const result = await runtime.adapter.run(summaryPrompt, attemptConnection, {
+                    ...runtime.context,
+                    signal: controller.signal,
+                    system: summarySystem,
+                    effort: summaryEffort(attemptConnection),
+                    emit: delta => {
+                      if (delta && call.ttftMs === undefined) call.ttftMs = Date.now() - calledAt;
+                    },
+                    onTransport: info => {
+                      call.transport = info;
+                    },
+                    onUsage: count => {
+                      counted = combineUsage(counted, count, 'max');
+                    },
+                  });
+                  if (!result.trim() && !last) {
+                    call.outcome = 'error';
+                    call.code = 'PROVIDER_EMPTY_RESPONSE';
+                    continue;
+                  }
+                  call.outcome = 'completed';
+                  return result;
+                } catch (error) {
+                  call.outcome = 'error';
+                  call.code = codeOf(error);
+                  if (last || ['CANCELLED', 'LOGIN_REQUIRED', 'PROVIDER_QUOTA', 'PROVIDER_PERMISSION_DENIED'].includes(call.code || ''))
+                    throw error;
+                } finally {
+                  call.ms = Date.now() - calledAt;
+                  if (counted.total) call.usage = counted;
+                  usage = combineUsage(usage, counted);
+                  stepUsage = combineUsage(stepUsage, counted);
+                  recordUsage(counted);
+                }
               }
+              return '';
             },
           });
           if (result.method !== 'none') {

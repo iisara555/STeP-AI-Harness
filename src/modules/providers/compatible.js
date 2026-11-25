@@ -176,6 +176,9 @@ export async function compatibleRun(
     headers["x-api-key"] = context.key;
     headers["anthropic-version"] = "2023-06-01";
   } else if (context.key) headers.authorization = "Bearer " + context.key;
+  let sentReasoningEffort =
+    protocol === "openai" &&
+    ["low", "medium", "high"].includes(context.effort);
   const body =
     protocol === "anthropic"
       ? {
@@ -224,6 +227,7 @@ export async function compatibleRun(
               : { max_tokens: 8192 }),
           stream: true,
           stream_options: { include_usage: true },
+          ...(sentReasoningEffort ? { reasoning_effort: context.effort } : {}),
           // Native tool calling (policy nativeToolCalls): the service returns tool requests as structured calls whose
           // arguments it has already escaped, instead of JSON the model writes by hand in a step-tool fence.
           ...(native ? { tools: context.nativeTools } : {}),
@@ -240,23 +244,34 @@ export async function compatibleRun(
           ],
         };
   let response;
-  try {
-    response = await fetcher(endpoint, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-      redirect: "error",
-      signal,
-    });
-  } catch {
-    if (signal.aborted)
-      throw new Error(
-        context.signal?.aborted ? "CANCELLED" : "PROVIDER_TIMEOUT",
-      );
-    throw new Error("PROVIDER_NETWORK_FAILED");
-  }
-  if (!response.ok) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      response = await fetcher(endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        redirect: "error",
+        signal,
+      });
+    } catch {
+      if (signal.aborted)
+        throw new Error(
+          context.signal?.aborted ? "CANCELLED" : "PROVIDER_TIMEOUT",
+        );
+      throw new Error("PROVIDER_NETWORK_FAILED");
+    }
+    if (response.ok) break;
     let code = await failureCode(response);
+    if (
+      sentReasoningEffort &&
+      attempt === 0 &&
+      response.status === 400 &&
+      code === "PROVIDER_REQUEST_FAILED"
+    ) {
+      delete body.reasoning_effort;
+      sentReasoningEffort = false;
+      continue;
+    }
     if (
       images.length &&
       code === "PROVIDER_REQUEST_FAILED" &&
