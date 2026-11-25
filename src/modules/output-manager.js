@@ -101,8 +101,8 @@ export function buildOutputDirectory({
 } = {}) {
   const { year, month } = dateParts(date);
   const teamCode = normalizeTeamCode(team);
-  const outputType = normalizeOutputType(type, extension);
-  return join(workspaceDir, OUTPUT_ROOT, teamCode, year, month, outputType);
+  normalizeOutputType(type, extension);
+  return join(workspaceDir, OUTPUT_ROOT, teamCode, `${year}-${month}`);
 }
 
 export function buildOutputBaseName({
@@ -115,7 +115,7 @@ export function buildOutputBaseName({
   const { year, month, day } = dateParts(date);
   const teamCode = normalizeTeamCode(team);
   const outputType = normalizeOutputType(type, extension);
-  const safeTitle = sanitizeOutputSegment(title, { fallback: 'untitled', maxLength: 72 });
+  const safeTitle = sanitizeOutputSegment(title, { fallback: 'untitled', maxLength: 56 });
   return `${year}${month}${day}_${teamCode}_${outputType}_${safeTitle}`;
 }
 

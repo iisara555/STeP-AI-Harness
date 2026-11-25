@@ -49,10 +49,9 @@ export const en: Record<string, string> = {
   'ภาพต้นฉบับพร้อมส่ง · ตรวจภาพก่อนส่ง': 'Original image ready to send · review before sending',
   'กำลังเตรียมภาพ…': 'Preparing image…',
   รอให้งานปัจจุบันเสร็จก่อนวางภาพ: 'Wait for the current task to finish before pasting an image.',
-  'แนบได้ครั้งละ 1 ไฟล์ กรุณานำไฟล์เดิมออกก่อนวางภาพ':
-    'Only one attachment can be sent at a time. Remove the current file before pasting an image.',
+  'แนบได้สูงสุด {0} ไฟล์ต่อครั้ง': 'You can attach up to {0} files at a time.',
   'วางภาพ PNG หรือ JPEG ได้': 'Paste a PNG or JPEG image.',
-  'ภาพจากคลิปบอร์ดต้องมีขนาดไม่เกิน 4 MB': 'The clipboard image must be no larger than 4 MB.',
+  'ภาพจากคลิปบอร์ดต้องมีขนาดไม่เกิน 10 MB': 'The clipboard image must be no larger than 10 MB.',
   'กำลังเตรียมภาพ กรุณารอสักครู่ก่อนส่ง': 'Preparing the image. Please wait before sending.',
   'รอคำตอบปัจจุบันก่อนส่ง ข้อความยังอยู่ในช่องพิมพ์': 'Wait for the current reply before sending. Your message is still in the composer.',
   การเริ่มโปรแกรม: 'Startup',
@@ -1702,8 +1701,10 @@ export const en: Record<string, string> = {
     'High-risk data found, such as passwords, tokens or data that must not leave. Remove or mask it in the file and attach it again',
   'ยังไม่รองรับไฟล์ชนิดนี้ ใช้ PDF, Word (DOCX), TXT, MD, CSV หรือ TSV':
     "This file type isn't supported yet. Use PDF, Word (DOCX), TXT, MD, CSV or TSV",
-  'ไฟล์ยาวเกินขอบเขต (ข้อความเกิน 100,000 ตัวอักษร หรือเกิน 200 หน้า) แบ่งไฟล์แล้วแนบทีละส่วน':
-    'The file is too long (over 100,000 characters or 200 pages). Split it and attach the parts separately',
+  'แนบไฟล์เกินจำนวนสูงสุด (64 ไฟล์ต่อครั้ง) กรุณานำไฟล์บางส่วนออก':
+    'Too many attachments (maximum 64 files per send). Remove some files and try again',
+  'ไฟล์ยาวหรือใหญ่เกินขอบเขต (เกิน 50 MB, ข้อความเกิน 180,000 ตัวอักษร, ภาพเกิน 10 MB หรือรวมเกิน 20 ภาพ/20 MB) แบ่งไฟล์แล้วแนบทีละส่วน':
+    'The attachment exceeds limits (over 50 MB file, 180,000 characters, 10 MB image, or 20 images / 20 MB combined). Split and attach separately',
   'ไฟล์นี้ไม่มีตัวอักษรให้อ่าน มักเป็น PDF สแกนหรือรูปภาพ ใช้ไฟล์ต้นฉบับ (Word หรือ PDF ที่พิมพ์) แทน':
     "This file has no readable text; it's usually a scanned PDF or an image. Use the original (Word or a typed PDF) instead",
   'บางหน้าใน PDF เป็นภาพสแกนที่อ่านตัวอักษรไม่ได้ ระบบจึงยังไม่ส่ง เพื่อไม่ให้ AI สรุปจากเนื้อหาที่ขาดไป ใช้ไฟล์ต้นฉบับหรือตัดหน้าที่เป็นภาพออก':

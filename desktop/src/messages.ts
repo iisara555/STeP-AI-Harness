@@ -209,8 +209,10 @@ export const errorText: Record<string, string> = localized({
   // Why an attached file cannot be sent (electron/attachments.ts). Shown on the chip and when sending is refused.
   ATTACH_SENSITIVE: 'พบข้อมูลความเสี่ยงสูง เช่น รหัสผ่าน token หรือข้อมูลที่ห้ามส่งออก ลบหรือปิดบังส่วนนั้นในไฟล์แล้วแนบใหม่',
   ATTACH_UNSUPPORTED: 'ยังไม่รองรับไฟล์ชนิดนี้ ใช้ PDF, Word (DOCX), TXT, MD, CSV หรือ TSV',
-  ATTACH_TOO_LARGE: 'ไฟล์ยาวเกินขอบเขต (ข้อความเกิน 100,000 ตัวอักษร หรือเกิน 200 หน้า) แบ่งไฟล์แล้วแนบทีละส่วน',
-  CLIPBOARD_IMAGE_SIZE: 'ภาพจากคลิปบอร์ดต้องมีขนาดไม่เกิน 4 MB',
+  ATTACH_COUNT_LIMIT: 'แนบไฟล์เกินจำนวนสูงสุด (64 ไฟล์ต่อครั้ง) กรุณานำไฟล์บางส่วนออก',
+  ATTACH_TOO_LARGE:
+    'ไฟล์ยาวหรือใหญ่เกินขอบเขต (เกิน 50 MB, ข้อความเกิน 180,000 ตัวอักษร, ภาพเกิน 10 MB หรือรวมเกิน 20 ภาพ/20 MB) แบ่งไฟล์แล้วแนบทีละส่วน',
+  CLIPBOARD_IMAGE_SIZE: 'ภาพจากคลิปบอร์ดต้องมีขนาดไม่เกิน 10 MB',
   CLIPBOARD_IMAGE_UNSUPPORTED: 'วางภาพ PNG หรือ JPEG ได้',
   ATTACH_NO_TEXT: 'ไฟล์นี้ไม่มีตัวอักษรให้อ่าน มักเป็น PDF สแกนหรือรูปภาพ ใช้ไฟล์ต้นฉบับ (Word หรือ PDF ที่พิมพ์) แทน',
   ATTACH_PAGES_WITHOUT_TEXT:
