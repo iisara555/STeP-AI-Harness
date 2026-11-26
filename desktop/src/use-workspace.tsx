@@ -541,7 +541,7 @@ export function useWorkspace() {
       .catch(() => setSkills([]));
   }, [api]);
   // The Skills hub lists what this computer imported; reread after the Skill Packs window closes.
-  const ownSkillsAllowed = snapshot?.policy?.features.staffSkills !== false;
+  const ownSkillsAllowed = Boolean(snapshot?.policy?.features.skillPacks === true || snapshot?.policy?.features.staffSkills !== false);
   useEffect(() => {
     if (!api || view !== 'skills' || packsOpen || !ownSkillsAllowed) return;
     let live = true;
@@ -742,8 +742,21 @@ export function useWorkspace() {
   async function attachDocument(tool: DocumentToolId): Promise<DocumentAttachment | null> {
     const task = await createDocumentTask(tool);
     if (!task) return null;
-    const file = await api!.call('attach', { id: task.id, documentTool: tool });
-    return file ? { sessionId: task.id, file } : null;
+    try {
+      const file = await api!.call('attach', { id: task.id, documentTool: tool });
+      if (file) return { sessionId: task.id, file };
+    } catch (error) {
+      await api!.call('remove', { id: task.id }).catch(() => {});
+      throw error;
+    }
+    await api!.call('remove', { id: task.id }).catch(() => {});
+    return null;
+  }
+  async function detachDocument(sessionId: string, fileId: string) {
+    await api!.call('detach', { id: sessionId, fileId }).catch(() => {});
+    const targetSession = snapshot?.sessions.find(s => s.id === sessionId);
+    if (targetSession && !targetSession.messages.length && !targetSession.draft.trim())
+      await api!.call('remove', { id: sessionId }).catch(() => {});
   }
   // Drafting or revising a document shows that task with its draft open, on the AI chosen in the composer.
   async function openDraftTask(id: string) {
@@ -764,7 +777,8 @@ export function useWorkspace() {
     if (form.source && !form.source.file.usable) throw new Error('ATTACHMENT_NOT_APPROVED');
     if (form.source && form.sourceRole !== 'template' && form.source.file.sourceUsable === false)
       throw new Error('ATTACHMENT_NOT_APPROVED');
-    const request = documentRequest(tool, form.values, form.variant, form.source ? form.sourceRole : 'source', form.recipients);
+    const recipients = tool === 'letter' && form.variant === 'invitation' ? form.recipients : undefined;
+    const request = documentRequest(tool, form.values, form.variant, form.source ? form.sourceRole : 'source', recipients);
     const id = form.source?.sessionId || (await createDocumentTask(tool))?.id;
     if (!id) return;
     await openDraftTask(id);
@@ -781,7 +795,7 @@ export function useWorkspace() {
           ? {
               rsvpUrl: form.values.rsvpUrl || '',
               venueUrl: form.values.venueUrl || '',
-              ...(form.recipients?.length ? { recipients: form.recipients } : {}),
+              ...(recipients?.length ? { recipients } : {}),
             }
           : undefined,
     });
@@ -789,7 +803,7 @@ export function useWorkspace() {
   async function reviseDocument(id: string, changes: string) {
     if (!snapshot?.sessions.find(s => s.id === id)?.documentTool) throw new Error('INVALID_DOCUMENT_TOOL');
     await openDraftTask(id);
-    await start(id, t('แก้ร่างเดิมตามคำขอนี้: {0}', changes), { sourceText: '', mode: 'draft' });
+    return start(id, t('แก้ร่างเดิมตามคำขอนี้: {0}', changes), { sourceText: '', mode: 'draft', coordinator: false });
   }
   async function create() {
     if (guardSettingsExit(create)) return;
@@ -990,7 +1004,7 @@ export function useWorkspace() {
       setTermsAccepted(false);
       const { consent: _token, ...ask } = run;
       setConsentAsk({ ...ask, sessionId: id, text, ...result.consent });
-      return;
+      return false;
     }
     if (result.aside) {
       setQuery(current => (current === submittedQuery ? '' : current));
@@ -1001,7 +1015,7 @@ export function useWorkspace() {
         setProgress('');
         setStartedAt(0);
       }
-      return;
+      return false;
     }
     if (result.started && result.warning) notify(t('ส่งแล้ว ข้อความนี้มีคำที่อาจเป็นข้อมูลอ่อนไหว อย่าใส่ชื่อหรือรหัสของบุคคลในงานนี้'));
     else if (result.started && result.masked?.length) notify(t('ระบบปิดบังก่อนส่งให้ AI: {0}', result.masked.join(', ')));
@@ -1030,7 +1044,9 @@ export function useWorkspace() {
         setToolTab('output');
         openPanel();
       }
+      return true;
     }
+    return false;
   }
   const lastRequest = [...(session?.messages || [])].reverse().find(m => m.role === 'user')?.text || '';
   // Staff see Thai Skill names, and developer Skills only in Dev mode (skill-display.ts).
@@ -1222,6 +1238,10 @@ export function useWorkspace() {
     documents: () => {
       setSettings(false);
       navigate('documents');
+    },
+    media: () => {
+      setSettings(false);
+      navigate('media');
     },
     'theme-system': () => void setTheme('system'),
     'theme-light': () => void setTheme('light'),
@@ -1615,6 +1635,14 @@ export function useWorkspace() {
     keybindingsRef,
     recentSessions,
     paletteItems,
+    detachDocument,
+    mediaToChat: (prompt: string, image: boolean) => {
+      setSettings(false);
+      setView('chat');
+      setSelected('');
+      setWorkMode(image ? 'image' : 'chat');
+      setQuery(prompt);
+    },
     lastAnswer,
     openLink,
   };

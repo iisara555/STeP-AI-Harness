@@ -1420,7 +1420,7 @@ export async function exportDocument(
     const layout = exportLayout();
     const presentation = resolvePresentation(options.presentation, typeof options.documentTool === 'string' ? options.documentTool : false);
     const furniture = layout.id === 'tor' ? torPdfFurniture(content, layout.font, presentation) : undefined;
-    const printFonts = invitation ? await documentPrintFontCss('TH SarabunPSK') : '';
+    const printFonts = await documentPrintFontCss(layout.font).catch(() => '');
     return writeFile(
       path,
       await pdf(

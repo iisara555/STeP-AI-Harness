@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Copy, Lightbulb } from './icons';
+import { Copy, Lightbulb, Sparkles } from './icons';
 import {
   MEDIA_EXAMPLES,
   MEDIA_FONTS,
@@ -33,14 +33,30 @@ function loadDraft(): MediaState {
 export function InternalMedia({
   notify,
   copyText,
+  hasAi,
+  canGenerate,
+  onDraftInChat,
+  onGenerateImage,
 }: {
   notify: (text: string, tone?: 'info' | 'error') => void;
   copyText: (text: string) => Promise<unknown>;
+  hasAi?: boolean;
+  canGenerate?: boolean;
+  onDraftInChat?: (text: string) => void;
+  onGenerateImage?: (prompt: string) => void;
 }) {
   const [state, setState] = useState<MediaState>(loadDraft);
   const [exampleType, setExampleType] = useState<MediaType | null>(null);
+  const [clearConfirm, setClearConfirm] = useState(false);
   const result = useMemo(() => compileMedia(state), [state]);
   const aiRequest = useMemo(() => mediaAiRequest(state), [state]);
+  const hiddenDetailsWarning = useMemo(() => {
+    const exampleSource = t('ตัวอย่างสมมติสำหรับทดลอง');
+    const staleExample =
+      state.source.trim() === exampleSource && state.topic.trim() !== '' && state.topic.trim() !== MEDIA_EXAMPLES[state.type].topic;
+    const visualOrSourceResult = compileMedia({ ...state, topic: 'x', brief: '', content: 'x' });
+    return visualOrSourceResult.warnings.length > 0 || staleExample;
+  }, [state]);
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -63,10 +79,15 @@ export function InternalMedia({
     setExampleType(null);
     notify(t('ใส่ตัวอย่างแล้ว แก้ให้ตรงกับงานจริง'));
   }
+  const hasDraft = [state.topic, state.brief, state.content, state.visual, state.source].some(value => value.trim());
   function applyExample() {
-    const replacesDraft = [state.topic, state.brief, state.content, state.visual, state.source].some(value => value.trim());
-    if (replacesDraft) setExampleType(state.type);
+    if (hasDraft) setExampleType(state.type);
     else fillExample(state.type);
+  }
+  function clearDraft() {
+    set({ topic: '', brief: '', content: '', visual: '', source: '' });
+    setClearConfirm(false);
+    notify(t('ล้างข้อมูลแล้ว'));
   }
   const audit = result.ready
     ? t('พร้อมคัดลอก · ตรวจเนื้อหาก่อนใช้จริง')
@@ -77,6 +98,17 @@ export function InternalMedia({
       ].join(' · ');
   return (
     <div className="internal-media">
+      {clearConfirm && (
+        <ConfirmDialog
+          title={t('ล้างข้อมูลในหน้านี้หรือไม่?')}
+          confirmLabel={t('ล้างข้อมูล')}
+          focusCancel
+          onCancel={() => setClearConfirm(false)}
+          onConfirm={clearDraft}
+        >
+          <p>{t('หัวข้อ เนื้อหา และรายละเอียดที่พิมพ์ไว้จะถูกล้าง')}</p>
+        </ConfirmDialog>
+      )}
       {exampleType && (
         <ConfirmDialog
           title={t('ใช้ตัวอย่างแทนข้อมูลปัจจุบันหรือไม่?')}
@@ -128,6 +160,11 @@ export function InternalMedia({
               <Lightbulb size={16} />
               {t('ใส่ตัวอย่าง')}
             </button>
+            {hasDraft && (
+              <button type="button" className="quiet" onClick={() => setClearConfirm(true)}>
+                {t('ล้างข้อมูล')}
+              </button>
+            )}
           </div>
           <details className="media-ai-request">
             <summary>{t('ให้ AI ช่วยร่างเนื้อหา')}</summary>
@@ -137,10 +174,18 @@ export function InternalMedia({
               )}
             </p>
             <textarea readOnly rows={8} aria-label={t('คำขอให้ AI ช่วยร่าง')} value={aiRequest} />
-            <button type="button" className="quiet" disabled={!state.topic.trim()} onClick={() => void copy(aiRequest)}>
-              <Copy size={16} />
-              {t('คัดลอกคำขอให้ AI')}
-            </button>
+            <div className="media-actions">
+              <button type="button" className="quiet" disabled={!state.topic.trim()} onClick={() => void copy(aiRequest)}>
+                <Copy size={16} />
+                {t('คัดลอกคำขอให้ AI')}
+              </button>
+              {onDraftInChat && hasAi && (
+                <button type="button" className="quiet" disabled={!state.topic.trim()} onClick={() => onDraftInChat(aiRequest)}>
+                  <Sparkles size={16} />
+                  {t('เปิดในแชตให้ AI ช่วยร่าง')}
+                </button>
+              )}
+            </div>
           </details>
           <label>
             {t('เนื้อหา / ขั้นตอนที่จะใช้')}
@@ -237,6 +282,9 @@ export function InternalMedia({
               />
             </label>
           </details>
+          {hiddenDetailsWarning && (
+            <p className="small media-audit-pending">{t('ตรวจข้อความใน "รายละเอียดเพิ่มเติม" (แนวคิดภาพ / แหล่งข้อมูล) ด้วย')}</p>
+          )}
           <p className="small muted">{t('ร่างนี้เก็บไว้ในเครื่องนี้อัตโนมัติ')}</p>
         </section>
         <section className="media-card media-result">
@@ -262,6 +310,12 @@ export function InternalMedia({
               <Copy size={16} />
               {t('คัดลอก Prompt')}
             </button>
+            {onGenerateImage && canGenerate && (
+              <button type="button" className="quiet" disabled={!result.ready} onClick={() => onGenerateImage(result.prompt)}>
+                <Sparkles size={16} />
+                {t('สร้างภาพในแชต')}
+              </button>
+            )}
           </div>
           {/* The layout sketch is what staff check; the English prompt is for the image tool, so it sits below, short. */}
           <MediaPreview state={state} />

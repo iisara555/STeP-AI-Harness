@@ -3541,6 +3541,24 @@ export const en: Record<string, string> = {
     'Attach up to 64 files (50 MiB per file) with flat output/<TEAM>/<YYYY-MM>/ export paths',
   'เปิดเครื่องมือเขียนโค้ดในพื้นที่ทำงาน และใช้งาน Google Workspace ต่อเนื่องอัตโนมัติ':
     'Workspace coding and tool-building support with seamless Google Workspace continuity',
+  'เลือก AI ที่เชื่อมต่อแล้วด้านล่างก่อน': 'Choose a connected AI below first',
+  'ตรวจลิงก์ QR ให้ขึ้นต้นด้วย http:// หรือ https://': 'Check QR links start with http:// or https://',
+  'ล้างข้อมูลในฟอร์มนี้หรือไม่?': 'Clear this form?',
+  ล้างฟอร์ม: 'Clear form',
+  ข้อมูลที่กรอกไว้และไฟล์แนบในแบบฟอร์มนี้จะถูกล้าง: 'Entered fields and attached file in this form will be cleared',
+  'แบบฟอร์ม / ตัวอย่าง (รองรับเฉพาะไฟล์ Word .docx ที่ตรวจโครงสร้างแล้ว)': 'Form / example (supports verified Word .docx templates only)',
+  'ตั้งค่าสารบัญ/หัวท้ายที่เลือกไว้ใช้ได้เฉพาะ Word (.docx) ล้างค่าก่อนส่งออกรูปแบบนี้':
+    'Selected table of contents / header / footer options apply to Word (.docx) only. Clear them before exporting in this format.',
+  'ล้างตัวเลือกเฉพาะ Word': 'Clear Word-only options',
+  'พบข้อมูลที่อาจเป็นเลขบัตรหรือเบอร์โทรส่วนตัว กรุณาลบก่อนคัดลอก':
+    'Possible national ID or personal phone number found. Remove it before copying.',
+  'ล้างข้อมูลในหน้านี้หรือไม่?': 'Clear this draft?',
+  ล้างข้อมูล: 'Clear draft',
+  'หัวข้อ เนื้อหา และรายละเอียดที่พิมพ์ไว้จะถูกล้าง': 'Entered topic, copy, and details will be cleared',
+  ล้างข้อมูลแล้ว: 'Draft cleared',
+  'เปิดในแชตให้ AI ช่วยร่าง': 'Open in Chat to draft with AI',
+  'ตรวจข้อความใน "รายละเอียดเพิ่มเติม" (แนวคิดภาพ / แหล่งข้อมูล) ด้วย': 'Also check text inside "More details" (visual idea / source)',
+  สร้างภาพในแชต: 'Generate image in Chat',
   'ผลการค้นหาและตรวจโค้ดในโฟลเดอร์งาน (ไม่รวมไฟล์ที่มีข้อมูลส่วนบุคคล)':
     'Search and code check results in the workspace folder (excluding personal data files)',
   แบบอักษรภาษาไทย: 'Thai UI font',

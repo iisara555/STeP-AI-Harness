@@ -3,6 +3,7 @@ import { ConfirmDialog } from './ui';
 import { lazyScreen } from './lazy-screen';
 import { t } from './i18n';
 import { DocumentTools, InternalMedia, ReceiptApp } from './app-shared';
+import { canGenerateImages } from './image-routing';
 import type { AppView } from './use-workspace';
 
 const SettingsPanel = lazyScreen(async () => ({ default: (await import('./settings')).SettingsPanel }));
@@ -12,6 +13,7 @@ export function ToolScreens({ v }: { v: AppView }) {
   const {
     api,
     attachDocument,
+    detachDocument,
     caseSend,
     caseSessions,
     chooseConnection,
@@ -20,6 +22,7 @@ export function ToolScreens({ v }: { v: AppView }) {
     documentsOpened,
     draftDocument,
     mediaOpened,
+    mediaToChat,
     notify,
     openAiSettings,
     openCaseChat,
@@ -83,6 +86,7 @@ export function ToolScreens({ v }: { v: AppView }) {
             connectionId={connectionId}
             chooseConnection={setConnectionId}
             attach={attachDocument}
+            detach={detachDocument}
             draft={draftDocument}
             existingDraft={
               session?.documentTool && (session.draft.trim() || session.proposals.length)
@@ -99,7 +103,14 @@ export function ToolScreens({ v }: { v: AppView }) {
       )}
       {mediaOpened && (
         <div style={{ display: view === 'media' && !settings ? 'contents' : 'none' }}>
-          <InternalMedia notify={notify} copyText={text => api.call('copyText', { text })} />
+          <InternalMedia
+            notify={notify}
+            copyText={text => api.call('copyText', { text })}
+            hasAi={snapshot.connections.some(c => c.ready)}
+            canGenerate={canGenerateImages(snapshot.connections.find(c => c.id === connectionId && c.ready))}
+            onDraftInChat={text => mediaToChat(text, false)}
+            onGenerateImage={prompt => mediaToChat(prompt, true)}
+          />
         </div>
       )}
       {/* A connection being set up keeps going when Settings is closed: the panel stays mounted, hidden, until it
