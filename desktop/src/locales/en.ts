@@ -3541,4 +3541,9 @@ export const en: Record<string, string> = {
     'Attach up to 64 files (50 MiB per file) with flat output/<TEAM>/<YYYY-MM>/ export paths',
   'เปิดเครื่องมือเขียนโค้ดในพื้นที่ทำงาน และใช้งาน Google Workspace ต่อเนื่องอัตโนมัติ':
     'Workspace coding and tool-building support with seamless Google Workspace continuity',
+  แบบอักษรภาษาไทย: 'Thai UI font',
+  'เปลี่ยนฟอนต์หน้าจอแอปทันที · เอกสารราชการยังใช้ TH Sarabun ตามเดิม':
+    'Applies to the app interface immediately · official documents still use TH Sarabun',
+  มีหัว: 'Looped',
+  ไม่มีหัว: 'Loopless',
 };
