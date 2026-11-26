@@ -10,7 +10,7 @@
 
 ภาพใช้ข้อมูลตัวอย่าง หน้าจอและตัวเลือกอาจต่างตามรุ่นและการตั้งค่าขององค์กร
 
-**รุ่นที่เผยแพร่ล่าสุด** [**STeP Desktop v0.6.44**](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.44) ดูสิ่งที่เปลี่ยนในแต่ละรุ่นที่ [CHANGELOG](../CHANGELOG.md#desktop-v0644-2026-11-25)
+**รุ่นที่เผยแพร่ล่าสุด** [**STeP Desktop v0.6.44**](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.44) ดูสิ่งที่เปลี่ยนในแต่ละรุ่นที่ [CHANGELOG](../CHANGELOG.md#desktop-v0644-2026-11-26)
 
 ## เริ่มใช้งาน
 

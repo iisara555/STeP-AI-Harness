@@ -3536,4 +3536,9 @@ export const en: Record<string, string> = {
   ตรวจงานเบื้องหลัง: 'Checking background tasks',
   สร้างภาพ: 'Generating image',
   ดาวน์โหลดไฟล์: 'Download file',
+  'ระบบจัดการเวอร์ชันเอกสารร่างพร้อม Diff Timeline และปุ่มย้อนกลับรายเวอร์ชัน': 'Draft versioning with Diff Timeline and per-version undo',
+  'รองรับการแนบไฟล์สูงสุด 64 ไฟล์ (50 MiB/ไฟล์) และจัดระเบียบโฟลเดอร์ไฟล์ส่งออกเป็น output/<TEAM>/<YYYY-MM>/':
+    'Attach up to 64 files (50 MiB per file) with flat output/<TEAM>/<YYYY-MM>/ export paths',
+  'เปิดเครื่องมือเขียนโค้ดในพื้นที่ทำงาน และใช้งาน Google Workspace ต่อเนื่องอัตโนมัติ':
+    'Workspace coding and tool-building support with seamless Google Workspace continuity',
 };

@@ -10,7 +10,7 @@
 
 **STeP Desktop** คือหน้าจอทำงานหลักของ STeP AI สำหรับพนักงาน STeP / RSP North ใช้ภาษาไทยได้ ไม่ต้องจำชื่อ Skill หรือพิมพ์คำสั่งติดตั้งเอง ภาพในหน้านี้ใช้ข้อมูลตัวอย่าง หน้าจอจริงอาจต่างตามรุ่นและการตั้งค่าขององค์กร
 
-**รุ่นที่เผยแพร่ล่าสุด** [**STeP Desktop v0.6.44**](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.44) ปรับการจัดการข้อความยาวของ Antigravity และรักษาข้อความอ้างอิงจากเอกสาร STeP เมื่อต้องย่อบริบท ดูรายละเอียดใน [CHANGELOG](CHANGELOG.md#desktop-v0644-2026-11-25)
+**รุ่นที่เผยแพร่ล่าสุด** [**STeP Desktop v0.6.44**](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.44) รวมการจัดการบริบทแบบยาวและ low-effort compaction, ระบบเวอร์ชันเอกสารร่าง Diff Timeline, แนบไฟล์สูงสุด 64 ไฟล์พร้อมพาธส่งออกระดับตื้น และเครื่องมือโค้ด/Google Workspace แบบต่อเนื่อง ดูรายละเอียดใน [CHANGELOG](CHANGELOG.md#desktop-v0644-2026-11-26)
 
 ## ทำอะไรได้บ้าง
 
