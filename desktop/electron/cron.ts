@@ -225,8 +225,11 @@ export class Automations {
           run.code = /^[A-Z_]+$/.test(e.message) ? e.message : 'AUTOMATION_FAILED';
         } finally {
           this.controllers.delete(id);
-          delete job.running;
-          if (this.store.get('automation', job.id)) this.store.put('automation', job.id, job);
+          const current = this.store.get<Automation>('automation', job.id);
+          if (current) {
+            delete current.running;
+            this.store.put('automation', current.id, current);
+          }
           this.store.put('automation-run', id, run);
           this.notify(run);
         }

@@ -68,6 +68,12 @@ const ALIASES: Record<string, Tool> = {
   get_artifact: 'artifact_read',
   subagent: 'invoke_subagent',
   gworkspace: 'google_workspace',
+  file_read: 'files',
+  file_write: 'changes',
+  file_edit: 'patch',
+  shell_run: 'terminal',
+  find_files: 'search_files',
+  list_files: 'files',
 };
 
 /** Where a model puts the target when it forgets `input`, per tool. Only these names are read, only when input is missing. */
@@ -123,7 +129,7 @@ function toolName(value: unknown): Tool | undefined {
     .trim()
     .toLowerCase()
     .replace(/^(?:functions|tools?|step_host|default_api)[.:]/, '')
-    .replace(/[\s-]+/g, '_');
+    .replace(/[\s.-]+/g, '_');
   if ((LOOP_TOOLS as readonly string[]).includes(key)) return key as Tool;
   return ALIASES[key];
 }
@@ -256,6 +262,16 @@ export function repairToolRequest(parsed: unknown): Repaired {
         `args.${key} read as ${Array.isArray(fixed) ? 'a list' : typeof fixed === 'string' ? JSON.stringify(fixed) : typeof fixed}`,
       );
     }
+  }
+  if (tool === 'artifact_save' && request.content === undefined && typeof args.content === 'string') {
+    request.content = args.content;
+    delete args.content;
+    notes.push('moved args.content to content');
+  }
+  if (tool === 'repl_eval' && request.content === undefined && typeof args.code === 'string') {
+    request.content = args.code;
+    delete args.code;
+    notes.push('moved args.code to content');
   }
   if (Object.keys(args).length) request.args = args;
   else delete request.args;

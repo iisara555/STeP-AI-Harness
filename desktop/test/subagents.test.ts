@@ -152,3 +152,76 @@ test('invoke_subagent in a real run calls the AI again with the subagent role an
     store.close();
   }
 });
+
+test('subagent completion does not dispose parent transmission/consent state before parent outgoing runs', async () => {
+  const store = new Store(':memory:');
+  store.put('connection', 'c', { id: 'c', provider: 'openai', model: 'fixture', ready: true } as Connection);
+  store.put('settings', 'main', { workspace: tmpdir(), team: 'cc' });
+  let disposed = 0;
+  let main = 0;
+  const harness: Harness = {
+    root,
+    route: (query, opts) => routing.queryStepRouter(query, { autoRoute: true, authorityChecks: true, ...opts }),
+    contextPolicy: boundary.classifyContextPolicy,
+    privacy: privacy.evaluatePrivacyGate,
+    skillMetadata: async id => {
+      const metadata = await routing.loadSkillContextMetadata(id);
+      return { ...metadata, mandatoryReferences: await routing.loadDocumentContextMetadata(metadata.mandatory) };
+    },
+    documentCatalog: async () => routing.loadDocumentCatalog(),
+    catalog: async () => catalog.loadSkillCatalog(root),
+    documentPrivacy: async () => null,
+    nextOutput: async () => null,
+    toolLoop: () => true,
+    tools: async scope => ({
+      enabled: () => true,
+      check: async () => {
+        if (disposed > 0) throw new Error('CANCELLED');
+      },
+      readOnly: () => false,
+      execute: async request => {
+        if (request.tool === 'invoke_subagent') {
+          const result = await scope.delegate!(String(request.args?.role), String(request.args?.prompt));
+          return { status: 'completed', result };
+        }
+        if (request.tool === 'files') return { path: 'policy.md', text: 'Synthetic rule' };
+        throw new Error('UNEXPECTED_TOOL');
+      },
+      outgoing: async s => {
+        if (disposed > 0) throw new Error('CANCELLED');
+        return s;
+      },
+      dispose: async () => {
+        disposed++;
+      },
+    }),
+  };
+  const service = new WorkService(
+    store,
+    harness,
+    async () => ({
+      context: { cwd: tmpdir(), env: {} },
+      adapter: {
+        run: async (_prompt: string, _c: unknown, context: any) => {
+          if (/You are a subagent/.test(context.system || '')) {
+            return /Synthetic rule/.test(_prompt) ? 'พบกฎใน policy.md' : step('files', 'policy.md');
+          }
+          return ++main === 1
+            ? step('invoke_subagent', '', { role: 'Reader', prompt: 'อ่าน policy.md' })
+            : 'สรุปเสร็จสมบูรณ์หลัง subagent จบ';
+        },
+      },
+    }),
+    () => {},
+  );
+  const session = store.create('c', 'cc');
+  try {
+    await service.run(session.id, 'ช่วยสรุปงานจากไฟล์หน่อย', '', true, undefined, 'chat');
+    const done = store.session(session.id);
+    assert.equal(done.status, 'review');
+    assert.equal(done.messages.at(-1)?.text, 'สรุปเสร็จสมบูรณ์หลัง subagent จบ');
+    assert.equal(disposed, 1, 'host.dispose() runs once when the parent ToolLoop finishes, never when subagent exits');
+  } finally {
+    store.close();
+  }
+});
