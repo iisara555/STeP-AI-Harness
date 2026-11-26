@@ -667,7 +667,12 @@ export class DesktopTools {
     // REPL code runs like a command: privacy check, approval in ask mode, and shellByAi in auto mode. It is not matched
     // against the shell allow/deny lists, which describe shell commands, so an allowed command prefix cannot let code
     // run without a person.
-    const replCode = r.tool === 'repl_eval' ? (typeof a.code === 'string' ? a.code : target) : undefined;
+    const replCode =
+      r.tool === 'repl_eval'
+        ? typeof a.code === 'string'
+          ? a.code
+          : target || (typeof r.content === 'string' ? r.content : '')
+        : undefined;
     const subagent =
       r.tool === 'invoke_subagent'
         ? {
@@ -865,12 +870,13 @@ export class DesktopTools {
               typeof a.timeoutMs === 'number' ? a.timeoutMs : 5000,
             );
           case 'artifact_save': {
+            const body = typeof a.content === 'string' ? a.content : typeof r.content === 'string' ? r.content : '';
             const saved = this.workbench.saveArtifact(
               scope.sessionId,
               (a.id as string) || target,
               (a.title as string) || (a.id as string) || target,
               (a.kind as any) || 'markdown',
-              (a.content as string) || '',
+              body,
             );
             const ref = { id: saved.id, title: saved.title, kind: saved.kind, version: saved.version };
             scope.artifactSaved?.(ref);

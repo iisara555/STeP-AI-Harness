@@ -47,7 +47,7 @@ export function highConfidenceSkill(routed: any, entries: Entry[], query: string
 export function shouldRunModelSkillSelection(routed: any, query: string, source: string, hasStrongKnowledge = false): boolean {
   if (source.trim().length > 0) return true;
   const deliverableCue =
-    /อ่านร่าง|ตรวจร่าง|ตรวจเอกสาร|ร่าง|เขียน|จัดทำ|ทำแผน|วางแผน|วิเคราะห์|ประเมิน|ออกแบบ|สร้าง|เตรียม|สรุปผล|คำนวณ|ตรวจสอบ|รีวิว|เปรียบเทียบ|แคปชัน|โพสต์|สคริปต์|บรีฟ|ใบเสนอราคา|สัญญา|บันทึกข้อความ|รายงาน|review|draft|write|create|plan|analyze|prepare|build|design|evaluate|audit/i.test(
+    /อ่านร่าง|ตรวจร่าง|ตรวจเอกสาร|ร่าง|เขียน|จัดทำ|ทำแผน|วางแผน|วิเคราะห์|ประเมิน|ออกแบบ|สร้าง|เตรียม|สรุปผล|คำนวณ|ตรวจสอบ|รีวิว|เปรียบเทียบ|แคปชัน|โพสต์|สคริปต์|บรีฟ|ใบเสนอราคา|สัญญา|บันทึกข้อความ|รายงาน|เช็ก|เช็ค|เปิด|ดึง|ส่ง|เมล|อีเมล|ปฏิทิน|นัด|ไดรฟ์|gmail|drive|calendar|sheets?|docs?|slides?|forms?|tasks?|apps\s*script|google\s*workspace|review|draft|write|create|plan|analyze|prepare|build|design|evaluate|audit/i.test(
       query,
     );
   if (hasStrongKnowledge && !deliverableCue) return false;

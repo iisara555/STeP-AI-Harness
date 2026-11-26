@@ -806,3 +806,48 @@ test('ToolLoop provides remediation hints and reflection guidance when a tool fa
   assert.match(prompts[1], /args\.action=read/);
   assert.match(prompts[1], /reflect briefly in one sentence on the reason before correcting/i);
 });
+
+test('TOOL_RULES exposes coding/tool-creation and direct google_workspace capabilities, and catalog pages without premature split', async () => {
+  for (const name of [
+    'code_symbols',
+    'code_references',
+    'code_diagnostics',
+    'repl_eval',
+    'artifact_save',
+    'artifact_read',
+    'invoke_subagent',
+    'google_workspace',
+    'args.edits',
+  ]) {
+    assert.ok(TOOL_RULES.includes(name), `TOOL_RULES should mention ${name}`);
+  }
+  assert.match(toolRemediationHint('changes', 'WORKSPACE_REQUIRED') || '', /artifact_save/i);
+  assert.match(toolRemediationHint('google_workspace', 'GOOGLE_ACCOUNT_CHANGED') || '', /action":"list"/i);
+  assert.match(toolRemediationHint('google_workspace', 'GOOGLE_OPERATION_UNSUPPORTED') || '', /action":"list"/i);
+  assert.match(toolRemediationHint('google_workspace', 'GOOGLE_SCOPE_MISSING') || '', /Change allowed services/i);
+
+  const bigCatalog = JSON.stringify({ accounts: [{ handle: 'h1', services: ['gmail-read'] }], operations: Array(76).fill('op') }).padEnd(
+    9000,
+    ' ',
+  );
+  const prompts: string[] = [];
+  let calls = 0;
+  const loop = new ToolLoop(
+    host({
+      execute: async () => bigCatalog,
+    }),
+  );
+  const answer = await loop.run(
+    'check google catalog',
+    async prompt => {
+      prompts.push(prompt);
+      if (++calls === 1) return request('google_workspace', '', { action: 'list' });
+      return 'catalog complete';
+    },
+    signal(),
+  );
+  assert.equal(answer, 'catalog complete');
+  const rows = JSON.parse(/<tool_results>\n([\s\S]+?)\n<\/tool_results>/.exec(prompts[1])![1]);
+  assert.equal(rows[0].nextOffset, undefined);
+  assert.equal(rows[0].text.length, 9000);
+});

@@ -133,6 +133,9 @@ export type Harness = {
   compactHook?: (event: 'pre_compact' | 'post_compact', id: string, before: number, after: number) => Promise<void>;
   completed?: (session: Session) => Promise<void>;
   toolLoop?: () => boolean;
+  /** Masked summary of connected Google Workspace accounts/services for seamless direct tool use. */
+  googleWorkspaceSummary?: () =>
+    { enabled: boolean; vaultSuspended?: boolean; accounts: { label: string; services: string[] }[] } | undefined;
   /** Rechecked throughout the work-assistant run, including before provider calls. */
   assistantPolicy?: () => string | undefined;
   /** Choose a registered procedure before ordinary chat; explicit Skills and fixed workflows keep their own route. */
@@ -1586,6 +1589,15 @@ export class WorkService {
             instructionItems.push(preloadedResource);
           }
         }
+        const gwSummary = toolsEnabled && scopedToolInstructions === undefined ? this.harness.googleWorkspaceSummary?.() : undefined;
+        const googleWorkspaceStatus =
+          gwSummary?.enabled && !gwSummary.vaultSuspended && gwSummary.accounts.length > 0
+            ? `Google Workspace is connected and ready for direct google_workspace tool calls in this conversation without needing /google-workspace first (${gwSummary.accounts
+                .map(a => `${a.label}: ${a.services.join(', ') || 'none'}`)
+                .join(
+                  '; ',
+                )}). Start with google_workspace(input="",args={"action":"list"}) to obtain the session account handle and operation catalog.`
+            : '';
         // The Web tab's rules go only to conversations that show web-page work; others get a pointer to tool_describe.
         const browserRules =
           toolsEnabled && scopedToolInstructions === undefined
@@ -1637,6 +1649,7 @@ export class WorkService {
           this.harness.permissionMode?.() === 'plan' &&
             'Current permission mode is plan. Provide a plan and references for review; do not draft the final document, propose file mutations, or request command execution.',
           toolsEnabled && (scopedToolInstructions ?? TOOL_RULES),
+          googleWorkspaceStatus,
           browserRules,
           toolsEnabled && smallModel(connection.model) && SMALL_MODEL_TOOL_RULE,
           nativeTools && NATIVE_TOOL_RULE,
@@ -2325,7 +2338,7 @@ export class WorkService {
               if (request.tool === 'reference' && request.input) opened.add(request.input);
               if (['web_fetch', 'web_extract', 'browser'].includes(request.tool) && request.input) browsed.add(request.input);
               const done = host.execute(request, signal);
-              if (request.tool === 'changes' && request.content !== undefined)
+              if ((request.tool === 'changes' && request.content !== undefined) || request.tool === 'patch')
                 void done.then(
                   (change: any) => {
                     if (change && typeof change.path === 'string' && typeof change.id === 'string')
