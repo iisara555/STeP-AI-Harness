@@ -48,7 +48,7 @@ import {appendFileSync} from 'node:fs';
 readline.createInterface({input:process.stdin}).on('line',line=>{
  const m=JSON.parse(line);appendFileSync(${JSON.stringify(log)},JSON.stringify(m)+'\\n');
  if(m.id===undefined)return;
- const result=m.method==='initialize'?{}:m.method==='account/rateLimits/read'?{rateLimits:{planType:'plus',
+ const result=m.method==='initialize'?{}:m.method==='model/list'?{data:[]}:m.method==='account/rateLimits/read'?{rateLimits:{planType:'plus',
  primary:{usedPercent:35,windowDurationMins:300,resetsAt:1791288000},secondary:{usedPercent:70,windowDurationMins:10080},
  credits:{hasCredits:true,unlimited:false,balance:'12.50'}}}:null;
  console.log(JSON.stringify({id:m.id,...(result?{result}:{error:{message:'unexpected generation request'}})}));
@@ -169,11 +169,31 @@ try {
   await expect(page.locator('[data-picker-quota="synthetic-antigravity"]')).toContainText('85%');
   await expect(page.locator('.quota-mini-pill')).toContainText('5H');
   await expect(page.locator('.quota-mini-pill')).toContainText('85%');
+  await page.keyboard.press('Escape');
+  const composer = page.locator('.composer');
+  const send = composer.getByRole('button', { name: 'ส่งคำขอ', exact: true });
+  // The smallest CSS viewport models the native window under display zoom.
+  for (const width of [1280, 800, 580]) {
+    await page.setViewportSize({ width, height: 680 });
+    const options = await composer.locator('.composer-options').boundingBox();
+    const model = await composer.getByRole('button', { name: 'เลือกบริการ โมเดลและระดับการคิด' }).boundingBox();
+    const action = await send.boundingBox();
+    const status = await composer.locator('.quota-mini-pill').boundingBox();
+    const frame = await composer.boundingBox();
+    assert.ok(options && model && action && status && frame, 'composer controls are visible');
+    assert.ok(model.x + model.width <= action.x, 'the selected model and Send never overlap');
+    assert.ok(action.x + action.width <= frame.x + frame.width, 'Send remains within the chat pane');
+    assert.ok(status.y >= action.y + action.height, 'quota is grouped below the action bar');
+    if (width === 580) assert.ok(model.y >= options.y + options.height, 'controls reflow in the narrow chat pane');
+  }
+  await composer.locator('.quota-mini-pill').click();
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'ปิด', exact: true }).click();
   const calls = (await readFile(log, 'utf8')).trim().split('\n').map(JSON.parse);
   assert.equal(calls.filter(c => c.method === 'account/rateLimits/read').length, 1, 'one-minute cache avoids duplicate polling');
   assert.ok(
-    calls.every(c => ['initialize', 'initialized', 'account/rateLimits/read'].includes(c.method)),
-    'no generation or auth request',
+    calls.every(c => ['initialize', 'initialized', 'account/rateLimits/read', 'model/list'].includes(c.method)),
+    `only read-only quota and model discovery: ${calls.map(c => c.method).join(', ')}`,
   );
   const agyCalls = (await readFile(agyLog, 'utf8')).trim().split('\n').map(JSON.parse);
   assert.ok(

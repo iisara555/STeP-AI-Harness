@@ -52,6 +52,7 @@
 }
 .composer-area {
   padding: 0 var(--space-6) var(--space-3);
+  container: composer / inline-size;
 }
 /* The textarea draws no outline of its own, so the box shows where typing goes. */
 .composer:focus-within {
@@ -63,20 +64,87 @@
   field-sizing: content;
   resize: none;
   width: 100%;
-  min-height: 44px;
+  min-height: var(--space-14);
   max-height: 200px;
   border: 0;
   background: transparent;
-  padding: var(--space-2-5) var(--space-4) var(--space-1-5);
+  padding: var(--space-3) var(--space-4) var(--space-2);
   outline: none;
 }
 .composer-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.composer-options,
+.composer-submit {
   display: flex;
   align-items: center;
-  /* One row: pickers shrink with an ellipsis (full text in their tooltip) before anything wraps. */
-  flex-wrap: nowrap;
-  padding: var(--space-0-5) var(--space-2) var(--space-2);
   gap: var(--space-1);
+  min-width: 0;
+}
+.composer-options {
+  flex-wrap: wrap;
+}
+.composer-options > .icon {
+  flex: none;
+  justify-content: center;
+  width: var(--space-8);
+  height: var(--space-8);
+}
+.composer-submit {
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+.composer-submit > .send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1-5);
+  width: auto;
+  height: auto;
+  min-height: var(--space-8);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.composer-usage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-0-5) var(--space-3);
+  border-top: 1px solid var(--line);
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
+  background: var(--sidebar);
+}
+.composer-usage:empty,
+.composer-side-actions:empty {
+  display: none;
+}
+.composer-usage .context-window-gauge {
+  padding-inline: var(--space-1);
+}
+.composer-usage .quota-mini-pill {
+  flex-wrap: wrap;
+  min-width: 0;
+  min-height: var(--space-6);
+  margin-inline-start: auto;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  padding-inline: var(--space-1);
+}
+.composer-usage .quota-mini-pill:hover {
+  background: var(--hover);
+  color: var(--text);
 }
 .composer-side-actions {
   display: flex;
@@ -85,14 +153,11 @@
   gap: var(--space-1);
   padding: 0 var(--space-2) var(--space-1);
 }
-.composer-tools > button {
-  flex-shrink: 0;
-}
-/* Compact pickers like Claude Desktop: as wide as the chosen option, highlighted on hover. */
 .composer-tools .pill-select {
   field-sizing: content;
   min-width: 0;
-  max-width: 190px;
+  max-width: min(100%, 11rem);
+  min-height: var(--space-8);
   font-size: var(--text-sm);
   padding: var(--pad-control-sm);
   border: 1px solid transparent;
@@ -106,10 +171,6 @@
 .composer-tools .pill-select:focus-visible {
   background: var(--hover);
   color: var(--text);
-}
-.composer-tools .model-select {
-  color: var(--text);
-  max-width: 170px;
 }
 /* The permission pill shows a shield and a short word; the real list lies over it, see-through, so a click opens it. */
 .composer-tools .permission-pill {
@@ -143,8 +204,29 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1-5);
-  max-width: 230px;
+  max-width: min(100%, 13rem);
+  border-color: var(--line);
   color: var(--text);
+}
+.composer-tools .ai-picker-button > svg {
+  flex: none;
+}
+.composer-submit .ai-picker-menu {
+  width: min(17.5rem, calc(100cqw - var(--space-6)));
+  max-height: 60vh;
+  overflow-y: auto;
+}
+@container composer (max-width: 36rem) {
+  .composer-tools {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .composer-submit {
+    justify-content: space-between;
+  }
+  .composer-submit .ai-picker-menu {
+    inset-inline-start: 0;
+    inset-inline-end: auto;
+  }
 }
 .composer-add {
   border: 1px solid var(--line);

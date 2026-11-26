@@ -1010,55 +1010,19 @@ export function ConversationView({ v }: { v: AppView }) {
                 </div>
               )}
               <Readiness api={api} query={query} connectionId={session?.connectionId || connectionId} model={currentModel} />
-              {workMode !== 'image' && (
-                <ContextWindowGauge session={session} connectionId={connection?.id} model={currentModel} onEvent={api.onEvent} />
-              )}
-              {/* Laid out like Claude Desktop: add and modes on the left, AI and send on the right. */}
               <div className="composer-tools">
-                <button
-                  className="icon composer-add"
-                  data-tour="attach"
-                  aria-label={t('ตรวจและแนบเอกสาร')}
-                  title={t('ตรวจและแนบเอกสาร')}
-                  disabled={running || pastingImage || (!session && connectionId === CLAUDE_CODE)}
-                  onClick={() =>
-                    void action(async () => {
-                      const id = session?.id || (await createTask())?.id;
-                      if (!id) return;
-                      const res = await api.call('attach', { id, multiple: true });
-                      const added = Array.isArray(res) ? res : res ? [res] : [];
-                      if (added.length) {
-                        addFiles(added);
-                        if (added.length === 1) setInspecting(added[0]);
-                        else {
-                          const refused = added.find(item => !item.usable);
-                          if (refused) setInspecting(refused);
-                        }
-                      }
-                    })
-                  }
-                >
-                  <Plus size={18} />
-                </button>
-                {snapshot.policy?.features.voice && (
-                  <VoiceButton
-                    key={session?.id || 'composer'}
-                    api={api}
-                    disabled={running || pastingImage}
-                    onText={text => setQuery(q => (q ? q + '\n' : '') + text)}
-                  />
-                )}
-                {snapshot.policy?.features.vision && (
+                <div className="composer-options">
                   <button
-                    className="icon"
-                    aria-label={t('แนบภาพให้ AI')}
-                    title={t('ตรวจและแนบภาพต้นฉบับให้ AI')}
-                    disabled={running || pastingImage}
+                    className="icon composer-add"
+                    data-tour="attach"
+                    aria-label={t('ตรวจและแนบเอกสาร')}
+                    title={t('ตรวจและแนบเอกสาร')}
+                    disabled={running || pastingImage || (!session && connectionId === CLAUDE_CODE)}
                     onClick={() =>
                       void action(async () => {
                         const id = session?.id || (await createTask())?.id;
                         if (!id) return;
-                        const res = await api.call('attach', { id, vision: true, multiple: true });
+                        const res = await api.call('attach', { id, multiple: true });
                         const added = Array.isArray(res) ? res : res ? [res] : [];
                         if (added.length) {
                           addFiles(added);
@@ -1071,223 +1035,269 @@ export function ConversationView({ v }: { v: AppView }) {
                       })
                     }
                   >
-                    <ImagePlus size={18} />
+                    <Plus size={18} />
                   </button>
-                )}
-                <select
-                  className="pill-select"
-                  data-tour="mode"
-                  aria-label={t('โหมดทำงาน')}
-                  title={t('โหมดทำงาน')}
-                  value={workflow || workMode}
-                  disabled={running || submitting}
-                  onChange={e => {
-                    const value = e.target.value;
-                    if (value in WORKFLOW_LABELS) {
-                      setWorkflow(value as Workflow);
-                      setWorkMode('chat');
-                    } else {
-                      setWorkflow('');
-                      setWorkMode(value as WorkMode);
-                    }
-                  }}
-                >
-                  <option value="chat">{t('คุยกับผู้ช่วย')}</option>
-                  {/* Native workflows of the harness, like Claude Code's plan mode: rules for how the assistant works. */}
-                  <optgroup label={t('ขั้นตอนทำงาน')}>
-                    {(Object.keys(WORKFLOW_LABELS) as Workflow[]).map(id => (
-                      <option key={id} value={id} disabled={id === 'execute' && !session?.workPlan?.tasks.length}>
-                        {t(WORKFLOW_LABELS[id])}
-                      </option>
-                    ))}
-                  </optgroup>
-                  {/* Chat writes documents too (open in Output, or file changes), like other AI apps; the separate
-                        drafting mode stays only for tasks that already use it and for multi-worker drafting. */}
-                  {(workMode === 'draft' || session?.documentTool || snapshot.policy?.features.coordinator) && (
-                    <option value="draft">{session?.documentTool ? t('แก้เอกสารนี้') : t('สร้างเอกสาร')}</option>
+                  {snapshot.policy?.features.voice && (
+                    <VoiceButton
+                      key={session?.id || 'composer'}
+                      api={api}
+                      disabled={running || pastingImage}
+                      onText={text => setQuery(q => (q ? q + '\n' : '') + text)}
+                    />
                   )}
-                  <option value="image">{t('สร้างรูป')}</option>
-                </select>
-                {/* Permission as a small shield pill with a short word; the native list underneath keeps the full
-                        wording, so opening it still explains each level. */}
-                {snapshot.policy && (
-                  <label className="pill-select permission-pill" title={t('สิทธิ์เครื่องมือ')}>
-                    <ShieldCheck size={14} aria-hidden="true" />
-                    <span>{t(PERMISSION_SHORT[snapshot.policy.mode] || 'ถามก่อน')}</span>
-                    <ChevronDown size={13} aria-hidden="true" />
-                    <select
-                      aria-label={t('สิทธิ์เครื่องมือ')}
-                      title={t('สิทธิ์เครื่องมือ')}
-                      value={snapshot.policy.mode}
-                      disabled={running || submitting}
-                      onChange={e =>
+                  {snapshot.policy?.features.vision && (
+                    <button
+                      className="icon"
+                      aria-label={t('แนบภาพให้ AI')}
+                      title={t('ตรวจและแนบภาพต้นฉบับให้ AI')}
+                      disabled={running || pastingImage}
+                      onClick={() =>
                         void action(async () => {
-                          await api.call('permissionMode', { mode: e.target.value });
-                          await refresh();
+                          const id = session?.id || (await createTask())?.id;
+                          if (!id) return;
+                          const res = await api.call('attach', { id, vision: true, multiple: true });
+                          const added = Array.isArray(res) ? res : res ? [res] : [];
+                          if (added.length) {
+                            addFiles(added);
+                            if (added.length === 1) setInspecting(added[0]);
+                            else {
+                              const refused = added.find(item => !item.usable);
+                              if (refused) setInspecting(refused);
+                            }
+                          }
                         })
                       }
                     >
-                      <option value="ask" disabled={!snapshot.policy.modes.includes('ask')}>
-                        {t('ถามก่อนแก้ไข')}
-                      </option>
-                      <option value="acceptEdits" disabled={!snapshot.policy.modes.includes('acceptEdits')}>
-                        {t('แก้ไฟล์ได้เลย · ถามก่อนรันคำสั่ง')}
-                        {!snapshot.policy.modes.includes('acceptEdits') ? t(' · ปิดโดยผู้ดูแล') : ''}
-                      </option>
-                      <option value="auto" disabled={!snapshot.policy.modes.includes('auto')}>
-                        {t('อัตโนมัติเต็มรูปแบบ')}
-                        {!snapshot.policy.modes.includes('auto') ? t(' · ปิดโดยผู้ดูแล') : ''}
-                      </option>
-                      <option value="plan" disabled={!snapshot.policy.modes.includes('plan')}>
-                        {t('อ่านอย่างเดียว · ห้ามแก้ไขไฟล์')}
-                      </option>
-                    </select>
-                  </label>
-                )}
-                <span className="spacer" />
-                {/* One pill for the AI account, model and reasoning level: the full choice opens above it, so the row
-                        stays on one line and the account is not repeated in the status bar. */}
-                <InlineQuotaChip account={activeUsageAccount} onClick={() => setUsageOpen(true)} />
-                <div className="ai-picker" ref={aiPickerRef}>
-                  <button
-                    type="button"
-                    className="pill-select ai-picker-button"
-                    data-tour="model"
-                    aria-label={t('เลือกบริการ โมเดลและระดับการคิด')}
-                    aria-expanded={aiPicker}
-                    title={aiSummary}
-                    disabled={running}
-                    onClick={() => setAiPicker(open => !open)}
-                  >
-                    <span className={`status-dot ${connection?.ready ? (runFailed ? 'failed' : 'ok') : ''}`} aria-hidden="true" />
-                    <span className="ai-picker-label">{aiLabel}</span>
-                    <ChevronDown size={14} aria-hidden="true" />
-                  </button>
-                  {aiPicker && (
-                    <div className="ai-picker-menu" role="group" aria-label={t('AI ของงานนี้')}>
-                      <label>
-                        {t('บัญชี AI')}
-                        <select
-                          aria-label={t('เลือกบัญชี AI')}
-                          value={session ? session.connectionId : connectionId}
-                          disabled={running}
-                          onChange={e => void action(() => chooseConnection(e.target.value))}
-                        >
-                          <option value="">{t('เลือก AI')}</option>
-                          {snapshot.connections.map(c => (
-                            <option key={c.id} value={c.id}>
-                              {connectionName(c)}
-                              {c.ready ? '' : t(' · ยังไม่พร้อม')}
-                            </option>
-                          ))}
-                          {!session && <option value={CLAUDE_CODE}>{t('Claude · Pro/Max (เปิดใน Claude Code)')}</option>}
-                        </select>
-                      </label>
-                      {connection && (
-                        <label>
-                          {t('โมเดล')}
-                          <select
-                            aria-label={t('เลือกโมเดล')}
-                            title={
-                              connection.models?.find(m => m.id === currentModel)?.description || t('โมเดลสำหรับงานนี้ เปลี่ยนได้ทุกเมื่อ')
-                            }
-                            value={currentModel}
-                            disabled={running}
-                            onChange={e => void action(() => chooseModel(e.target.value))}
-                          >
-                            <option value="" title={t('ค่าเริ่มต้นของบริการ')}>
-                              {defaultModel ? defaultModel.label : t('ค่าเริ่มต้นของบริการ')}
-                            </option>
-                            {(connection.models || [])
-                              .filter(m => m.id !== defaultModel?.id || m.id === currentModel)
-                              .map(m => (
-                                <option key={m.id} value={m.id} title={m.description}>
-                                  {m.label}
-                                </option>
-                              ))}
-                            {currentModel && !connection.models?.some(m => m.id === currentModel) && (
-                              <option value={currentModel}>{currentModel}</option>
-                            )}
-                          </select>
-                        </label>
-                      )}
-                      {activeModel?.efforts?.length ? (
-                        <label>
-                          {t('ระดับการคิด')}
-                          <select
-                            aria-label={t('เลือกระดับการคิด')}
-                            title={
-                              activeModel.efforts.find(e => e.id === currentEffort)?.description ||
-                              (!currentEffort && snapshot.policy?.features.autoEffort
-                                ? t(
-                                    'อัตโนมัติ: คำถามสั้นในแชตใช้ Low งานใหญ่ (หลายขั้นตอน โหมดวางแผน คำขอยาว หรือหลายไฟล์) ใช้ High งานทั่วไปใช้ค่าเริ่มต้นของโมเดล',
-                                  )
-                                : t('ระดับการคิด (reasoning) ยิ่งสูงยิ่งละเอียดแต่ช้าและใช้โควตามากขึ้น'))
-                            }
-                            value={currentEffort}
-                            disabled={running}
-                            onChange={e => void action(() => chooseModel(currentModel, e.target.value))}
-                          >
-                            <option value="">
-                              {snapshot.policy?.features.autoEffort
-                                ? t('อัตโนมัติตามขนาดงาน')
-                                : activeModel.defaultEffort
-                                  ? t('ค่าเริ่มต้น ({0})', effortLabel[activeModel.defaultEffort] || activeModel.defaultEffort)
-                                  : t('ค่าเริ่มต้น')}
-                            </option>
-                            {activeModel.efforts.map(e => (
-                              <option key={e.id} value={e.id} title={e.description}>
-                                {effortLabel[e.id] || e.id}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      ) : null}
-                      <AccountQuotaMenuSummary
-                        account={activeUsageAccount}
-                        busy={quotaRefreshing}
-                        onRefresh={() => void action(refreshActiveQuota)}
-                        onOpenUsage={() => {
-                          setAiPicker(false);
-                          setUsageOpen(true);
-                        }}
-                      />
-                    </div>
+                      <ImagePlus size={18} />
+                    </button>
                   )}
-                </div>
-                {running && query.trim() ? (
-                  // Typed while the task runs: the send button asks a side question (the task keeps running). Enter still
-                  // keeps the text for the next turn, so a follow-up is never answered as a side question by accident.
-                  <button
-                    className="send"
-                    title={t('ถามแทรก')}
-                    disabled={Boolean(files.length || pendingSource || session?.sideQuestions?.some(q => q.status === 'running'))}
-                    onClick={() => void action(() => askAside())}
-                  >
-                    <ArrowUp size={20} />
-                  </button>
-                ) : running ? (
-                  <button
-                    className="send stop"
-                    title={writeNow ? t('เขียนคำตอบจากที่อ่านมา · กดอีกครั้งเพื่อหยุดงาน') : t('หยุดงาน')}
-                    onClick={() => {
-                      if (!writeNow) return void api.call('cancel', { id: selected });
-                      setWriteNowAt(startedAt);
-                      void api.call('writeNow', { id: selected });
+                  <select
+                    className="pill-select"
+                    data-tour="mode"
+                    aria-label={t('โหมดทำงาน')}
+                    title={t('โหมดทำงาน')}
+                    value={workflow || workMode}
+                    disabled={running || submitting}
+                    onChange={e => {
+                      const value = e.target.value;
+                      if (value in WORKFLOW_LABELS) {
+                        setWorkflow(value as Workflow);
+                        setWorkMode('chat');
+                      } else {
+                        setWorkflow('');
+                        setWorkMode(value as WorkMode);
+                      }
                     }}
                   >
-                    <Square size={17} />
-                  </button>
-                ) : (
-                  <button
-                    className="send"
-                    title={t('ส่งคำขอ (Enter) · ขึ้นบรรทัดใหม่ (Shift+Enter)')}
-                    disabled={(!query.trim() && !files.some(file => file.imagePreview)) || submitting || pastingImage}
-                    onClick={() => void action(send)}
-                  >
-                    {submitting ? <LoaderCircle size={20} className="spin" /> : <ArrowUp size={20} />}
-                  </button>
+                    <option value="chat">{t('คุยกับผู้ช่วย')}</option>
+                    {/* Native workflows of the harness, like Claude Code's plan mode: rules for how the assistant works. */}
+                    <optgroup label={t('ขั้นตอนทำงาน')}>
+                      {(Object.keys(WORKFLOW_LABELS) as Workflow[]).map(id => (
+                        <option key={id} value={id} disabled={id === 'execute' && !session?.workPlan?.tasks.length}>
+                          {t(WORKFLOW_LABELS[id])}
+                        </option>
+                      ))}
+                    </optgroup>
+                    {/* Chat writes documents too (open in Output, or file changes), like other AI apps; the separate
+                        drafting mode stays only for tasks that already use it and for multi-worker drafting. */}
+                    {(workMode === 'draft' || session?.documentTool || snapshot.policy?.features.coordinator) && (
+                      <option value="draft">{session?.documentTool ? t('แก้เอกสารนี้') : t('สร้างเอกสาร')}</option>
+                    )}
+                    <option value="image">{t('สร้างรูป')}</option>
+                  </select>
+                  {/* Permission as a small shield pill with a short word; the native list underneath keeps the full
+                        wording, so opening it still explains each level. */}
+                  {snapshot.policy && (
+                    <label className="pill-select permission-pill" title={t('สิทธิ์เครื่องมือ')}>
+                      <ShieldCheck size={14} aria-hidden="true" />
+                      <span>{t(PERMISSION_SHORT[snapshot.policy.mode] || 'ถามก่อน')}</span>
+                      <ChevronDown size={13} aria-hidden="true" />
+                      <select
+                        aria-label={t('สิทธิ์เครื่องมือ')}
+                        title={t('สิทธิ์เครื่องมือ')}
+                        value={snapshot.policy.mode}
+                        disabled={running || submitting}
+                        onChange={e =>
+                          void action(async () => {
+                            await api.call('permissionMode', { mode: e.target.value });
+                            await refresh();
+                          })
+                        }
+                      >
+                        <option value="ask" disabled={!snapshot.policy.modes.includes('ask')}>
+                          {t('ถามก่อนแก้ไข')}
+                        </option>
+                        <option value="acceptEdits" disabled={!snapshot.policy.modes.includes('acceptEdits')}>
+                          {t('แก้ไฟล์ได้เลย · ถามก่อนรันคำสั่ง')}
+                          {!snapshot.policy.modes.includes('acceptEdits') ? t(' · ปิดโดยผู้ดูแล') : ''}
+                        </option>
+                        <option value="auto" disabled={!snapshot.policy.modes.includes('auto')}>
+                          {t('อัตโนมัติเต็มรูปแบบ')}
+                          {!snapshot.policy.modes.includes('auto') ? t(' · ปิดโดยผู้ดูแล') : ''}
+                        </option>
+                        <option value="plan" disabled={!snapshot.policy.modes.includes('plan')}>
+                          {t('อ่านอย่างเดียว · ห้ามแก้ไขไฟล์')}
+                        </option>
+                      </select>
+                    </label>
+                  )}
+                </div>
+                <div className="composer-submit">
+                  <div className="ai-picker" ref={aiPickerRef}>
+                    <button
+                      type="button"
+                      className="pill-select ai-picker-button"
+                      data-tour="model"
+                      aria-label={t('เลือกบริการ โมเดลและระดับการคิด')}
+                      aria-expanded={aiPicker}
+                      title={aiSummary}
+                      disabled={running}
+                      onClick={() => setAiPicker(open => !open)}
+                    >
+                      <span className={`status-dot ${connection?.ready ? (runFailed ? 'failed' : 'ok') : ''}`} aria-hidden="true" />
+                      <span className="ai-picker-label">{aiLabel}</span>
+                      <ChevronDown size={14} aria-hidden="true" />
+                    </button>
+                    {aiPicker && (
+                      <div className="ai-picker-menu" role="group" aria-label={t('AI ของงานนี้')}>
+                        <label>
+                          {t('บัญชี AI')}
+                          <select
+                            aria-label={t('เลือกบัญชี AI')}
+                            value={session ? session.connectionId : connectionId}
+                            disabled={running}
+                            onChange={e => void action(() => chooseConnection(e.target.value))}
+                          >
+                            <option value="">{t('เลือก AI')}</option>
+                            {snapshot.connections.map(c => (
+                              <option key={c.id} value={c.id}>
+                                {connectionName(c)}
+                                {c.ready ? '' : t(' · ยังไม่พร้อม')}
+                              </option>
+                            ))}
+                            {!session && <option value={CLAUDE_CODE}>{t('Claude · Pro/Max (เปิดใน Claude Code)')}</option>}
+                          </select>
+                        </label>
+                        {connection && (
+                          <label>
+                            {t('โมเดล')}
+                            <select
+                              aria-label={t('เลือกโมเดล')}
+                              title={
+                                connection.models?.find(m => m.id === currentModel)?.description ||
+                                t('โมเดลสำหรับงานนี้ เปลี่ยนได้ทุกเมื่อ')
+                              }
+                              value={currentModel}
+                              disabled={running}
+                              onChange={e => void action(() => chooseModel(e.target.value))}
+                            >
+                              <option value="" title={t('ค่าเริ่มต้นของบริการ')}>
+                                {defaultModel ? defaultModel.label : t('ค่าเริ่มต้นของบริการ')}
+                              </option>
+                              {(connection.models || [])
+                                .filter(m => m.id !== defaultModel?.id || m.id === currentModel)
+                                .map(m => (
+                                  <option key={m.id} value={m.id} title={m.description}>
+                                    {m.label}
+                                  </option>
+                                ))}
+                              {currentModel && !connection.models?.some(m => m.id === currentModel) && (
+                                <option value={currentModel}>{currentModel}</option>
+                              )}
+                            </select>
+                          </label>
+                        )}
+                        {activeModel?.efforts?.length ? (
+                          <label>
+                            {t('ระดับการคิด')}
+                            <select
+                              aria-label={t('เลือกระดับการคิด')}
+                              title={
+                                activeModel.efforts.find(e => e.id === currentEffort)?.description ||
+                                (!currentEffort && snapshot.policy?.features.autoEffort
+                                  ? t(
+                                      'อัตโนมัติ: คำถามสั้นในแชตใช้ Low งานใหญ่ (หลายขั้นตอน โหมดวางแผน คำขอยาว หรือหลายไฟล์) ใช้ High งานทั่วไปใช้ค่าเริ่มต้นของโมเดล',
+                                    )
+                                  : t('ระดับการคิด (reasoning) ยิ่งสูงยิ่งละเอียดแต่ช้าและใช้โควตามากขึ้น'))
+                              }
+                              value={currentEffort}
+                              disabled={running}
+                              onChange={e => void action(() => chooseModel(currentModel, e.target.value))}
+                            >
+                              <option value="">
+                                {snapshot.policy?.features.autoEffort
+                                  ? t('อัตโนมัติตามขนาดงาน')
+                                  : activeModel.defaultEffort
+                                    ? t('ค่าเริ่มต้น ({0})', effortLabel[activeModel.defaultEffort] || activeModel.defaultEffort)
+                                    : t('ค่าเริ่มต้น')}
+                              </option>
+                              {activeModel.efforts.map(e => (
+                                <option key={e.id} value={e.id} title={e.description}>
+                                  {effortLabel[e.id] || e.id}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ) : null}
+                        <AccountQuotaMenuSummary
+                          account={activeUsageAccount}
+                          busy={quotaRefreshing}
+                          onRefresh={() => void action(refreshActiveQuota)}
+                          onOpenUsage={() => {
+                            setAiPicker(false);
+                            setUsageOpen(true);
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {running && query.trim() ? (
+                    // Typed while the task runs: the send button asks a side question (the task keeps running). Enter still
+                    // keeps the text for the next turn, so a follow-up is never answered as a side question by accident.
+                    <button
+                      className="send"
+                      title={t('ถามแทรก')}
+                      disabled={Boolean(files.length || pendingSource || session?.sideQuestions?.some(q => q.status === 'running'))}
+                      onClick={() => void action(() => askAside())}
+                    >
+                      <ArrowUp size={18} aria-hidden="true" />
+                      {t('ถามแทรก')}
+                    </button>
+                  ) : running ? (
+                    <button
+                      className="send stop"
+                      title={writeNow ? t('เขียนคำตอบจากที่อ่านมา · กดอีกครั้งเพื่อหยุดงาน') : t('หยุดงาน')}
+                      onClick={() => {
+                        if (!writeNow) return void api.call('cancel', { id: selected });
+                        setWriteNowAt(startedAt);
+                        void api.call('writeNow', { id: selected });
+                      }}
+                    >
+                      <Square size={15} aria-hidden="true" />
+                      {writeNow ? t('เขียนคำตอบ') : t('หยุดงาน')}
+                    </button>
+                  ) : (
+                    <button
+                      className="send"
+                      title={t('ส่งคำขอ (Enter) · ขึ้นบรรทัดใหม่ (Shift+Enter)')}
+                      disabled={(!query.trim() && !files.some(file => file.imagePreview)) || submitting || pastingImage}
+                      onClick={() => void action(send)}
+                    >
+                      {submitting ? (
+                        <LoaderCircle size={18} className="spin" aria-hidden="true" />
+                      ) : (
+                        <ArrowUp size={18} aria-hidden="true" />
+                      )}
+                      {t('ส่งคำขอ')}
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="composer-usage">
+                {workMode !== 'image' && (
+                  <ContextWindowGauge session={session} connectionId={connection?.id} model={currentModel} onEvent={api.onEvent} />
                 )}
+                <InlineQuotaChip account={activeUsageAccount} onClick={() => setUsageOpen(true)} />
               </div>
             </div>
             {!session?.messages.length && (

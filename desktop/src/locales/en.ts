@@ -1356,6 +1356,8 @@ export const en: Record<string, string> = {
   'ระดับการคิด: ค่าเริ่มต้น': 'Reasoning: default',
   'ระดับการคิด:': 'Reasoning:',
   หยุดงาน: 'Stop task',
+  ส่งคำขอ: 'Send',
+  เขียนคำตอบ: 'Write answer',
   'ส่งคำขอ (Enter) · ขึ้นบรรทัดใหม่ (Shift+Enter)': 'Send (Enter) · New line (Shift+Enter)',
   'เชื่อมต่อ AI เพื่อเริ่มทำงาน': 'Connect AI to get started',
   สถานะ: 'Status',
