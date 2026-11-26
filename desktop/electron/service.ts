@@ -2551,16 +2551,21 @@ export class WorkService {
         const u = session.usage || { input: 0, output: 0, total: 0, runs: 0 };
         session.usage = { input: u.input + usage.input, output: u.output + usage.output, total: u.total + usage.total, runs: u.runs + 1 };
       }
-      if (mode === 'draft')
-        session.proposals.push({
-          id: randomUUID(),
-          text: handoff,
-          ...(patched ? { document: patched.document } : {}),
-          ...(documentOutput?.review ? { review: documentOutput.review } : {}),
-          baseRevision,
-          sources,
-          at: new Date().toISOString(),
-        });
+      if (mode === 'draft') {
+        const proposalPrompt = (latest || session.originalQuery || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+        session.proposals = [
+          {
+            id: randomUUID(),
+            text: handoff,
+            ...(patched ? { document: patched.document } : {}),
+            ...(documentOutput?.review ? { review: documentOutput.review } : {}),
+            baseRevision,
+            ...(proposalPrompt ? { prompt: proposalPrompt } : {}),
+            sources,
+            at: new Date().toISOString(),
+          },
+        ];
+      }
       // The host's own pre-search summary is the answer's evidence, so all its links show. A web_search tool result is a
       // raw hit list (it once showed a drama's pages under writing advice); only hits the answer used are shown.
       const shownSources = [...webSources(retrieved), ...usedWebSources(searched.join('\n\n'), handoff, browsed)]
