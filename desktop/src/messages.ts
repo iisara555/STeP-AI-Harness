@@ -22,6 +22,8 @@ export const errorText: Record<string, string> = localized({
   PACKET_EXPORT_SOURCE: 'กรุณาบันทึกเป็นไฟล์ใหม่ เพื่อเก็บต้นฉบับและสำเนาหลักฐานไว้ครบ',
   PACKET_EXPORT_LAYOUT: 'จัดเลขหน้าสรุปชุดไม่ได้ โปรดลดความยาวหน้าสรุปแล้วลองส่งออกใหม่',
   PACKET_EMPTY: 'เลือกหน้าหลักฐานหรือร่างเอกสารอย่างน้อยหนึ่งรายการก่อนส่งออก',
+  RECEIPT_VISION_PAGE_LIMIT: 'การอ่านใบเสร็จด้วย AI รองรับ PDF ไม่เกิน 3 หน้า โปรดแบ่งไฟล์แล้วอ่านทีละส่วน',
+  RECEIPT_VISION_IMAGE_UNSUPPORTED: 'AI เปิดภาพใบเสร็จนี้ไม่ได้ โปรดใช้ OCR ในเครื่อง หรือบันทึกสำเนาเป็น PNG หรือ JPG แล้วเลือกใหม่',
   OCR_LOCAL_ONLY: 'โหมด OCR ในเครื่องไม่เรียกบริการ AI ภายนอก',
   DOCX_PRESENTATION_ONLY: 'สารบัญและหัวท้ายกระดาษที่ตั้งไว้ใช้กับ DOCX กรุณาส่งออก DOCX หรือปิดตัวเลือกเหล่านี้ก่อนส่งออกรูปแบบอื่น',
   ...credentialErrorsTh,

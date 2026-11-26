@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { FileText, LoaderCircle, Paperclip, Sparkles, X } from './icons';
+import { ConfirmDialog } from './ui';
 import type { Attachment, Connection } from './types';
 import {
   DOCUMENT_TOOLS,
@@ -54,6 +55,7 @@ export function DocumentTools({
   connectionId,
   chooseConnection,
   attach,
+  detach,
   draft,
   existingDraft,
   revise,
@@ -66,9 +68,10 @@ export function DocumentTools({
   connectionId: string;
   chooseConnection: (id: string) => void;
   attach: (id: DocumentToolId) => Promise<DocumentAttachment | null>;
+  detach?: (sessionId: string, fileId: string) => Promise<void>;
   draft: (id: DocumentToolId, form: DocumentForm) => Promise<void>;
   existingDraft?: { id: string; tool: DocumentToolId; title: string };
-  revise: (id: string, request: string) => Promise<void>;
+  revise: (id: string, request: string) => Promise<boolean>;
   consumedTask: string;
   busy: boolean;
   onError: (error: unknown) => void;
@@ -78,6 +81,7 @@ export function DocumentTools({
   const [forms, setForms] = useState<Partial<Record<DocumentToolId, DocumentForm>>>({});
   const [working, setWorking] = useState(false);
   const [revisionRequest, setRevisionRequest] = useState('');
+  const [clearConfirm, setClearConfirm] = useState(false);
   const profile = documentTool(selected)!;
   const form = forms[selected] || { values: {}, variant: profile.variants[0].id };
   const ready = connections.filter(c => c.ready);
@@ -91,20 +95,29 @@ export function DocumentTools({
   };
   const invalidLinks = invitation && invalidInvitationLinks(links).length > 0;
   const hasRecipients = Boolean(invitation && form.recipients?.some(r => r.recipient.trim() || r.position.trim() || r.number.trim()));
-  const hasInput = Object.values(form.values).some(v => v.trim()) || hasRecipients || Boolean(form.source?.file.usable);
+  const hasInput =
+    profile.fields.some(f => (!f.invitationOnly || invitation) && (form.values[f.key] || '').trim()) ||
+    hasRecipients ||
+    Boolean(form.source?.file.usable);
+  const templateAllowed = Boolean(form.source?.file.templateReady && !invitation);
   const sourceBlocked = Boolean(
-    form.source && (!form.source.file.usable || (form.sourceRole !== 'template' && form.source.file.sourceUsable === false)),
+    form.source &&
+    (!form.source.file.usable ||
+      (form.sourceRole === 'template' && !templateAllowed) ||
+      (form.sourceRole !== 'template' && form.source.file.sourceUsable === false)),
   );
   // The same checks that disable the draft button, worded for staff so a grey button never goes unexplained.
   const blockedReason = disabled
     ? ''
     : !connected
-      ? t('เลือก AI ที่เชื่อมต่อแล้วด้านบนก่อน')
+      ? t('เลือก AI ที่เชื่อมต่อแล้วด้านล่างก่อน')
       : sourceBlocked
         ? t('ไฟล์แนบส่งให้ AI ไม่ได้ ให้นำออกหรือแนบไฟล์อื่นก่อน')
-        : !hasInput
-          ? t('กรอกอย่างน้อยหนึ่งช่อง หรือแนบต้นเรื่อง แล้วจึงให้ AI ร่าง')
-          : '';
+        : invalidLinks
+          ? t('ตรวจลิงก์ QR ให้ขึ้นต้นด้วย http:// หรือ https://')
+          : !hasInput
+            ? t('กรอกอย่างน้อยหนึ่งช่อง หรือแนบต้นเรื่อง แล้วจึงให้ AI ร่าง')
+            : '';
   const update = (patch: Partial<DocumentForm>) => setForms(old => ({ ...old, [selected]: { ...form, ...patch } }));
   const placeholder = (f: DocumentField) => {
     const example = fieldExample(selected, f.key, form.variant);
@@ -137,6 +150,9 @@ export function DocumentTools({
       {f.hint && <small className="muted">{t(f.hint)}</small>}
     </label>
   );
+  useEffect(() => {
+    if (existingDraft?.tool) setSelected(existingDraft.tool);
+  }, [existingDraft?.id, existingDraft?.tool]);
   useEffect(() => setRevisionRequest(''), [existingDraft?.id, selected]);
   // Consent is handled by the normal send dialog. Only a started send consumes the attachment.
   useEffect(() => {
@@ -162,8 +178,24 @@ export function DocumentTools({
   }
   return (
     <div className="document-tools">
+      {clearConfirm && (
+        <ConfirmDialog
+          title={t('ล้างข้อมูลในฟอร์มนี้หรือไม่?')}
+          confirmLabel={t('ล้างฟอร์ม')}
+          focusCancel
+          onCancel={() => setClearConfirm(false)}
+          onConfirm={() => {
+            const attached = form.source;
+            setClearConfirm(false);
+            setForms(old => ({ ...old, [selected]: { values: {}, variant: profile.variants[0].id } }));
+            if (attached && detach) void run(() => detach(attached.sessionId, attached.file.id));
+          }}
+        >
+          <p>{t('ข้อมูลที่กรอกไว้และไฟล์แนบในแบบฟอร์มนี้จะถูกล้าง')}</p>
+        </ConfirmDialog>
+      )}
       <h1 className="sr-only">{t('เครื่องมือร่างเอกสาร')}</h1>
-      <div className="document-tool-picker" aria-label={t('ชนิดเอกสาร')}>
+      <div className="document-tool-picker" role="group" aria-label={t('ชนิดเอกสาร')}>
         {DOCUMENT_TOOLS.map(p => (
           <button
             key={p.id}
@@ -221,8 +253,7 @@ export function DocumentTools({
               disabled={disabled || !connected || !revisionRequest.trim()}
               onClick={() =>
                 void run(async () => {
-                  await revise(existingDraft.id, revisionRequest.trim());
-                  setRevisionRequest('');
+                  if (await revise(existingDraft.id, revisionRequest.trim())) setRevisionRequest('');
                 })
               }
             >
@@ -237,7 +268,24 @@ export function DocumentTools({
               aria-label={t('ชนิด / เรื่อง')}
               value={form.variant}
               disabled={disabled}
-              onChange={e => update({ variant: e.target.value })}
+              onChange={e => {
+                const nextVariant = e.target.value;
+                const nextInvitation = selected === 'letter' && nextVariant === 'invitation';
+                const patch: Partial<DocumentForm> = { variant: nextVariant };
+                if (!nextInvitation && form.recipients?.length) {
+                  const row = form.recipients.length === 1 ? form.recipients[0] : undefined;
+                  patch.recipients = undefined;
+                  patch.recipientMode = undefined;
+                  if (row)
+                    patch.values = {
+                      ...form.values,
+                      ...(form.values.number?.trim() ? {} : { number: row.number }),
+                      ...(form.values.recipient?.trim() ? {} : { recipient: row.recipient }),
+                    };
+                }
+                if (nextInvitation && form.sourceRole === 'template') patch.sourceRole = 'source';
+                update(patch);
+              }}
             >
               {profile.variants.map(v => (
                 <option key={v.id} value={v.id}>
@@ -246,6 +294,11 @@ export function DocumentTools({
               ))}
             </select>
           </label>
+          {(hasInput || Boolean(form.source)) && (
+            <button type="button" className="quiet" disabled={disabled} onClick={() => setClearConfirm(true)}>
+              {t('ล้างฟอร์ม')}
+            </button>
+          )}
         </div>
         {!connected && (
           <p className="small">
@@ -295,7 +348,12 @@ export function DocumentTools({
                 className="icon"
                 aria-label={t('นำต้นเรื่องออก')}
                 disabled={disabled}
-                onClick={() => update({ source: undefined, sourceRole: undefined })}
+                onClick={() =>
+                  void run(async () => {
+                    if (form.source && detach) await detach(form.source.sessionId, form.source.file.id);
+                    update({ source: undefined, sourceRole: undefined });
+                  })
+                }
               >
                 <X size={16} />
               </button>
@@ -309,7 +367,11 @@ export function DocumentTools({
                   onChange={e => update({ sourceRole: e.target.value as DocumentAttachmentRole })}
                 >
                   <option value="source">{t('ต้นเรื่องของงานนี้')}</option>
-                  <option value="template">{t('แบบฟอร์ม / ตัวอย่าง (ใช้เฉพาะโครงสร้าง)')}</option>
+                  <option value="template" disabled={!templateAllowed}>
+                    {templateAllowed
+                      ? t('แบบฟอร์ม / ตัวอย่าง (ใช้เฉพาะโครงสร้าง)')
+                      : t('แบบฟอร์ม / ตัวอย่าง (รองรับเฉพาะไฟล์ Word .docx ที่ตรวจโครงสร้างแล้ว)')}
+                  </option>
                 </select>
               </label>
               {form.sourceRole === 'template' && (

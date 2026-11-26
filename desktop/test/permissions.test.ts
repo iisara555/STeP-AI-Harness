@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { defaultPolicy, parsePolicy } from '../electron/policy';
-import { evaluatePermission, sensitivePath, deniedCommand, allowedCommand, allowedDomain } from '../electron/permissions';
+import { evaluatePermission, sensitivePath, deniedPath, deniedCommand, allowedCommand, allowedDomain } from '../electron/permissions';
 
 test('credential paths and policy files are denied in every mode, even with an allow rule', () => {
   const p = parsePolicy({
@@ -153,4 +153,23 @@ test('scoped allowedCommands and allowedDomains work only after sensitive/denied
   // Policy parser rejects shell operators in allowedCommands and malformed domains in allowedDomains.
   assert.ok(parsePolicy({ permission: { allowedCommands: ['npm test; rm -rf /'] } }).problems.length > 0);
   assert.ok(parsePolicy({ permission: { allowedDomains: ['.invalid.com'] } }).problems.length > 0);
+});
+
+test('deniedCommand, deniedPath and command token checks catch newlines, subshells, flags and Windows aliases', () => {
+  const p = parsePolicy({
+    permission: {
+      pathRules: [{ pattern: 'restricted/*', allow: false }],
+      deniedCommands: ['rm -rf *', 'deploy *'],
+    },
+  }).policy;
+  for (const cmd of ['echo ok\nrm -rf /', 'echo ok & deploy prod', 'echo $(rm -rf /)', 'echo `deploy prod`'])
+    assert.ok(deniedCommand(cmd, p.permission.deniedCommands), cmd);
+  for (const cmd of ['cat --file=.env', 'ssh -i~/.ssh/id_rsa host', "powershell -Command Get-Content('.env')", 'cat restricted/file.md'])
+    assert.equal(
+      evaluatePermission({ tool: 'terminal', readOnly: false, execute: true, command: cmd }, 'ask', p, { root: '/project' }).allowed,
+      false,
+      cmd,
+    );
+  assert.ok(deniedPath('restricted/secret::$DATA', p.permission.pathRules, '/project'));
+  assert.ok(deniedPath('restricted/secret.', p.permission.pathRules, '/project'));
 });

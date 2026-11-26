@@ -24,6 +24,7 @@ import {
 import '../../experiments/local-thai-ocr/web/receipt-review.js';
 import { SectionArt } from './illustration';
 import { receiptSourceText } from './receipt-source';
+import { amountInSatang } from './receipt-money';
 import { receiptProvenance } from './extraction-provenance';
 import { expenseCategorySuggestion, expenseCodeLabel, expenseDescriptionFromText, formValues, receiptAssessment } from './receipt-workflow';
 import { localized, t } from './i18n';
@@ -317,7 +318,7 @@ export function ReceiptApp({
   const resized = (doc?.result?.warnings || []).some((w: string) => /resized/i.test(w));
   const result = useMemo(
     () =>
-      review.reviewIssues(values, confirmed, {
+      review.reviewIssues({ ...values, ...formValues(values) }, confirmed, {
         reviewLineCount: reviewLines,
         reviewLinesChecked: allChecked,
         resized,
@@ -375,7 +376,7 @@ export function ReceiptApp({
     setCategory(null);
     if (localOnly) return;
     // The second, independent reading by a vision model, compared with the OCR field by field below.
-    if (status?.vision && (readingConnectionId || cloudAccountId)) await readWithAi(formValues(nextValues), nextGuessed, sourceId);
+    if (canReadImageWithAi) await readWithAi(formValues(nextValues), nextGuessed, sourceId);
     // Without the image reading, the AI still sorts the OCR candidates into the fields (OCR text only, masked).
     else if (usableConnectionId && extracted?.afpMapping)
       await aiFilter(nextValues, nextGuessed, extracted.afpMapping, String(read.result?.text || ''), sourceId);
@@ -394,6 +395,14 @@ export function ReceiptApp({
       description: reading.expenseDescription,
     });
     notify(t('AI อ่านภาพใบเสร็จแล้ว ดูช่องที่ไฮไลต์เทียบกับต้นฉบับ แล้วติ๊กยืนยันครั้งเดียว'), 'success');
+  }
+  async function reread() {
+    if (canReadImageWithAi) {
+      await readWithAi();
+    } else if (canFilterTextWithAi) {
+      // Start from OCR again, so manually corrected values are neither sent nor overwritten.
+      await aiFilter(Object.fromEntries(Object.entries(fields).map(([key, field]) => [key, field.value])), {});
+    }
   }
   const matchOf = (k: string) =>
     vision ? compareField(k as ReceiptField, fields[k]?.value || '', vision.fields[k as ReceiptField]?.value || '') : undefined;
@@ -436,6 +445,10 @@ export function ReceiptApp({
     items: vision?.items,
     itemsTotal: vision?.itemsTotal,
   }).filter(r => ruleText[r.code]);
+  // The blocking legacy finding takes precedence when both checks report the same mismatch.
+  const reportableRules = result.issues.some(issue => issue.code === 'amount_mismatch')
+    ? rules.filter(rule => rule.code !== 'amounts_do_not_add_up')
+    : rules;
   const assessment = receiptAssessment({
     type: docType,
     values,
@@ -585,7 +598,7 @@ export function ReceiptApp({
       },
       issues: [
         ...result.issues.map(i => ({ ...i, message: describe(i) })),
-        ...rules.map(r => ({ code: r.code, severity: 'advisory', message: t(ruleText[r.code]) })),
+        ...reportableRules.map(r => ({ code: r.code, severity: 'advisory', message: t(ruleText[r.code]) })),
       ],
       ocr: { text: doc?.result?.text || '', lines: records },
     });
@@ -623,8 +636,13 @@ export function ReceiptApp({
             ),
           ]
         : []),
-      ...(result.issues.length || rules.length
-        ? ['', t('ประเด็นที่ระบบตรวจพบ:'), ...result.issues.map(i => '- ' + describe(i)), ...rules.map(r => '- ' + t(ruleText[r.code]))]
+      ...(result.issues.length || reportableRules.length
+        ? [
+            '',
+            t('ประเด็นที่ระบบตรวจพบ:'),
+            ...result.issues.map(i => '- ' + describe(i)),
+            ...reportableRules.map(r => '- ' + t(ruleText[r.code])),
+          ]
         : []),
     ].join('\n');
 
@@ -663,7 +681,6 @@ export function ReceiptApp({
         },
       },
     });
-    if (filtered?.cancelled) return;
     if (sourceIdRef.current !== sourceId || filtered?.cancelled) return;
     const decisions: AiDecision[] = Array.isArray(filtered?.decisions) ? filtered.decisions : [];
     setAiDecisions(decisions);
@@ -687,6 +704,8 @@ export function ReceiptApp({
   const usableConnectionId = connections.find(c => c.id === connectionId && c.ready)?.id;
   const caseConnection = connections.find(c => c.id === usableConnectionId);
   const caseAiName = caseConnection ? [connectionName(caseConnection), caseConnection.model].filter(Boolean).join(' · ') : '';
+  const canReadImageWithAi = !localOnly && (cloudReady || Boolean(!status?.cloud && status?.vision && (geminiOcr || usableConnectionId)));
+  const canFilterTextWithAi = !localOnly && Boolean(usableConnectionId && mapping);
   const canPick = Boolean(ready || apiReady || cloudReady || (!status?.cloud && status?.vision && usableConnectionId));
   // Why "เลือกใบเสร็จ" is grey, said right under it instead of only further down the page.
   const pickReason =
@@ -705,7 +724,9 @@ export function ReceiptApp({
     ...new Set([
       ...compliance.filter(item => ['missing', 'warn'].includes(item.status) && !item.ifCategoryB).map(itemText),
       ...issues.filter(issue => issue.code !== 'unconfirmed_fields' && !issue.code.startsWith('missing_')).map(describe),
-      ...rules.map(rule => (rule.itemIndex !== undefined ? t('รายการที่ {0}: ', rule.itemIndex + 1) : '') + t(ruleText[rule.code])),
+      ...reportableRules.map(
+        rule => (rule.itemIndex !== undefined ? t('รายการที่ {0}: ', rule.itemIndex + 1) : '') + t(ruleText[rule.code]),
+      ),
     ]),
   ];
   const nextSteps = [
@@ -724,6 +745,14 @@ export function ReceiptApp({
   );
   const requiredFilled = review.requiredKeys.every((k: string) => String(values[k] || '').trim());
   const requiredChecked = allChecked && requiredFilled;
+  const items = vision?.items;
+  const reviewedItems =
+    requiredChecked &&
+    items?.length &&
+    items.every(item => !item.needsReview && item.description.trim() && amountInSatang(item.amount) > 0) &&
+    !rules.some(rule => rule.itemIndex !== undefined || rule.code === 'items_total_mismatch')
+      ? items.map(({ description, amount }) => ({ description, amount }))
+      : undefined;
   // Until OCR is ready, installing it is the page's one primary action; choosing a receipt waits beside it, quiet.
   const needsOcr = Boolean(status && !ready && !status.geminiApi && !status.cloud);
   return (
@@ -760,9 +789,11 @@ export function ReceiptApp({
                 sourceToken: doc.sourceToken,
                 checked: requiredChecked,
                 recipient: values.merchant || '',
+                merchantAddress: requiredChecked ? values.merchantAddress?.trim() || undefined : undefined,
                 date: values.date || '',
                 description: expenseDescription,
                 total: values.total || '',
+                items: reviewedItems,
                 kind: docType,
                 category,
                 // The suggested sub-category only travels when it belongs to the category the person kept.
@@ -1074,8 +1105,16 @@ export function ReceiptApp({
                   {(guessCount > 0 || vision) && (
                     <p className="small muted">{t('ค่าที่ระบบอ่านได้ยังต้องเทียบต้นฉบับ โดยเฉพาะช่องที่ไฮไลต์')}</p>
                   )}
-                  <details className="receipt-values">
-                    <summary>{t('ตรวจ/แก้ข้อมูลที่อ่านได้')}</summary>
+                  <section className="receipt-values" aria-labelledby="receipt-values-title">
+                    <header>
+                      <h3 id="receipt-values-title">{t('ตรวจ/แก้ข้อมูลที่อ่านได้')}</h3>
+                      {(canReadImageWithAi || canFilterTextWithAi) && (
+                        <button type="button" className="quiet" disabled={Boolean(busy)} onClick={() => void run('reread', reread)}>
+                          {busy === 'reread' ? <LoaderCircle size={15} className="spin" /> : <RefreshCw size={15} />}
+                          {busy === 'reread' ? t('กำลังอ่านใบเสร็จใหม่…') : t('ให้ AI อ่านใหม่')}
+                        </button>
+                      )}
+                    </header>
                     <label className="receipt-value-row">
                       {t('ประเภทเอกสาร')}
                       <select
@@ -1207,7 +1246,7 @@ export function ReceiptApp({
                       </div>
                     ) : null}
                     {vision?.notes && <p className="small muted">{t('AI ฝากตรวจ: {0}', vision.notes)}</p>}
-                  </details>
+                  </section>
                 </>
               )}
             </section>

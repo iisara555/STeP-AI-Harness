@@ -118,3 +118,23 @@ test('policy lists intranet hosts for the browser only as plain host names', asy
   for (const privateHosts of ['intranet', ['http://intranet/'], ['.step'], new Array(51).fill('a.b')])
     assert.ok(parsePolicy({ network: { privateHosts } }).problems.length, JSON.stringify(privateHosts).slice(0, 40));
 });
+
+test('HTML preview blocks loopback, metadata and DNS-rebound HTTP URLs while allowing own file and inline data URLs', async () => {
+  const { isAllowedPreviewRequest } = await import('../electron/html-preview');
+  const isOwn = (u: string) => u === 'file:///tmp/own/index.html';
+  const publicDns = async () => [{ address: '202.28.1.1', family: 4 }];
+  const privateDns = async () => [{ address: '10.0.0.5', family: 4 }];
+  assert.equal(await isAllowedPreviewRequest('file:///tmp/own/index.html', isOwn, publicDns), true);
+  assert.equal(await isAllowedPreviewRequest('data:text/plain,ok', isOwn, publicDns), true);
+  assert.equal(await isAllowedPreviewRequest('blob:null/123', isOwn, publicDns), true);
+  assert.equal(await isAllowedPreviewRequest('https://cdn.example/lib.js', isOwn, publicDns), true);
+  for (const blocked of [
+    'http://127.0.0.1:8080/secret',
+    'http://localhost:3000/api',
+    'http://169.254.169.254/latest/meta-data/',
+    'http://192.168.1.1/',
+    'file:///etc/passwd',
+  ])
+    assert.equal(await isAllowedPreviewRequest(blocked, isOwn, publicDns), false, blocked);
+  assert.equal(await isAllowedPreviewRequest('https://rebind.example/beacon', isOwn, privateDns), false);
+});

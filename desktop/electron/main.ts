@@ -46,7 +46,7 @@ import { GOOGLE_PAGES, type GoogleService } from '../src/google-services';
 import { googleChange, googleResourceUrl } from '../src/google-changes';
 import type { GoogleRequest } from './google-operations';
 import { googleInvocation, googleOperationCatalog } from './google-operations';
-import { BRIEF_OPERATIONS, briefDay, readMorningBrief, type MorningBrief } from './morning-brief';
+import { BRIEF_OPERATIONS, MEET_URL, briefDay, readMorningBrief, type MorningBrief } from './morning-brief';
 import { credentialTitles } from '../src/credential-copy';
 import { credentialErrorsTh, credentialErrorsEn } from '../src/credential-copy';
 import { googleResultConsent } from './google-consent';
@@ -67,7 +67,7 @@ import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
 import { searchPublicWeb } from './public-search';
 import { Splash } from './splash';
 import { documentTool, documentVariant } from '../src/document-tools';
-import { resolveInvitation } from '../src/invitation';
+import { invitationForRecipient, resolveInvitation } from '../src/invitation';
 import { documentConversationContext, requestedDocumentTool, requestedLetterVariant } from '../src/document-intent';
 import { isDocumentQuestion } from './document-tools';
 import { inspectDocumentTemplate, templateControlText } from './document-template';
@@ -107,7 +107,8 @@ import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython, type OcrStatus, readOcrInput } from './ocr';
 import { installTyphoon, typhoonBuild } from './typhoon';
 import { ReceiptOperations } from './receipt-operations';
-import { receiptVisionImages } from './receipt-image-input';
+import { RECEIPT_VISION_PAGES, receiptVisionImages } from './receipt-image-input';
+import { decodeReceiptImage } from './receipt-image-decode';
 import { readReceiptVision } from './receipt-vision-recheck';
 import { isReceiptGeminiApi, receiptReadingMode } from './receipt-status';
 import { combineUsage } from './usage';
@@ -462,6 +463,9 @@ async function main() {
     return policyState.policy.checks.privacy
       ? privacy.evaluatePrivacyGate(text, options)
       : credentialsOnly(text, privacy.scanPrivacyText, privacy.CREDENTIAL_PATTERN);
+  }
+  function strictPrivacy(text: string, options?: any) {
+    return privacy.evaluatePrivacyGate(vaultRedaction.mask(text, options?.credentialMetadata === true), options);
   }
   const harness: Harness = {
     permissionMode: () => permissionMode(),
@@ -962,13 +966,19 @@ async function main() {
   );
   harness.tools = scope => tools.host(scope);
   const phase4Identity = () => JSON.stringify([store.settings().workspace, store.settings().team, permissionMode()]);
-  const phase4Consent = (title: string, body: string, signal?: AbortSignal, technical?: string) =>
+  const phase4Consent = (title: string, body: string, signal?: AbortSignal, technical?: string, sessionId?: string) =>
     approvals.request(
       approvals.rule(store.settings().workspace || data, 'phase4', body),
-      { title, body, technical, privacyClass: 'internal', allowRemember: false },
+      { title, body, technical, privacyClass: 'internal', allowRemember: false, ...(sessionId ? { sessionId } : {}) },
       signal,
     );
-  const mcp = new Mcp(() => policyState.policy, phase4Identity, join(data, 'mcp'), harness.privacy, phase4Consent);
+  const mcp = new Mcp(
+    () => policyState.policy,
+    phase4Identity,
+    join(data, 'mcp'),
+    harness.privacy,
+    (title, body, signal, technical, sessionId) => phase4Consent(title, body, signal, technical, sessionId),
+  );
   mcp.executionAllowed = executionAllowed;
   localMcpActive = () => mcp.localActive > 0;
   workbench.executionAllowed = executionAllowed;
@@ -1077,12 +1087,13 @@ async function main() {
     workbench,
     () => policyState.policy,
     harness.privacy,
-    (body, signal) => phase4Consent(tm('รันคำสั่งใน Docker sandbox?'), body, signal),
+    (body, signal, sessionId) => phase4Consent(tm('รันคำสั่งใน Docker sandbox?'), body, signal, undefined, sessionId),
   );
   tools.closeBrowser = id => {
     agentBrowser.closeOwner(id);
     vault.endOwner(id);
   };
+  tools.externalConsents = true;
   tools.external = async (request, scope, check) => {
     if (request.tool === 'google_workspace') {
       if (!policyState.policy.features.googleWorkspace) throw new Error('FEATURE_DISABLED');
@@ -1157,7 +1168,9 @@ async function main() {
       )
         throw new Error('CANCELLED');
       await check();
-      return JSON.parse(report.redactedText);
+      const approved = JSON.parse(report.redactedText);
+      await scope.googleReads?.recordDiscovery(request, JSON.stringify(approved));
+      return approved;
     }
     if (request.tool === 'browser_vault') {
       if (policyState.policy.credentialStorage?.sharedDevice) throw new Error('VAULT_SHARED_DEVICE');
@@ -1331,11 +1344,17 @@ async function main() {
       });
     if (request.tool === 'mcp_search')
       return request.input
-        ? mcp.search(request.input, String(request.args?.query || ''), scope.signal)
+        ? mcp.search(request.input, String(request.args?.query || ''), scope.signal, scope.sessionId)
         : Promise.resolve({ servers: mcp.servers() });
     if (request.tool === 'mcp_call')
-      return mcp.call(request.input, String(request.args?.name || ''), request.args?.arguments as Record<string, unknown>, scope.signal);
-    return sandbox.run(request.input, (request.args?.files || []) as string[], scope.signal);
+      return mcp.call(
+        request.input,
+        String(request.args?.name || ''),
+        request.args?.arguments as Record<string, unknown>,
+        scope.signal,
+        scope.sessionId,
+      );
+    return sandbox.run(request.input, (request.args?.files || []) as string[], scope.signal, scope.sessionId);
   };
   harness.recordUsage = (connection, count) => ledger.record(connection, count);
   const memories = new Memories(store, data, () => policyState.policy, harness.privacy);
@@ -1546,7 +1565,7 @@ async function main() {
     const connection = store.get<Connection>('connection', connectionId);
     if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
     if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
-    const review = harness.privacy(input);
+    const review = strictPrivacy(input);
     if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 120_000);
@@ -1883,7 +1902,7 @@ async function main() {
   const automations = new Automations(
     store,
     () => policyState.policy,
-    harness.privacy,
+    strictPrivacy,
     async (job, signal, created) => {
       const identity = phase4Identity(),
         policy = policyState.policy;
@@ -1927,7 +1946,8 @@ async function main() {
         check();
         // A picture task runs as an image request with the account's image model; everything else drafts text only.
         if (job.output === 'image') await service.run(session.id, job.query, '', true, undefined, 'image');
-        else await service.run(session.id, job.query, '', true, undefined, 'draft', undefined, [], { draftOnly: true });
+        else
+          await service.run(session.id, job.query, '', true, undefined, 'draft', undefined, [], { draftOnly: true, allowKnowledge: true });
         check();
         if (store.session(session.id).status !== 'review') throw new Error('AUTOMATION_NEEDS_REVIEW');
         return session.id;
@@ -2019,10 +2039,16 @@ async function main() {
   async function receiptImages(receipt: NonNullable<typeof lastReceipt>) {
     const pages =
       receipt.extension === 'pdf'
-        ? (await pdfPageImages(receipt.path, join(root, 'src/vendor/privacy'), { bytes: receipt.bytes, maxPages: 3 })).map(page =>
-            nativeImage.createFromBuffer(Buffer.from(page.data, 'base64')),
-          )
-        : [nativeImage.createFromBuffer(receipt.bytes)];
+        ? (
+            await pdfPageImages(receipt.path, join(root, 'src/vendor/privacy'), {
+              bytes: receipt.bytes,
+              maxPages: RECEIPT_VISION_PAGES,
+            }).catch(error => {
+              if (errorCode(error) === 'ATTACH_SCANNED_TOO_LONG') throw new Error('RECEIPT_VISION_PAGE_LIMIT');
+              throw error;
+            })
+          ).map(page => nativeImage.createFromBuffer(Buffer.from(page.data, 'base64')))
+        : [await decodeReceiptImage(receipt.bytes, receipt.extension)];
     return { ...receiptVisionImages(pages), pages };
   }
   async function readCentralReceipt(input: any, signal: AbortSignal, check: () => void) {
@@ -2568,8 +2594,7 @@ async function main() {
       case 'morningBriefOpen': {
         // Only a Meet link from today's brief, never an address the page supplies.
         const url = inputText(input.url, 200);
-        if (!/^https:\/\/meet\.google\.com\/[a-z0-9-]+$/.test(url) || !briefToday?.brief.events.some(e => e.meet === url))
-          throw new Error('INVALID_INPUT');
+        if (!MEET_URL.test(url) || !briefToday?.brief.events.some(e => e.meet === url)) throw new Error('INVALID_INPUT');
         await shell.openExternal(url);
         return true;
       }
@@ -2972,6 +2997,7 @@ async function main() {
               id,
               html,
               url => void openBrowserTab({ url }).catch(() => {}),
+              change ? undefined : { allowedHosts: ['127.0.0.1'] },
             );
           } catch (error) {
             browsers.delete(id);
@@ -3274,6 +3300,10 @@ async function main() {
           outputStyle,
           assistantTone: input.assistantTone === undefined ? store.settings().assistantTone : inputText(input.assistantTone, 300).trim(),
           language: input.language === 'en' || input.language === 'th' ? input.language : store.settings().language,
+          fontStyle:
+            input.fontStyle === undefined
+              ? store.settings().fontStyle
+              : styleInput(input.fontStyle, value => (value === 'looped' || value === 'loopless' ? value : 'looped')),
           chatLanguage:
             input.chatLanguage === undefined
               ? store.settings().chatLanguage
@@ -3309,6 +3339,7 @@ async function main() {
         });
       case 'packInstall': {
         if (!packImportAllowed(policyState.policy)) throw new Error('PACK_IMPORT_DISABLED');
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
         // Staff usually have one Skill file; a folder (or a pack with pack.json) is the second choice.
         const file = input.kind === 'file';
         const selected = await dialog.showOpenDialog(window!, {
@@ -3348,6 +3379,7 @@ async function main() {
       case 'skillCreate': {
         // Saves the previewed (and possibly edited) draft like an imported file: privacy gate, review, credit.
         if (policyState.policy.features.staffSkills === false) throw new Error('PACK_PERSONAL_DISABLED');
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
         const settings = store.settings();
         return installSkillText(settings.workspace || data, inputText(input.text, 200_000), {
           credit: { name: settings.userName || '', team: settings.team || '' },
@@ -3355,6 +3387,7 @@ async function main() {
         });
       }
       case 'packEnable': {
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
         const identity = phase4Identity(),
           workspace = store.settings().workspace || data,
           id = inputText(input.id, 64),
@@ -3414,6 +3447,7 @@ async function main() {
           policyState.policy,
         );
       case 'packPromote': {
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
         // "เสนอให้องค์กรใช้": only to the organization's intake (or the one set in policy), only a pack whose files pass the
         // privacy check (every read of a pack re-runs it) and the Standard v2 review, and only after the employee agrees to what is sent and to credit.
         const identity = phase4Identity(),
@@ -4182,10 +4216,13 @@ async function main() {
         // The case's own chat goes with it; a case whose chat is still answering is not deleted under it.
         const packetId = receiptPackets.get(input.id).id;
         const chats = store.list<Session>('session').filter(s => s.claimPacketId === packetId);
-        if (chats.some(s => service.isActive(s.id) || coordinator.has(s.id))) throw new Error('RUN_ALREADY_ACTIVE');
-        await receiptPackets.delete(packetId);
+        if (chats.some(s => s.status === 'queued' || service.isActive(s.id) || coordinator.has(s.id)))
+          throw new Error('RUN_ALREADY_ACTIVE');
+        const deleted = receiptPackets.delete(packetId, () => {
+          for (const s of chats) store.remove('session', s.id);
+        });
+        await deleted;
         for (const s of chats) {
-          store.remove('session', s.id);
           for (const [aid, a] of attachments) if (a.sessionId === s.id) attachments.delete(aid);
         }
         return true;
@@ -4204,6 +4241,7 @@ async function main() {
           const review = input.review as ReviewedReceipt;
           if (!source || !review || review.checked !== true || review.sourceToken !== receiptSourceToken(source.bytes))
             throw new Error('PACKET_REVIEW_STALE');
+          if (!['pdf', 'png', 'jpg', 'jpeg'].includes(source.extension)) throw new Error('PACKET_SOURCE_LIMIT');
           return receiptPackets.add(
             input.id,
             input.revision,
@@ -4368,18 +4406,12 @@ async function main() {
             const sources = [];
             for (const source of packet.documents) {
               if (!source.pages.some(page => page.included)) continue;
-              const original = await receiptPackets.sourceBytes(packet, source);
-              if (source.extension === 'pdf') sources.push({ source, bytes: original });
-              else {
-                const image = nativeImage.createFromBuffer(original),
-                  size = image.getSize();
-                if (image.isEmpty() || size.width * size.height > 40_000_000) throw new Error('PACKET_SOURCE_LIMIT');
-                sources.push({ source: { ...source, extension: 'png' as const }, bytes: image.toPNG() });
-              }
+              sources.push({ source, bytes: await receiptPackets.sourceBytes(packet, source) });
             }
             if (!sources.length && !voucher && !disbursement) throw new Error('PACKET_EMPTY');
             bytes = await mergePacketPdf(cover, voucher, sources, disbursement);
           }
+          receiptPackets.get(packet.id, packet.revision);
           await writeFile(saved.filePath, bytes);
           exportPaths.add(saved.filePath);
           return { path: saved.filePath };
@@ -4531,6 +4563,8 @@ async function main() {
           store.remove('session', session.id);
           throw new Error('HOOK_BLOCKED');
         }
+        // A case can be deleted while its new chat is awaiting an organization hook.
+        if (claimPacketId) receiptPackets.get(claimPacketId);
         if (input.model !== undefined || input.effort) {
           session.model = modelChoice(connection, input.model);
           session.effort = effortChoice(connection, session.model ?? connection.model, input.effort);
@@ -4667,8 +4701,7 @@ async function main() {
         if (draftingTool && coordinated) throw new Error('INVALID_DOCUMENT_TOOL');
         if (coordinated && (!policyState.policy.features.coordinator || workMode !== 'draft' || input.skill || input.retry))
           throw new Error('COORDINATOR_DISABLED');
-        if (workMode === 'image' && (sendingConnection.mode !== 'api' || sendingConnection.provider === 'claude'))
-          throw new Error('IMAGE_API_REQUIRED');
+        if (workMode === 'image' && !canGenerateImages(sendingConnection)) throw new Error('IMAGE_API_REQUIRED');
         const selectedImageModel = input.imageModel ? inputText(input.imageModel, 120) : undefined;
         // A directly invoked Skill must be one the router can reach.
         const skill = draftingTool?.skill || (input.skill ? inputText(input.skill, 80) : '');
@@ -5137,6 +5170,7 @@ async function main() {
             ...(reason ? { reason } : {}),
           };
           if (reason) diagnose('attach-refused', { reason, extension: extname(path).toLowerCase().slice(0, 8) });
+          if (attachingSession.claimPacketId) receiptPackets.get(attachingSession.claimPacketId);
           attachments.set(view.id, {
             view,
             text: sourceUsable ? ocrAttachmentSource(report, 'attachment:' + view.id) : '',
@@ -5262,6 +5296,10 @@ async function main() {
           const fontStatus = await window.webContents
             .executeJavaScript(`(${probeDocumentFont.toString()})(${JSON.stringify(font)})`)
             .catch(() => 'unknown');
+          const checkedDoc =
+            items[0] && s.presentation?.invitation
+              ? invitationForRecipient(s.document || markdownDocument(s.draft), items[0])
+              : s.document || markdownDocument(s.draft);
           return {
             ...result,
             layout: {
@@ -5274,7 +5312,7 @@ async function main() {
                 ...(template
                   ? [formRevisionCheck(await templateControlText(template), await loadQsRegister())].filter(check => check !== undefined)
                   : []),
-                ...documentChecks(s.document || markdownDocument(s.draft), layout.id),
+                ...documentChecks(checkedDoc, layout.id),
               ],
             },
           };

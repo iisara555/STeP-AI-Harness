@@ -491,6 +491,10 @@ export const TOOL_REGISTRY = Object.fromEntries(
     },
   ]),
 );
+export const LARGE_ARGS_TOOLS = new Set(['patch', 'sheet_create', 'slides_create', 'artifact_save', 'repl_eval']);
+export function toolArgsLimit(tool: unknown) {
+  return typeof tool === 'string' && LARGE_ARGS_TOOLS.has(tool) ? 220_000 : 30_000;
+}
 export type ToolName = keyof typeof TOOL_REGISTRY;
 /** Protocol envelope + published field types checked again at host dispatch. Unknown legacy args remain compatible. */
 export function validateToolRequest(
@@ -500,7 +504,10 @@ export function validateToolRequest(
   const request = value as Record<string, unknown>;
   if (typeof request.tool !== 'string' || !Object.hasOwn(TOOL_REGISTRY, request.tool)) throw new Error('UNKNOWN_OPERATION');
   validate(request, TOOL_REGISTRY[request.tool].inputSchema);
-  if (String(request.input).includes('\0') || (request.args !== undefined && JSON.stringify(request.args).length > 30000))
+  if (
+    String(request.input).includes('\0') ||
+    (request.args !== undefined && JSON.stringify(request.args).length > toolArgsLimit(request.tool))
+  )
     throw new Error('INVALID_INPUT');
   if (
     request.tool === 'tool_describe' &&

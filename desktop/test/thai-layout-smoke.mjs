@@ -18,7 +18,7 @@ const watchdog = setTimeout(() => {
 }, 120000);
 try {
   await mkdir(output, { recursive: true });
-  const fontDir = resolve('node_modules/@fontsource/ibm-plex-sans-thai');
+  const fontDir = resolve('node_modules/@fontsource/noto-sans-thai-looped');
   let fontCss = await readFile(join(fontDir, '400.css'), 'utf8');
   for (const match of [...fontCss.matchAll(/url\(([^)]+)\)/g)]) {
     const bytes = await readFile(resolve(fontDir, match[1]));
@@ -60,7 +60,9 @@ try {
       },
       { source, profile, path: join(output, `${name}.docx`) },
     );
-    await page.setContent(html.replace('</style>', `${fontCss}body{font-family:"IBM Plex Sans Thai",sans-serif}body{width:16cm}</style>`));
+    await page.setContent(
+      html.replace('</style>', `${fontCss}body{font-family:"Noto Sans Thai Looped",sans-serif}body{width:16cm}</style>`),
+    );
     await page.evaluate(() => document.fonts.ready);
     const result = await page.evaluate(() => {
       const overflow = [];
@@ -117,7 +119,7 @@ try {
   }
   await writeFile(
     join(output, 'summary.json'),
-    JSON.stringify({ font: 'Bundled IBM Plex Sans Thai (synthetic QA only)', wordLayoutVerified: false, reports }, null, 2),
+    JSON.stringify({ font: 'Bundled Noto Sans Thai Looped (synthetic QA only)', wordLayoutVerified: false, reports }, null, 2),
   );
   console.log(`PASS: Thai wrapping, combining marks, unmodified identifiers and six DOCX/PDF exports (${output})`);
 } finally {

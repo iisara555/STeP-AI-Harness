@@ -5,6 +5,7 @@ import { DraftDiffView } from './draft-diff-view';
 import { documentTool } from './document-tools';
 import { DOCUMENT_FONTS, resolveDocumentLayout } from './document-layout';
 import { DocumentPresentationControls, saveExportSettingsOpen } from './document-presentation-controls';
+import { resolvePresentation } from './document-presentation';
 import { lazyScreen } from './lazy-screen';
 import type { DocumentToolbar as Toolbar } from './document-toolbar';
 import type { Editor } from '@tiptap/react';
@@ -557,6 +558,51 @@ export function SidePanel({ v }: { v: AppView }) {
                         )}
                     </div>
                   )}
+                  {format !== 'docx' &&
+                    !presentation.invitation &&
+                    (() => {
+                      const defaults = resolvePresentation({}, session.documentTool || false);
+                      const torPdf = format === 'pdf' && session.documentTool === 'tor';
+                      const docxOnly = Boolean(
+                        presentation.toc ||
+                        (!torPdf &&
+                          (presentation.headerText ||
+                            presentation.footerText ||
+                            (presentation.pageNumber !== 'none' &&
+                              (presentation.pageNumber !== defaults.pageNumber ||
+                                presentation.pageNumberPosition !== defaults.pageNumberPosition)))),
+                      );
+                      if (!docxOnly) return null;
+                      return (
+                        <div className="document-export-settings">
+                          <p className="small muted">
+                            {t('ตั้งค่าสารบัญ/หัวท้ายที่เลือกไว้ใช้ได้เฉพาะ Word (.docx) ล้างค่าก่อนส่งออกรูปแบบนี้')}
+                          </p>
+                          <button
+                            type="button"
+                            className="quiet"
+                            disabled={exporting || draftAcceptPending}
+                            onClick={() => {
+                              const next = {
+                                ...presentation,
+                                toc: false,
+                                headerText: '',
+                                footerText: '',
+                                pageNumber: defaults.pageNumber,
+                                pageNumberPosition: defaults.pageNumberPosition,
+                              };
+                              setPresentation(next);
+                              presentationRef.current = next;
+                              setDirty(true);
+                              dirtyRef.current = true;
+                              setExportInfo(null);
+                            }}
+                          >
+                            {t('ล้างตัวเลือกเฉพาะ Word')}
+                          </button>
+                        </div>
+                      );
+                    })()}
                   <footer className="artifact-footer">
                     <button className="quiet" disabled={!dirty} onClick={() => void action(save)}>
                       <Save size={16} />

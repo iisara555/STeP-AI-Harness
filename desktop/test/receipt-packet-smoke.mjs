@@ -1,6 +1,6 @@
 // Native packet/Word/PDF flow with synthetic sources only; no provider, account or real staff record.
 import { _electron as electron, expect } from '@playwright/test';
-import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFRawStream, StandardFonts } from 'pdf-lib';
 import { createServer } from 'node:http';
 import { mkdtemp, mkdir, readFile, writeFile, rm, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -31,6 +31,15 @@ await createPdf(receipt, [421]);
 const originalBytes = await readFile(source);
 const bundle = join(fixture, 'store.cjs');
 await build({ entryPoints: ['electron/store.ts'], outfile: bundle, bundle: true, platform: 'node', format: 'cjs' });
+const decoder = join(fixture, 'receipt-image-decode.cjs');
+await build({
+  entryPoints: ['electron/receipt-image-decode.ts'],
+  outfile: decoder,
+  bundle: true,
+  platform: 'node',
+  format: 'cjs',
+  external: ['electron'],
+});
 const { Store } = createRequire(import.meta.url)(bundle);
 const store = new Store(join(home, 'workspace.sqlite'));
 store.put('settings', 'main', {
@@ -122,6 +131,45 @@ try {
   let page = await launch();
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
+  const webp = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 16;
+    canvas.height = 8;
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#563482';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/webp').split(',')[1];
+  });
+  const bmp = Buffer.alloc(62, 0xff);
+  bmp.fill(0, 0, 54);
+  bmp.write('BM');
+  bmp.writeUInt32LE(bmp.length, 2);
+  bmp.writeUInt32LE(54, 10);
+  bmp.writeUInt32LE(40, 14);
+  bmp.writeUInt32LE(2, 18);
+  bmp.writeUInt32LE(1, 22);
+  bmp.writeUInt16LE(1, 26);
+  bmp.writeUInt16LE(24, 28);
+  const raster = await app.evaluate(
+    async (_, fixtures) => {
+      const { decodeReceiptImage } = process.getBuiltinModule('node:module').createRequire(fixtures.decoder)(fixtures.decoder);
+      const results = {};
+      for (const [extension, data] of Object.entries(fixtures.images)) {
+        try {
+          results[extension] = (await decodeReceiptImage(Buffer.from(data, 'base64'), extension)).getSize();
+        } catch (error) {
+          results[extension] = error.message;
+        }
+      }
+      return results;
+    },
+    { decoder, images: { webp, bmp: bmp.toString('base64'), tiff: 'SUkqAAgAAAAAAA==' } },
+  );
+  assert.deepEqual(raster, {
+    webp: { width: 16, height: 8 },
+    bmp: { width: 2, height: 1 },
+    tiff: 'RECEIPT_VISION_IMAGE_UNSUPPORTED',
+  });
   await page.getByRole('button', { name: 'เรื่องใหม่', exact: true }).click();
   await page.getByLabel('ชื่อเรื่องเบิก', { exact: true }).fill('ทดสอบชุดเบิก — ข้อมูลสมมติ');
   await page.getByLabel('โครงการหรือหน่วยงาน', { exact: true }).fill('โครงการทดสอบระบบ');
@@ -133,8 +181,8 @@ try {
   await page.getByLabel('ชื่อผู้จ่ายเงินสำหรับช่องลงนาม', { exact: true }).fill('ผู้จ่ายเงินตัวอย่าง');
   await page.getByLabel('รายการรับเงิน 1', { exact: true }).fill('ค่าตอบแทนทดสอบระบบ — ข้อมูลสมมติ');
   await page.getByLabel('จำนวนเงินรายการ 1', { exact: true }).fill('1,234.50');
-  const pngPath = join(fixture, 'synthetic-image.png');
-  const png = await page.evaluate(() => {
+  const jpegPath = join(fixture, 'synthetic-image.jpg');
+  const jpeg = await page.evaluate(() => {
     const canvas = document.createElement('canvas');
     canvas.width = 600;
     canvas.height = 400;
@@ -146,21 +194,22 @@ try {
     ctx.fillText('SYNTHETIC SUPPORTING IMAGE', 30, 70);
     ctx.font = '18px sans-serif';
     ctx.fillText('No real payment or personal data', 30, 110);
-    return canvas.toDataURL('image/png').split(',')[1];
+    return canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
   });
-  await writeFile(pngPath, Buffer.from(png, 'base64'));
-  await pick([source, pngPath]);
+  const jpegBytes = Buffer.from(jpeg, 'base64');
+  await writeFile(jpegPath, jpegBytes);
+  await pick([source, jpegPath]);
   await page.getByRole('button', { name: 'หลักฐาน', exact: true }).click();
   await page.getByRole('button', { name: 'เพิ่มเอกสาร', exact: true }).click();
   await expect(page.getByLabel('ประเภทของ synthetic-mixed.pdf', { exact: true })).toBeVisible();
   await page.getByLabel('ประเภทของ synthetic-mixed.pdf', { exact: true }).selectOption('receipt');
-  await page.getByLabel('ประเภทของ synthetic-image.png', { exact: true }).selectOption('supporting');
+  await page.getByLabel('ประเภทของ synthetic-image.jpg', { exact: true }).selectOption('supporting');
   await page.getByText('เลือกหน้าและแยกประเภท (3 หน้า)', { exact: true }).click();
   await page.getByLabel('รวมหน้า 2 ของ synthetic-mixed.pdf', { exact: true }).uncheck();
   await page.getByLabel('ประเภทหน้า 3 ของ synthetic-mixed.pdf', { exact: true }).selectOption('supporting');
   await page.getByLabel('ตรวจเทียบหน้าที่เลือกของ synthetic-mixed.pdf แล้ว', { exact: true }).check();
-  await page.getByLabel('ตรวจเทียบหน้าที่เลือกของ synthetic-image.png แล้ว', { exact: true }).check();
-  await page.getByLabel('เลื่อนเอกสารขึ้น synthetic-image.png', { exact: true }).click();
+  await page.getByLabel('ตรวจเทียบหน้าที่เลือกของ synthetic-image.jpg แล้ว', { exact: true }).check();
+  await page.getByLabel('เลื่อนเอกสารขึ้น synthetic-image.jpg', { exact: true }).click();
   await page.getByRole('button', { name: 'ร่างและส่งออก', exact: true }).click();
   await page.getByLabel('ตรวจข้อมูลร่างใบสำคัญรับเงินเทียบกับหลักฐานแล้ว', { exact: true }).check();
   await expect(page.getByLabel('ตรวจข้อมูลร่างใบสำคัญรับเงินเทียบกับหลักฐานแล้ว', { exact: true })).toBeChecked();
@@ -175,6 +224,17 @@ try {
   await waitFile(pdfPath);
   const pdf = await PDFDocument.load(await readFile(pdfPath));
   assert.equal(pdf.getPageCount(), 5, 'one summary, one voucher, one image, two selected source pages');
+  assert.ok(
+    pdf.context
+      .enumerateIndirectObjects()
+      .some(
+        ([, object]) =>
+          object instanceof PDFRawStream &&
+          object.dict.get(PDFName.of('Filter'))?.toString() === '/DCTDecode' &&
+          Buffer.from(object.getContents()).equals(jpegBytes),
+      ),
+    'the exported source retains its original JPEG bytes and compression',
+  );
   assert.deepEqual(
     pdf
       .getPages()
@@ -228,7 +288,7 @@ try {
   const packets = await page.evaluate(() => window.step.call('receiptPacketList'));
   packetId = packets[0].id;
   const persisted = await page.evaluate(id => window.step.call('receiptPacketGet', { id }), packetId);
-  assert.equal(persisted.documents[0].name, 'synthetic-image.png');
+  assert.equal(persisted.documents[0].name, 'synthetic-image.jpg');
   assert.deepEqual(
     persisted.documents[1].pages.filter(page => page.included).map(page => page.number),
     [1, 3],

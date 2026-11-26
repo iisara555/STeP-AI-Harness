@@ -73,6 +73,12 @@ export const receiptPacketEn: Record<string, string> = {
   'แม่แบบ Word เปล่า': 'Blank Word template',
   'ข้อมูลที่ระบุตรวจแล้ว · รอ AFP ตรวจ': 'Listed information checked · awaiting AFP review',
   ยังมีข้อมูลหรือหลักฐานรอตรวจ: 'Information or evidence still needs review',
+  'กรอกชื่อเรื่อง โครงการ และวัตถุประสงค์ให้ครบ': 'Complete the case title, project and purpose',
+  เพิ่มหลักฐานและเลือกหน้าที่จะรวมในชุด: 'Add evidence and select the pages for this packet',
+  ระบุประเภทและตรวจเทียบหลักฐานทุกหน้าที่เลือก: 'Classify and review each selected evidence page',
+  กรอกและตรวจเทียบใบสำคัญรับเงิน: 'Complete and review the receipt voucher',
+  'กรอกและตรวจเทียบใบสำคัญจ่ายสำหรับ AFP': 'Complete and review the AFP disbursement voucher',
+  หลักฐานตามกรณีที่ยังไม่พบ: 'Evidence for this case not yet found',
   'PDF รวมมีหน้าสรุปและเลขหน้าของหลักฐาน การตรวจครบยังไม่ใช่การอนุมัติจ่ายเงิน':
     'The combined PDF includes a summary and evidence page references. Completed checks are not payment approval',
   'ส่งออก PDF รวม': 'Export combined PDF',

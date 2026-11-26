@@ -1688,6 +1688,12 @@ export const en: Record<string, string> = {
   'การเชื่อมต่อ AI นี้ยังไม่รับภาพ (รวมถึง PDF สแกน) เลือกโมเดลที่อ่านภาพได้ หรือใช้ไฟล์ต้นฉบับที่มีข้อความ':
     "This AI connection doesn't take images (scanned PDFs included). Pick a model that reads images, or use the original file with text",
   'PDF สแกนยาวเกิน 30 หน้า แบ่งไฟล์แล้วแนบทีละส่วน': 'The scanned PDF is over 30 pages. Split it and attach one part at a time',
+  'การอ่านใบเสร็จด้วย AI รองรับ PDF ไม่เกิน 3 หน้า โปรดแบ่งไฟล์แล้วอ่านทีละส่วน':
+    'AI receipt reading supports PDFs of up to 3 pages. Split the file and read one part at a time.',
+  'AI เปิดภาพใบเสร็จนี้ไม่ได้ โปรดใช้ OCR ในเครื่อง หรือบันทึกสำเนาเป็น PNG หรือ JPG แล้วเลือกใหม่':
+    'AI could not open this receipt image. Use local OCR or save a PNG or JPG copy and select it again.',
+  'ให้ AI อ่านใหม่': 'Read again with AI',
+  'กำลังอ่านใบเสร็จใหม่…': 'Reading the receipt again…',
   'PDF นี้เป็นภาพสแกน แต่บัญชี AI ที่เลือกอยู่ (เช่น GitHub Copilot) ยังรับภาพไม่ได้ และ OCR ในเครื่องยังไม่เปิด เปิด OCR ในเครื่อง หรือเปลี่ยนเป็น ChatGPT, Claude หรือ Gemini ด้วย API key แล้วแนบใหม่':
     'This PDF is a scan, but the selected AI account (such as GitHub Copilot) cannot take images and on-device OCR is not running. Start on-device OCR, or switch to ChatGPT, Claude or Gemini with an API key, then attach it again',
   'ส่งภาพให้ AI อ่านโดยตรง ตรวจว่ามีสิทธิ์ส่งข้อมูลในภาพก่อนส่ง':
@@ -3543,4 +3549,29 @@ export const en: Record<string, string> = {
     'Attach up to 64 files (50 MiB per file) with flat output/<TEAM>/<YYYY-MM>/ export paths',
   'เปิดเครื่องมือเขียนโค้ดในพื้นที่ทำงาน และใช้งาน Google Workspace ต่อเนื่องอัตโนมัติ':
     'Workspace coding and tool-building support with seamless Google Workspace continuity',
+  'เลือก AI ที่เชื่อมต่อแล้วด้านล่างก่อน': 'Choose a connected AI below first',
+  'ตรวจลิงก์ QR ให้ขึ้นต้นด้วย http:// หรือ https://': 'Check QR links start with http:// or https://',
+  'ล้างข้อมูลในฟอร์มนี้หรือไม่?': 'Clear this form?',
+  ล้างฟอร์ม: 'Clear form',
+  ข้อมูลที่กรอกไว้และไฟล์แนบในแบบฟอร์มนี้จะถูกล้าง: 'Entered fields and attached file in this form will be cleared',
+  'แบบฟอร์ม / ตัวอย่าง (รองรับเฉพาะไฟล์ Word .docx ที่ตรวจโครงสร้างแล้ว)': 'Form / example (supports verified Word .docx templates only)',
+  'ตั้งค่าสารบัญ/หัวท้ายที่เลือกไว้ใช้ได้เฉพาะ Word (.docx) ล้างค่าก่อนส่งออกรูปแบบนี้':
+    'Selected table of contents / header / footer options apply to Word (.docx) only. Clear them before exporting in this format.',
+  'ล้างตัวเลือกเฉพาะ Word': 'Clear Word-only options',
+  'พบข้อมูลที่อาจเป็นเลขบัตรหรือเบอร์โทรส่วนตัว กรุณาลบก่อนคัดลอก':
+    'Possible national ID or personal phone number found. Remove it before copying.',
+  'ล้างข้อมูลในหน้านี้หรือไม่?': 'Clear this draft?',
+  ล้างข้อมูล: 'Clear draft',
+  'หัวข้อ เนื้อหา และรายละเอียดที่พิมพ์ไว้จะถูกล้าง': 'Entered topic, copy, and details will be cleared',
+  ล้างข้อมูลแล้ว: 'Draft cleared',
+  'เปิดในแชตให้ AI ช่วยร่าง': 'Open in Chat to draft with AI',
+  'ตรวจข้อความใน "รายละเอียดเพิ่มเติม" (แนวคิดภาพ / แหล่งข้อมูล) ด้วย': 'Also check text inside "More details" (visual idea / source)',
+  สร้างภาพในแชต: 'Generate image in Chat',
+  'ผลการค้นหาและตรวจโค้ดในโฟลเดอร์งาน (ไม่รวมไฟล์ที่มีข้อมูลส่วนบุคคล)':
+    'Search and code check results in the workspace folder (excluding personal data files)',
+  แบบอักษรภาษาไทย: 'Thai UI font',
+  'เปลี่ยนฟอนต์หน้าจอแอปทันที · เอกสารราชการยังใช้ TH Sarabun ตามเดิม':
+    'Applies to the app interface immediately · official documents still use TH Sarabun',
+  มีหัว: 'Looped',
+  ไม่มีหัว: 'Loopless',
 };

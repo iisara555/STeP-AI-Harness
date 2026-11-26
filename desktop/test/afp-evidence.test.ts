@@ -94,6 +94,9 @@ test('a filename is only a hint; classification, selected pages and human review
   // Payment documents are suggested from the name too; a mixed name suggests nothing.
   assert.equal(suggestPacketKind('ใบเสร็จน้ำดื่ม-1.pdf'), 'receipt');
   assert.equal(suggestPacketKind('ใบเสร็จรับเงิน/ใบกำกับภาษี ร้านป้าย.pdf'), 'tax_invoice');
+  assert.equal(suggestPacketKind('abbreviated-tax-invoice.pdf'), 'abbreviated_tax_invoice');
+  assert.equal(suggestPacketKind('tax_invoice.pdf'), 'tax_invoice');
+  assert.equal(suggestPacketKind('supplier_invoice.pdf'), 'invoice_or_quotation');
   assert.equal(suggestPacketKind('ใบแจ้งหนี้ร้านป้าย.pdf'), 'invoice_or_quotation');
   assert.equal(suggestPacketKind('สลิปโอนเงิน.jpg'), 'transfer_slip');
   assert.equal(suggestPacketKind('FM-AF-015 ใบเซ็นชื่อประชุม.pdf'), 'attendance');
@@ -105,6 +108,39 @@ test('a filename is only a hint; classification, selected pages and human review
   assert.equal(status(), 'checked');
   packet.documents[0].pages[0].included = false;
   assert.equal(status(), 'missing');
+});
+
+test('included tax invoices can match the payment evidence without satisfying other evidence requirements', () => {
+  const packet = base();
+  packet.documents = [
+    {
+      id: sourceId,
+      name: 'tax_invoice.pdf',
+      extension: 'pdf',
+      bytes: 30,
+      sha256: 'a'.repeat(64),
+      pages: [{ number: 1, kind: 'other', included: true, checked: false }],
+    },
+  ];
+  const [page] = packet.documents[0].pages;
+  const checklist = () => Object.fromEntries(evidenceChecklist(packet).map(item => [item.id, item.status]));
+  for (const finance of ['b_clearance', 'reserve_claim'] as const) {
+    packet.guidance.finance = finance;
+    page.kind = 'other';
+    page.checked = false;
+    assert.equal(checklist().receipt, 'suggested');
+    page.kind = 'tax_invoice';
+    assert.equal(checklist().receipt, 'unchecked');
+    page.checked = true;
+    assert.equal(checklist().receipt, 'checked');
+    page.kind = 'abbreviated_tax_invoice';
+    assert.equal(checklist().receipt, 'checked');
+    assert.equal(checklist().recipient, 'missing');
+    page.kind = 'transfer_slip';
+    assert.equal(checklist().receipt, 'missing');
+    page.kind = 'invoice_or_quotation';
+    assert.equal(checklist().receipt, 'missing');
+  }
 });
 
 test('the AI handoff contains only fixed categories and states, never case text, filenames, custom labels or receipt data', () => {

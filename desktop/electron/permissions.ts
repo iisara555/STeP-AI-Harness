@@ -119,16 +119,28 @@ export function sensitivePath(path: string, root?: string) {
 }
 
 export function deniedPath(path: string, rules: PathRule[], root?: string) {
-  const full = normalize(path, root);
-  return rules.find(
-    rule => !rule.allow && matches(full, /^(?:[a-z]:|\/|\*)/i.test(rule.pattern) ? rule.pattern : normalize(rule.pattern, root)),
-  );
+  const full = normalize(path, root),
+    alias = windowsName(full);
+  return rules.find(rule => {
+    if (rule.allow) return false;
+    const target = /^(?:[a-z]:|\/|\*)/i.test(rule.pattern) ? rule.pattern : normalize(rule.pattern, root);
+    return matches(full, target) || matches(alias, target);
+  });
 }
 
 export function deniedCommand(command: string, patterns: string[]) {
   const line = command.trim().replace(/\s+/g, ' ');
-  // Check each shell segment too, so a harmless prefix cannot hide a denied command.
-  const segments = [line, ...line.split(/(?:;|&&|\|\||\|)\s*/).map(s => s.trim())];
+  // Split raw command on newlines, command separators, & and subshells before normalizing spaces.
+  const parts = command
+    .split(/(?:\r?\n|;|&&|\|\||&|\||\$\(|`)/)
+    .map(s =>
+      s
+        .replace(/^[(`]+|[)`]+$/g, '')
+        .trim()
+        .replace(/\s+/g, ' '),
+    )
+    .filter(Boolean);
+  const segments = [line, ...parts];
   return patterns.find(pattern => segments.some(segment => matches(segment, pattern)));
 }
 
@@ -175,9 +187,19 @@ export function evaluatePermission(
   if (request.command) {
     const denied = deniedCommand(request.command, policy.permission.deniedCommands);
     if (denied) return { allowed: false, requiresConfirmation: false, reason: `DENIED_COMMAND:${denied}` };
-    for (const token of request.command.split(/[\s;|&<>]+/).filter(Boolean)) {
-      const path = token.replace(/^["']|["']$/g, '');
-      if (sensitivePath(path, options.root)) return { allowed: false, requiresConfirmation: false, reason: 'SENSITIVE_PATH:command' };
+    for (const raw of request.command.split(/[\s;|&<>(),[\]{}]+/).filter(Boolean)) {
+      const cleaned = raw.replace(/^["'({[]+|["')}\]]+$/g, '');
+      const eq = cleaned.indexOf('=');
+      const candidates = [cleaned];
+      if (eq > 0 && eq < cleaned.length - 1) candidates.push(cleaned.slice(eq + 1).replace(/^["']|["']$/g, ''));
+      if (/^-[A-Za-z][/~.]|^-[A-Za-z][A-Za-z]:/.test(cleaned)) candidates.push(cleaned.slice(2));
+      for (const candidate of candidates) {
+        if (!candidate) continue;
+        if (sensitivePath(candidate, options.root))
+          return { allowed: false, requiresConfirmation: false, reason: 'SENSITIVE_PATH:command' };
+        const cmdRule = deniedPath(candidate, policy.permission.pathRules, options.root);
+        if (cmdRule) return { allowed: false, requiresConfirmation: false, reason: `PATH_RULE:${cmdRule.pattern}` };
+      }
     }
   }
   // A mode the organization did not allow falls back to asking.

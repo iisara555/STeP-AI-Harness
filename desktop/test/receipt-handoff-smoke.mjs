@@ -29,12 +29,12 @@ try {
       );
       db.close();
       const original = ipcMain._invokeHandlers.get('step:call');
-      globalThis.receiptSendFixture = { fail: true, sent: [], delayPreview: false, previewCompleted: 0 };
+      globalThis.receiptSendFixture = { fail: true, sent: [], delayPreview: false, previewCompleted: 0, visionReads: 0 };
       ipcMain.removeHandler('step:call');
       ipcMain.handle('step:call', async (event, method, input) => {
         const state = globalThis.receiptSendFixture;
         if (method === 'models') return (await original(event, 'snapshot', {})).connections.find(c => c.id === id);
-        if (method === 'ocrStatus') return { installed: true, running: true, vision: false, localOnly: false };
+        if (method === 'ocrStatus') return { installed: true, running: true, vision: true, localOnly: false };
         if (method === 'ocrResolve') return { cancelled: true };
         if (method === 'ocrRead') {
           const lines = [
@@ -66,13 +66,25 @@ try {
             return { consent: { token: 'synthetic-consent', first: false, flagged: false, labels: [], attachment: false } };
           return { started: true };
         }
+        if (method === 'receiptVision') {
+          const first = ++state.visionReads === 1;
+          return {
+            model: 'synthetic-reader',
+            fields: {
+              total: { value: first ? '107.00' : '109.00', evidence: 'Synthetic total' },
+              receiptNumber: { value: first ? 'RC-SYNTHETIC' : 'RC-SECOND', evidence: 'Synthetic receipt number' },
+            },
+            items: [],
+            features: {},
+          };
+        }
         if (method === 'receiptPacketPrivacyPreview' && state.delayPreview) {
           const result = await original(event, method, input);
           await new Promise(resolve => setTimeout(resolve, 500));
           state.previewCompleted++;
           return result;
         }
-        if (['receiptVision', 'connect', 'run'].includes(method)) throw new Error('LIVE_PROVIDER_NOT_ALLOWED_IN_FIXTURE');
+        if (['connect', 'run'].includes(method)) throw new Error('LIVE_PROVIDER_NOT_ALLOWED_IN_FIXTURE');
         return original(event, method, input);
       });
     },
@@ -83,16 +95,13 @@ try {
   await page.getByRole('button', { name: /^ผู้ช่วยเบิกจ่าย/ }).click();
   await expect(page.getByRole('heading', { name: 'ผู้ช่วยเบิกจ่าย' })).toBeVisible();
   await page.getByRole('button', { name: 'เลือกใบเสร็จ' }).click();
-  await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
+  await expect(page.getByLabel('ยอดรวมที่ชำระ')).toBeVisible();
   await expect(page.getByLabel('ยอดรวมที่ชำระ')).toHaveValue('107.00');
   await page.setViewportSize({ width: 1280, height: 820 });
   const sourcePane = page.getByRole('region', { name: 'ใบเสร็จต้นฉบับ' });
   const reviewPane = page.getByRole('region', { name: 'ข้อมูลที่ต้องตรวจ' });
-  await expect(reviewPane.getByRole('heading', { level: 2 })).toHaveText([
-    'ต้องเตรียมเอกสารหรือยืนยันเงื่อนไขเพิ่มเติม',
-    'ทำอะไรต่อ',
-    'ดูองค์ประกอบพื้นฐานใบเสร็จ',
-  ]);
+  for (const name of ['ต้องเตรียมเอกสารหรือยืนยันเงื่อนไขเพิ่มเติม', 'ทำอะไรต่อ', 'ดูองค์ประกอบพื้นฐานใบเสร็จ'])
+    await expect(reviewPane.getByRole('heading', { name, exact: true })).toBeVisible();
   const left = await sourcePane.boundingBox(),
     right = await reviewPane.boundingBox();
   assert.ok(left.x + left.width <= right.x, 'source must be left of the review');
@@ -107,19 +116,23 @@ try {
   await expect(check).not.toBeChecked();
   await expect(page.getByRole('button', { name: 'ให้ AI ตรวจทานต่อ' })).toBeDisabled();
   await page.getByLabel('ยอดรวมที่ชำระ').fill('107.00');
-  await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
+  await check.check();
+  await page.getByRole('button', { name: 'ให้ AI อ่านใหม่', exact: true }).click();
+  await expect.poll(() => app.evaluate(() => globalThis.receiptSendFixture.visionReads)).toBe(2);
+  await expect(check).not.toBeChecked();
+  await expect(page.getByLabel('ยอดรวมที่ชำระ')).toHaveValue('107.00');
   await page.locator('.receipt-app').evaluate(el => {
     el.scrollTop = 0;
   });
-  await page.screenshot({ path: '/tmp/step-ocr-minimal-light.png', fullPage: true });
+  await page.screenshot({ path: join(home, 'receipt-review-light.png'), fullPage: true });
   await page.evaluate(() => {
     document.documentElement.dataset.theme = 'dark';
   });
   await page.waitForTimeout(400);
-  await page.screenshot({ path: '/tmp/step-ocr-minimal-dark.png', fullPage: true });
+  await page.screenshot({ path: join(home, 'receipt-review-dark.png'), fullPage: true });
   await page.setViewportSize({ width: 800, height: 600 });
   assert.ok(await page.locator('.receipt-app').evaluate(el => el.scrollWidth <= el.clientWidth + 1));
-  await page.screenshot({ path: '/tmp/step-ocr-minimal-small.png', fullPage: true });
+  await page.screenshot({ path: join(home, 'receipt-review-small.png'), fullPage: true });
   await page.setViewportSize({ width: 1280, height: 820 });
 
   await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();

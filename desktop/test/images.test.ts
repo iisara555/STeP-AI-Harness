@@ -187,3 +187,39 @@ test('other compatible services and connections without a checked address cannot
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('Internal Media prompts trigger isImageRequest and Images strips data-URI / whitespace base64', async () => {
+  const { IMAGE_MODELS } = await import('../src/image-routing');
+  assert.ok(IMAGE_MODELS.openai.includes('gpt-image-1'));
+  assert.ok(IMAGE_MODELS.gemini.includes('gemini-2.5-flash-image'));
+  assert.equal(
+    isImageRequest(
+      'TASK\nCreate one illustration for INTERNAL communication only.\nOUTPUT\nCreate one internal-use image, aspect ratio 1:1.',
+    ),
+    true,
+  );
+  assert.equal(isImageRequest('Create one announcement for INTERNAL communication only.'), true);
+  assert.equal(isImageRequest('Create one how-to guide for INTERNAL communication only.'), true);
+  assert.equal(isImageRequest('Create one educational visual for INTERNAL communication only.'), true);
+
+  const root = await mkdtemp(join(tmpdir(), 'step-image-b64-'));
+  try {
+    const request = (async (url: any) =>
+      new Response(
+        JSON.stringify(
+          String(url).endsWith('models')
+            ? { data: [{ id: 'gpt-image-1' }] }
+            : { data: [{ b64_json: `data:image/png;base64,${png.toString('base64').slice(0, 12)}\n${png.toString('base64').slice(12)}` }] },
+        ),
+      )) as typeof fetch;
+    const artifact = await new Images(root, async () => 'k', request).generate(
+      connection('openai'),
+      'tree',
+      undefined,
+      new AbortController().signal,
+    );
+    assert.deepEqual(await readFile(new Images(root, async () => 'k', request).path(artifact)), png);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

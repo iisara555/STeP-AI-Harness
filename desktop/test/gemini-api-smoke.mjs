@@ -7,9 +7,10 @@ import { join } from 'node:path';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
 import assert from 'node:assert/strict';
+import { routeFixtureOcr } from './receipt-ocr-fixture.mjs';
 
 let mode = 'quota';
-let ocrServer;
+let ocrReady = false;
 const chatTurns = [];
 const selectionTurns = [];
 const DELIVERABLE = 'อ่านร่างนี้ให้หน่อย มีตรงไหนงง ข้อมูลตกหล่น หรือบอกไม่เหมือนกันบ้าง';
@@ -122,6 +123,11 @@ const server = createServer((req, res) => {
 });
 server.listen(0, '127.0.0.1');
 await once(server, 'listening');
+const ocrServer = createServer((_req, res) => {
+  res.writeHead(ocrReady ? 200 : 503).end(JSON.stringify({ ok: ocrReady, service: 'STeP Local Thai OCR' }));
+});
+ocrServer.listen(0, '127.0.0.1');
+await once(ocrServer, 'listening');
 
 const home = await mkdtemp(join(tmpdir(), 'step-gemini-api-'));
 await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ receiptLocalOnly: false }));
@@ -133,6 +139,7 @@ const env = {
 delete env.ELECTRON_RUN_AS_NODE;
 const app = await electron.launch({ args: ['.'], env, timeout: 45000 });
 try {
+  await routeFixtureOcr(app, ocrServer);
   const page = await app.firstWindow();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -235,7 +242,7 @@ try {
   await page.getByRole('button', { name: /ศูนย์รวม Skill/ }).click();
   await page.getByLabel('กำลังตรวจใบเสร็จอยู่').waitFor();
   await page.getByRole('button', { name: /ผู้ช่วยเบิกจ่าย/ }).click();
-  await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'ตรวจ/แก้ข้อมูลที่อ่านได้', exact: true })).toBeVisible();
   await expect(page.getByLabel('ยอดรวมที่ชำระ')).toHaveValue('107.00', { timeout: 60000 });
   assert.equal(await page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า').inputValue(), 'ร้านตัวอย่าง จำกัด');
   await page.getByText('AI ฝากตรวจ: ตัวเลขยอดสุทธิจางเล็กน้อย').waitFor();
@@ -405,14 +412,10 @@ try {
       return error.message;
     }
   }, connectionId);
-  assert.ok(tooLong.includes('ATTACH_SCANNED_TOO_LONG'), tooLong);
+  assert.ok(tooLong.includes('RECEIPT_VISION_PAGE_LIMIT'), tooLong);
   assert.equal(prompts.length, beforeLongPdf, 'incomplete PDF input is rejected before a provider call');
   // Every OCR lifecycle result must retain Gemini's image capability, not just ocrStatus.
-  ocrServer = createServer((_req, res) => res.end(JSON.stringify({ ok: true, service: 'STeP Local Thai OCR' })));
-  await new Promise((resolve, reject) => {
-    ocrServer.once('error', reject);
-    ocrServer.listen(8765, '127.0.0.1', resolve);
-  });
+  ocrReady = true;
   const started = await page.evaluate(connectionId => window.step.call('ocrStart', { connectionId }), connectionId);
   assert.equal(started.vision, true);
   assert.equal(started.textOnly, false);
@@ -475,7 +478,7 @@ try {
   );
 } finally {
   await app.close().catch(() => {});
-  if (ocrServer) await new Promise(resolve => ocrServer.close(resolve));
+  await new Promise(resolve => ocrServer.close(resolve));
   server.close();
   await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }).catch(() => {});
 }

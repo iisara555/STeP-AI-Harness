@@ -76,6 +76,21 @@ test('receiptRuleChecks flags a bad check digit, VAT that is not 7% and amounts 
   assert.deepEqual(receiptRuleChecks({ taxId: '123', vat: '5' }), [], 'nothing to check is not a finding');
 });
 
+test('a zero VAT amount still participates in total checks without a 7 percent warning', () => {
+  assert.deepEqual(receiptRuleChecks({ subtotal: '100.00', vat: '0.00', total: '100.00' }), []);
+  assert.deepEqual(receiptRuleChecks({ subtotal: '100.00', vat: '๐.๐๐ %', total: '100.00' }), []);
+  assert.equal(compareField('vat', '0%', '0.00'), 'agree');
+  assert.deepEqual(receiptRuleChecks({ subtotal: '0%', vat: '7%', total: '0%' }), [
+    { code: 'invalid_money', field: 'subtotal' },
+    { code: 'invalid_money', field: 'vat' },
+    { code: 'invalid_money', field: 'total' },
+  ]);
+  assert.deepEqual(
+    receiptRuleChecks({ subtotal: '100.00', vat: '0.00', total: '100.01' }).map(note => note.code),
+    ['amounts_do_not_add_up'],
+  );
+});
+
 test('thaiBahtWords reads the total written in Thai words', () => {
   assert.equal(thaiBahtWords('แปดร้อยแปดบาทถ้วน'), 808);
   assert.equal(thaiBahtWords('(หนึ่งพันสองร้อยห้าสิบบาทถ้วน)'), 1250);

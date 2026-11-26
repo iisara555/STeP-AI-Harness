@@ -5,7 +5,7 @@ import { _electron as electron, expect } from '@playwright/test';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { mkdtemp, mkdir, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createServer } from 'node:http';
@@ -206,9 +206,47 @@ try {
   await expect(latest.getByRole('button', { name: /ใช้ประเภทที่อ่านได้/ })).toHaveCount(0);
   await expect(page.getByLabel('ประเภทของ photo-2.png', { exact: true })).toHaveValue('other');
 
+  // The local evidence picker adds to the packet without preparing anything in the AI composer.
+  const localEvidence = join(home, 'local-evidence.pdf');
+  await writeFile(localEvidence, Buffer.from(await pdf(['RECEIPT', 'Local evidence only']), 'base64'));
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+  }, localEvidence);
+  await chat.getByRole('button', { name: 'แนบหลักฐานในเครื่อง', exact: true }).click();
+  await expect(page.getByLabel('ประเภทของ local-evidence.pdf', { exact: true })).toBeVisible();
+  await expect(chat.locator('.case-composer .attachments')).toHaveCount(0);
+  await expect(chat.getByRole('button', { name: 'แนบไฟล์ให้ AI อ่าน', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'ร่างและส่งออก', exact: true }).click();
+  await expect(page.locator('.packet-export').getByText('ระบุประเภทและตรวจเทียบหลักฐานทุกหน้าที่เลือก', { exact: true })).toBeVisible();
+
   const packets = await page.evaluate(() => window.step.call('receiptPacketList'));
-  assert.equal(packets[0].documentCount, 6);
+  assert.equal(packets[0].documentCount, 7);
   assert.deepEqual(ai, [], 'no AI was asked');
+
+  // A drop belongs to the case selected when it started, including while the browser reads the bytes.
+  await page.evaluate(() => {
+    const original = File.prototype.arrayBuffer;
+    const pending = new Promise(resolve => {
+      globalThis.releaseCaseDrop = resolve;
+    });
+    File.prototype.arrayBuffer = async function () {
+      if (this.name === 'quote.pdf') {
+        globalThis.caseDropReading = true;
+        await pending;
+      }
+      return original.call(this);
+    };
+  });
+  await drop(['quote.pdf']);
+  await expect.poll(() => page.evaluate(() => globalThis.caseDropReading)).toBe(true);
+  await page.getByRole('button', { name: 'เรื่องใหม่', exact: true }).click();
+  await expect(page.getByLabel('ชื่อเรื่องเบิก', { exact: true })).toHaveValue('ชุดเอกสารใหม่');
+  await page.evaluate(() => globalThis.releaseCaseDrop());
+  await expect(page.getByText('กลับไปยังเรื่องเดิม แล้ววางไฟล์อีกครั้ง', { exact: true })).toBeVisible();
+  const otherPackets = await page.evaluate(() => window.step.call('receiptPacketList'));
+  assert.deepEqual(otherPackets.map(packet => packet.documentCount).sort(), [0, 7]);
+  await page.locator('.case-list .case-open', { hasText: 'ประชุมคณะทำงาน ข้อมูลสมมติ' }).click();
+  await expect(page.getByLabel('ชื่อเรื่องเบิก', { exact: true })).toHaveValue('ประชุมคณะทำงาน ข้อมูลสมมติ');
 
   // Dark and narrow.
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));

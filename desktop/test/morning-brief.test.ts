@@ -147,3 +147,22 @@ test('policy: the brief is on by default, IT can turn it or its remembered conse
   assert.ok(parsePolicy({ morningBrief: { rememberConsent: 'no' } }).problems.length);
   assert.ok(parsePolicy({ morningBrief: { rememberConsent: true, extra: 1 } }).problems.length);
 });
+
+test('malformed end dates fall back safely, evening events stay clamped to 16:30, and lookup Meet URLs work', () => {
+  const brief = summarizeDay({
+    now: NOW,
+    events: [
+      { summary: 'ไม่มี end', start: { dateTime: at('09:00') }, hangoutLink: 'https://meet.google.com/lookup/daily-sync?hs=1' },
+      event('ประชุมช่วงบ่าย', '12:00', '13:30'),
+      event('ดินเนอร์เย็น', '18:00', '20:00'),
+    ],
+    tasks: [],
+  });
+  assert.equal(brief.events[0].meet, 'https://meet.google.com/lookup/daily-sync?hs=1');
+  assert.ok(Number.isFinite(Date.parse(brief.events[0].end)));
+  // Morning free stretch 09:30–12:00 (2h30m) is shorter than afternoon 13:30–16:30 (3h00m), NOT 13:30–18:00!
+  assert.deepEqual(brief.tips.at(-1), {
+    text: 'ช่วงว่าง {0}–{1} น. เหมาะทำงานที่ต้องใช้สมาธิ',
+    args: ['13:30', '16:30'],
+  });
+});

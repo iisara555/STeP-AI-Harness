@@ -2149,3 +2149,35 @@ test('artifact_save accepts both args.content and top-level content', async () =
     await f.workbench.close();
   }
 });
+
+test('pilot run-scope covers clean artifact, patch and coding reads without repeated prompts, while hostOwnedConsent deduplicates MCP prompts', async () => {
+  const f = await fixture('ask');
+  f.policy.pilot = true;
+  f.policy.features.mcp = true;
+  f.policy.mcpServers = [{ name: 'synthetic', transport: 'stdio', command: 'unused', args: [] }];
+  f.allowRun();
+  try {
+    await writeFile(join(f.root, 'app.ts'), 'export const hello = 1;\n');
+    const host = await f.tools.host(f.scope);
+    const r1 = { tool: 'code_symbols' as const, input: 'app.ts' };
+    const out1 = await host.execute(r1, f.scope.signal);
+    await host.outgoing(JSON.stringify(out1), f.scope.signal, r1);
+    const r2 = { tool: 'artifact_save' as const, input: 'calc', content: '<p>ok</p>', args: { title: 'Calc', kind: 'html' } };
+    const out2 = await host.execute(r2, f.scope.signal);
+    await host.outgoing(JSON.stringify(out2), f.scope.signal, r2);
+    const r3 = { tool: 'patch' as const, input: 'app.ts', args: { old_string: '1', new_string: '2' } };
+    const out3 = await host.execute(r3, f.scope.signal);
+    await host.outgoing(JSON.stringify(out3), f.scope.signal, r3);
+    assert.equal(f.requests(), 1, 'one outgoing run-scope pilot prompt covers code_symbols, artifact_save, and staged patch');
+
+    const beforeMcp = f.requests();
+    f.tools.externalConsents = true;
+    f.tools.external = async () => ({ tools: [] });
+    await host.execute({ tool: 'mcp_search', input: 'synthetic' }, f.scope.signal);
+    assert.equal(f.requests(), beforeMcp, 'externalConsents suppresses duplicate ToolGate prompt for mcp_search');
+    const listed = (await host.execute({ tool: 'mcp_search', input: '' }, f.scope.signal)) as any;
+    assert.deepEqual(listed, { tools: [] });
+  } finally {
+    await f.workbench.close();
+  }
+});

@@ -101,7 +101,7 @@ const pick = <T extends string>(value: unknown, allowed: readonly T[], fallback:
 const text = (value: unknown) => (typeof value === 'string' ? value : '');
 
 function hasMediaPlaceholder(value: string): boolean {
-  if (/รอข้อมูลจริง|รอยืนยัน/.test(value)) return true;
+  if (/รอข้อมูลจริง|รอยืนยัน|(?<![a-zA-Z0-9_])_{3,}(?![a-zA-Z0-9_])|\bXXX\b|<[^>]*?(?:ระบุ|เติม|ใส่)[^>]*>/.test(value)) return true;
   // Brackets also hold citations and Markdown links; only explicit unfinished slots need input.
   return [...value.matchAll(/\[([^\]]*)\]/g)].some(([, bracket]) => {
     const slot = bracket.trim();
@@ -109,9 +109,13 @@ function hasMediaPlaceholder(value: string): boolean {
   });
 }
 
+function hasSensitivePii(value: string): boolean {
+  return /\b[1-8]-\d{4}-\d{5}-\d{2}-\d\b|(?<!\d)[1-8]\d{12}(?!\d)|(?<!\d)0[689]\d[- ]?\d{3}[- ]?\d{4}(?!\d)/.test(value);
+}
+
 function hasExternalPublicationIntent(value: string): boolean {
   const intents = value.matchAll(
-    /(?:เผยแพร่|ประชาสัมพันธ์|โพสต์|แชร์|ลง(?:บน)?(?:เพจ|เว็บไซต์))[^\n.!?;]{0,100}?(?:ภายนอก|สาธารณะ|สาธารณชน)|(?:สื่อ|เว็บไซต์|เพจ)\s*สาธารณะ|\b(?:publish|post|share)\b[^\n.!?;]{0,100}?\b(?:publicly|externally|(?:public|external)\s+(?:posts?|communications?|publications?|websites?|sites?|pages?|use|audience|social(?:\s+media)?))\b|\b(?:public|external)\s+(?:posts?|communications?|publications?|websites?|sites?|pages?|use|audience|social(?:\s+media)?)\b/gi,
+    /(?:เผยแพร่|ประชาสัมพันธ์|โพสต์|แชร์|ลง(?:บน)?(?:เพจ|เว็บไซต์))[^\n.!?;]{0,100}?(?:ภายนอก|สาธารณะ|สาธารณชน|ลูกค้า|บุคคลภายนอก|ผู้ประกอบการ)|(?:ลง|โพสต์)\s*(?:Facebook|FB|IG|Instagram|TikTok|YouTube|เพจ\s*STeP)|ประชาสัมพันธ์\s*(?:ลูกค้า|บุคคลภายนอก|ผู้ประกอบการ)|สื่อสาร\s*(?:ลูกค้า|ผู้ประกอบการ)|โปสเตอร์เปิดรับสมัคร|(?:สื่อ|เว็บไซต์|เพจ)\s*สาธารณะ|\b(?:publish|post|share)\b[^\n.!?;]{0,100}?\b(?:publicly|externally|(?:public|external)\s+(?:posts?|communications?|publications?|websites?|sites?|pages?|use|audience|social(?:\s+media)?))\b|\b(?:public|external)\s+(?:posts?|communications?|publications?|websites?|sites?|pages?|use|audience|social(?:\s+media)?)\b/gi,
   );
   for (const intent of intents) {
     const before = value.slice(0, intent.index).trimEnd();
@@ -169,6 +173,8 @@ export function compileMedia(raw: Partial<MediaState>): MediaResult {
   const userFields = [s.topic, s.brief, s.content, s.visual, s.source];
   if (userFields.some(hasMediaPlaceholder)) warnings.push('เนื้อหายังมีช่องรอข้อมูล กรุณาเติมก่อนใช้จริง');
   if (userFields.some(hasExternalPublicationIntent)) warnings.push('รุ่นนี้ใช้สื่อสารภายในเท่านั้น กรุณาปรับโจทย์');
+  if (userFields.some(hasSensitivePii)) warnings.push('พบข้อมูลที่อาจเป็นเลขบัตรหรือเบอร์โทรส่วนตัว กรุณาลบก่อนคัดลอก');
+  const safeCopy = s.content.replace(/END EXACT COPY/g, 'END COPY');
   const typeRule = MEDIA_TYPE_RULES[s.type];
   const colour =
     s.style === 'NOTION'
@@ -181,7 +187,7 @@ Preferred result: include the following exact Thai copy in the image, preserving
 Do not make font certification a prerequisite for attempting image creation. Do not claim an image generator has embedded or verified an exact font family unless there is actual evidence. If the tool supports Thai lettering but cannot certify the font, attempt the requested image as a draft for typography review, clearly report that font identity is unverified and do not label it a font-approved final.
 If the tool cannot render the supplied Thai copy legibly or needs unavailable font files to typeset it, create the illustration with the left third clean and empty instead, without any text, digits or pseudo-text anywhere. Retain the exact copy separately for later typesetting in ${s.font}; identify this output as an illustration awaiting typesetting, not a complete announcement. Do not require a font upload just to create the illustration.
 BEGIN EXACT COPY
-${s.content}
+${safeCopy}
 END EXACT COPY
 For the preferred result, arrange the illustration around the copy without overlapping it.`
       : `RESERVE SPACE FOR LATER TEXT
