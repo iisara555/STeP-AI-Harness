@@ -145,6 +145,7 @@ try {
   await expect(jobs.locator('.schedule-card')).toContainText('Updated recurring draft');
   await jobs.getByRole('button', { name: 'พักงาน Updated recurring draft', exact: true }).click();
   await expect(jobs.locator('.schedule-card')).toContainText('พักไว้');
+  await expect(jobs.locator('.schedule-card')).toHaveCSS('opacity', '1');
   await jobs.getByRole('button', { name: 'แก้ไขงาน Updated recurring draft', exact: true }).click();
   await expect(jobs.getByRole('checkbox', { name: 'เปิดใช้งานตามเวลาที่ตั้ง' })).not.toBeChecked();
   await expect(preview).toContainText('รอบถัดไปหากเปิดใช้');
