@@ -379,6 +379,8 @@ export type Settings = {
   theme: 'system' | 'light' | 'dark';
   /** Interface language; Thai when unset. */
   language?: 'th' | 'en';
+  /** UI Thai font style: looped ('Noto Sans Thai Looped') when unset, or loopless ('Noto Sans Thai'). */
+  fontStyle?: 'looped' | 'loopless';
   /** Preferred chat reply language; independent of UI language. Explicit requests can override it. */
   chatLanguage?: 'auto' | 'th' | 'en';
   onboarding: boolean;

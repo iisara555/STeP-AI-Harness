@@ -3543,4 +3543,9 @@ export const en: Record<string, string> = {
     'Workspace coding and tool-building support with seamless Google Workspace continuity',
   'ผลการค้นหาและตรวจโค้ดในโฟลเดอร์งาน (ไม่รวมไฟล์ที่มีข้อมูลส่วนบุคคล)':
     'Search and code check results in the workspace folder (excluding personal data files)',
+  แบบอักษรภาษาไทย: 'Thai UI font',
+  'เปลี่ยนฟอนต์หน้าจอแอปทันที · เอกสารราชการยังใช้ TH Sarabun ตามเดิม':
+    'Applies to the app interface immediately · official documents still use TH Sarabun',
+  มีหัว: 'Looped',
+  ไม่มีหัว: 'Loopless',
 };

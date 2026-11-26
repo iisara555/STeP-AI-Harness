@@ -3294,6 +3294,10 @@ async function main() {
           outputStyle,
           assistantTone: input.assistantTone === undefined ? store.settings().assistantTone : inputText(input.assistantTone, 300).trim(),
           language: input.language === 'en' || input.language === 'th' ? input.language : store.settings().language,
+          fontStyle:
+            input.fontStyle === undefined
+              ? store.settings().fontStyle
+              : styleInput(input.fontStyle, value => (value === 'looped' || value === 'loopless' ? value : 'looped')),
           chatLanguage:
             input.chatLanguage === undefined
               ? store.settings().chatLanguage
