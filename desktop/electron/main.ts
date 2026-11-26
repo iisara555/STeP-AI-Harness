@@ -46,7 +46,7 @@ import { GOOGLE_PAGES, type GoogleService } from '../src/google-services';
 import { googleChange, googleResourceUrl } from '../src/google-changes';
 import type { GoogleRequest } from './google-operations';
 import { googleInvocation, googleOperationCatalog } from './google-operations';
-import { BRIEF_OPERATIONS, briefDay, readMorningBrief, type MorningBrief } from './morning-brief';
+import { BRIEF_OPERATIONS, MEET_URL, briefDay, readMorningBrief, type MorningBrief } from './morning-brief';
 import { credentialTitles } from '../src/credential-copy';
 import { credentialErrorsTh, credentialErrorsEn } from '../src/credential-copy';
 import { googleResultConsent } from './google-consent';
@@ -67,7 +67,7 @@ import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
 import { searchPublicWeb } from './public-search';
 import { Splash } from './splash';
 import { documentTool, documentVariant } from '../src/document-tools';
-import { resolveInvitation } from '../src/invitation';
+import { invitationForRecipient, resolveInvitation } from '../src/invitation';
 import { documentConversationContext, requestedDocumentTool, requestedLetterVariant } from '../src/document-intent';
 import { isDocumentQuestion } from './document-tools';
 import { inspectDocumentTemplate, templateControlText } from './document-template';
@@ -2568,8 +2568,7 @@ async function main() {
       case 'morningBriefOpen': {
         // Only a Meet link from today's brief, never an address the page supplies.
         const url = inputText(input.url, 200);
-        if (!/^https:\/\/meet\.google\.com\/[a-z0-9-]+$/.test(url) || !briefToday?.brief.events.some(e => e.meet === url))
-          throw new Error('INVALID_INPUT');
+        if (!MEET_URL.test(url) || !briefToday?.brief.events.some(e => e.meet === url)) throw new Error('INVALID_INPUT');
         await shell.openExternal(url);
         return true;
       }
@@ -3309,6 +3308,7 @@ async function main() {
         });
       case 'packInstall': {
         if (!packImportAllowed(policyState.policy)) throw new Error('PACK_IMPORT_DISABLED');
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
         // Staff usually have one Skill file; a folder (or a pack with pack.json) is the second choice.
         const file = input.kind === 'file';
         const selected = await dialog.showOpenDialog(window!, {
@@ -3348,6 +3348,7 @@ async function main() {
       case 'skillCreate': {
         // Saves the previewed (and possibly edited) draft like an imported file: privacy gate, review, credit.
         if (policyState.policy.features.staffSkills === false) throw new Error('PACK_PERSONAL_DISABLED');
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
         const settings = store.settings();
         return installSkillText(settings.workspace || data, inputText(input.text, 200_000), {
           credit: { name: settings.userName || '', team: settings.team || '' },
@@ -3355,6 +3356,7 @@ async function main() {
         });
       }
       case 'packEnable': {
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
         const identity = phase4Identity(),
           workspace = store.settings().workspace || data,
           id = inputText(input.id, 64),
@@ -3414,6 +3416,7 @@ async function main() {
           policyState.policy,
         );
       case 'packPromote': {
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
         // "เสนอให้องค์กรใช้": only to the organization's intake (or the one set in policy), only a pack whose files pass the
         // privacy check (every read of a pack re-runs it) and the Standard v2 review, and only after the employee agrees to what is sent and to credit.
         const identity = phase4Identity(),
@@ -4667,8 +4670,7 @@ async function main() {
         if (draftingTool && coordinated) throw new Error('INVALID_DOCUMENT_TOOL');
         if (coordinated && (!policyState.policy.features.coordinator || workMode !== 'draft' || input.skill || input.retry))
           throw new Error('COORDINATOR_DISABLED');
-        if (workMode === 'image' && (sendingConnection.mode !== 'api' || sendingConnection.provider === 'claude'))
-          throw new Error('IMAGE_API_REQUIRED');
+        if (workMode === 'image' && !canGenerateImages(sendingConnection)) throw new Error('IMAGE_API_REQUIRED');
         const selectedImageModel = input.imageModel ? inputText(input.imageModel, 120) : undefined;
         // A directly invoked Skill must be one the router can reach.
         const skill = draftingTool?.skill || (input.skill ? inputText(input.skill, 80) : '');
@@ -5262,6 +5264,10 @@ async function main() {
           const fontStatus = await window.webContents
             .executeJavaScript(`(${probeDocumentFont.toString()})(${JSON.stringify(font)})`)
             .catch(() => 'unknown');
+          const checkedDoc =
+            items[0] && s.presentation?.invitation
+              ? invitationForRecipient(s.document || markdownDocument(s.draft), items[0])
+              : s.document || markdownDocument(s.draft);
           return {
             ...result,
             layout: {
@@ -5274,7 +5280,7 @@ async function main() {
                 ...(template
                   ? [formRevisionCheck(await templateControlText(template), await loadQsRegister())].filter(check => check !== undefined)
                   : []),
-                ...documentChecks(s.document || markdownDocument(s.draft), layout.id),
+                ...documentChecks(checkedDoc, layout.id),
               ],
             },
           };

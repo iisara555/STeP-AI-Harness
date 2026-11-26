@@ -85,7 +85,7 @@ export function FeedbackDialog({
   /** Opens "แจ้งปัญหา / เสนอแนะ" for this answer instead; absent when IT turned it off. */
   onReport?: (text: string) => void;
   /** Asks the AI to answer again with the note; absent while the task runs or where a new turn cannot start. */
-  onRevise?: (note: string) => Promise<void>;
+  onRevise?: (note: string) => Promise<unknown>;
 }) {
   const [text, setText] = useState(ask.text),
     [scope, setScope] = useState<'private' | 'project'>('private'),

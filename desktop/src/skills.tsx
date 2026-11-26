@@ -203,7 +203,9 @@ export function SkillsHub({
         })}
         {otherSkills.map(skillCard)}
       </div>
-      {skills && !visible.length && !visibleTools.length && <p className="muted">{t('ไม่พบ Skill ลองเปลี่ยนคำค้นหรือตัวกรอง')}</p>}
+      {skills && !visible.length && !visibleTools.length && !visibleOwn.length && (
+        <p className="muted">{t('ไม่พบ Skill ลองเปลี่ยนคำค้นหรือตัวกรอง')}</p>
+      )}
     </div>
   );
 }

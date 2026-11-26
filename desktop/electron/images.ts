@@ -124,8 +124,9 @@ export class Images {
     // Gemini's convenience output_image denotes the last final model image, not an intermediate block.
     const finalImages = candidates.filter((c: any) => c?.data && (!c.type || c.type === 'image'));
     const encoded = openai ? finalImages[0]?.data : data.output_image?.data || finalImages.at(-1)?.data;
-    if (typeof encoded !== 'string' || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) throw new Error('IMAGE_RESULT_INVALID');
-    const bytes = Buffer.from(encoded, 'base64');
+    const rawEncoded = typeof encoded === 'string' ? encoded.replace(/^data:image\/[^;]+;base64,/i, '').replace(/\s+/g, '') : '';
+    if (!rawEncoded || !/^[A-Za-z0-9+/]+={0,2}$/.test(rawEncoded)) throw new Error('IMAGE_RESULT_INVALID');
+    const bytes = Buffer.from(rawEncoded, 'base64');
     const mime = bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
       ? 'image/png'
       : bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255

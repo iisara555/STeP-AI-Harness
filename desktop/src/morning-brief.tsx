@@ -18,7 +18,10 @@ export type BriefState = {
   brief?: MorningBrief;
 };
 type Call = (method: string, input?: any) => Promise<any>;
-const clock = (iso: string) => new Date(Date.parse(iso) + 7 * 3600_000).toISOString().slice(11, 16);
+const clock = (iso: string) => {
+  const ms = Date.parse(iso);
+  return Number.isFinite(ms) ? new Date(ms + 7 * 3600_000).toISOString().slice(11, 16) : '';
+};
 const tip = (value: { text: string; args: string[] }) => t(value.text, ...value.args);
 
 /** The day's summary as a question the employee can edit before sending it to their AI. */
@@ -42,7 +45,7 @@ export function MorningBriefCard({
   const [state, setState] = useState<BriefState>();
   const [busy, setBusy] = useState(false);
   const [remember, setRemember] = useState(false);
-  const autoRun = useRef(false);
+  const autoRunDay = useRef('');
   const run = async (method: string, input?: unknown) => {
     setBusy(true);
     try {
@@ -67,13 +70,14 @@ export function MorningBriefCard({
       clearInterval(timer);
     };
   }, [call]);
-  // With the every-day OK already given, the brief is read without a button press, once per opening of the card.
+  // With the every-day OK already given, the brief is read without a button press once per Thai calendar day.
   useEffect(() => {
-    if (state?.due && state.remembered && !state.brief && !autoRun.current && !busy) {
-      autoRun.current = true;
+    const today = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
+    if (state?.due && state.remembered && !state.brief && autoRunDay.current !== today && !busy) {
+      autoRunDay.current = today;
       void run('morningBriefRun');
     }
-  });
+  }, [state?.due, state?.remembered, state?.brief, busy]);
   if (!state?.feature || !state.available || !state.due) return null;
   const brief = state.brief;
   return (

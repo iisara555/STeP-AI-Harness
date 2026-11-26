@@ -22,6 +22,7 @@ export const COMMANDS = [
   ['skills', 'ศูนย์รวม Skill', ''],
   ['receipt', 'ผู้ช่วยเบิกจ่าย', ''],
   ['documents', 'เครื่องมือร่างเอกสาร', ''],
+  ['media', 'สื่อภายใน', ''],
   ['theme-system', 'ธีมตามระบบ', ''],
   ['theme-light', 'ธีมสว่าง', ''],
   ['theme-dark', 'ธีมมืด', ''],
