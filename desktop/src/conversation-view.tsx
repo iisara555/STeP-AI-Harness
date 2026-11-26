@@ -58,6 +58,7 @@ export function ConversationView({ v }: { v: AppView }) {
     activeModel,
     activeUsageAccount,
     activityAt,
+    addFiles,
     aiLabel,
     aiPicker,
     aiPickerRef,
@@ -77,7 +78,6 @@ export function ConversationView({ v }: { v: AppView }) {
     currentEffort,
     currentModel,
     defaultModel,
-    discardFiles,
     failureCode,
     files,
     forTeam,
@@ -109,6 +109,7 @@ export function ConversationView({ v }: { v: AppView }) {
     readyConnection,
     refresh,
     refreshActiveQuota,
+    removeFile,
     runFailed,
     running,
     save,
@@ -120,7 +121,6 @@ export function ConversationView({ v }: { v: AppView }) {
     setCoordinated,
     setDismissedSkills,
     setFeedbackAsk,
-    setFiles,
     setForcedSkill,
     setImageModel,
     setInspecting,
@@ -793,7 +793,7 @@ export function ConversationView({ v }: { v: AppView }) {
                           {!f.usable && <small>{t('· ส่งไม่ได้')}</small>}
                         </span>
                       </button>
-                      <button aria-label={t('นำไฟล์ออก')} title={t('นำไฟล์ออก')} onClick={discardFiles}>
+                      <button aria-label={t('นำไฟล์ออก')} title={t('นำไฟล์ออก')} onClick={() => removeFile(f.id)}>
                         <X size={13} />
                       </button>
                     </span>
@@ -1025,11 +1025,15 @@ export function ConversationView({ v }: { v: AppView }) {
                     void action(async () => {
                       const id = session?.id || (await createTask())?.id;
                       if (!id) return;
-                      const f = await api.call('attach', { id });
-                      if (f) {
-                        discardFiles();
-                        setFiles([f]);
-                        setInspecting(f);
+                      const res = await api.call('attach', { id, multiple: true });
+                      const added = Array.isArray(res) ? res : res ? [res] : [];
+                      if (added.length) {
+                        addFiles(added);
+                        if (added.length === 1) setInspecting(added[0]);
+                        else {
+                          const refused = added.find(item => !item.usable);
+                          if (refused) setInspecting(refused);
+                        }
                       }
                     })
                   }
@@ -1054,11 +1058,15 @@ export function ConversationView({ v }: { v: AppView }) {
                       void action(async () => {
                         const id = session?.id || (await createTask())?.id;
                         if (!id) return;
-                        const f = await api.call('attach', { id, vision: true });
-                        if (f) {
-                          discardFiles();
-                          setFiles([f]);
-                          setInspecting(f);
+                        const res = await api.call('attach', { id, vision: true, multiple: true });
+                        const added = Array.isArray(res) ? res : res ? [res] : [];
+                        if (added.length) {
+                          addFiles(added);
+                          if (added.length === 1) setInspecting(added[0]);
+                          else {
+                            const refused = added.find(item => !item.usable);
+                            if (refused) setInspecting(refused);
+                          }
                         }
                       })
                     }

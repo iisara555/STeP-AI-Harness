@@ -828,21 +828,42 @@ export function useWorkspace() {
     if (selected) for (const file of files) void api!.call('detach', { id: selected, attachmentId: file.id }).catch(() => undefined);
     setFiles([]);
   }
+  function removeFile(attachmentId: string) {
+    if (selected) void api!.call('detach', { id: selected, attachmentId }).catch(() => undefined);
+    setFiles(current => current.filter(file => file.id !== attachmentId));
+  }
+  function addFiles(incoming: Attachment[]) {
+    if (!incoming.length) return;
+    setFiles(current => {
+      const merged = [...current];
+      const overflow: Attachment[] = [];
+      for (const item of incoming) {
+        if (merged.some(existing => existing.id === item.id)) continue;
+        if (merged.length < 64) merged.push(item);
+        else overflow.push(item);
+      }
+      if (overflow.length && selected) {
+        for (const extra of overflow) void api!.call('detach', { id: selected, attachmentId: extra.id }).catch(() => undefined);
+        notify(t('แนบได้สูงสุด {0} ไฟล์ต่อครั้ง', 64), 'info');
+      }
+      return merged;
+    });
+  }
   async function pasteImage(file: File) {
     if (running || sendInFlight.current || pasteInFlight.current) {
       notify(t('รอให้งานปัจจุบันเสร็จก่อนวางภาพ'), 'info');
       return;
     }
-    if (files.length) {
-      notify(t('แนบได้ครั้งละ 1 ไฟล์ กรุณานำไฟล์เดิมออกก่อนวางภาพ'), 'info');
+    if (files.length >= 64) {
+      notify(t('แนบได้สูงสุด {0} ไฟล์ต่อครั้ง', 64), 'info');
       return;
     }
     if (!['image/png', 'image/jpeg'].includes(file.type)) {
       notify(t('วางภาพ PNG หรือ JPEG ได้'), 'error');
       return;
     }
-    if (!file.size || file.size > 4_000_000) {
-      notify(t('ภาพจากคลิปบอร์ดต้องมีขนาดไม่เกิน 4 MB'), 'error');
+    if (!file.size || file.size > 10 * 1024 * 1024) {
+      notify(t('ภาพจากคลิปบอร์ดต้องมีขนาดไม่เกิน 10 MB'), 'error');
       return;
     }
     const version = navigationVersion.current;
@@ -858,7 +879,7 @@ export function useWorkspace() {
         await api!.call('detach', { id, attachmentId: attachment.id });
         return;
       }
-      setFiles([attachment]);
+      setFiles(current => [...current, attachment]);
     } finally {
       pasteInFlight.current = false;
       setPastingImage(false);
@@ -1533,6 +1554,8 @@ export function useWorkspace() {
     create,
     createTask,
     discardFiles,
+    removeFile,
+    addFiles,
     pasteImage,
     send,
     askAside,

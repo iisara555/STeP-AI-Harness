@@ -3,6 +3,13 @@
 // never dropped without the person knowing why.
 const TOO_LARGE = new Set(['file-size-limit', 'text-size-limit', 'page-limit', 'archive-size-limit', 'archive-entry-limit']);
 
+/** Attachment caps aligned with shipped Antigravity (64 files, 50 MiB file, 10 MiB per image, 20 images / 20 MB total). */
+export const MAX_ATTACHMENTS_PER_SEND = 64;
+export const MAX_ATTACHMENT_CHARS = 180_000;
+export const MAX_IMAGE_FILE_BYTES = 10 * 1024 * 1024;
+export const MAX_IMAGES_PER_SEND = 20;
+export const MAX_TOTAL_IMAGE_BYTES = 20_000_000;
+
 /** A verified native outline is a separate capability, never permission to send the original source. */
 export function attachmentCapabilities(report: unknown, nativeOutlineVerified: boolean) {
   const sourceReason = attachmentReason(report),
@@ -11,7 +18,7 @@ export function attachmentCapabilities(report: unknown, nativeOutlineVerified: b
   return { sourceUsable, usable, reason: usable ? undefined : sourceReason };
 }
 
-export function attachmentReason(report: any, limit = 100_000): string | undefined {
+export function attachmentReason(report: any, limit = MAX_ATTACHMENT_CHARS): string | undefined {
   const reasons: string[] = Array.isArray(report?.reviewReasons) ? report.reviewReasons : [];
   if (report?.action === 'block-external') return 'ATTACH_SENSITIVE';
   if (report?.extractionStatus === 'unavailable') {

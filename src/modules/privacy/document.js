@@ -3,7 +3,7 @@ import { extname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { Worker } from 'node:worker_threads';
 
-export const DOCUMENT_LIMITS = Object.freeze({ bytes: 25 * 1024 * 1024, expandedBytes: 8 * 1024 * 1024,
+export const DOCUMENT_LIMITS = Object.freeze({ bytes: 50 * 1024 * 1024, expandedBytes: 8 * 1024 * 1024,
   characters: 1_000_000, pages: 200, entries: 1000, timeoutMs: 20_000 });
 export const TEXT_EXTENSIONS = new Set(['.txt', '.md', '.csv', '.tsv', '.json', '.yaml', '.yml', '.log']);
 

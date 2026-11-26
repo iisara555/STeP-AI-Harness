@@ -43,6 +43,7 @@ import { RETRYABLE_CODES, RETRY_DELAYS_MS, retryDelay } from './retry';
 import { section } from './prompt';
 import { CHECKPOINT_SYSTEM, compact, contextBudget, LOOP_FOLD_SHARE, promptTooLong, ProviderPromptLimitError, tokens } from './compact';
 import { ANTIGRAVITY_FIRST_MESSAGE_TOKENS } from './antigravity';
+import { MAX_ATTACHMENT_CHARS, MAX_ATTACHMENTS_PER_SEND } from './attachments';
 import { mainLocale, tm } from './i18n';
 import { internalSystemFor, internalSystemRule } from './internal-systems';
 import { workflowRule } from './workflows';
@@ -121,8 +122,8 @@ export function parseAnswerCheck(reply: string): Message['check'] {
     return undefined;
   }
 }
-const CHAT_FILE_CHARS = 100_000;
-const CHAT_FILE_LIMIT = 10;
+const CHAT_FILE_CHARS = MAX_ATTACHMENT_CHARS;
+const CHAT_FILE_LIMIT = MAX_ATTACHMENTS_PER_SEND;
 // A short message sent with a file ("อันนี้", "ตามนี้") belongs to the request before it.
 const SHORT_WITH_FILE = 40;
 export type Harness = {
@@ -725,7 +726,7 @@ export class WorkService {
       throw new Error('INVALID_DOCUMENT_VARIANT');
     if (selectedDocument && skill && skill !== selectedDocument.skill) throw new Error('INVALID_DOCUMENT_TOOL');
     skill = selectedDocument?.skill || skill;
-    if (!input.trim() || input.length > 30_000 || attachmentText.length > 100_000) throw new Error('INPUT_LIMIT');
+    if (!input.trim() || input.length > 30_000 || attachmentText.length > MAX_ATTACHMENT_CHARS) throw new Error('INPUT_LIMIT');
     // Identifiers a person confirmed stay with this run only, so parallel runs never share them.
     const allowed = this.store.session(id).allowedIdentifiers || [];
     // New user-supplied data: credentials and sensitive identifiers never leave; review signals need explicit confirmation.

@@ -14,22 +14,20 @@
 ```text
 output/
 └─ <TEAM>/
-   └─ <YYYY>/
-      └─ <MM>/
-         └─ <TYPE>/
+   └─ <YYYY-MM>/
 ```
 
 ตัวอย่าง:
 
 ```text
-output/CC/2026/09/presentation/
-output/AFP/2026/09/document/
-output/MI/2026/09/spreadsheet/
-output/SHARED/2026/09/image/
+output/CC/2026-09/
+output/AFP/2026-09/
+output/MI/2026-09/
+output/SHARED/2026-09/
 ```
 
 - `TEAM`: ใช้รหัสทีมจาก USER.md / workspace เช่น CC, MI, AFP, PITI หากไม่ทราบให้ใช้ `SHARED`
-- `TYPE`: ใช้ประเภทที่สื่อความหมาย เช่น `document`, `presentation`, `spreadsheet`, `image`, `report`, `data`, `web` หรือประเภทงานเฉพาะที่สั้นและค้นหาได้
+- `YYYY-MM`: แยกตามเดือน-ปี ส่วนประเภทงาน (`document`, `presentation`, `spreadsheet`, `image`, `report`, `data`, `web`) อยู่ในชื่อไฟล์แล้ว โฟลเดอร์จึงไม่ลึกเกินไปและเปิดดูง่ายบน Windows/macOS
 
 ## รูปแบบชื่อไฟล์
 
