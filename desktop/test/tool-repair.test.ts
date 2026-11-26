@@ -141,3 +141,27 @@ test('coding, artifact and google_workspace tool calls repair cleanly', () => {
     args: { title: 'Calc', kind: 'html' },
   });
 });
+
+test('large payloads (>30 KB) and dot-style coding aliases parse and hoist cleanly', () => {
+  const html45k = '<p>' + 'ก'.repeat(45_000) + '</p>';
+  const saved = one({ tool: 'artifact_save', input: 'big-ui', args: { title: 'Big UI', kind: 'html', content: html45k } });
+  assert.equal(saved.tool, 'artifact_save');
+  assert.equal(saved.content, html45k);
+  assert.deepEqual(saved.args, { title: 'Big UI', kind: 'html' });
+
+  const js40k = 'const x = "' + 'a'.repeat(40_000) + '"; x.length';
+  const repl = one({ tool: 'repl_eval', input: '', args: { code: js40k } });
+  assert.equal(repl.tool, 'repl_eval');
+  assert.equal(repl.content, js40k);
+
+  const bigOld = 'x'.repeat(35_000);
+  const bigNew = 'y'.repeat(35_000);
+  const patched = one({ tool: 'patch', input: 'app.ts', args: { old_string: bigOld, new_string: bigNew } });
+  assert.equal(patched.tool, 'patch');
+  assert.equal(patched.args?.old_string, bigOld);
+
+  assert.equal(one({ tool: 'file.read', input: 'a.ts' }).tool, 'files');
+  assert.equal(one({ tool: 'file.write', input: 'a.ts', content: 'hi' }).tool, 'changes');
+  assert.equal(one({ tool: 'file.edit', input: 'a.ts', args: { old_string: 'a', new_string: 'b' } }).tool, 'patch');
+  assert.equal(one({ tool: 'shell.run', input: 'npm test' }).tool, 'terminal');
+});

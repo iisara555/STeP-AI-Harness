@@ -3559,4 +3559,11 @@ export const en: Record<string, string> = {
   'เปิดในแชตให้ AI ช่วยร่าง': 'Open in Chat to draft with AI',
   'ตรวจข้อความใน "รายละเอียดเพิ่มเติม" (แนวคิดภาพ / แหล่งข้อมูล) ด้วย': 'Also check text inside "More details" (visual idea / source)',
   สร้างภาพในแชต: 'Generate image in Chat',
+  'ผลการค้นหาและตรวจโค้ดในโฟลเดอร์งาน (ไม่รวมไฟล์ที่มีข้อมูลส่วนบุคคล)':
+    'Search and code check results in the workspace folder (excluding personal data files)',
+  แบบอักษรภาษาไทย: 'Thai UI font',
+  'เปลี่ยนฟอนต์หน้าจอแอปทันที · เอกสารราชการยังใช้ TH Sarabun ตามเดิม':
+    'Applies to the app interface immediately · official documents still use TH Sarabun',
+  มีหัว: 'Looped',
+  ไม่มีหัว: 'Loopless',
 };

@@ -275,7 +275,7 @@ export function SettingsPanel({
     general: 'ชื่อ ทีม ผู้ช่วย รูป โปรไฟล์ สไตล์ โฟลเดอร์ เริ่มโปรแกรม เปิดเครื่อง startup Windows chat language profile team style folder',
     ai: 'AI บัญชี โมเดล ทดสอบ account model test',
     credentials: 'Google ปฏิทิน Gmail รหัสผ่าน ที่อยู่ พัก บัญชี password address pause calendar',
-    appearance: 'ภาษา ธีม language theme display',
+    appearance: 'ภาษา ธีม ฟอนต์ แบบอักษร มีหัว ไม่มีหัว language theme font looped loopless display',
     privacy: 'ข้อมูล privacy data',
     policy: 'สิทธิ์ policy permissions',
     developer: 'นักพัฒนา แอดมิน diagnostics error log ระบบ debug admin',
@@ -607,6 +607,33 @@ export function SettingsPanel({
               <button key={id} className={theme === id ? 'active' : 'quiet'} onClick={() => setTheme(id)}>
                 <Icon size={16} />
                 {label}
+              </button>
+            ))}
+          </div>
+          <h2>{t('แบบอักษรภาษาไทย')}</h2>
+          <p className="muted small">{t('เปลี่ยนฟอนต์หน้าจอแอปทันที · เอกสารราชการยังใช้ TH Sarabun ตามเดิม')}</p>
+          <div className="theme-options" role="radiogroup" aria-label={t('แบบอักษรภาษาไทย')}>
+            {(
+              [
+                ['looped', t('มีหัว'), 'Noto Sans Thai Looped'],
+                ['loopless', t('ไม่มีหัว'), 'Noto Sans Thai'],
+              ] as const
+            ).map(([id, label, fontName]) => (
+              <button
+                key={id}
+                role="radio"
+                aria-checked={(snapshot.settings.fontStyle || 'looped') === id}
+                className={(snapshot.settings.fontStyle || 'looped') === id ? 'active' : 'quiet'}
+                disabled={busy === 'fontStyle'}
+                style={{ fontFamily: `'${fontName}', sans-serif` }}
+                onClick={() =>
+                  void run('fontStyle', () => {
+                    const s = snapshot.settings;
+                    return call('settings', { assistant: s.assistant, team: s.team, theme: s.theme, fontStyle: id });
+                  })
+                }
+              >
+                {label} ({fontName})
               </button>
             ))}
           </div>

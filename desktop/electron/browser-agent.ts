@@ -328,9 +328,8 @@ export class AgentBrowser {
       const target = new URL(url);
       const continueHere = url === entry.opened || (!target.search && !target.hash && target.pathname === '/');
       if (!continueHere && url !== entry.contents.getURL()) {
-        // A query or fragment can trigger a site action, even on a GET or hash change. Confirm that exact URL
-        // in every mode; approval to open the earlier page is not approval for an arbitrary later action.
-        if (target.search || target.hash) {
+        // A query, fragment, or explicit path change in ask mode requires approval before loading the destination.
+        if (target.search || target.hash || !context.routine?.()) {
           context.activity?.(tm('รออนุญาตเปิดเว็บ {0}', target.host));
           if (
             !(await context.approve(
@@ -450,10 +449,12 @@ export class AgentBrowser {
               const target = new URL(browserUrl(details.url));
               const origin = this.origins.get(details.webContentsId ?? -1);
               if (details.resourceType === 'mainFrame' && (!origin || target.origin !== origin)) return cb({ cancel: true });
+              const tabHost = origin ? new URL(origin).hostname.replace(/^\[|\]$/g, '').toLowerCase() : '';
+              const allowedHosts = tabHost && this.privateHosts().includes(tabHost) ? this.privateHosts() : [];
               // Check DNS on subresources and redirects too, not just the first page. A public-looking name may resolve
-              // to loopback or the intranet. Chromium still owns the connection; this is not DNS pinning.
+              // to loopback or the intranet, and public pages must never reach configured privateHosts.
               await Promise.race([
-                publicSite(target, this.privateHosts(), this.resolve),
+                publicSite(target, allowedHosts, this.resolve),
                 new Promise<never>((_done, fail) => {
                   timer = setTimeout(() => fail(new Error('WEB_TIMEOUT')), 5000);
                 }),

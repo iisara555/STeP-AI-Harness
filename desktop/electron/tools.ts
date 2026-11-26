@@ -145,6 +145,7 @@ export function documentSections(text: string) {
 }
 export class DesktopTools {
   external?: (request: LoopRequest, scope: ToolScope, check: () => Promise<void>) => Promise<unknown>;
+  externalConsents = false;
   closeBrowser?: (sessionId: string) => void;
   private sourceClean = new WeakMap<LoopRequest, boolean>();
   private transmissions = new Map<RunTransmission, () => void>();
@@ -470,21 +471,32 @@ export class DesktopTools {
         r.tool === 'ask_user' ||
         r.tool === 'plan' ||
         r.tool === 'plan_update' ||
+        r.tool === 'artifact_save' ||
+        r.tool === 'patch' ||
         (r.tool === 'changes' && !r.args?.action && typeof r.content === 'string')
       )
         return {
           key: 'draft-progress',
           label: tm('คำตอบที่คุณส่งให้ผู้ช่วยและสถานะการเตรียมร่างในงานนี้ (ไม่รวมเนื้อหาไฟล์หรือการส่งงานจริง)'),
         };
-      if (r.tool === 'files') {
+      if (['files', 'doc_outline', 'doc_section', 'sheet_read'].includes(r.tool)) {
         if (this.sourceClean.get(r) === false) return;
         const folder =
-          r.args?.action === 'list' || !r.input ? await this.workbench.path(r.input || '.') : dirname(await this.workbench.path(r.input));
+          r.args?.action === 'list' || !r.input
+            ? await this.workbench.path(r.input || '.').catch(() => workspace)
+            : dirname(await this.workbench.path(r.input).catch(() => workspace));
         return {
           key: `files:${folder}`,
           label: relative(workspace, folder)
             ? tm('ไฟล์ข้อความในโฟลเดอร์ {0} (ไม่รวมโฟลเดอร์ย่อย)', relative(workspace, folder))
             : tm('ไฟล์ข้อความในโฟลเดอร์งานหลัก (ไม่รวมโฟลเดอร์ย่อย)'),
+        };
+      }
+      if (['search_files', 'code_symbols', 'code_references', 'code_diagnostics', 'artifact_read'].includes(r.tool)) {
+        if (this.sourceClean.get(r) === false) return;
+        return {
+          key: `workspace-tools:${workspace}`,
+          label: tm('ผลการค้นหาและตรวจโค้ดในโฟลเดอร์งาน (ไม่รวมไฟล์ที่มีข้อมูลส่วนบุคคล)'),
         };
       }
       if (['browser', 'web_fetch', 'web_extract'].includes(r.tool)) {
@@ -671,7 +683,9 @@ export class DesktopTools {
       r.tool === 'repl_eval'
         ? typeof a.code === 'string'
           ? a.code
-          : target || (typeof r.content === 'string' ? r.content : '')
+          : typeof r.content === 'string' && r.content
+            ? r.content
+            : target
         : undefined;
     const subagent =
       r.tool === 'invoke_subagent'
@@ -693,6 +707,7 @@ export class DesktopTools {
       tool: r.tool,
       readOnly:
         (r.tool === 'browser_vault' && a.action === 'list') ||
+        (r.tool === 'mcp_search' && !target) ||
         (!cancelTask &&
           ![
             'terminal',
@@ -741,6 +756,7 @@ export class DesktopTools {
                 : target + tm('\nคำสั่งอาจแก้ไฟล์หรือเชื่อมต่อเครือข่ายด้วยสิทธิ์ของคุณ'),
         key: replCode ?? (subagent ? `${subagent.role}\n${subagent.prompt}` : target),
         sessionId: scope.sessionId,
+        hostOwnedConsent: this.externalConsents && ['mcp_search', 'mcp_call', 'sandbox'].includes(r.tool),
       },
       async () => {
         switch (r.tool) {
@@ -756,7 +772,13 @@ export class DesktopTools {
               const remote = { tool: 'mcp_search', input: a.server, args: { query: target } } as LoopRequest;
               const value = (await this.gate.run(
                 { tool: 'mcp_search', readOnly: false },
-                { title: tm('รันคำสั่งจาก AI?'), body: a.server, key: a.server, sessionId: scope.sessionId },
+                {
+                  title: tm('รันคำสั่งจาก AI?'),
+                  body: a.server,
+                  key: a.server,
+                  sessionId: scope.sessionId,
+                  hostOwnedConsent: this.externalConsents,
+                },
                 async () => {
                   await check();
                   return this.external!(remote, scope, check);

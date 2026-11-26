@@ -44,23 +44,23 @@ export class Sandbox {
     private workbench: Workbench,
     private policy: () => Policy,
     private privacy: (text: string) => any,
-    private consent: (text: string, signal?: AbortSignal) => Promise<boolean>,
+    private consent: (text: string, signal?: AbortSignal, sessionId?: string) => Promise<boolean>,
     private runner = processResult,
   ) {}
-  async run(command: string, files: string[], signal?: AbortSignal) {
+  async run(command: string, files: string[], signal?: AbortSignal, sessionId?: string) {
     const controller = new AbortController(),
       abort = () => controller.abort();
     if (signal?.aborted) throw new Error('CANCELLED');
     this.active.add(controller);
     signal?.addEventListener('abort', abort, { once: true });
     try {
-      return await this.execute(command, files, controller.signal);
+      return await this.execute(command, files, controller.signal, sessionId);
     } finally {
       signal?.removeEventListener('abort', abort);
       this.active.delete(controller);
     }
   }
-  private async execute(command: string, files: string[], signal?: AbortSignal) {
+  private async execute(command: string, files: string[], signal?: AbortSignal, sessionId?: string) {
     const policy = this.policy(),
       root = await this.workbench.root();
     if (!policy.features.sandbox) throw new Error('SANDBOX_DISABLED');
@@ -99,6 +99,7 @@ export class Sandbox {
           entries.map(e => e.path).join(', ') || tm('ไม่มี'),
         ),
         signal,
+        sessionId,
       ))
     )
       throw new Error('CANCELLED');

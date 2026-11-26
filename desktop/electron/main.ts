@@ -463,6 +463,9 @@ async function main() {
       ? privacy.evaluatePrivacyGate(text, options)
       : credentialsOnly(text, privacy.scanPrivacyText, privacy.CREDENTIAL_PATTERN);
   }
+  function strictPrivacy(text: string, options?: any) {
+    return privacy.evaluatePrivacyGate(vaultRedaction.mask(text, options?.credentialMetadata === true), options);
+  }
   const harness: Harness = {
     permissionMode: () => permissionMode(),
     memoryDir: () => store.settings().workspace || app.getPath('userData'),
@@ -962,13 +965,19 @@ async function main() {
   );
   harness.tools = scope => tools.host(scope);
   const phase4Identity = () => JSON.stringify([store.settings().workspace, store.settings().team, permissionMode()]);
-  const phase4Consent = (title: string, body: string, signal?: AbortSignal, technical?: string) =>
+  const phase4Consent = (title: string, body: string, signal?: AbortSignal, technical?: string, sessionId?: string) =>
     approvals.request(
       approvals.rule(store.settings().workspace || data, 'phase4', body),
-      { title, body, technical, privacyClass: 'internal', allowRemember: false },
+      { title, body, technical, privacyClass: 'internal', allowRemember: false, ...(sessionId ? { sessionId } : {}) },
       signal,
     );
-  const mcp = new Mcp(() => policyState.policy, phase4Identity, join(data, 'mcp'), harness.privacy, phase4Consent);
+  const mcp = new Mcp(
+    () => policyState.policy,
+    phase4Identity,
+    join(data, 'mcp'),
+    harness.privacy,
+    (title, body, signal, technical, sessionId) => phase4Consent(title, body, signal, technical, sessionId),
+  );
   mcp.executionAllowed = executionAllowed;
   localMcpActive = () => mcp.localActive > 0;
   workbench.executionAllowed = executionAllowed;
@@ -1077,12 +1086,13 @@ async function main() {
     workbench,
     () => policyState.policy,
     harness.privacy,
-    (body, signal) => phase4Consent(tm('รันคำสั่งใน Docker sandbox?'), body, signal),
+    (body, signal, sessionId) => phase4Consent(tm('รันคำสั่งใน Docker sandbox?'), body, signal, undefined, sessionId),
   );
   tools.closeBrowser = id => {
     agentBrowser.closeOwner(id);
     vault.endOwner(id);
   };
+  tools.externalConsents = true;
   tools.external = async (request, scope, check) => {
     if (request.tool === 'google_workspace') {
       if (!policyState.policy.features.googleWorkspace) throw new Error('FEATURE_DISABLED');
@@ -1157,7 +1167,9 @@ async function main() {
       )
         throw new Error('CANCELLED');
       await check();
-      return JSON.parse(report.redactedText);
+      const approved = JSON.parse(report.redactedText);
+      await scope.googleReads?.recordDiscovery(request, JSON.stringify(approved));
+      return approved;
     }
     if (request.tool === 'browser_vault') {
       if (policyState.policy.credentialStorage?.sharedDevice) throw new Error('VAULT_SHARED_DEVICE');
@@ -1331,11 +1343,17 @@ async function main() {
       });
     if (request.tool === 'mcp_search')
       return request.input
-        ? mcp.search(request.input, String(request.args?.query || ''), scope.signal)
+        ? mcp.search(request.input, String(request.args?.query || ''), scope.signal, scope.sessionId)
         : Promise.resolve({ servers: mcp.servers() });
     if (request.tool === 'mcp_call')
-      return mcp.call(request.input, String(request.args?.name || ''), request.args?.arguments as Record<string, unknown>, scope.signal);
-    return sandbox.run(request.input, (request.args?.files || []) as string[], scope.signal);
+      return mcp.call(
+        request.input,
+        String(request.args?.name || ''),
+        request.args?.arguments as Record<string, unknown>,
+        scope.signal,
+        scope.sessionId,
+      );
+    return sandbox.run(request.input, (request.args?.files || []) as string[], scope.signal, scope.sessionId);
   };
   harness.recordUsage = (connection, count) => ledger.record(connection, count);
   const memories = new Memories(store, data, () => policyState.policy, harness.privacy);
@@ -1546,7 +1564,7 @@ async function main() {
     const connection = store.get<Connection>('connection', connectionId);
     if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
     if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
-    const review = harness.privacy(input);
+    const review = strictPrivacy(input);
     if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 120_000);
@@ -1883,7 +1901,7 @@ async function main() {
   const automations = new Automations(
     store,
     () => policyState.policy,
-    harness.privacy,
+    strictPrivacy,
     async (job, signal, created) => {
       const identity = phase4Identity(),
         policy = policyState.policy;
@@ -1927,7 +1945,8 @@ async function main() {
         check();
         // A picture task runs as an image request with the account's image model; everything else drafts text only.
         if (job.output === 'image') await service.run(session.id, job.query, '', true, undefined, 'image');
-        else await service.run(session.id, job.query, '', true, undefined, 'draft', undefined, [], { draftOnly: true });
+        else
+          await service.run(session.id, job.query, '', true, undefined, 'draft', undefined, [], { draftOnly: true, allowKnowledge: true });
         check();
         if (store.session(session.id).status !== 'review') throw new Error('AUTOMATION_NEEDS_REVIEW');
         return session.id;
@@ -2971,6 +2990,7 @@ async function main() {
               id,
               html,
               url => void openBrowserTab({ url }).catch(() => {}),
+              change ? undefined : { allowedHosts: ['127.0.0.1'] },
             );
           } catch (error) {
             browsers.delete(id);
@@ -3273,6 +3293,10 @@ async function main() {
           outputStyle,
           assistantTone: input.assistantTone === undefined ? store.settings().assistantTone : inputText(input.assistantTone, 300).trim(),
           language: input.language === 'en' || input.language === 'th' ? input.language : store.settings().language,
+          fontStyle:
+            input.fontStyle === undefined
+              ? store.settings().fontStyle
+              : styleInput(input.fontStyle, value => (value === 'looped' || value === 'loopless' ? value : 'looped')),
           chatLanguage:
             input.chatLanguage === undefined
               ? store.settings().chatLanguage

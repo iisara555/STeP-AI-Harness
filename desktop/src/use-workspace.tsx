@@ -559,6 +559,9 @@ export function useWorkspace() {
     document.documentElement.dataset.theme = snapshot?.settings.theme || 'system';
   }, [snapshot?.settings.theme]);
   useEffect(() => {
+    document.documentElement.dataset.fontStyle = snapshot?.settings.fontStyle === 'loopless' ? 'loopless' : 'looped';
+  }, [snapshot?.settings.fontStyle]);
+  useEffect(() => {
     const guard = (event: BeforeUnloadEvent) => {
       if (dirtyRef.current || settingsDirty.current) {
         event.preventDefault();
