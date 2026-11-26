@@ -106,6 +106,7 @@ export type CompactOptions = {
   system: string;
   state: string;
   budget?: number;
+  maxPromptBytes?: number;
   reactive?: boolean;
   signal: AbortSignal;
   summarize: (data: string) => Promise<string>;
@@ -113,11 +114,17 @@ export type CompactOptions = {
   hook?: (event: 'pre_compact' | 'post_compact', before: number, after: number) => Promise<void>;
 };
 export class ProviderPromptLimitError extends Error {
-  constructor(readonly maxPromptTokens: number) {
+  constructor(
+    readonly maxPromptTokens: number,
+    readonly promptOnly = false,
+    readonly maxPromptBytes?: number,
+    readonly allowRecovery = true,
+  ) {
     super('CONTEXT_LIMIT');
   }
 }
 export function promptTooLong(error: unknown) {
+  if (error instanceof ProviderPromptLimitError) return error.allowRecovery;
   return (
     error instanceof Error &&
     /CONTEXT_LIMIT|PROMPT_TOO_LONG|context.{0,20}(?:length|window|exceed)|prompt.{0,15}too long|maximum.{0,15}tokens/i.test(error.message)
@@ -133,6 +140,8 @@ const PROTECTED_TAGS = new Set([
   'task_state',
   'current_message',
   'earlier_request',
+  'request',
+  'latest_message',
   'revision_requests',
   'source_document',
   'current_draft',
@@ -193,11 +202,10 @@ function maxToolResultTextLength(partsList: Part[]) {
 
 /**
  * Staged fallback trimming for tight prompt budgets (e.g., Antigravity's 56k first-message limit after a session reset).
- * Never shortens protected task/governance/source tags or the `<conversation_files>` inventory.
+ * Keeps protected task, governance and source tags, and the conversation file inventory.
  */
-function trimToFit(items: Part[], limit: number, buildFor: (parts: Part[]) => string, system: string): Part[] {
-  const sizeOf = (list: Part[]) => tokens(system + buildFor(list));
-  if (sizeOf(items) <= limit) return items;
+function trimToFit(items: Part[], fits: (parts: Part[]) => boolean): Part[] {
+  if (fits(items)) return items;
 
   let work = items.map(p => ({ ...p }));
 
@@ -209,7 +217,7 @@ function trimToFit(items: Part[], limit: number, buildFor: (parts: Part[]) => st
     if (p.tag === 'tool_history' && index !== lastHistoryIdx) p.text = preview(p.text, 250);
     if (p.tag === 'tool_results' && index !== lastResultIdx) p.text = rewriteToolResults(p.text, 120);
   }
-  if (sizeOf(work) <= limit) return work;
+  if (fits(work)) return work;
 
   const resultIndices = work.flatMap((p, i) => (p.tag === 'tool_results' ? [i] : []));
   if (resultIndices.length > 2) {
@@ -233,24 +241,24 @@ function trimToFit(items: Part[], limit: number, buildFor: (parts: Part[]) => st
       kept.push(p);
     }
     work = kept;
-    if (sizeOf(work) <= limit) return work;
+    if (fits(work)) return work;
   }
 
   // Stage 2: Latest tool turn(s).
   for (const p of work) {
     if (p.tag === 'tool_history') p.text = preview(p.text, 500);
   }
-  if (sizeOf(work) <= limit) return work;
+  if (fits(work)) return work;
 
   const maxRowLen = maxToolResultTextLength(work);
   if (maxRowLen > 0) {
     const withResultCap = (cap: number) => work.map(p => (p.tag === 'tool_results' ? { ...p, text: rewriteToolResults(p.text, cap) } : p));
-    if (sizeOf(withResultCap(0)) <= limit) {
+    if (fits(withResultCap(0))) {
       let low = 0;
       let high = maxRowLen;
       while (low < high) {
         const mid = Math.ceil((low + high) / 2);
-        if (sizeOf(withResultCap(mid)) <= limit) low = mid;
+        if (fits(withResultCap(mid))) low = mid;
         else high = mid - 1;
       }
       return withResultCap(low);
@@ -260,46 +268,69 @@ function trimToFit(items: Part[], limit: number, buildFor: (parts: Part[]) => st
 
   // Stage 3: <conversation_files> only (never <source_document>), preserving chunk 0 (the file inventory).
   const filePart = work.find(p => p.tag === 'conversation_files');
-  if (!filePart || !filePart.text) return work;
-  const chunks = filePart.text.split(/\n--- /);
-  if (chunks.length < 2) return work;
+  if (filePart && filePart.text) {
+    const chunks = filePart.text.split(/\n--- /);
+    if (chunks.length >= 2) {
+      for (let i = 1; i < chunks.length - 1; i++) {
+        const nl = chunks[i].indexOf('\n');
+        chunks[i] = nl === -1 ? chunks[i] : chunks[i].slice(0, nl + 1) + preview(chunks[i].slice(nl + 1), 300);
+      }
+      filePart.text = chunks.join('\n--- ');
+      if (fits(work)) return work;
 
-  for (let i = 1; i < chunks.length - 1; i++) {
-    const nl = chunks[i].indexOf('\n');
-    chunks[i] = nl === -1 ? chunks[i] : chunks[i].slice(0, nl + 1) + preview(chunks[i].slice(nl + 1), 300);
+      const lastIdx = chunks.length - 1;
+      const lastChunk = chunks[lastIdx];
+      const nl = lastChunk.indexOf('\n');
+      const lastHeader = nl === -1 ? lastChunk : lastChunk.slice(0, nl + 1);
+      const lastBody = nl === -1 ? '' : lastChunk.slice(nl + 1);
+      const setLastCap = (cap: number) => {
+        const nextChunks = [...chunks];
+        nextChunks[lastIdx] = lastHeader + preview(lastBody, cap);
+        filePart.text = nextChunks.join('\n--- ');
+      };
+      setLastCap(0);
+      if (!fits(work) && chunks.length > 2) {
+        for (let i = 1; i < chunks.length - 1; i++) {
+          const idx = chunks[i].indexOf('\n');
+          chunks[i] = idx === -1 ? chunks[i] : chunks[i].slice(0, idx);
+        }
+        setLastCap(0);
+      }
+      if (fits(work) && lastBody.length > 0) {
+        let low = 0;
+        let high = lastBody.length;
+        while (low < high) {
+          const mid = Math.ceil((low + high) / 2);
+          setLastCap(mid);
+          if (fits(work)) low = mid;
+          else high = mid - 1;
+        }
+        setLastCap(low);
+      }
+      if (fits(work)) return work;
+    }
   }
-  filePart.text = chunks.join('\n--- ');
-  if (sizeOf(work) <= limit) return work;
 
-  const lastIdx = chunks.length - 1;
-  const lastChunk = chunks[lastIdx];
-  const nl = lastChunk.indexOf('\n');
-  const lastHeader = nl === -1 ? lastChunk : lastChunk.slice(0, nl + 1);
-  const lastBody = nl === -1 ? '' : lastChunk.slice(nl + 1);
-  const setLastCap = (cap: number) => {
-    const nextChunks = [...chunks];
-    nextChunks[lastIdx] = lastHeader + preview(lastBody, cap);
-    filePart.text = nextChunks.join('\n--- ');
-  };
-  setLastCap(0);
-  if (sizeOf(work) > limit && chunks.length > 2) {
-    for (let i = 1; i < chunks.length - 1; i++) {
-      const idx = chunks[i].indexOf('\n');
-      chunks[i] = idx === -1 ? chunks[i] : chunks[i].slice(0, idx);
+  // Stage 4: Recalled <memory_context> and <workspace_preferences>.
+  for (const tag of ['memory_context', 'workspace_preferences'] as const) {
+    const part = work.find(p => p.tag === tag);
+    if (!part?.text) continue;
+    const original = part.text;
+    part.text = '[Compacted memory/preferences to fit context budget.]';
+    if (fits(work)) {
+      let low = 0;
+      let high = original.length;
+      while (low < high) {
+        const mid = Math.ceil((low + high) / 2);
+        part.text = mid === 0 ? '[Compacted memory/preferences to fit context budget.]' : preview(original, mid);
+        if (fits(work)) low = mid;
+        else high = mid - 1;
+      }
+      part.text = low === 0 ? '[Compacted memory/preferences to fit context budget.]' : preview(original, low);
+      return work;
     }
-    setLastCap(0);
   }
-  if (sizeOf(work) <= limit && lastBody.length > 0) {
-    let low = 0;
-    let high = lastBody.length;
-    while (low < high) {
-      const mid = Math.ceil((low + high) / 2);
-      setLastCap(mid);
-      if (sizeOf(work) <= limit) low = mid;
-      else high = mid - 1;
-    }
-    setLastCap(low);
-  }
+
   return work;
 }
 
@@ -342,11 +373,18 @@ function readConversation(text: string): HistoryTurn[] {
 export async function compact(prompt: string, options: CompactOptions): Promise<CompactResult> {
   const before = tokens(options.system + prompt);
   const budget = options.budget ?? CONTEXT_TOKENS;
-  if (!options.reactive && before <= budget) return { prompt, before, after: before, method: 'none' };
+  const byteRoom = (value: string) => (options.maxPromptBytes ?? Infinity) - Buffer.byteLength(value, 'utf8');
+  const byteOverflow = options.maxPromptBytes !== undefined && byteRoom(prompt) < 0;
+  if (!options.reactive && before <= budget && !byteOverflow) return { prompt, before, after: before, method: 'none' };
   if (options.signal.aborted) throw new Error('CANCELLED');
   await options.hook?.('pre_compact', before, before);
   let items = parts(prompt).filter(p => p.tag !== 'task_state');
-  const target = options.reactive ? Math.min(budget, before - 1) : budget;
+  const target = options.reactive && !byteOverflow ? Math.min(budget, before - 1) : budget;
+  const fits = (value: string) =>
+    tokens(options.system + value) <= target && (options.maxPromptBytes === undefined || byteRoom(value) >= 0);
+  // Reserve room for history under both limits. An estimated token can cover four UTF-16 units of up to three bytes each.
+  const historyRoom = (value: string) =>
+    Math.min(target - tokens(options.system + value), options.maxPromptBytes === undefined ? Infinity : Math.floor(byteRoom(value) / 12));
   // Keep unique non-tagged host text verbatim (including retrieval citation requirements) while dropping repeated loop lines.
   const outside = dedupeOutside(prompt.replace(/<([a-z_]+)>\n[\s\S]*?\n<\/\1>/g, '').trim());
   const lastResult = items.map(p => p.tag).lastIndexOf('tool_results');
@@ -377,7 +415,7 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
     for (const part of items) if (part.tag === 'tool_history') part.text = preview(part.text, 1500);
     value = build();
   }
-  if (options.reactive || tokens(options.system + value) > target) {
+  if (options.reactive || !fits(value)) {
     const conversation = items.find(part => part.tag === 'conversation');
     const inlineSummary = items.findLast(part => part.tag === 'context_summary');
     const messages = options.history ?? readConversation(conversation?.text || '[]');
@@ -386,17 +424,17 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
       items = items.filter(part => part.tag !== 'context_summary');
       conversation.text = '[]';
       const minHistoryRoom = Math.min(3000, Math.floor(target * 0.25));
-      if (target - tokens(options.system + build()) < minHistoryRoom) {
-        items = trimToFit(items, Math.max(0, target - minHistoryRoom), buildFor, options.system);
+      if (historyRoom(build()) < minHistoryRoom) {
+        items = trimToFit(items, list => historyRoom(buildFor(list)) >= minHistoryRoom);
       }
       const trimmedConversation = items.find(part => part.tag === 'conversation')!;
-      const roomForHistory = target - tokens(options.system + build());
+      const roomForHistory = historyRoom(build());
       if (roomForHistory <= 0) throw new Error('CONTEXT_LIMIT');
 
       const recentCount = Math.min(2, messages.length);
       let cut = messages.length - recentCount;
       trimmedConversation.text = JSON.stringify(messages.slice(cut));
-      let room = Math.min(Math.floor(budget * RECENT_SHARE), RECENT_TOKENS, target - SUMMARY_RESERVE - tokens(options.system + build()));
+      let room = Math.min(Math.floor(budget * RECENT_SHARE), RECENT_TOKENS, historyRoom(build()) - SUMMARY_RESERVE);
       while (cut > 1) {
         const size = tokens(JSON.stringify(messages[cut - 1]));
         if (size > room) break;
@@ -432,7 +470,7 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
           checkpoint = { format: CHECKPOINT_FORMAT, covered: earlier.length, prefixHash: signature(earlier), text: summary };
         }
         const displaySummary = checkpointText(summary, Math.min(CHECKPOINT_TOKENS, Math.floor(roomForHistory / 2)));
-        const facts = preserveUserFacts(earlier, displaySummary, Math.min(650, Math.floor(roomForHistory / 5)));
+        const facts = preserveUserFacts(earlier, displaySummary, Math.min(1200, Math.floor(roomForHistory / 4)));
         const context = [displaySummary, facts ? options.privacy(facts) : ''].filter(Boolean).join('\n\n');
         if (!context) throw new Error('CONTEXT_LIMIT');
         items.push({ tag: 'context_summary', text: context });
@@ -442,20 +480,20 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
       const recent = messages.slice(cut);
       trimmedConversation.text = JSON.stringify(recent);
       value = build();
-      if (recent.length && tokens(options.system + value) > target) {
+      if (recent.length && !fits(value)) {
         trimmedConversation.text = '[]';
-        const recentBudget = target - tokens(options.system + build());
+        const recentBudget = historyRoom(build());
         trimmedConversation.text = JSON.stringify(recentPreview(recent, recentBudget));
         value = build();
       }
     }
   }
-  if (tokens(options.system + value) > target) {
-    items = trimToFit(items, target, buildFor, options.system);
+  if (!fits(value)) {
+    items = trimToFit(items, list => fits(buildFor(list)));
     value = build();
   }
   const after = tokens(options.system + value);
-  if (after > budget || (options.reactive && after >= before)) throw new Error('CONTEXT_LIMIT');
+  if (after > target || (options.maxPromptBytes !== undefined && byteRoom(value) < 0)) throw new Error('CONTEXT_LIMIT');
   if (options.signal.aborted) throw new Error('CANCELLED');
   await options.hook?.('post_compact', before, after);
   if (checkpoint) options.retain?.(checkpoint);

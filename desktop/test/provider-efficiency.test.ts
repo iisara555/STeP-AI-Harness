@@ -642,3 +642,69 @@ test('Claude and Copilot cancellation closes the retained SDK conversation befor
     assert.equal(stopped, 1, provider);
   }
 });
+
+test('Copilot maps SDK context-limit errors to PROMPT_TOO_LONG without blind session replay', async () => {
+  let clients = 0;
+  let calls = 0;
+  const copilotConnection = { id: 'c', provider: 'copilot', mode: 'oauth', model: 'gpt-4o' } as Connection;
+  const base = { cwd: tmpdir(), env: {}, key: 'gho_synthetic', system: 'Rules', emit: () => {}, signal: new AbortController().signal };
+  const adapter = new CopilotAdapter(() => {
+    const clientId = ++clients;
+    return {
+      start: async () => {},
+      forceStop: async () => {},
+      deleteSession: async () => {},
+      createSession: async (options: any) => ({
+        sessionId: 's' + clientId,
+        sendAndWait: async () => {
+          calls++;
+          if (calls === 1) {
+            options.onEvent({ type: 'assistant.message_delta', data: { deltaContent: 'Done' } });
+            return { data: { content: 'Done' } };
+          }
+          throw new Error('This model maximum context length is 128000 tokens; your prompt is too long');
+        },
+      }),
+    } as any;
+  });
+  const session = new ProviderSession();
+  assert.equal(await adapter.run('Request', copilotConnection, { ...base, session }), 'Done');
+  await assert.rejects(adapter.run('Request\nResult', copilotConnection, { ...base, session }), /PROMPT_TOO_LONG/);
+  assert.equal(clients, 1, 'PROMPT_TOO_LONG must surface for compaction instead of resetting and replaying the session');
+  assert.equal(calls, 2);
+  await session.closeAndWait();
+});
+
+test('Copilot passes low reasoningEffort to createSession when context.effort is low', async () => {
+  const seenOptions: any[] = [];
+  const copilotConnection = { id: 'c', provider: 'copilot', mode: 'oauth', model: 'o3' } as Connection;
+  const adapter = new CopilotAdapter(
+    () =>
+      ({
+        start: async () => {},
+        forceStop: async () => {},
+        deleteSession: async () => {},
+        createSession: async (options: any) => {
+          seenOptions.push(options);
+          return {
+            sessionId: 's-low',
+            sendAndWait: async () => {
+              options.onEvent({ type: 'assistant.message_delta', data: { deltaContent: 'Summary' } });
+              return { data: { content: 'Summary' } };
+            },
+          };
+        },
+      }) as any,
+  );
+  const reply = await adapter.run('Summarize', copilotConnection, {
+    cwd: tmpdir(),
+    env: {},
+    key: 'gho_synthetic',
+    system: 'Rules',
+    effort: 'low',
+    emit: () => {},
+    signal: new AbortController().signal,
+  });
+  assert.equal(reply, 'Summary');
+  assert.equal(seenOptions[0].reasoningEffort, 'low');
+});

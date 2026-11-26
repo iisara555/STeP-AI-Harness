@@ -59,6 +59,15 @@ const ALIASES: Record<string, Tool> = {
   write: 'changes',
   write_file: 'changes',
   create_file: 'changes',
+  run_js: 'repl_eval',
+  eval_js: 'repl_eval',
+  javascript: 'repl_eval',
+  save_artifact: 'artifact_save',
+  create_artifact: 'artifact_save',
+  read_artifact: 'artifact_read',
+  get_artifact: 'artifact_read',
+  subagent: 'invoke_subagent',
+  gworkspace: 'google_workspace',
 };
 
 /** Where a model puts the target when it forgets `input`, per tool. Only these names are read, only when input is missing. */
@@ -82,6 +91,14 @@ const INPUT_NAMES: Partial<Record<Tool, string[]>> = {
   ask_user: ['question', 'text'],
   session_search: ['query', 'q'],
   read_remaining: ['id', 'result_id'],
+  google_workspace: ['operation', 'op', 'method'],
+  artifact_save: ['id', 'title', 'name'],
+  artifact_read: ['id', 'name'],
+  repl_eval: ['code', 'script'],
+  code_symbols: ['path', 'file_path', 'file', 'query'],
+  code_references: ['symbol', 'path', 'file_path'],
+  code_diagnostics: ['path', 'file_path', 'file'],
+  invoke_subagent: ['prompt', 'task', 'question'],
 };
 
 /** Argument names other harnesses use for the same field, per tool. */
@@ -201,6 +218,10 @@ export function repairToolRequest(parsed: unknown): Repaired {
         else delete args[name];
         notes.push(`input taken from "${name}"`);
         break;
+      }
+      if (request.input === undefined && tool === 'google_workspace' && args.action === 'list') {
+        request.input = '';
+        notes.push('defaulted empty input for google_workspace list');
       }
     }
   }

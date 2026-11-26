@@ -49,6 +49,15 @@ export const ACTION_LABELS: Record<string, string> = {
   read_remaining: 'อ่านผลเพิ่มเติม',
   terminal: 'ใช้คำสั่ง',
   sandbox: 'ใช้คำสั่ง',
+  tasks: 'ตรวจงานเบื้องหลัง',
+  code_diagnostics: 'ตรวจสอบโค้ด',
+  code_symbols: 'ค้นหาสัญลักษณ์ในโค้ด',
+  code_references: 'ค้นหาจุดอ้างอิงในโค้ด',
+  repl_eval: 'คำนวณด้วยโค้ด JavaScript',
+  artifact_save: 'บันทึกเอกสารทำงานของผู้ช่วย',
+  artifact_read: 'อ่านเอกสารทำงานของผู้ช่วย',
+  invoke_subagent: 'ให้ผู้ช่วยย่อยค้นคว้า',
+  image_generate: 'สร้างภาพ',
 };
 
 /** One icon per kind of tool, so a step reads at a glance (the AI's thinking panel, src/thinking-panel.tsx). */
@@ -80,6 +89,15 @@ export const ACTION_ICONS: Record<string, typeof Check> = {
   tool_describe: Blocks,
   terminal: Command,
   sandbox: Command,
+  tasks: Command,
+  code_diagnostics: Blocks,
+  code_symbols: Search,
+  code_references: Search,
+  repl_eval: Command,
+  artifact_save: FileText,
+  artifact_read: FileText,
+  invoke_subagent: Bot,
+  image_generate: Blocks,
 };
 
 /** Update by the host's unique action ID, including concurrent tool calls. */

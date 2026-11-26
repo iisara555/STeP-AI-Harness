@@ -14,6 +14,7 @@ const SECTIONS = [
   'conversation_files',
   'current_draft',
   'source_document',
+  'organization_knowledge',
   'web_evidence',
   'previous_step_draft',
   'partial_tor_draft',

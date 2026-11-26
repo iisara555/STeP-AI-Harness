@@ -46,7 +46,7 @@ test('Output File Management', async (t) => {
       extension: 'pptx',
       date: '2026-09-18',
     });
-    assert.ok(directory.replace(/\\/g, '/').endsWith('/output/CC/2026/09/presentation'));
+    assert.ok(directory.replace(/\\/g, '/').endsWith('/output/CC/2026-09'));
 
     const baseName = buildOutputBaseName({
       team: 'cc',
@@ -73,7 +73,7 @@ test('Output File Management', async (t) => {
       assert.equal(first.version, 1);
       assert.equal(
         first.relativePath,
-        'output/CC/2026/09/presentation/20260918_CC_presentation_STeP-Booth-CMU_v01.pptx'
+        'output/CC/2026-09/20260918_CC_presentation_STeP-Booth-CMU_v01.pptx'
       );
       assert.ok(await pathExists(first.directory));
 
@@ -111,7 +111,7 @@ test('Output File Management', async (t) => {
       ]);
 
       const result = JSON.parse(stdout);
-      assert.equal(result.relativePath, 'output/CC/2026/09/presentation/20260918_CC_presentation_STeP-Booth-CMU_v01.pptx');
+      assert.equal(result.relativePath, 'output/CC/2026-09/20260918_CC_presentation_STeP-Booth-CMU_v01.pptx');
       assert.ok(await pathExists(result.directory));
     } finally {
       await rm(workspace, { recursive: true, force: true });

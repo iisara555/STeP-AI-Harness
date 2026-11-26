@@ -20,6 +20,7 @@ import { AntigravityAdapter, antigravityModels, prewarmAntigravity, antigravityS
 import type { GovernedBridgeExecutor } from './antigravity-mcp-bridge';
 export { prewarmAntigravity, antigravitySpareCount, closeAntigravitySpares };
 import { strictJsonSchema, jsonSchemaInstruction } from './json-schema';
+import { ProviderPromptLimitError, tokens } from './compact';
 
 // A failure keeps its code when the runtime said why; the scrubbed tail travels as `detail`.
 export function runtimeError(error: unknown, rpc: Rpc) {
@@ -1173,10 +1174,17 @@ export async function compatibleModels(connection: Connection, key?: string, fet
   }
 }
 
+const MAX_COMPATIBLE_PROMPT_CHARS = 400_000;
+const SAFE_COMPATIBLE_PROMPT_CHARS = 360_000;
+
 export class CompatibleAdapter implements ProviderAdapter {
   constructor(private fetcher: typeof fetch = fetch) {}
   async run(prompt: string, connection: Connection, context: ProviderContext) {
     if (connection.promptCaching === 'gemini-explicit') throw new Error('INVALID_INPUT');
+    if (prompt.length > MAX_COMPATIBLE_PROMPT_CHARS) {
+      const maxPromptTokens = Math.max(1, Math.floor((tokens(prompt) * SAFE_COMPATIBLE_PROMPT_CHARS) / prompt.length));
+      throw new ProviderPromptLimitError(maxPromptTokens, true);
+    }
     const system = context.jsonSchema
       ? [context.system, jsonSchemaInstruction(context.jsonSchema)].filter(Boolean).join('\n\n')
       : context.system;

@@ -3,7 +3,14 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { attachmentReason } from '../electron/attachments';
+import {
+  MAX_ATTACHMENTS_PER_SEND,
+  MAX_ATTACHMENT_CHARS,
+  MAX_IMAGES_PER_SEND,
+  MAX_IMAGE_FILE_BYTES,
+  MAX_TOTAL_IMAGE_BYTES,
+  attachmentReason,
+} from '../electron/attachments';
 
 const documents: any = await import('../../src/modules/privacy/document.js');
 
@@ -57,8 +64,14 @@ test('reasons follow the scan report', () => {
   assert.equal(attachmentReason({ extractionStatus: 'unavailable', reviewReasons: ['processing-time-limit'] }), 'ATTACH_TIMEOUT');
   assert.equal(attachmentReason({ extractionStatus: 'unavailable', reviewReasons: ['parser-failed'] }), 'ATTACH_READ_FAILED');
   assert.equal(attachmentReason({ extractionStatus: 'text-extracted' }), 'ATTACH_NEEDS_REVIEW');
-  assert.equal(attachmentReason({ extractionStatus: 'text-extracted', redactedText: 'x'.repeat(100_001) }), 'ATTACH_TOO_LARGE');
+  assert.equal(attachmentReason({ extractionStatus: 'text-extracted', redactedText: 'x'.repeat(150_000) }), undefined);
+  assert.equal(attachmentReason({ extractionStatus: 'text-extracted', redactedText: 'x'.repeat(180_001) }), 'ATTACH_TOO_LARGE');
   assert.equal(attachmentReason({ extractionStatus: 'text-extracted', action: 'human-confirm', redactedText: 'ok' }), undefined);
+  assert.equal(MAX_ATTACHMENTS_PER_SEND, 64);
+  assert.equal(MAX_ATTACHMENT_CHARS, 180_000);
+  assert.equal(MAX_IMAGE_FILE_BYTES, 10 * 1024 * 1024);
+  assert.equal(MAX_IMAGES_PER_SEND, 20);
+  assert.equal(MAX_TOTAL_IMAGE_BYTES, 20_000_000);
 });
 
 test('a scan that can go neither as pictures nor as OCR text names what to change', () => {

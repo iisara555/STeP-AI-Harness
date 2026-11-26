@@ -1,6 +1,6 @@
 import { constants } from 'node:fs';
 import { searchWorkspace } from './file-search';
-import { readdir, realpath, lstat, writeFile, open, rename, unlink } from 'node:fs/promises';
+import { mkdir, readdir, realpath, lstat, writeFile, open, rename, unlink } from 'node:fs/promises';
 import { resolve, relative, isAbsolute, dirname, basename, join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { spawn, execFile, type ChildProcess } from 'node:child_process';
@@ -135,10 +135,25 @@ export class Workbench {
     within(full);
     // Refuse every symlink/junction component, not just the final leaf.
     let ancestor = full === root ? root : dirname(full);
+    let deepestExisting = root;
     while (ancestor !== root) {
-      if ((await lstat(ancestor)).isSymbolicLink()) throw new Error('INVALID_PATH');
+      within(ancestor);
       permitted(ancestor);
+      try {
+        const info = await lstat(ancestor);
+        if (info.isSymbolicLink()) throw new Error('INVALID_PATH');
+        if (deepestExisting === root) deepestExisting = ancestor;
+      } catch (e: any) {
+        if (!missing || e.code !== 'ENOENT') throw e;
+      }
       ancestor = dirname(ancestor);
+    }
+    if (deepestExisting !== root || missing) {
+      const baseInfo = await lstat(deepestExisting);
+      if (!baseInfo.isDirectory() || baseInfo.isSymbolicLink()) throw new Error('INVALID_PATH');
+      const actualBase = await realpath(deepestExisting);
+      within(actualBase);
+      permitted(actualBase);
     }
     try {
       const info = await lstat(full);
@@ -147,11 +162,7 @@ export class Workbench {
       within(actual);
       permitted(actual);
     } catch (e: any) {
-      if (missing && e.code === 'ENOENT') {
-        const parent = await realpath(dirname(full));
-        within(parent);
-        permitted(parent);
-      } else throw e;
+      if (!missing || e.code !== 'ENOENT') throw e;
     }
     return full;
   }
@@ -711,6 +722,9 @@ export class Workbench {
     await this.path(change.path, true);
     if (change.root !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
     if (hash === 'missing') {
+      await mkdir(dirname(path), { recursive: true });
+      await this.path(change.path, true);
+      if (change.root !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
       await writeFile(path, change.binary ? Buffer.from(change.binary, 'base64') : change.after, { flag: 'wx' });
     } else {
       // Open without truncation/following links. Verify the same handle before any byte mutation.

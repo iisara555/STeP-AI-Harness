@@ -155,7 +155,15 @@ import { sendConsent, type SendSignals } from './consent-plan';
 import { Approvals } from './approvals';
 import { ToolGate } from './tool-gate';
 import { HookEngine, type HookPayload } from './hooks';
-import { attachmentReason, attachmentCapabilities } from './attachments';
+import {
+  MAX_ATTACHMENT_CHARS,
+  MAX_ATTACHMENTS_PER_SEND,
+  MAX_IMAGES_PER_SEND,
+  MAX_IMAGE_FILE_BYTES,
+  MAX_TOTAL_IMAGE_BYTES,
+  attachmentCapabilities,
+  attachmentReason,
+} from './attachments';
 import { DesktopTools } from './tools';
 import { Questions } from './questions';
 import { CostLedger } from './cost';
@@ -973,6 +981,19 @@ async function main() {
         : undefined,
     url => shell.openExternal(url),
   );
+  harness.googleWorkspaceSummary = () => {
+    const enabled = Boolean(
+      policyState.policy.features.googleWorkspace &&
+      policyState.policy.googleWorkspace &&
+      !policyState.policy.credentialStorage?.sharedDevice,
+    );
+    const st = google.state();
+    return {
+      enabled,
+      vaultSuspended: st.vaultSuspended,
+      accounts: st.accounts.filter(a => !a.paused && !a.reauth).map(a => ({ label: a.label, services: a.services })),
+    };
+  };
   const googleContext = (signal = new AbortController().signal, after = async () => {}, sessionId?: string) => {
     const identity = phase4Identity(),
       policy = policyState.policy;
@@ -4654,7 +4675,7 @@ async function main() {
         if (draftingTool && input.skill && input.skill !== draftingTool.skill) throw new Error('INVALID_DOCUMENT_TOOL');
         if (skill && !(await skillCatalog.loadSkillCatalog(root)).some((s: any) => s.name === skill && s.inRouter))
           throw new Error('SKILL_NOT_ROUTED');
-        if (Array.isArray(input.attachments) && input.attachments.length > 1) throw new Error('ONE_SOURCE_PER_RUN');
+        if (Array.isArray(input.attachments) && input.attachments.length > MAX_ATTACHMENTS_PER_SEND) throw new Error('ATTACH_COUNT_LIMIT');
         const attachmentRole = input.attachmentRole || 'source';
         if (!['source', 'template'].includes(attachmentRole)) throw new Error('INVALID_DOCUMENT_SOURCE_ROLE');
         const selected: {
@@ -4670,7 +4691,11 @@ async function main() {
             throw new Error('ATTACHMENT_NOT_APPROVED');
           return a;
         });
-        const vision = selected.some(a => Boolean(a.images?.length));
+        const allImages = selected.flatMap(a => a.images || []);
+        const vision = allImages.length > 0;
+        if (allImages.length > MAX_IMAGES_PER_SEND) throw new Error('ATTACH_TOO_LARGE');
+        const totalImageBytes = allImages.reduce((sum, img) => sum + Math.floor((img.data.length * 3) / 4), 0);
+        if (totalImageBytes > MAX_TOTAL_IMAGE_BYTES) throw new Error('ATTACH_TOO_LARGE');
         if (vision && !policyState.policy.features.vision) throw new Error('VISION_DISABLED');
         if (vision && workMode === 'image') throw new Error('VISION_UNAVAILABLE');
         // A picture attached under an image-capable account cannot go out after a switch to one that drops it.
@@ -4682,8 +4707,8 @@ async function main() {
         if (attachmentRole === 'template' && !nativeTemplate) throw new Error('DOCUMENT_TEMPLATE_REQUIRED');
         const templateDescription = nativeTemplate ? await inspectDocumentTemplate(nativeTemplate, draftingTool!.id) : undefined;
         const attachmentText = templateDescription?.context || selected.map((a: any) => a.text).join('\n\n');
-        if (typeof input.sourceText === 'string' && input.sourceText.length > 100_000) throw new Error('INPUT_LIMIT');
-        const sourceText = typeof input.sourceText === 'string' ? inputText(input.sourceText, 100_000) : '';
+        if (typeof input.sourceText === 'string' && input.sourceText.length > MAX_ATTACHMENT_CHARS) throw new Error('INPUT_LIMIT');
+        const sourceText = typeof input.sourceText === 'string' ? inputText(input.sourceText, MAX_ATTACHMENT_CHARS) : '';
         const questionSnapshot = aside ? service.questionSnapshot(id) : undefined;
         const priorDraft =
           autoDocument &&
@@ -4693,7 +4718,7 @@ async function main() {
             : '';
         const priorSource = priorDraft ? `Prior document for this request; draft only, not an approval:\n${priorDraft}` : '';
         const combinedSource = questionSnapshot?.source || [sourceText, attachmentText, priorSource].filter(Boolean).join('\n\n---\n\n');
-        if (combinedSource.length > 100_000) throw new Error('INPUT_LIMIT');
+        if (combinedSource.length > MAX_ATTACHMENT_CHARS) throw new Error('INPUT_LIMIT');
         // Only juristic-person numbers (13 digits starting with 0) that the person checked may stay unmasked.
         const allowIds = (Array.isArray(input.allowIdentifiers) ? input.allowIdentifiers : [])
           .map((v: unknown) => String(v).replace(/\D/g, ''))
@@ -4990,45 +5015,19 @@ async function main() {
         const sessionId = inputText(input.id, 60);
         const attachingSession = store.session(sessionId);
         const fromClipboard = method === 'attachClipboard';
+        const allowMultiple = !fromClipboard && input.multiple === true && input.documentTool === undefined;
         const vision = fromClipboard ? policyState.policy.features.vision : input.vision === true;
         // Pictures go only to a connection that can carry them. Gemini through Antigravity (and Copilot) get the local
         // OCR text of an image or scanned PDF instead (src/vision-transport.ts).
         const imagesAccepted = takesImages(store.get<Connection>('connection', attachingSession.connectionId)?.provider);
         if (vision && !policyState.policy.features.vision) throw new Error('VISION_DISABLED');
+        const attachmentTool = input.documentTool === undefined ? undefined : documentTool(input.documentTool);
+        if (input.documentTool !== undefined && !attachmentTool) throw new Error('INVALID_DOCUMENT_TOOL');
         let temporaryDir: string | undefined;
         let temporaryPath: string | undefined;
         let clipboardPreview: string | undefined;
-        try {
-          let path: string;
-          if (fromClipboard) {
-            if (!(input.bytes instanceof Uint8Array) || !input.bytes.byteLength || input.bytes.byteLength > 4_000_000)
-              throw new Error('CLIPBOARD_IMAGE_SIZE');
-            const extension = input.mime === 'image/png' ? 'png' : input.mime === 'image/jpeg' ? 'jpg' : '';
-            if (!extension) throw new Error('CLIPBOARD_IMAGE_UNSUPPORTED');
-            const bytes = Buffer.from(input.bytes);
-            const image = visionImage(extension, bytes);
-            documentImageDimensions(bytes);
-            clipboardPreview = `data:${image.mime};base64,${image.data}`;
-            temporaryDir = await mkdtemp(join(tmpdir(), 'step-paste-'));
-            temporaryPath = join(temporaryDir, `clipboard.${extension}`);
-            await writeFile(temporaryPath, bytes, { flag: 'wx' });
-            path = temporaryPath;
-          } else {
-            const result = await dialog.showOpenDialog(window, {
-              properties: ['openFile'],
-              filters: [
-                {
-                  name: 'Documents and images',
-                  extensions: vision ? ['png', 'jpg', 'jpeg', 'webp'] : ['txt', 'md', 'csv', 'tsv', 'pdf', 'docx', ...OCR_EXTENSIONS],
-                },
-              ],
-            });
-            if (result.canceled) return null;
-            path = result.filePaths[0];
-          }
+        const attachOne = async (path: string): Promise<Attachment> => {
           const extension = extname(path).slice(1).toLowerCase();
-          const attachmentTool = input.documentTool === undefined ? undefined : documentTool(input.documentTool);
-          if (input.documentTool !== undefined && !attachmentTool) throw new Error('INVALID_DOCUMENT_TOOL');
           let nativeBytes: Buffer | undefined;
           let nativeDescription: Awaited<ReturnType<typeof inspectDocumentTemplate>> | undefined;
           if (extension === 'docx' && attachmentTool && attachmentTool.id !== 'tor') {
@@ -5053,7 +5052,7 @@ async function main() {
             ['png', 'jpg', 'jpeg', 'webp'].includes(extension);
           if (directImage) {
             const bytes = await readFile(path);
-            if (bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
+            if (bytes.length > MAX_IMAGE_FILE_BYTES) throw new Error('ATTACH_TOO_LARGE');
             images = [visionImage(extension, bytes)];
             report = { ...unscanned(''), extractionStatus: 'text-extracted' };
           }
@@ -5090,7 +5089,7 @@ async function main() {
               // Text redaction cannot mask pixels. Flagged OCR forbids sending the original image.
               if (vision && imagesAccepted && (report.action !== 'pass' || report.containsPersonalData)) report.action = 'block-external';
               if (vision && imagesAccepted && !attachmentReason(report)) {
-                if (read.bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
+                if (read.bytes.length > MAX_IMAGE_FILE_BYTES) throw new Error('ATTACH_TOO_LARGE');
                 images = [visionImage(extension, read.bytes)];
               }
             }
@@ -5147,6 +5146,39 @@ async function main() {
             sourceUsable,
           });
           return view;
+        };
+        try {
+          let filePaths: string[];
+          if (fromClipboard) {
+            if (!(input.bytes instanceof Uint8Array) || !input.bytes.byteLength || input.bytes.byteLength > MAX_IMAGE_FILE_BYTES)
+              throw new Error('CLIPBOARD_IMAGE_SIZE');
+            const extension = input.mime === 'image/png' ? 'png' : input.mime === 'image/jpeg' ? 'jpg' : '';
+            if (!extension) throw new Error('CLIPBOARD_IMAGE_UNSUPPORTED');
+            const bytes = Buffer.from(input.bytes);
+            const image = visionImage(extension, bytes);
+            documentImageDimensions(bytes);
+            clipboardPreview = `data:${image.mime};base64,${image.data}`;
+            temporaryDir = await mkdtemp(join(tmpdir(), 'step-paste-'));
+            temporaryPath = join(temporaryDir, `clipboard.${extension}`);
+            await writeFile(temporaryPath, bytes, { flag: 'wx' });
+            filePaths = [temporaryPath];
+          } else {
+            const result = await dialog.showOpenDialog(window, {
+              properties: allowMultiple ? ['openFile', 'multiSelections'] : ['openFile'],
+              filters: [
+                {
+                  name: 'Documents and images',
+                  extensions: vision ? ['png', 'jpg', 'jpeg', 'webp'] : ['txt', 'md', 'csv', 'tsv', 'pdf', 'docx', ...OCR_EXTENSIONS],
+                },
+              ],
+            });
+            if (result.canceled || !result.filePaths.length) return allowMultiple ? [] : null;
+            filePaths = result.filePaths.slice(0, MAX_ATTACHMENTS_PER_SEND);
+          }
+          if (!allowMultiple) return await attachOne(filePaths[0]);
+          const attached: Attachment[] = [];
+          for (const filePath of filePaths) attached.push(await attachOne(filePath));
+          return attached;
         } finally {
           if (temporaryPath) await rm(temporaryPath, { force: true }).catch(() => diagnose('clipboard-cleanup-failed'));
           if (temporaryDir) await rmdir(temporaryDir).catch(() => diagnose('clipboard-cleanup-failed'));

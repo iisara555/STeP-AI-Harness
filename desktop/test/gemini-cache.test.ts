@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { GeminiApiAdapter } from '../electron/gemini-api';
 import { GeminiAdapter, type ProviderContext, type TokenCount } from '../electron/providers';
+import { ProviderPromptLimitError } from '../electron/compact';
 import type { Connection } from '../src/types';
 
 const connection = {
@@ -308,4 +309,45 @@ test('cancelling a cache waiter stops immediately without cancelling the shared 
   resolveCache(Response.json({ name: 'cachedContents/shared' }));
   assert.equal(await owner, 'Done');
   assert.equal(generation, 1);
+});
+
+test('GeminiApiAdapter rejects prompts above 400k chars as recoverable ProviderPromptLimitError before calling fetch', async () => {
+  let calls = 0;
+  const adapter = new GeminiApiAdapter(
+    (async () => {
+      calls++;
+      return stream();
+    }) as typeof fetch,
+    new Map(),
+  );
+  let caught: unknown;
+  try {
+    await adapter.run('a'.repeat(400_001), connection, context({ system: 'Standing rules' }));
+  } catch (error) {
+    caught = error;
+  }
+  assert.ok(caught instanceof ProviderPromptLimitError);
+  assert.equal(caught.message, 'CONTEXT_LIMIT');
+  assert.equal(caught.promptOnly, true);
+  assert.ok(caught.maxPromptTokens > 0);
+  assert.equal(calls, 0);
+});
+
+test('GeminiApiAdapter sets low thinkingBudget on 2.5 and low thinkingLevel on 3+ when effort is low', async () => {
+  const bodies: any[] = [];
+  const adapter = new GeminiApiAdapter(
+    (async (url: any, init: any) => {
+      if (String(url).endsWith('/cachedContents')) return Response.json({ name: 'cachedContents/low-effort' });
+      bodies.push(JSON.parse(init.body));
+      return stream();
+    }) as typeof fetch,
+    new Map(),
+  );
+  await adapter.run('Summarize', { ...connection, model: 'gemini-2.5-flash' }, context({ effort: 'low' }));
+  await adapter.run('Summarize', { ...connection, model: 'gemini-3-flash' }, context({ effort: 'low' }));
+  assert.equal(bodies.length, 2);
+  assert.equal(bodies[0].generationConfig.thinkingConfig.thinkingBudget, 512);
+  assert.equal(bodies[0].generationConfig.thinkingConfig.thinkingLevel, undefined);
+  assert.equal(bodies[1].generationConfig.thinkingConfig.thinkingLevel, 'LOW');
+  assert.equal(bodies[1].generationConfig.thinkingConfig.thinkingBudget, undefined);
 });

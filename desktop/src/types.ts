@@ -244,6 +244,8 @@ export type Message = {
 };
 /** A file sent in a chat: its checked, masked text stays with the conversation. */
 export type ConversationFile = { name: string; text: string; at: string };
+export type DraftVersionOrigin = 'ai' | 'manual' | 'restore' | 'shelved';
+export type DraftMeta = { origin?: DraftVersionOrigin; label?: string; restoredFrom?: number };
 export type DraftVersion = {
   revision: number;
   text: string;
@@ -252,6 +254,10 @@ export type DraftVersion = {
   /** The document type this version was drafted as, so restoring it brings back its own layout. */
   documentTool?: DocumentToolId;
   documentVariant?: string;
+  /** How this revision was produced and the prompt or label behind it, for readable version history. */
+  origin?: DraftVersionOrigin;
+  label?: string;
+  restoredFrom?: number;
   /** The request this version answered, kept when another document took over the task, so a restore can edit it again. */
   task?: DocumentTask;
   at: string;
@@ -263,6 +269,8 @@ export type Proposal = {
   review?: string;
   document?: DraftNode;
   baseRevision: number;
+  /** The user instruction that produced this proposal, shown in the diff card and carried into accepted version metadata. */
+  prompt?: string;
   sources: string[];
   at: string;
 };
@@ -313,6 +321,7 @@ export type Session = {
   draft: string;
   document?: DraftNode;
   presentation?: import('./document-presentation').DocumentPresentation;
+  draftMeta?: DraftMeta;
   revision: number;
   versions: DraftVersion[];
   proposals: Proposal[];

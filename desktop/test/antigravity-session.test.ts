@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import {
   AntigravityAdapter,
   ANTIGRAVITY_FIRST_MESSAGE_TOKENS,
+  ANTIGRAVITY_MAX_USER_INPUT_BYTES,
   prewarmAntigravity,
   antigravitySpareCount,
   closeAntigravitySpares,
@@ -203,8 +204,9 @@ test('a first message agy would cut is refused before agy starts; a long later t
   try {
     const adapter = new AntigravityAdapter();
     // agy keeps only part of a long first message, so the newest request at its end would be lost without an error.
-    const long = 'ประวัติงาน '.repeat(9000);
+    const long = 'ประวัติงาน'.repeat(6190);
     assert.ok(tokens(f.context.system + long) > ANTIGRAVITY_FIRST_MESSAGE_TOKENS);
+    assert.ok(Buffer.byteLength(long, 'utf8') < ANTIGRAVITY_MAX_USER_INPUT_BYTES);
     // The host answers this error by compacting the prompt once and sending it again.
     await assert.rejects(
       adapter.run(long + '\nRequest', f.connection, f.context),
@@ -220,7 +222,7 @@ test('a first message agy would cut is refused before agy starts; a long later t
       /CONTEXT_LIMIT/,
     );
     assert.equal((await f.calls()).filter(c => c.start).length, 0);
-    // Later turns of a kept conversation are not cut, so a long tool result still goes as a delta.
+    // A kept turn can exceed the first-message token budget if its new message fits the byte limit.
     assert.equal(await adapter.run('Request', f.connection, f.context), 'answer 1');
     assert.equal(await adapter.run('Request\n<tool_results>' + long + '</tool_results>', f.connection, f.context), 'answer 2');
     assert.deepEqual(
@@ -410,15 +412,21 @@ test('native MCP bridge executes governed host tools over local IPC and rejects 
   const seen: any[] = [];
   try {
     const adapter = new AntigravityAdapter();
-    const answer = await adapter.run('Read note', f.connection, {
+    const context = {
       ...f.context,
-      nativeBridge: async (request, _signal) => {
+      nativeBridge: async (request: unknown) => {
         seen.push(request);
         return { ok: true, result: { text: 'governed-content' } };
       },
-    });
+    };
+    const answer = await adapter.run('Read note', f.connection, context);
     assert.equal(answer, 'bridge:step_host:{"ok":true,"result":{"text":"governed-content"}}');
     assert.deepEqual(seen, [{ tool: 'files', input: 'note.txt' }]);
+    await assert.rejects(
+      adapter.run('Read note' + 'a'.repeat(ANTIGRAVITY_MAX_USER_INPUT_BYTES + 1), f.connection, context),
+      error => error instanceof ProviderPromptLimitError && !promptTooLong(error),
+    );
+    assert.equal(seen.length, 1);
   } finally {
     await f.session.closeAndWait();
     await f.close();
@@ -590,6 +598,40 @@ test('the real-agy bridge probe passes against a CLI that applies agy permission
     assert.equal(report.bridge.pass, true, JSON.stringify(report));
     assert.equal(report.nativeRead.pass, true);
     assert.equal(report.toolLoop.pass, true, JSON.stringify(report.toolLoop));
+  } finally {
+    await f.session.closeAndWait();
+    await f.close();
+  }
+});
+
+test('Antigravity rejects oversized UTF-8 first messages and kept deltas before writing to agy', async () => {
+  const f = await fixture();
+  try {
+    const adapter = new AntigravityAdapter();
+    const oversizedAscii = 'field '.repeat(31_500);
+    assert.ok(Buffer.byteLength(oversizedAscii, 'utf8') > ANTIGRAVITY_MAX_USER_INPUT_BYTES);
+    assert.ok(tokens(f.context.system + oversizedAscii) <= ANTIGRAVITY_FIRST_MESSAGE_TOKENS);
+    await assert.rejects(
+      adapter.run(oversizedAscii, f.connection, f.context),
+      error =>
+        promptTooLong(error) && error instanceof ProviderPromptLimitError && error.maxPromptBytes === ANTIGRAVITY_MAX_USER_INPUT_BYTES,
+    );
+    assert.equal((await f.calls()).filter(c => c.start).length, 0);
+
+    assert.equal(await adapter.run('Request', f.connection, f.context), 'answer 1');
+    const oversizedDelta = 'เนื้อหา '.repeat(9_000);
+    assert.ok(oversizedDelta.length < ANTIGRAVITY_MAX_USER_INPUT_BYTES);
+    assert.ok(Buffer.byteLength(oversizedDelta, 'utf8') > ANTIGRAVITY_MAX_USER_INPUT_BYTES);
+    await assert.rejects(
+      adapter.run('Request' + oversizedDelta, f.connection, f.context),
+      error => error instanceof ProviderPromptLimitError && error.maxPromptBytes === ANTIGRAVITY_MAX_USER_INPUT_BYTES,
+    );
+    await assert.rejects(adapter.run('Unrelated prefix', f.connection, { ...f.context, followUpDelta: oversizedDelta }), /CONTEXT_LIMIT/);
+    assert.equal(await adapter.run('Request\nA short follow-up', f.connection, f.context), 'answer 2');
+    assert.deepEqual(
+      f.transports.map(t => t.mode),
+      ['full', 'delta'],
+    );
   } finally {
     await f.session.closeAndWait();
     await f.close();

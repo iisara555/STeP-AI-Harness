@@ -1127,3 +1127,55 @@ test('a fresh draft that lost its output envelope is re-wrapped once by the same
     }
   }
 });
+
+test('follow-up edits on a conversation-derived document retain pre-draft chat history and avoid duplicate followUps on retry', async () => {
+  const { store, session, harness } = fixture();
+  harness.contextPolicy = classifyContextPolicy;
+  session.messages.push(
+    { role: 'user', text: 'SYNTHETIC-PRE-DRAFT-CONTEXT: งานป้าย Foamboard หน้าโต๊ะ 150x75 cm', at: '2026-11-02T00:00:00Z' },
+    { role: 'assistant', text: 'SYNTHETIC-PRE-DRAFT-REPLY: รับทราบขนาด 150x75 cm', at: '2026-11-02T00:00:01Z' },
+  );
+  store.save(session);
+  const prompts: string[] = [];
+  let failEditOnce = true;
+  const service = new WorkService(
+    store,
+    harness,
+    async () => ({
+      context: { cwd: root, env: {} },
+      adapter: {
+        run: async prompt => {
+          prompts.push(prompt);
+          if (prompts.length === 2 && failEditOnce) {
+            failEditOnce = false;
+            throw new Error('PROVIDER_QUOTA');
+          }
+          return envelope('# เอกสารสังเคราะห์\n\nรายละเอียด Foamboard 150x75 cm');
+        },
+      },
+    }),
+    () => {},
+  );
+  try {
+    await service.run(session.id, 'ช่วยร่าง TOR', '', true, undefined, 'draft', undefined, [], {
+      documentTool: 'tor',
+      fromConversation: true,
+    });
+    const drafted = store.session(session.id);
+    assert.equal(drafted.contextStart, 0, 'conversation-derived document must retain prior chat messages');
+    store.accept(session.id, drafted.proposals.at(-1)!.id);
+
+    const editText = 'ขอเพิ่ม Foamboard ติด Sticker รายชื่อหน่วยงาน ติดหน้าโต๊ะ 150x75 cm';
+    await service.run(session.id, editText, '', true, undefined, 'draft');
+    assert.equal(store.session(session.id).status, 'error');
+    // User resends the exact same edit text after a failure instead of pressing retry.
+    await service.run(session.id, editText, '', true, undefined, 'draft');
+    const after = store.session(session.id);
+    assert.equal(after.status, 'review');
+    assert.deepEqual(after.followUps, [editText], 'repeated identical edit attempts must not duplicate followUps');
+    assert.match(prompts.at(-1)!, /SYNTHETIC-PRE-DRAFT-CONTEXT/, 'follow-up edits retain earlier conversation context');
+    assert.match(prompts.at(-1)!, /SYNTHETIC-PRE-DRAFT-REPLY/);
+  } finally {
+    store.close();
+  }
+});

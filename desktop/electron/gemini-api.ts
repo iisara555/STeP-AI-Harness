@@ -1,7 +1,11 @@
 import { providerUsage, type TokenCount } from '../../src/modules/providers/usage.js';
 import type { ProviderAdapter, ProviderContext } from './providers';
 import { providerSessionKey } from './provider-session-key';
+import { ProviderPromptLimitError, tokens } from './compact';
 import type { Connection } from '../src/types';
+
+const MAX_GEMINI_API_PROMPT_CHARS = 400_000;
+const SAFE_GEMINI_API_PROMPT_CHARS = 360_000;
 
 type CacheEntry = { expires: number; pending: Promise<string | undefined> };
 // Server resources expire after five minutes. Only opaque identities/resource names stay in host memory.
@@ -141,7 +145,11 @@ export class GeminiApiAdapter implements ProviderAdapter {
       if (bytes > 4_000_000 || imageBytes > 12_000_000) throw new Error('ATTACH_TOO_LARGE');
     }
     const model = connection.model.replace(/^models\//, '');
-    if (!/^gemini-[a-zA-Z0-9._-]{1,120}$/.test(model) || prompt.length > 400_000) throw new Error('INVALID_INPUT');
+    if (!/^gemini-[a-zA-Z0-9._-]{1,120}$/.test(model)) throw new Error('INVALID_INPUT');
+    if (prompt.length > MAX_GEMINI_API_PROMPT_CHARS) {
+      const maxPromptTokens = Math.max(1, Math.floor((tokens(prompt) * SAFE_GEMINI_API_PROMPT_CHARS) / prompt.length));
+      throw new ProviderPromptLimitError(maxPromptTokens, true);
+    }
     if (context.signal.aborted) throw new Error('CANCELLED');
     // Main sets this only for non-packaged synthetic tests, just as it does for Gemini CLI.
     if (context.geminiBaseUrl) {
@@ -159,6 +167,16 @@ export class GeminiApiAdapter implements ProviderAdapter {
     const base = (context.geminiBaseUrl || 'https://generativelanguage.googleapis.com').replace(/\/$/, '') + '/v1beta';
     // Gemini returns its thought summaries only when asked, and only thinking models (2.5 and later) accept the request.
     const thoughts = Boolean(context.onReasoning && !context.jsonSchema && !context.receiptOcr && /^gemini-(?:2\.5|[3-9])/.test(model));
+    const thinkingBudget = context.effort === 'low' && !context.receiptOcr && /^gemini-2\.5/.test(model) ? 512 : undefined;
+    const thinkingLevel = context.effort === 'low' && !context.receiptOcr && /^gemini-[3-9]/.test(model) ? 'LOW' : undefined;
+    const thinkingConfig =
+      thoughts || thinkingBudget !== undefined || thinkingLevel
+        ? {
+            ...(thoughts ? { includeThoughts: true } : {}),
+            ...(thinkingBudget !== undefined ? { thinkingBudget } : {}),
+            ...(thinkingLevel ? { thinkingLevel } : {}),
+          }
+        : undefined;
     const signal = AbortSignal.any([context.signal, AbortSignal.timeout(600_000)]);
     const cached = context.receiptOcr
       ? { name: undefined, status: 'bypassed' as const }
@@ -190,10 +208,10 @@ export class GeminiApiAdapter implements ProviderAdapter {
                 ],
               },
             ],
-            ...(connection.maxOutputTokens || context.jsonSchema || thoughts
+            ...(connection.maxOutputTokens || context.jsonSchema || thinkingConfig
               ? {
                   generationConfig: {
-                    ...(thoughts ? { thinkingConfig: { includeThoughts: true } } : {}),
+                    ...(thinkingConfig ? { thinkingConfig } : {}),
                     ...(connection.maxOutputTokens ? { maxOutputTokens: connection.maxOutputTokens } : {}),
                     ...(context.receiptOcr ? { maxOutputTokens: Math.min(connection.maxOutputTokens || 16_384, 16_384) } : {}),
                     // Receipt extraction supplies the native schema; all responses still pass the host's parser.

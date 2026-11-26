@@ -118,3 +118,26 @@ test('small models are told the exact request form', async () => {
   for (const model of ['gemini-3.8-flash-medium', 'claude-opus-5-5', 'qwen3.5-27b', 'deepseek-v4.1-flash', 'step-chat', '', undefined])
     assert.equal(smallModel(model), false, String(model));
 });
+
+test('coding, artifact and google_workspace tool calls repair cleanly', () => {
+  assert.deepEqual(one({ tool: 'google_workspace', args: { action: 'list' } }), {
+    tool: 'google_workspace',
+    input: '',
+    args: { action: 'list' },
+  });
+  assert.deepEqual(one({ tool: 'google_workspace', operation: 'gmail.list', account: 'h1' }), {
+    tool: 'google_workspace',
+    input: 'gmail.list',
+    args: { account: 'h1' },
+  });
+  assert.deepEqual(one({ tool: 'run_js', code: '1 + 2' }), {
+    tool: 'repl_eval',
+    input: '1 + 2',
+  });
+  assert.deepEqual(one({ tool: 'save_artifact', input: 'calc', title: 'Calc', kind: 'html', content: '<html/>' }), {
+    tool: 'artifact_save',
+    input: 'calc',
+    content: '<html/>',
+    args: { title: 'Calc', kind: 'html' },
+  });
+});

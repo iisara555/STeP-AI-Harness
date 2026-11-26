@@ -49,10 +49,9 @@ export const en: Record<string, string> = {
   'ภาพต้นฉบับพร้อมส่ง · ตรวจภาพก่อนส่ง': 'Original image ready to send · review before sending',
   'กำลังเตรียมภาพ…': 'Preparing image…',
   รอให้งานปัจจุบันเสร็จก่อนวางภาพ: 'Wait for the current task to finish before pasting an image.',
-  'แนบได้ครั้งละ 1 ไฟล์ กรุณานำไฟล์เดิมออกก่อนวางภาพ':
-    'Only one attachment can be sent at a time. Remove the current file before pasting an image.',
+  'แนบได้สูงสุด {0} ไฟล์ต่อครั้ง': 'You can attach up to {0} files at a time.',
   'วางภาพ PNG หรือ JPEG ได้': 'Paste a PNG or JPEG image.',
-  'ภาพจากคลิปบอร์ดต้องมีขนาดไม่เกิน 4 MB': 'The clipboard image must be no larger than 4 MB.',
+  'ภาพจากคลิปบอร์ดต้องมีขนาดไม่เกิน 10 MB': 'The clipboard image must be no larger than 10 MB.',
   'กำลังเตรียมภาพ กรุณารอสักครู่ก่อนส่ง': 'Preparing the image. Please wait before sending.',
   'รอคำตอบปัจจุบันก่อนส่ง ข้อความยังอยู่ในช่องพิมพ์': 'Wait for the current reply before sending. Your message is still in the composer.',
   การเริ่มโปรแกรม: 'Startup',
@@ -1048,6 +1047,8 @@ export const en: Record<string, string> = {
     'Tax invoices are checked for the tax ID, number and VAT, and payment vouchers flag withholding to review.',
   'แก้ปัญหาแชตยาวบน Antigravity ติด CONTEXT_LIMIT ระหว่างเรียกเครื่องมือหลายรอบ โดยคงบริบทงานและไฟล์ตั้งต้นได้ต่อเนื่องขึ้น':
     'Fixed long Antigravity chats hitting CONTEXT_LIMIT during multi-turn tool calls while preserving the task brief and starter files.',
+  'Antigravity ตรวจขนาดข้อความก่อนส่ง และเก็บข้อความอ้างอิงจากเอกสาร STeP ไว้เมื่อย่อบริบท':
+    'Antigravity checks message size before sending and keeps the STeP source passages used when compacting context.',
   'เพิ่ม Skill จัดงานอีเวนต์ 2 ชุดใหม่ (วางแผนผลิตงานครบวงจรและจัดงานอย่างยั่งยืน/ลดโลกร้อน) พร้อมยกระดับ Skill งานสร้างสรรค์และอีเวนต์อีก 5 ชุดเป็นมาตรฐาน v3':
     'Added two new event planning Skills (full-cycle event production and sustainable/low-carbon events) and upgraded five Creative and Event Skills to Standard v3.',
   'สัญลักษณ์รอเปลี่ยนตามงานที่ AI กำลังทำ ทั้งคิด อ่าน ค้นหา และเขียนคำตอบ':
@@ -1405,6 +1406,24 @@ export const en: Record<string, string> = {
   ยังไม่มีเนื้อหาในร่างปัจจุบัน: 'The current draft is empty',
   'อ่านข้อเสนอจาก AI': 'Read the AI proposal',
   ไม่ใช้: 'Discard',
+  'AI ร่าง': 'AI draft',
+  แก้เอง: 'Edited',
+  คืนค่า: 'Restore',
+  เก็บไว้: 'Shelved',
+  ' · คืนค่าจากเวอร์ชัน {0}': ' · Restored from version {0}',
+  ย้อนกลับฉบับก่อนหน้า: 'Undo to previous version',
+  ประวัติเอกสารนี้: 'This document history',
+  เอกสารอื่นในงานนี้: 'Other documents in this task',
+  ตรงกับฉบับปัจจุบัน: 'Matches current',
+  เทียบ: 'Compare',
+  ซ่อน: 'Hide',
+  'ตามคำสั่ง: “{0}”': 'Prompt: “{0}”',
+  จุดที่เปลี่ยน: 'Changes',
+  ฉบับเต็ม: 'Full text',
+  ไม่พบความแตกต่างจากฉบับปัจจุบัน: 'No differences from the current draft',
+  ความแตกต่างของร่าง: 'Draft differences',
+  '… ซ่อน {0} บรรทัดที่ไม่เปลี่ยนแปลง …': '… {0} unchanged lines hidden …',
+  'จุดที่ต่างจากร่างปัจจุบัน (+{0} / -{1})': 'Changes from current draft (+{0} / -{1})',
   จัดรูปแบบร่าง: 'Format draft',
   ข้อความ: 'Text',
   หัวข้อ: 'Heading',
@@ -1702,8 +1721,10 @@ export const en: Record<string, string> = {
     'High-risk data found, such as passwords, tokens or data that must not leave. Remove or mask it in the file and attach it again',
   'ยังไม่รองรับไฟล์ชนิดนี้ ใช้ PDF, Word (DOCX), TXT, MD, CSV หรือ TSV':
     "This file type isn't supported yet. Use PDF, Word (DOCX), TXT, MD, CSV or TSV",
-  'ไฟล์ยาวเกินขอบเขต (ข้อความเกิน 100,000 ตัวอักษร หรือเกิน 200 หน้า) แบ่งไฟล์แล้วแนบทีละส่วน':
-    'The file is too long (over 100,000 characters or 200 pages). Split it and attach the parts separately',
+  'แนบไฟล์เกินจำนวนสูงสุด (64 ไฟล์ต่อครั้ง) กรุณานำไฟล์บางส่วนออก':
+    'Too many attachments (maximum 64 files per send). Remove some files and try again',
+  'ไฟล์ยาวหรือใหญ่เกินขอบเขต (เกิน 50 MB, ข้อความเกิน 180,000 ตัวอักษร, ภาพเกิน 10 MB หรือรวมเกิน 20 ภาพ/20 MB) แบ่งไฟล์แล้วแนบทีละส่วน':
+    'The attachment exceeds limits (over 50 MB file, 180,000 characters, 10 MB image, or 20 images / 20 MB combined). Split and attach separately',
   'ไฟล์นี้ไม่มีตัวอักษรให้อ่าน มักเป็น PDF สแกนหรือรูปภาพ ใช้ไฟล์ต้นฉบับ (Word หรือ PDF ที่พิมพ์) แทน':
     "This file has no readable text; it's usually a scanned PDF or an image. Use the original (Word or a typed PDF) instead",
   'บางหน้าใน PDF เป็นภาพสแกนที่อ่านตัวอักษรไม่ได้ ระบบจึงยังไม่ส่ง เพื่อไม่ให้ AI สรุปจากเนื้อหาที่ขาดไป ใช้ไฟล์ต้นฉบับหรือตัดหน้าที่เป็นภาพออก':
@@ -3505,4 +3526,19 @@ export const en: Record<string, string> = {
   เปิดอยู่: 'On',
   ปิดอยู่: 'Off',
   'คัดลอก digest': 'Copy digest',
+  ตรวจสอบโค้ด: 'Checking code',
+  ค้นหาสัญลักษณ์ในโค้ด: 'Searching code symbols',
+  ค้นหาจุดอ้างอิงในโค้ด: 'Finding symbol references',
+  'คำนวณด้วยโค้ด JavaScript': 'Running JavaScript calculation',
+  บันทึกเอกสารทำงานของผู้ช่วย: "Saving the assistant's working document",
+  อ่านเอกสารทำงานของผู้ช่วย: "Reading the assistant's working document",
+  ให้ผู้ช่วยย่อยค้นคว้า: 'Asking research subagent',
+  ตรวจงานเบื้องหลัง: 'Checking background tasks',
+  สร้างภาพ: 'Generating image',
+  ดาวน์โหลดไฟล์: 'Download file',
+  'ระบบจัดการเวอร์ชันเอกสารร่างพร้อม Diff Timeline และปุ่มย้อนกลับรายเวอร์ชัน': 'Draft versioning with Diff Timeline and per-version undo',
+  'รองรับการแนบไฟล์สูงสุด 64 ไฟล์ (50 MiB/ไฟล์) และจัดระเบียบโฟลเดอร์ไฟล์ส่งออกเป็น output/<TEAM>/<YYYY-MM>/':
+    'Attach up to 64 files (50 MiB per file) with flat output/<TEAM>/<YYYY-MM>/ export paths',
+  'เปิดเครื่องมือเขียนโค้ดในพื้นที่ทำงาน และใช้งาน Google Workspace ต่อเนื่องอัตโนมัติ':
+    'Workspace coding and tool-building support with seamless Google Workspace continuity',
 };

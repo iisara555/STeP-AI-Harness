@@ -1,14 +1,18 @@
-import { Check, Download, History, PanelRightClose, Save, Settings2, SlidersHorizontal, Sparkles } from './icons';
+import { useEffect, useState, type ComponentProps } from 'react';
+import { Check, Download, History, PanelRightClose, RotateCcw, Save, Settings2, SlidersHorizontal, Sparkles } from './icons';
+import { computeDraftDiff } from './draft-diff';
+import { DraftDiffView } from './draft-diff-view';
+import { documentTool } from './document-tools';
 import { DOCUMENT_FONTS, resolveDocumentLayout } from './document-layout';
 import { DocumentPresentationControls, saveExportSettingsOpen } from './document-presentation-controls';
 import { lazyScreen } from './lazy-screen';
-import type { ComponentProps } from 'react';
 import type { DocumentToolbar as Toolbar } from './document-toolbar';
 import type { Editor } from '@tiptap/react';
 import { InvitationLinks, invalidInvitationLinks } from './invitation-links';
 import { RichText } from './ui';
 import { SectionArt } from './illustration';
 import type { ToolTab } from './tools';
+import type { DraftVersion, DraftVersionOrigin } from './types';
 import { WorkbenchPanel } from './workbench';
 import { locale, t } from './i18n';
 import { EXPORT_FORMAT_LABELS } from './app-shared';
@@ -38,7 +42,24 @@ const checkPart = (part: string) =>
     ผู้จดรายงาน: t('ผู้จดรายงาน'),
   })[part] || part;
 
+const originLabel = (origin?: DraftVersionOrigin) => {
+  if (origin === 'ai') return t('AI ร่าง');
+  if (origin === 'manual') return t('แก้เอง');
+  if (origin === 'restore') return t('คืนค่า');
+  if (origin === 'shelved') return t('เก็บไว้');
+  return '';
+};
+
+const docTypeLabel = (toolId?: DraftVersion['documentTool'], variant?: string) => {
+  const tool = documentTool(toolId);
+  if (!tool) return '';
+  const variantLabel = variant ? tool.variants.find(item => item.id === variant)?.label : undefined;
+  return variantLabel || tool.title;
+};
+
 export function SidePanel({ v }: { v: AppView }) {
+  const [proposalMode, setProposalMode] = useState<'diff' | 'full'>('diff');
+  const [compareRevision, setCompareRevision] = useState<number | null>(null);
   const {
     action,
     advancedTools,
@@ -90,6 +111,72 @@ export function SidePanel({ v }: { v: AppView }) {
     useProposal,
     width,
   } = v;
+  useEffect(() => {
+    setProposalMode('diff');
+    setCompareRevision(null);
+  }, [selected]);
+  const nonEmptyVersions = session
+    ? session.versions
+        .filter(item => item.text.trim())
+        .slice()
+        .reverse()
+    : [];
+  const isSameDoc = (item: DraftVersion) =>
+    Boolean(session) &&
+    (!item.documentTool || (item.documentTool === session!.documentTool && item.documentVariant === session!.documentVariant));
+  const sameDocVersions = nonEmptyVersions.filter(isSameDoc);
+  const otherDocVersions = nonEmptyVersions.filter(item => !isSameDoc(item));
+  const undoCandidate = session ? sameDocVersions.find(item => item.text !== session.draft) : undefined;
+  const renderVersionItem = (item: DraftVersion, otherDoc = false) => {
+    const diff = session ? computeDraftDiff(item.text, session.draft) : { added: 0, removed: 0, changed: false, hunks: [] };
+    const badge = otherDoc ? docTypeLabel(item.documentTool, item.documentVariant) : originLabel(item.origin);
+    const comparing = compareRevision === item.revision;
+    return (
+      <div className="version-item" key={item.revision}>
+        <div className="version-item-head">
+          <div className="version-item-meta">
+            <span className="version-rev">#{item.revision}</span>
+            {badge && <span className={'version-badge' + (item.origin ? ' origin-' + item.origin : '')}>{badge}</span>}
+            {diff.changed ? (
+              <span className="diff-badge">
+                <span className="diff-plus">+{diff.added}</span> <span className="diff-minus">-{diff.removed}</span>
+              </span>
+            ) : (
+              <span className="small muted">{t('ตรงกับฉบับปัจจุบัน')}</span>
+            )}
+          </div>
+          <div className="version-actions">
+            <button
+              type="button"
+              className="quiet"
+              aria-pressed={comparing}
+              onClick={() => setCompareRevision(comparing ? null : item.revision)}
+            >
+              {comparing ? t('ซ่อน') : t('เทียบ')}
+            </button>
+            <button
+              type="button"
+              className="quiet"
+              aria-label={`${t('คืนค่าเวอร์ชัน')} ${item.revision}`}
+              onClick={() =>
+                void action(async () => {
+                  if (dirtyRef.current) await save();
+                  await api.call('restore', { id: selected, revision: item.revision });
+                  setCompareRevision(null);
+                  await refresh();
+                })
+              }
+            >
+              {t('คืนค่า')}
+            </button>
+          </div>
+        </div>
+        {item.label && <p className="version-label">{item.label}</p>}
+        <small>{new Date(item.at).toLocaleString(locale())}</small>
+        {comparing && session && <DraftDiffView before={item.text} after={session.draft} />}
+      </div>
+    );
+  };
   return (
     <>
       {(showPanel || panelOpened) && (
@@ -196,7 +283,7 @@ export function SidePanel({ v }: { v: AppView }) {
                 </div>
               ) : (
                 <>
-                  {/* The task's name is in the top bar and the sidebar; here only the draft's state and its two actions. */}
+                  {/* The task's name is in the top bar and the sidebar; here only the draft's state and its actions. */}
                   <header className="draft-title">
                     <div>
                       <small>
@@ -210,11 +297,33 @@ export function SidePanel({ v }: { v: AppView }) {
                         ) : (
                           <>
                             {t('เวอร์ชัน')} {session.revision}
+                            {session.draftMeta?.restoredFrom !== undefined
+                              ? t(' · คืนค่าจากเวอร์ชัน {0}', session.draftMeta.restoredFrom)
+                              : originLabel(session.draftMeta?.origin)
+                                ? ` · ${originLabel(session.draftMeta?.origin)}`
+                                : ''}
                             {dirty ? t(' · มีการแก้ไขที่ยังไม่บันทึก') : t(' · บันทึกแล้ว')}
                           </>
                         )}
                       </small>
                     </div>
+                    {undoCandidate && (
+                      <button
+                        type="button"
+                        className="icon"
+                        title={t('ย้อนกลับฉบับก่อนหน้า')}
+                        onClick={() =>
+                          void action(async () => {
+                            if (dirtyRef.current) await save();
+                            await api.call('restore', { id: selected, revision: undoCandidate.revision });
+                            setCompareRevision(null);
+                            await refresh();
+                          })
+                        }
+                      >
+                        <RotateCcw size={16} />
+                      </button>
+                    )}
                     <button className="icon" title={t('ประวัติเวอร์ชัน')} aria-pressed={history} onClick={() => setHistory(!history)}>
                       <History size={17} />
                     </button>
@@ -224,73 +333,107 @@ export function SidePanel({ v }: { v: AppView }) {
                   </header>
                   {history && (
                     <div className="version-list">
-                      {session.versions.some(v => v.text.trim()) ? (
-                        session.versions
-                          .filter(v => v.text.trim())
-                          .slice()
-                          .reverse()
-                          .map(v => (
-                            <button
-                              key={v.revision}
-                              disabled={dirty}
-                              onClick={() =>
-                                void action(async () => {
-                                  await api.call('restore', { id: selected, revision: v.revision });
-                                  await refresh();
-                                })
-                              }
-                            >
-                              {t('คืนค่าเวอร์ชัน')} {v.revision} <small>{new Date(v.at).toLocaleString(locale())}</small>
-                            </button>
-                          ))
+                      {sameDocVersions.length || otherDocVersions.length ? (
+                        <>
+                          {sameDocVersions.length > 0 && (
+                            <>
+                              <div className="version-group-title">{t('ประวัติเอกสารนี้')}</div>
+                              {sameDocVersions.map(item => renderVersionItem(item, false))}
+                            </>
+                          )}
+                          {otherDocVersions.length > 0 && (
+                            <>
+                              <div className="version-group-title">{t('เอกสารอื่นในงานนี้')}</div>
+                              {otherDocVersions.map(item => renderVersionItem(item, true))}
+                            </>
+                          )}
+                        </>
                       ) : (
                         <p>{t('ยังไม่มีเวอร์ชันก่อนหน้า')}</p>
                       )}
                     </div>
                   )}
-                  {session.proposals.map(p => (
-                    <section className={'proposal' + (session.draft.trim() ? '' : ' primary')} key={p.id}>
-                      <div className="proposal-head">
-                        <Sparkles size={16} />
-                        <strong>{t('ข้อเสนอจาก AI')}</strong>
-                        <div className="proposal-actions">
-                          <button disabled={draftAcceptPending} onClick={() => void action(() => useProposal(p.id))}>
-                            <Check size={15} />
-                            {t('ใช้ร่างนี้')}
-                          </button>
-                          <button
-                            className="quiet"
-                            disabled={draftAcceptPending}
-                            onClick={() =>
-                              void action(async () => {
-                                await api.call('reject', { id: selected, proposalId: p.id });
-                                await refresh();
-                              })
-                            }
-                          >
-                            {t('ไม่ใช้')}
-                          </button>
+                  {session.proposals.map(p => {
+                    const hasDraft = Boolean(session.draft.trim());
+                    const diff = hasDraft ? computeDraftDiff(session.draft, p.text) : undefined;
+                    return (
+                      <section className={'proposal' + (hasDraft ? '' : ' primary')} key={p.id}>
+                        <div className="proposal-head">
+                          <Sparkles size={16} />
+                          <strong>{t('ข้อเสนอจาก AI')}</strong>
+                          <div className="proposal-actions">
+                            <button disabled={draftAcceptPending} onClick={() => void action(() => useProposal(p.id))}>
+                              <Check size={15} />
+                              {t('ใช้ร่างนี้')}
+                            </button>
+                            <button
+                              className="quiet"
+                              disabled={draftAcceptPending}
+                              onClick={() =>
+                                void action(async () => {
+                                  await api.call('reject', { id: selected, proposalId: p.id });
+                                  await refresh();
+                                })
+                              }
+                            >
+                              {t('ไม่ใช้')}
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                      <p className="small muted">
-                        {dirty
-                          ? t('มีการแก้ไขที่ยังไม่บันทึก กดใช้ร่างนี้เพื่อบันทึกและตรวจร่างก่อนแทนที่')
-                          : p.baseRevision === session.revision
-                            ? t('ตรวจร่างนี้ก่อนแทนที่ร่างปัจจุบัน')
-                            : t('ร่างปัจจุบันเปลี่ยนแล้ว กดใช้ร่างนี้เพื่อตรวจและยืนยันก่อนแทนที่')}
-                      </p>
-                      <details open={!session.draft.trim()}>
-                        <summary>{session.draft.trim() ? t('อ่านข้อเสนอและเทียบกับร่างด้านล่าง') : t('อ่านร่างจาก AI')}</summary>
-                        <RichText className="proposal-text" text={p.text} />
-                      </details>
-                      {p.review && (
-                        <details className="document-review">
-                          <summary>{t('ผลตรวจและข้อมูลที่ต้องยืนยัน (ไม่ส่งออกในเอกสาร)')}</summary>
-                          <RichText text={p.review} />
-                        </details>
-                      )}
-                    </section>
-                  ))}
+                        {p.prompt && <p className="small muted proposal-prompt">{t('ตามคำสั่ง: “{0}”', p.prompt)}</p>}
+                        <p className="small muted">
+                          {dirty
+                            ? t('มีการแก้ไขที่ยังไม่บันทึก กดใช้ร่างนี้เพื่อบันทึกและตรวจร่างก่อนแทนที่')
+                            : p.baseRevision === session.revision
+                              ? t('ตรวจร่างนี้ก่อนแทนที่ร่างปัจจุบัน')
+                              : t('ร่างปัจจุบันเปลี่ยนแล้ว กดใช้ร่างนี้เพื่อตรวจและยืนยันก่อนแทนที่')}
+                        </p>
+                        {hasDraft && diff ? (
+                          <>
+                            <div className="proposal-view-toggle">
+                              <span className="diff-badge">
+                                <span className="diff-plus">+{diff.added}</span> <span className="diff-minus">-{diff.removed}</span>
+                              </span>
+                              <div className="proposal-toggle-buttons">
+                                <button
+                                  type="button"
+                                  className="quiet"
+                                  aria-pressed={proposalMode === 'diff'}
+                                  onClick={() => setProposalMode('diff')}
+                                >
+                                  {t('จุดที่เปลี่ยน')}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="quiet"
+                                  aria-pressed={proposalMode === 'full'}
+                                  onClick={() => setProposalMode('full')}
+                                >
+                                  {t('ฉบับเต็ม')}
+                                </button>
+                              </div>
+                            </div>
+                            {proposalMode === 'diff' ? (
+                              <DraftDiffView before={session.draft} after={p.text} />
+                            ) : (
+                              <RichText className="proposal-text" text={p.text} />
+                            )}
+                          </>
+                        ) : (
+                          <details open>
+                            <summary>{t('อ่านร่างจาก AI')}</summary>
+                            <RichText className="proposal-text" text={p.text} />
+                          </details>
+                        )}
+                        {p.review && (
+                          <details className="document-review">
+                            <summary>{t('ผลตรวจและข้อมูลที่ต้องยืนยัน (ไม่ส่งออกในเอกสาร)')}</summary>
+                            <RichText text={p.review} />
+                          </details>
+                        )}
+                      </section>
+                    );
+                  })}
                   {session.documentReview && (
                     <details className="document-review">
                       <summary>{t('ผลตรวจและข้อมูลที่ต้องยืนยัน (ไม่ส่งออกในเอกสาร)')}</summary>

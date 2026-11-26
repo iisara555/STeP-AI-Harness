@@ -195,9 +195,85 @@ test("compatible profiles deny unapproved, credential-bearing and remote plainte
     /INVALID_INPUT/,
   );
   await assert.rejects(
+    compatibleRun("a".repeat(400_001), profile, {}, fetcher),
+    /PROMPT_TOO_LONG/,
+  );
+  for (const errorBody of [
+    {
+      error: {
+        type: "invalid_request_error",
+        message: "This model's maximum context length is 128000 tokens.",
+      },
+    },
+    {
+      error: {
+        type: "invalid_request_error",
+        message: "prompt is too long: 140000 tokens > 128000 maximum",
+      },
+    },
+    {
+      message: "Input length exceeds context window limit",
+    },
+  ]) {
+    await assert.rejects(
+      compatibleRun(
+        "Text",
+        profile,
+        {},
+        async () =>
+          new Response(JSON.stringify(errorBody), {
+            status: 400,
+            headers: { "content-type": "application/json" },
+          }),
+      ),
+      /PROMPT_TOO_LONG/,
+    );
+  }
+  for (const [status, message, expected] of [
+    [429, "Input token limit exceeded for this minute", /PROVIDER_RATE_LIMIT/],
+    [503, "Request exceeds temporary gateway capacity", /PROVIDER_UNAVAILABLE/],
+  ]) {
+    await assert.rejects(
+      compatibleRun("Text", profile, {}, async () =>
+        Response.json({ error: { message } }, { status }),
+      ),
+      expected,
+    );
+  }
+  await assert.rejects(
     compatibleRun("Text", profile, { webSearch: true }, fetcher),
     /CAPABILITY_UNSUPPORTED/,
   );
+  const effortBodies = [];
+  const summary = await compatibleRun(
+    "Summarize",
+    profile,
+    { effort: "low" },
+    async (_url, init) => {
+      const parsed = JSON.parse(init.body);
+      effortBodies.push(parsed);
+      if (effortBodies.length === 1) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              type: "invalid_request_error",
+              message: "Unknown parameter: reasoning_effort",
+            },
+          }),
+          { status: 422, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response(
+        sse({ choices: [{ delta: { content: "Short checkpoint" } }] }) +
+          "data: [DONE]\n\n",
+        { headers: { "content-type": "text/event-stream" } },
+      );
+    },
+  );
+  assert.equal(summary, "Short checkpoint");
+  assert.equal(effortBodies.length, 2);
+  assert.equal(effortBodies[0].reasoning_effort, "low");
+  assert.equal("reasoning_effort" in effortBodies[1], false);
 });
 test("compatible transport sends pictures as content parts and names a model that cannot read them", async () => {
   const profile = {

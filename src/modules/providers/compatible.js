@@ -1,7 +1,9 @@
 import { providerUsage } from "./usage.js";
-// Error bodies are untrusted and may contain private text. Inspect only a bounded structured code/type.
+// Error bodies are untrusted and may contain private text. Inspect only a bounded structured code/type
+// and test message against static limit patterns without returning or logging raw text.
 async function failureCode(response) {
   let code = "";
+  let message = "";
   if (response.body) {
     const reader = response.body.getReader();
     try {
@@ -16,10 +18,18 @@ async function failureCode(response) {
         body += decoder.decode(part.value, { stream: true });
       }
       if (bytes <= 8192) {
-        const error = JSON.parse(body)?.error;
+        const parsed = JSON.parse(body);
+        const error = parsed?.error;
         code = [error?.code, error?.type]
           .filter((v) => typeof v === "string")
           .join(" ");
+        const rawMessage =
+          typeof error?.message === "string"
+            ? error.message
+            : typeof parsed?.message === "string"
+              ? parsed.message
+              : "";
+        message = rawMessage.slice(0, 500);
       }
     } catch {
     } finally {
@@ -35,13 +45,16 @@ async function failureCode(response) {
     )
   )
     return "PROVIDER_QUOTA";
-  if (/\b(context_length_exceeded|prompt_too_long)\b/.test(code))
+  if (response.status === 429) return "PROVIDER_RATE_LIMIT";
+  if (response.status >= 500) return "PROVIDER_UNAVAILABLE";
+  if (
+    /\b(context_length_exceeded|prompt_too_long)\b/.test(code) ||
+    /(?:context.{0,25}(?:length|window|limit|exceed)|(?:prompt|input|request|message).{0,25}(?:too long|too large|exceed|token limit)|maximum.{0,20}(?:context|tokens?)|too many tokens)/i.test(
+      message,
+    )
+  )
     return "PROMPT_TOO_LONG";
-  return response.status === 429
-    ? "PROVIDER_RATE_LIMIT"
-    : response.status >= 500
-      ? "PROVIDER_UNAVAILABLE"
-      : "PROVIDER_REQUEST_FAILED";
+  return "PROVIDER_REQUEST_FAILED";
 }
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 function imageParts(images, protocol) {
@@ -115,9 +128,9 @@ export async function compatibleRun(
   context = {},
   fetcher = fetch,
 ) {
+  if (typeof prompt !== "string") throw new Error("INVALID_INPUT");
+  if (prompt.length > 400_000) throw new Error("PROMPT_TOO_LONG");
   if (
-    typeof prompt !== "string" ||
-    prompt.length > 400_000 ||
     !profile.model ||
     profile.model.length > 160 ||
     (profile.maxOutputTokens !== undefined &&
@@ -161,6 +174,9 @@ export async function compatibleRun(
     headers["x-api-key"] = context.key;
     headers["anthropic-version"] = "2023-06-01";
   } else if (context.key) headers.authorization = "Bearer " + context.key;
+  let sentReasoningEffort =
+    protocol === "openai" &&
+    ["low", "medium", "high"].includes(context.effort);
   const body =
     protocol === "anthropic"
       ? {
@@ -209,6 +225,7 @@ export async function compatibleRun(
               : { max_tokens: 8192 }),
           stream: true,
           stream_options: { include_usage: true },
+          ...(sentReasoningEffort ? { reasoning_effort: context.effort } : {}),
           // Native tool calling (policy nativeToolCalls): the service returns tool requests as structured calls whose
           // arguments it has already escaped, instead of JSON the model writes by hand in a step-tool fence.
           ...(native ? { tools: context.nativeTools } : {}),
@@ -225,23 +242,34 @@ export async function compatibleRun(
           ],
         };
   let response;
-  try {
-    response = await fetcher(endpoint, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-      redirect: "error",
-      signal,
-    });
-  } catch {
-    if (signal.aborted)
-      throw new Error(
-        context.signal?.aborted ? "CANCELLED" : "PROVIDER_TIMEOUT",
-      );
-    throw new Error("PROVIDER_NETWORK_FAILED");
-  }
-  if (!response.ok) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      response = await fetcher(endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        redirect: "error",
+        signal,
+      });
+    } catch {
+      if (signal.aborted)
+        throw new Error(
+          context.signal?.aborted ? "CANCELLED" : "PROVIDER_TIMEOUT",
+        );
+      throw new Error("PROVIDER_NETWORK_FAILED");
+    }
+    if (response.ok) break;
     let code = await failureCode(response);
+    if (
+      sentReasoningEffort &&
+      attempt === 0 &&
+      [400, 422].includes(response.status) &&
+      code === "PROVIDER_REQUEST_FAILED"
+    ) {
+      delete body.reasoning_effort;
+      sentReasoningEffort = false;
+      continue;
+    }
     if (
       images.length &&
       code === "PROVIDER_REQUEST_FAILED" &&

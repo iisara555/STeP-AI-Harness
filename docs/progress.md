@@ -4,7 +4,7 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-25_
+_Last updated: 2026-11-26_
 
 ## In flight
 
@@ -47,6 +47,8 @@ _Last updated: 2026-11-25_
 - **"AI ขององค์กร" (2026-11-18)**: the organization bought OpenRouter credit (4,000 THB to start). Desktop gets an organization preset that signs in with the organization Google account and calls the AI gateway in STeP-AI-Webapp (key on the server only, per-person/department caps, ZDR). Waits on the owner: OpenRouter account setup and key on ik-node-01, gateway deploy behind Tailscale Funnel (owner's choice), setting the repository variable `STEP_ORGANIZATION_AI_URL`, and a quality check of the gateway's models (knowledge-accuracy, eval:golden, eval:selection) before staff use it. Not yet tried against a real Google sign-in and gateway end to end. Official-document work (document forms and the TOR/official-letter/decision-memo Skills) switches to the gateway's `step-long` model by itself; owner agreed (2026-11-18) to pilot with Claude Haiku 5.5 for general work and receipts and Sonnet 5.5 for official documents, trying DeepSeek V4.1 Flash and Gemini Flash only after ZDR and quality checks. See [organization-ai.md](organization-ai.md).
 
 ## Latest release
+
+- **Desktop v0.6.44 prepared (2026-11-26)**. Combined release integrating #418/#422 (Antigravity UTF-8/token limits, low-effort compaction, intact STeP evidence on retry, compatible provider rate-limit handling, chronological checkpoint requests), #419 (draft versioning diff timeline), #420 (64-file / 50 MiB attachment limits and flat `output/<TEAM>/<YYYY-MM>/` exports), and #421 (workspace coding tools and seamless Google Workspace continuity). Harness remains 0.7.7. Live Antigravity acceptance remains open.
 
 - **Desktop v0.6.43 prepared (2026-11-25)**: combines #415 (Antigravity `CONTEXT_LIMIT` multi-turn compaction/session fix), #414 (MIS access & internal channels guidance), #412 (new `event-planner-pro` draft Skill), #413 (5 Creative & Event Skills upgraded to Standard v3), and #416 (new `sustainable-event` draft Skill; 57 Skills / 56 router entries total). Harness remains 0.7.7. Merge after exact-head CI passes, then publish via `desktop-release.yml` on `main` with `publish=true`. Live Antigravity verification and CC/QS review of draft event Skills remain open above.
 - **Desktop v0.6.42 published (2026-11-24)**. Waiting marks follow thinking, reading, searching or writing. Status labels and streamed draft text stay steady across tool turns. Synthetic Windows and macOS checks passed. A live Gemini run on Windows remains open. [Release](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.42)

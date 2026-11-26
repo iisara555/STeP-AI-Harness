@@ -476,16 +476,15 @@ try {
     }, png);
   await pasteImage();
   const thumbnail = page.getByRole('img', { name: 'ตัวอย่างภาพแนบ' });
-  await expect(thumbnail).toBeVisible();
-  await expect(thumbnail).toHaveAttribute('src', /^data:image\/png;base64,/);
+  await expect(thumbnail).toHaveCount(1);
+  await expect(thumbnail.first()).toHaveAttribute('src', /^data:image\/png;base64,/);
   await page.getByText('ส่งภาพให้ AI', { exact: true }).waitFor();
   await page.screenshot({ path: 'release/qa/chat-clipboard.png' });
+  // Pasting a second image adds alongside the first, and removing one leaves the other intact.
   await pasteImage();
-  await page.getByText('แนบได้ครั้งละ 1 ไฟล์ กรุณานำไฟล์เดิมออกก่อนวางภาพ').waitFor();
-  await page.getByRole('button', { name: 'นำไฟล์ออก' }).click();
-  await expect(thumbnail).toHaveCount(0);
-  await pasteImage();
-  await expect(thumbnail).toBeVisible();
+  await expect(thumbnail).toHaveCount(2);
+  await page.getByRole('button', { name: 'นำไฟล์ออก' }).first().click();
+  await expect(thumbnail).toHaveCount(1);
   await composer.fill('');
   await expect(page.locator('.composer .send')).toBeEnabled();
   await composer.press('Enter');
@@ -503,7 +502,7 @@ try {
   await pasteImage();
   await expect(thumbnail).toBeVisible();
   await assert.rejects(
-    page.evaluate(id => window.step.call('attachClipboard', { id, mime: 'image/png', bytes: new Uint8Array(4_000_001) }), id),
+    page.evaluate(id => window.step.call('attachClipboard', { id, mime: 'image/png', bytes: new Uint8Array(10 * 1024 * 1024 + 1) }), id),
     /CLIPBOARD_IMAGE_SIZE/,
   );
   await assert.rejects(

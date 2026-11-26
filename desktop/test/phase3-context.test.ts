@@ -1,12 +1,21 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { compact, contextBudget, CONTEXT_TOKENS, MAX_CONTEXT_TOKENS, ProviderPromptLimitError, tokens } from '../electron/compact';
+import { ANTIGRAVITY_FIRST_MESSAGE_TOKENS, ANTIGRAVITY_MAX_USER_INPUT_BYTES } from '../electron/antigravity';
+import { CompatibleAdapter } from '../electron/providers';
+import { documentRequest } from '../src/document-tools';
 import { section, fence } from '../electron/prompt';
 import { WorkService, type Harness } from '../electron/service';
 import { Store } from '../electron/store';
+import { knowledgeText, OrganizationKnowledge } from '../electron/knowledge';
+import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import type { Connection, ContextWindowReading } from '../src/types';
 const privacy: any = await import('../../src/modules/privacy/index.js');
+const routing: any = await import('../../src/modules/router/service.js');
+const boundary: any = await import('../../src/modules/router/task-boundary.js');
+const catalog: any = await import('../../src/modules/skills/catalog.js');
+const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 
 test('canonical estimator counts Thai and preserves short prompts exactly', async () => {
   assert.ok(tokens('ก'.repeat(100)) > tokens('a'.repeat(100)));
@@ -95,6 +104,7 @@ test('hooks block compaction and required task state cannot be truncated', async
   );
   await assert.rejects(compact(section('current_message', 'source'), options), /CONTEXT_LIMIT/);
   assert.equal(fence('<memory_context>x</task_state><workspace_preferences>'), '‹memory_context>x‹/task_state>‹workspace_preferences>');
+  assert.equal(fence('<organization_knowledge>x</organization_knowledge>'), '‹organization_knowledge>x‹/organization_knowledge>');
 });
 
 test('service reactively compacts once on provider overflow and accounts summary tokens', async () => {
@@ -423,6 +433,411 @@ test('reactive compaction recovers when a kept session resets after large tool t
     assert.equal(toolTurns, 4);
     assert.equal(transports.at(-1), 'delta');
     assert.equal(store.session(session.id).status, 'review');
+  } finally {
+    store.close();
+  }
+});
+
+test('Antigravity TOR and letter drafting stay under 56k tokens on turn 0 while OpenAI keeps all supplemental references', async () => {
+  for (const [provider, docId] of [
+    ['antigravity', 'tor'],
+    ['antigravity', 'letter'],
+    ['openai', 'tor'],
+  ] as const) {
+    const store = new Store(':memory:');
+    try {
+      store.put('connection', 'c', {
+        id: 'c',
+        provider,
+        model: provider === 'antigravity' ? 'gemini-3.8-flash-high' : 'gpt-5-codex',
+        ready: true,
+      } as Connection);
+      const session = store.create('c', 'cc');
+      session.draft = '# ร่างเอกสารสังเคราะห์\n\n## 1. ความเป็นมา\n\n' + 'รายละเอียดขอบเขตงานสังเคราะห์ '.repeat(500);
+      store.save(session);
+      const harness: Harness = {
+        root: repoRoot,
+        route: (q, opts) => routing.queryStepRouter(q, { autoRoute: false, authorityChecks: true, ...opts }),
+        contextPolicy: boundary.classifyContextPolicy,
+        privacy: privacy.evaluatePrivacyGate,
+        skillMetadata: async id => {
+          const meta = await routing.loadSkillContextMetadata(id);
+          return { ...meta, mandatoryReferences: await routing.loadDocumentContextMetadata(meta.mandatory) };
+        },
+        documentCatalog: () => routing.loadDocumentCatalog(),
+        catalog: () => catalog.loadSkillCatalog(repoRoot),
+        documentPrivacy: async () => null,
+        nextOutput: async () => null,
+        toolLoop: () => true,
+        tools: async () => ({
+          enabled: () => true,
+          check: async () => {},
+          readOnly: () => true,
+          execute: async () => '',
+          outgoing: async s => s,
+        }),
+      };
+      let seenSystem = '';
+      let seenPrompt = '';
+      const service = new WorkService(
+        store,
+        harness,
+        async () => ({
+          context: { cwd: repoRoot, env: {} },
+          adapter: {
+            run: async (prompt, _connection, context) => {
+              const transportSystem = (context.system || '') + 'Transport header. '.repeat(80);
+              const maxPrompt = ANTIGRAVITY_FIRST_MESSAGE_TOKENS - tokens(transportSystem);
+              if (provider === 'antigravity' && tokens(transportSystem + prompt) > ANTIGRAVITY_FIRST_MESSAGE_TOKENS) {
+                throw new ProviderPromptLimitError(Math.max(0, maxPrompt));
+              }
+              seenSystem = context.system || '';
+              seenPrompt = prompt;
+              return '<document_draft>\n# ร่างเอกสารสังเคราะห์\n\nอัปเดต Foamboard 150x75 cm แล้ว\n</document_draft>\n<document_review>ตรวจข้อมูลสังเคราะห์แล้ว</document_review>';
+            },
+          },
+        }),
+        () => {},
+      );
+      const initial = documentRequest(docId, { [docId === 'tor' ? 'title' : 'subject']: 'จ้างจัดนิทรรศการสังเคราะห์' });
+      await service.run(session.id, initial.text, initial.sourceText, true, undefined, 'draft', undefined, [], {
+        documentTool: docId,
+      });
+      if (docId === 'tor') {
+        assert.equal(store.session(session.id).status, 'review', provider);
+        store.accept(session.id, store.session(session.id).proposals.at(-1)!.id);
+        await service.run(session.id, 'ขอเพิ่ม Foamboard ติด Sticker รายชื่อหน่วยงาน ติดหน้าโต๊ะ 150x75 cm', '', true, undefined, 'draft');
+      }
+      const done = store.session(session.id);
+      assert.equal(done.status, 'review', `${provider}/${docId}: ${done.messages.at(-1)?.text}`);
+      assert.ok(seenSystem.includes('<document_tool_contract>'));
+      assert.ok(seenPrompt.includes('จ้างจัดนิทรรศการสังเคราะห์'));
+      if (provider === 'antigravity') {
+        assert.ok(tokens(seenSystem + seenPrompt) <= ANTIGRAVITY_FIRST_MESSAGE_TOKENS);
+        assert.ok(seenSystem.includes('<deferred_skill_references>'), 'supplemental references should be deferred to fit Antigravity');
+      } else {
+        assert.ok(!seenSystem.includes('<deferred_skill_references>'), 'OpenAI should keep all supplemental references inline');
+      }
+    } finally {
+      store.close();
+    }
+  }
+});
+
+test('tool-free Antigravity recovery replaces a whole document with intact matched excerpts', async () => {
+  const store = new Store(':memory:');
+  try {
+    store.put('connection', 'c', { id: 'c', provider: 'antigravity', model: 'gemini-3.8-flash-high', ready: true } as Connection);
+    const session = store.create('c', 'cc');
+    // The registered excerpts and the user's current source both need to remain usable after recovery.
+    const protectedSource = 'ข้อมูลต้นเรื่องที่ห้ามตัดทอน '.repeat(900);
+    const harness: Harness = {
+      root: repoRoot,
+      route: (q, opts) => routing.queryStepRouter(q, { autoRoute: false, authorityChecks: true, ...opts }),
+      contextPolicy: boundary.classifyContextPolicy,
+      privacy: privacy.evaluatePrivacyGate,
+      skillMetadata: async id => {
+        const meta = await routing.loadSkillContextMetadata(id);
+        return { ...meta, mandatoryReferences: await routing.loadDocumentContextMetadata(meta.mandatory) };
+      },
+      documentCatalog: () => routing.loadDocumentCatalog(),
+      catalog: () => catalog.loadSkillCatalog(repoRoot),
+      documentPrivacy: async () => null,
+      nextOutput: async () => null,
+    };
+    const seenPrompts: string[] = [];
+    let attemptLimit = 0;
+    const service = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: repoRoot, env: {} },
+        adapter: {
+          run: async (prompt, _connection, context) => {
+            seenPrompts.push(prompt);
+            const total = tokens((context.system || '') + prompt);
+            if (!attemptLimit) {
+              attemptLimit = total - 800;
+              throw new ProviderPromptLimitError(Math.max(0, attemptLimit - tokens(context.system || '')));
+            }
+            if (total > attemptLimit) throw new ProviderPromptLimitError(Math.max(0, attemptLimit - tokens(context.system || '')));
+            return 'สรุปตามเอกสารระเบียบสวัสดิการสังเคราะห์เรียบร้อยแล้วครับ';
+          },
+        },
+      }),
+      () => {},
+    );
+    const request = 'ขั้นตอนตรวจรับครุภัณฑ์ STeP';
+    const knowledge = new OrganizationKnowledge(repoRoot, () => routing.loadDocumentCatalog());
+    const matched = await knowledge.searchTurn(request, request);
+    await service.run(session.id, request, protectedSource, true, undefined, 'draft', undefined, ['attached.txt']);
+    const done = store.session(session.id);
+    assert.equal(done.status, 'review', done.messages.at(-1)?.text);
+    assert.equal(seenPrompts.length, 2);
+    assert.match(seenPrompts[0], /§ ทั้งฉบับ/);
+    assert.ok(seenPrompts[1].includes(section('organization_knowledge', knowledgeText(matched))));
+    const sentSource = /<source_document>\n[\s\S]*?\n<\/source_document>/.exec(seenPrompts[0])?.[0];
+    assert.ok(sentSource);
+    assert.ok(sentSource.includes(protectedSource.trim()));
+    assert.ok(seenPrompts[1].includes(sentSource));
+    assert.doesNotMatch(seenPrompts[1], /§ ทั้งฉบับ|call reference\(input=ID|use reference\(input=ID/);
+    assert.ok(seenPrompts[1].length < seenPrompts[0].length);
+  } finally {
+    store.close();
+  }
+});
+
+test('Antigravity recovery fits the byte limit even when slimming the system satisfies the token limit', async () => {
+  for (const tokenOverflow of [false, true]) {
+    const store = new Store(':memory:');
+    try {
+      store.put('connection', 'c', {
+        id: 'c',
+        provider: 'antigravity',
+        mode: 'subscription',
+        model: 'gemini-3.8-flash-high',
+        ready: true,
+      } as Connection);
+      const session = store.create('c', 'cc');
+      session.messages = Array.from({ length: 4 }, (_, index) => ({
+        role: index % 2 ? 'assistant' : 'user',
+        text: 'Synthetic event notes ' + 'a'.repeat(46_650),
+        at: new Date().toISOString(),
+      }));
+      store.save(session);
+      const harness: Harness = {
+        root: repoRoot,
+        route: (q, opts) => routing.queryStepRouter(q, { autoRoute: false, authorityChecks: true, ...opts }),
+        contextPolicy: boundary.classifyContextPolicy,
+        privacy: privacy.evaluatePrivacyGate,
+        skillMetadata: async id => {
+          const meta = await routing.loadSkillContextMetadata(id);
+          return { ...meta, mandatoryReferences: await routing.loadDocumentContextMetadata(meta.mandatory) };
+        },
+        documentPrivacy: async () => null,
+        nextOutput: async () => null,
+      };
+      const attempts: { bytes: number; total: number; systemTokens: number; preloaded: boolean }[] = [];
+      let tokenLimit = 0;
+      const service = new WorkService(
+        store,
+        harness,
+        async () => ({
+          context: { cwd: repoRoot, env: {} },
+          adapter: {
+            run: async (prompt, _connection, context) => {
+              if (context.system?.startsWith('Summarize')) return 'Synthetic checkpoint.';
+              const system = context.system || '';
+              const total = tokens(system + prompt);
+              const bytes = Buffer.byteLength(prompt, 'utf8');
+              const systemTokens = tokens(system);
+              if (!attempts.length) tokenLimit = total + (tokenOverflow ? -400 : 400);
+              attempts.push({ bytes, total, systemTokens, preloaded: system.includes('[PRELOADED]') });
+              if (total > tokenLimit || bytes > ANTIGRAVITY_MAX_USER_INPUT_BYTES)
+                throw new ProviderPromptLimitError(tokenLimit - systemTokens, false, ANTIGRAVITY_MAX_USER_INPUT_BYTES);
+              assert.match(prompt, /สรุปลำดับงานสังเคราะห์/);
+              return 'สรุปลำดับงานสังเคราะห์เรียบร้อยแล้ว';
+            },
+          },
+        }),
+        () => {},
+      );
+      await service.run(session.id, 'ช่วยสรุปลำดับงานสังเคราะห์', '', true, 'event-run-of-show', 'chat');
+      assert.equal(attempts.length, 2);
+      assert.ok(attempts[0].bytes > ANTIGRAVITY_MAX_USER_INPUT_BYTES);
+      assert.equal(attempts[0].total > tokenLimit, tokenOverflow);
+      assert.ok(attempts[1].systemTokens < attempts[0].systemTokens);
+      assert.equal(attempts[0].preloaded, true);
+      assert.equal(attempts[1].preloaded, false);
+      assert.ok(attempts[1].bytes <= ANTIGRAVITY_MAX_USER_INPUT_BYTES);
+      assert.ok(attempts[1].total <= tokenLimit);
+      assert.equal(store.session(session.id).status, 'review');
+    } finally {
+      store.close();
+    }
+  }
+});
+
+test('CompatibleAdapter converts 400k+ prompts to promptOnly limit errors and WorkService recomputes prompt-only budget after system slimming', async () => {
+  let fetches = 0;
+  const compatible = new CompatibleAdapter(async () => {
+    fetches++;
+    return new Response('unexpected', { status: 500 });
+  });
+  let caught: unknown;
+  try {
+    await compatible.run(
+      'a'.repeat(400_001),
+      { id: 'c', provider: 'compatible', baseUrl: 'https://api.example.invalid/v1', model: 'gpt-5', ready: true } as Connection,
+      { cwd: tmpdir(), env: {}, emit: () => {}, signal: new AbortController().signal },
+    );
+  } catch (error) {
+    caught = error;
+  }
+  assert.ok(caught instanceof ProviderPromptLimitError);
+  assert.equal(caught.promptOnly, true);
+  assert.ok(caught.maxPromptTokens > 0);
+  assert.equal(fetches, 0);
+
+  const store = new Store(':memory:');
+  try {
+    store.put('connection', 'c', { id: 'c', provider: 'gemini', mode: 'api', model: 'gemini-2.5-flash', ready: true } as Connection);
+    const session = store.create('c', 'cc');
+    // Keep total input (~140k) under Gemini's 160k proactive budget while exceeding 400k chars on turn 1.
+    session.messages = Array.from({ length: 6 }, (_, i) => ({
+      role: i % 2 ? 'assistant' : 'user',
+      text: 'Long ASCII turn ' + 'a'.repeat(67_500),
+      at: new Date().toISOString(),
+    }));
+    store.save(session);
+    const harness: Harness = {
+      root: repoRoot,
+      route: (q, opts) => routing.queryStepRouter(q, { autoRoute: false, authorityChecks: true, ...opts }),
+      contextPolicy: boundary.classifyContextPolicy,
+      privacy: privacy.evaluatePrivacyGate,
+      skillMetadata: async id => {
+        const meta = await routing.loadSkillContextMetadata(id);
+        return { ...meta, mandatoryReferences: await routing.loadDocumentContextMetadata(meta.mandatory) };
+      },
+      documentCatalog: () => routing.loadDocumentCatalog(),
+      catalog: () => catalog.loadSkillCatalog(repoRoot),
+      documentPrivacy: async () => null,
+      nextOutput: async () => null,
+    };
+    const seenPrompts: string[] = [];
+    const seenSystems: string[] = [];
+    const service = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: repoRoot, env: {} },
+        adapter: {
+          run: async (prompt, _connection, context) => {
+            if (context.system?.startsWith('Summarize')) return 'Checkpoint summary.';
+            seenPrompts.push(prompt);
+            seenSystems.push(context.system || '');
+            if (prompt.length > 400_000) {
+              const safeTokens = Math.max(1, Math.floor((tokens(prompt) * 360_000) / prompt.length));
+              throw new ProviderPromptLimitError(safeTokens, true);
+            }
+            return '<document_draft>\n# หนังสือสังเคราะห์\n\nสรุปร่างหนังสือเรียบร้อย\n</document_draft>\n<document_review>ตรวจข้อมูลสังเคราะห์แล้ว</document_review>';
+          },
+        },
+      }),
+      () => {},
+    );
+    const initial = documentRequest('letter', { subject: 'ขอเชิญประชุมสังเคราะห์' });
+    await service.run(session.id, initial.text, initial.sourceText, true, undefined, 'draft', undefined, [], {
+      documentTool: 'letter',
+      fromConversation: true,
+    });
+    const done = store.session(session.id);
+    assert.equal(seenPrompts.length, 2, `${done.status}: ${done.messages.at(-1)?.text}`);
+    assert.ok(seenPrompts[0].length > 400_000);
+    assert.ok(seenPrompts[1].length <= 400_000, 'prompt length must drop below 400k chars even when system shrinks');
+    assert.ok(tokens(seenSystems[1]) < tokens(seenSystems[0]), 'core-only system should slim supplemental references');
+    assert.equal(done.status, 'review', done.messages.at(-1)?.text);
+  } finally {
+    store.close();
+  }
+});
+
+test('WorkService always summarizes at low effort (including Antigravity -low fallback) even when high effort or autoEffort off is set', async () => {
+  const store = new Store(':memory:');
+  try {
+    store.put('connection', 'c', {
+      id: 'c',
+      provider: 'antigravity',
+      model: 'gemini-3.8-flash-high',
+      ready: true,
+      models: [
+        { id: 'gemini-3.8-flash-low', label: 'Flash Low' },
+        { id: 'gemini-3.8-flash-high', label: 'Flash High' },
+      ],
+    } as Connection);
+    const session = store.create('c', 'cc');
+    session.effort = 'high';
+    session.messages = Array.from({ length: 8 }, (_, i) => ({
+      role: i % 2 ? 'assistant' : 'user',
+      text: 'Long turn ' + 'ก'.repeat(28_000),
+      at: new Date().toISOString(),
+    }));
+    store.save(session);
+    const harness: Harness = {
+      root: repoRoot,
+      route: async () => ({ routingContract: { mode: 'GENERAL', authority: { status: 'ALLOW' }, mandatoryReferences: [] } }),
+      contextPolicy: boundary.classifyContextPolicy,
+      privacy: privacy.evaluatePrivacyGate,
+      skillMetadata: async () => null,
+      documentPrivacy: async () => null,
+      nextOutput: async () => null,
+      autoEffort: () => false,
+    };
+    const summaryCalls: string[] = [];
+    const service = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: repoRoot, env: {} },
+        adapter: {
+          run: async (_prompt, connection, context) => {
+            if (context.system?.startsWith('Summarize')) {
+              summaryCalls.push(connection.model || '');
+              if (connection.model === 'gemini-3.8-flash-low') throw new Error('MODEL_NOT_AVAILABLE');
+              return 'Fallback checkpoint summary.';
+            }
+            return 'Done';
+          },
+        },
+      }),
+      () => {},
+    );
+    await service.run(session.id, 'Continue work', '', true, undefined, 'chat');
+    assert.ok(summaryCalls.length >= 2 && summaryCalls.length % 2 === 0);
+    for (let i = 0; i < summaryCalls.length; i += 2) {
+      assert.deepEqual(summaryCalls.slice(i, i + 2), ['gemini-3.8-flash-low', 'gemini-3.8-flash-high']);
+    }
+    assert.equal(store.session(session.id).status, 'review');
+
+    // Also verify non-suffixed / OpenAI models always summarize with effort='low' regardless of session effort & autoEffort=false.
+    store.put('connection', 'o', {
+      id: 'o',
+      provider: 'openai',
+      model: 'gpt-5',
+      ready: true,
+      models: [{ id: 'gpt-5', label: 'GPT-5', efforts: [{ id: 'low' }, { id: 'high' }] }],
+    } as Connection);
+    const openAiSession = store.create('o', 'cc');
+    openAiSession.effort = 'high';
+    openAiSession.messages = Array.from({ length: 12 }, (_, i) => ({
+      role: i % 2 ? 'assistant' : 'user',
+      text: 'Long turn ' + 'ก'.repeat(35_000),
+      at: new Date().toISOString(),
+    }));
+    store.save(openAiSession);
+    const openAiSummaryEfforts: (string | undefined)[] = [];
+    const answerEfforts: (string | undefined)[] = [];
+    const openAiService = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: repoRoot, env: {} },
+        adapter: {
+          run: async (_prompt, _connection, context) => {
+            if (context.system?.startsWith('Summarize')) {
+              openAiSummaryEfforts.push(context.effort);
+              return 'OpenAI checkpoint.';
+            }
+            answerEfforts.push(context.effort);
+            return 'Done';
+          },
+        },
+      }),
+      () => {},
+    );
+    await openAiService.run(openAiSession.id, 'Continue work', '', true, undefined, 'chat');
+    assert.ok(openAiSummaryEfforts.length >= 1 && openAiSummaryEfforts.every(e => e === 'low'));
+    assert.deepEqual(answerEfforts, ['high']);
   } finally {
     store.close();
   }
