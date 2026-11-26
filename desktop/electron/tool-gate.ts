@@ -17,7 +17,7 @@ export class ToolGate {
   ) {}
   async run<T>(
     request: ToolRequest,
-    detail: { title: string; body: string; key: string; privacyClass?: string; sessionId?: string },
+    detail: { title: string; body: string; key: string; privacyClass?: string; sessionId?: string; hostOwnedConsent?: boolean },
     action: () => Promise<T> | T,
     signal?: AbortSignal,
   ): Promise<T | null> {
@@ -50,7 +50,7 @@ export class ToolGate {
     // and a snapshot can undo it. Commands, the sandbox and external tool calls ask every time; an older remembered
     // rule for them is ignored. Administrators can turn remembering off.
     const rememberable = rememberableTool(request) && this.policy().permission.rememberApprovals !== false;
-    if (decision.requiresConfirmation && !(rememberable && this.approvals.remembered(rule))) {
+    if (decision.requiresConfirmation && !detail.hostOwnedConsent && !(rememberable && this.approvals.remembered(rule))) {
       const accepted = await this.approvals.request(
         rule,
         {

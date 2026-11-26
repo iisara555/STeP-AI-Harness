@@ -1,4 +1,4 @@
-import { validateToolRequest } from './tool-registry';
+import { toolArgsLimit, validateToolRequest } from './tool-registry';
 import { repairNotes, repairToolRequest } from './tool-repair';
 
 export type ToolTab = 'output' | 'browser' | 'terminal' | 'tasks' | 'files' | 'changes';
@@ -111,14 +111,14 @@ export function loopRequests(text: string): LoopRequest[] {
   // A model may open the fence mid-sentence and end its reply without closing it; the last fence then runs to the end.
   const fenced = [...text.matchAll(/```step-tool[ \t]*\n([\s\S]*?)(?:```|$)/g)].map(match => match[1].trim());
   for (const body of fenced.length ? fenced : looseRequest(text)) {
-    if (body.length > 210_000) continue;
+    if (body.length > 250_000) continue;
     try {
       const { value: r, notes } = repairToolRequest(JSON.parse(body)) as { value: any; notes: string[] };
       if (!r || !LOOP_TOOLS.includes(r.tool) || typeof r.input !== 'string' || r.input.length > 2000 || r.input.includes('\0')) continue;
       if (r.content !== undefined && (typeof r.content !== 'string' || r.content.length > 200_000)) continue;
       if (
         r.args !== undefined &&
-        (!r.args || typeof r.args !== 'object' || Array.isArray(r.args) || JSON.stringify(r.args).length > 30_000)
+        (!r.args || typeof r.args !== 'object' || Array.isArray(r.args) || JSON.stringify(r.args).length > toolArgsLimit(r.tool))
       )
         continue;
       validateToolRequest(r);
@@ -161,7 +161,7 @@ export function brokenRequests(text: string): string[] {
           ? `unknown tool ${JSON.stringify(String(r?.tool ?? '')).slice(0, 60)}`
           : field
             ? `invalid field: ${field}`
-            : 'invalid fields or a value over its size limit (input 2000, content 200000 characters, args 30000)',
+            : 'invalid fields or a value over its size limit (input 2000, content 200000 characters, args 30000 or 220000 for patch/sheet/slides/artifact/repl)',
       );
     } catch (error) {
       problems.push('invalid JSON: ' + String((error as Error).message).slice(0, 200));

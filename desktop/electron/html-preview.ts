@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { WebContents } from 'electron';
+import { publicSite } from './web-fetch';
 
 /** HTML the AI wrote (a slide deck, a page) is previewed from a private copy, not from the workspace. */
 export const PREVIEW_LIMIT = 5_000_000;
@@ -28,11 +29,42 @@ const localPath = (url: string) => {
  * page may go full screen but cannot use the camera, microphone, location or other permissions. Pop-up links open in a new Web tab.
  * The copy is removed when the tab closes.
  */
+type PreviewResolve = (host: string) => Promise<{ address: string; family: number }[]>;
+export type HtmlPreviewOptions = { allowedHosts?: string[]; dnsResolve?: PreviewResolve };
+
+/** Checks a preview request URL: allows only own HTML copy, inline data/blob URLs, and public HTTP(S) destinations (plus optional allowedHosts). */
+export async function isAllowedPreviewRequest(
+  detailsUrl: string,
+  isOwn: (url: string) => boolean,
+  dnsResolveOrOptions?: PreviewResolve | HtmlPreviewOptions,
+) {
+  const opts: HtmlPreviewOptions =
+    typeof dnsResolveOrOptions === 'function' ? { dnsResolve: dnsResolveOrOptions } : dnsResolveOrOptions || {};
+  const lower = detailsUrl.toLowerCase();
+  if (isOwn(detailsUrl) || lower.startsWith('data:') || lower.startsWith('blob:')) return true;
+  if (!web(lower)) return false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      publicSite(new URL(detailsUrl), opts.allowedHosts || [], opts.dnsResolve),
+      new Promise<never>((_done, fail) => {
+        timer = setTimeout(() => fail(new Error('WEB_TIMEOUT')), 5000);
+      }),
+    ]);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function openHtmlPreview(
   create: (partition: string) => WebContents,
   id: string,
   html: string,
   openLink: (url: string) => void,
+  options?: PreviewResolve | HtmlPreviewOptions,
 ) {
   if (Buffer.byteLength(html) > PREVIEW_LIMIT) throw new Error('FILE_TOO_LARGE');
   const folder = await mkdtemp(join(tmpdir(), 'step-preview-'));
@@ -47,8 +79,7 @@ export async function openHtmlPreview(
   contents.once('destroyed', () => void rm(folder, { recursive: true, force: true }).catch(() => {}));
   const network = contents.session;
   network.webRequest.onBeforeRequest((details, callback) => {
-    const url = details.url.toLowerCase();
-    callback({ cancel: !(isOwn(details.url) || web(url) || url.startsWith('data:') || url.startsWith('blob:')) });
+    void isAllowedPreviewRequest(details.url, isOwn, options).then(allowed => callback({ cancel: !allowed }));
   });
   // Full screen (a deck's F key), pointer lock (3D scenes) and copying are what pages like these use; camera,
   // microphone, location, notifications and the rest stay refused.
