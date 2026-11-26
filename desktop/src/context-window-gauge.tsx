@@ -31,8 +31,9 @@ export function ContextWindowGauge({
 
   const { inputTokens, budgetTokens } = reading;
   const ratio = inputTokens / budgetTokens;
-  const percent = ratio > 1 ? '100%+' : new Intl.NumberFormat(locale(), { style: 'percent' }).format(ratio);
-  const detail = t('{0} จาก {1} โทเคนโดยประมาณ', inputTokens.toLocaleString(locale()), budgetTokens.toLocaleString(locale()));
+  // Keep 100% for an estimate that has actually reached the Desktop budget.
+  const percent = ratio > 1 ? '100%+' : new Intl.NumberFormat(locale(), { style: 'percent' }).format(ratio < 1 ? Math.min(ratio, 0.99) : 1);
+  const detail = t('ประมาณ {0} จากงบบริบท STeP {1} โทเคน', inputTokens.toLocaleString(locale()), budgetTokens.toLocaleString(locale()));
   return (
     <div className="context-window-gauge">
       <span
@@ -44,9 +45,9 @@ export function ContextWindowGauge({
         aria-valuenow={Math.min(inputTokens, budgetTokens)}
         aria-valuetext={detail}
         data-level={ratio >= 1 ? 'full' : ratio >= 0.8 ? 'near' : 'normal'}
-        title={detail + ' · ' + t('ประมาณจากข้อความล่าสุดที่เตรียมส่งทั้งชุด')}
+        title={detail + ' · ' + t('คิดจากข้อความล่าสุดทั้งชุด ขีดจำกัดของโมเดลอาจต่างกัน')}
       >
-        <span aria-hidden="true">{t('บริบทล่าสุด')}</span>
+        <span aria-hidden="true">{t('งบบริบท STeP')}</span>
         <span className="context-window-track" aria-hidden="true">
           <span style={{ width: `${Math.min(100, ratio * 100)}%` }} />
         </span>

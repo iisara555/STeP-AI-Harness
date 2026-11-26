@@ -42,3 +42,15 @@ test('overflow is visible while the accessible meter value stays within its decl
   assert.match(html, /data-level="full"/);
   assert.match(html, />100%\+</);
 });
+
+test('the gauge names the Desktop budget and reserves 100% for reaching it', () => {
+  const render = (inputTokens: number) =>
+    renderToStaticMarkup(
+      createElement(ContextWindowGauge, { session: session({ ...reading, inputTokens }), connectionId: 'c', model: 'gemini-pro' }),
+    );
+  const near = render(55999);
+  assert.match(near, /งบบริบท STeP/);
+  assert.match(near, />99%</);
+  assert.doesNotMatch(near, />100%</);
+  assert.match(render(56000), />100%</);
+});
