@@ -5,6 +5,7 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
+import { routeFixtureOcr } from './receipt-ocr-fixture.mjs';
 
 // A PDF whose pages have no text layer, like a scanned document.
 function blankPdf(count) {
@@ -217,8 +218,9 @@ try {
   });
   await new Promise((resolve, reject) => {
     ocrServer.once('error', reject);
-    ocrServer.listen(8765, '127.0.0.1', resolve);
+    ocrServer.listen(0, '127.0.0.1', resolve);
   });
+  await routeFixtureOcr(app, ocrServer);
   await app.evaluate(({ dialog }, folder) => {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [folder] });
   }, folder);
@@ -244,7 +246,7 @@ try {
   assert.equal(started.textOnly, true);
   assert.equal(started.vision, false);
   await page.getByRole('button', { name: 'เลือกใบเสร็จ' }).click();
-  await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'ตรวจ/แก้ข้อมูลที่อ่านได้', exact: true })).toBeVisible();
   await expect(page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า')).toHaveValue('ร้านตัวอย่างถูกต้อง');
   await expect(page.getByLabel('เลขที่ใบเสร็จ', { exact: true })).toHaveValue('เล่ม 003 เลขที่ 042');
   await expect(page.getByLabel(/^วันที่/)).toHaveValue('04/11/2569');
@@ -263,11 +265,11 @@ try {
   );
   assert.match(denied, /VISION_DISABLED/);
   assert.deepEqual(await app.evaluate(() => globalThis.receiptDialogs), ['ให้ AI ช่วยกรองผล OCR']);
-  // The simplified page has no advanced reread controls. Exercise a delayed automatic mapping instead:
-  // human corrections entered while the native provider is working must survive its eventual suggestions.
+  // Re-run the OCR text filter on the same receipt, preserving corrections made before and during the read.
   await rm(ocrPrompt);
   await writeFile(ocrHold, 'hold');
-  await page.getByRole('button', { name: 'เลือกใบเสร็จ', exact: true }).click();
+  await page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า').fill('ร้านที่คนแก้แล้ว');
+  await page.getByRole('button', { name: 'ให้ AI อ่านใหม่', exact: true }).click();
   await expect
     .poll(async () =>
       readFile(ocrPrompt, 'utf8').then(
@@ -276,7 +278,7 @@ try {
       ),
     )
     .toBe(true);
-  await page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า').fill('ร้านที่คนแก้แล้ว');
+  assert.doesNotMatch(await readFile(ocrPrompt, 'utf8'), /ร้านที่คนแก้แล้ว|data:image|inlineData/);
   await page.getByLabel('รายการค่าใช้จ่าย', { exact: true }).fill('รายการที่คนแก้แล้ว');
   await rm(ocrHold);
   await expect(page.getByRole('button', { name: 'เลือกใบเสร็จ', exact: true })).toBeEnabled();

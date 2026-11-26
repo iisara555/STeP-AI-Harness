@@ -100,22 +100,28 @@ export function suggestEvidenceKind(name: string): EvidenceDocumentKind | null {
  * its amount still comes from the receipt check. Two kinds in one name suggest nothing.
  */
 export function suggestPacketKind(name: string): PacketDocumentKind | null {
+  const tax: PacketDocumentKind | null = /ใบกำกับภาษีอย่างย่อ|abbreviated[ _-]?tax[ _-]?invoice/i.test(name)
+    ? 'abbreviated_tax_invoice'
+    : /ใบกำกับภาษี|tax[ _-]?invoice/i.test(name)
+      ? 'tax_invoice'
+      : null;
   const payment: [PacketDocumentKind, RegExp][] = [
-    ['tax_invoice', /ใบกำกับภาษี|tax[ _-]?invoice/i],
     ['receipt', /ใบเสร็จ|receipt/i],
     ['cash_bill', /บิลเงินสด|cash[ _-]?bill/i],
     ['invoice_or_quotation', /ใบแจ้งหนี้|ใบเสนอราคา|ใบส่งของ|invoice|quotation/i],
     ['transfer_slip', /สลิป|slip/i],
   ];
   // "ใบเสร็จรับเงิน/ใบกำกับภาษี" is one combined document, read as the tax invoice.
-  const paid = payment.filter(([, pattern]) => pattern.test(name)).map(([kind]) => kind);
-  const pay = paid.length === 2 && paid.includes('tax_invoice') && paid.includes('receipt') ? ['tax_invoice' as const] : paid;
+  const paid = payment.filter(([, pattern]) => pattern.test(name.replace(/tax[ _-]?invoice/gi, ''))).map(([kind]) => kind);
+  const pay: PacketDocumentKind[] = !tax ? paid : paid.length === 1 && paid[0] === 'receipt' ? [tax] : [tax, ...paid];
   const evidence = suggestEvidenceKind(name);
   const all = [...pay, ...(evidence ? [evidence] : [])];
   return all.length === 1 ? all[0] : null;
 }
 
-type MatchKind = EvidenceDocumentKind | 'receipt' | 'receipt_voucher';
+type MatchKind = EvidenceDocumentKind | 'receipt' | 'receipt_voucher' | 'tax_invoice' | 'abbreviated_tax_invoice';
+const RECEIPT_EVIDENCE_LABEL = 'ใบเสร็จรับเงิน / ใบกำกับภาษี / ใบสำคัญรับเงิน FM-AF-014';
+const RECEIPT_EVIDENCE_KINDS: MatchKind[] = ['receipt', 'tax_invoice', 'abbreviated_tax_invoice', 'receipt_voucher'];
 type EvidenceItem = {
   id: string;
   label: string;
@@ -206,10 +212,10 @@ export function evidenceChecklist(packet: ReceiptPacket): EvidenceResult[] {
       },
       {
         id: 'receipt',
-        label: 'ใบเสร็จรับเงิน / ใบสำคัญรับเงิน FM-AF-014',
+        label: RECEIPT_EVIDENCE_LABEL,
         reason: 'ตรวจหลักฐานการรับเงินตามกรณี และเทียบต้นฉบับกับ AFP',
         source: 'afp-circular',
-        kinds: ['receipt', 'receipt_voucher'],
+        kinds: RECEIPT_EVIDENCE_KINDS,
       },
       {
         id: 'recipient',
@@ -261,10 +267,10 @@ export function evidenceChecklist(packet: ReceiptPacket): EvidenceResult[] {
       },
       {
         id: 'receipt',
-        label: 'ใบเสร็จรับเงิน / ใบสำคัญรับเงิน FM-AF-014',
+        label: RECEIPT_EVIDENCE_LABEL,
         reason: 'QP-AF-003 ข้อ 4.2 a: ส่งเข้าระบบตรวจสอบใบเสร็จใน STeP MIS ทุกครั้งที่ได้รับ แล้วรวบรวมฉบับจริงที่ผ่านการตรวจ',
         source: 'qp-af-003-reserve',
-        kinds: ['receipt', 'receipt_voucher'],
+        kinds: RECEIPT_EVIDENCE_KINDS,
       },
       {
         id: 'recipient',

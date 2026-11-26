@@ -93,6 +93,14 @@ test('deadlines, caps and the emergency category follow the AFP circular', () =>
   assert.ok(!other.some(i => i.id === 'report_deadline'));
 });
 
+test('THB is a currency label and the AFP cap still distinguishes 10,000.00 from 10,000.01', () => {
+  const exceedsCap = (total: string) =>
+    complianceChecklist({ ...cashBill, values: { ...cashBill.values, total }, category: 'B' }).some(item => item.id === 'over_cap');
+  assert.equal(exceedsCap('10,000.00 THB'), false);
+  assert.equal(exceedsCap('THB 10,000.01'), true);
+  assert.equal(exceedsCap('๑๐,๐๐๐.๐๑ thb'), true);
+});
+
 test('slips and invoices are not proof of payment; missing elements and AFP to-dos show', () => {
   const slip = complianceChecklist({ type: 'transfer_slip', features: {}, values: { total: '500' }, category: 'B' });
   assert.equal(slip[0].id, 'not_proof_of_payment');

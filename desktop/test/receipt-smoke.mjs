@@ -1,4 +1,4 @@
-// End-to-end check of the receipt mini app against a fake local OCR service on 127.0.0.1:8765.
+// End-to-end check of the receipt mini app against a fake local OCR service.
 // No real OCR, provider, or receipt data is used. Usage: node test/receipt-smoke.mjs <receipt-image> [screenshot-dir]
 import { _electron as electron, expect } from '@playwright/test';
 import { createServer } from 'node:http';
@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { build } from 'esbuild';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
+import { routeFixtureOcr } from './receipt-ocr-fixture.mjs';
 
 const out = process.argv[3] || (await mkdtemp(join(tmpdir(), 'step-receipt-qa-')));
 await mkdir(out, { recursive: true });
@@ -57,7 +58,7 @@ const ocr = createServer((req, res) => {
 });
 await new Promise((ok, fail) => {
   ocr.once('error', fail);
-  ocr.listen(8765, '127.0.0.1', ok);
+  ocr.listen(0, '127.0.0.1', ok);
 });
 
 const home = await mkdtemp(join(tmpdir(), 'step-receipt-'));
@@ -95,6 +96,7 @@ const env = {
 delete env.ELECTRON_RUN_AS_NODE;
 const app = await electron.launch({ args: ['.'], env, timeout: 45000 });
 try {
+  await routeFixtureOcr(app, ocr);
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
@@ -123,8 +125,8 @@ try {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
   }, image);
   await page.getByRole('button', { name: 'เลือกใบเสร็จ' }).click();
-  await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
-  await page.getByLabel('ยอดรวมที่ชำระ').waitFor();
+  await expect(page.getByRole('heading', { name: 'ตรวจ/แก้ข้อมูลที่อ่านได้', exact: true })).toBeVisible();
+  await expect(page.getByLabel('ยอดรวมที่ชำระ')).toBeVisible();
   assert.equal(await page.getByLabel('ยอดรวมที่ชำระ').inputValue(), '107.00');
   assert.equal(await page.getByLabel('ภาษีมูลค่าเพิ่ม').inputValue(), '7.00');
   await expect(page.locator('.receipt-value-row.uncertain').filter({ has: page.locator('#rf-vat') })).toHaveCount(1);
@@ -134,6 +136,16 @@ try {
   await expect(outcome).toContainText('B10 · ค่าน้ำดื่ม');
   assert.equal(await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).count(), 1);
   await page.getByRole('heading', { name: 'ต้องแก้หรือเติมข้อมูลก่อนใช้ประกอบการเบิก', exact: true }).waitFor();
+  await expect(page.getByRole('button', { name: 'ให้ AI อ่านใหม่', exact: true })).toHaveCount(0);
+  await page.getByLabel('ภาษีมูลค่าเพิ่ม').fill('๐%');
+  await page.getByLabel('ยอดรวมที่ชำระ').fill('THB 10,000.01');
+  await expect(outcome.getByText(/เกินเพดานหมวด B/)).toBeVisible();
+  await expect(outcome.getByText(/ยอดก่อนภาษีบวกภาษี(?:มูลค่าเพิ่ม)?ไม่(?:เท่ากับ|ตรงกับ)ยอดรวม/)).toHaveCount(1);
+  await expect(outcome.getByText(/ภาษีมูลค่าเพิ่มไม่เท่ากับ 7%/)).toHaveCount(0);
+  await expect(outcome.getByText('ภาษีมูลค่าเพิ่มยังไม่ใช่ตัวเลขที่อ่านได้', { exact: true })).toHaveCount(0);
+  await expect(outcome.getByText('ยอดรวมต้องเป็นตัวเลขมากกว่า 0', { exact: true })).toHaveCount(0);
+  await page.getByLabel('ภาษีมูลค่าเพิ่ม').fill('7.00');
+  await page.getByLabel('ยอดรวมที่ชำระ').fill('107.00');
   await page.screenshot({ path: join(out, 'receipt-review.png') });
   // One confirmation covers every field and the flagged line: the verdict flips to ready, never to "approved".
   await expect(page.getByRole('button', { name: 'ให้ AI ตรวจทานต่อ' })).toHaveCount(0);

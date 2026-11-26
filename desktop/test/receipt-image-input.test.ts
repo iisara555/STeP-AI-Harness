@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { receiptVisionImages } from '../electron/receipt-image-input';
+import { RECEIPT_VISION_PAGES, receiptAlternateImageMime, receiptVisionImages } from '../electron/receipt-image-input';
 
 test('high-resolution detail images use source pixels, are bounded and carry full-page coordinates', () => {
   const operations: unknown[] = [];
@@ -31,6 +31,28 @@ test('high-resolution detail images use source pixels, are bounded and carry ful
 
 test('multiple-page input keeps every full page and refuses silent omission', () => {
   const image: any = { isEmpty: () => false, getSize: () => ({ width: 100, height: 200 }), toJPEG: () => Buffer.from('synthetic') };
-  assert.equal(receiptVisionImages([image, image, image]).images.length, 3);
-  assert.throws(() => receiptVisionImages([image, image, image, image]), /ATTACH_SCANNED_TOO_LONG/);
+  const pages = Array.from({ length: RECEIPT_VISION_PAGES }, () => image);
+  assert.equal(receiptVisionImages(pages).images.length, RECEIPT_VISION_PAGES);
+  assert.throws(() => receiptVisionImages([...pages, image]), /RECEIPT_VISION_PAGE_LIMIT/);
+});
+
+test('alternate image dimensions are bounded before decoding and TIFF has a receipt-specific fallback', () => {
+  const bmp = Buffer.alloc(54);
+  bmp.write('BM');
+  bmp.writeUInt32LE(40, 14);
+  bmp.writeInt32LE(1280, 18);
+  bmp.writeInt32LE(-900, 22);
+  assert.equal(receiptAlternateImageMime(bmp, 'bmp'), 'image/bmp');
+  bmp.writeInt32LE(200_000, 18);
+  assert.throws(() => receiptAlternateImageMime(bmp, 'bmp'), /RECEIPT_VISION_IMAGE_UNSUPPORTED/);
+  const webp = Buffer.alloc(30);
+  webp.write('RIFF', 0);
+  webp.write('WEBPVP8X', 8);
+  webp.writeUIntLE(599, 24, 3);
+  webp.writeUIntLE(399, 27, 3);
+  assert.equal(receiptAlternateImageMime(webp, 'webp'), 'image/webp');
+  webp[20] = 2;
+  assert.throws(() => receiptAlternateImageMime(webp, 'webp'), /RECEIPT_VISION_IMAGE_UNSUPPORTED/);
+  for (const extension of ['tif', 'tiff', 'webp', 'bmp'])
+    assert.throws(() => receiptAlternateImageMime(Buffer.from('synthetic invalid bytes'), extension), /RECEIPT_VISION_IMAGE_UNSUPPORTED/);
 });

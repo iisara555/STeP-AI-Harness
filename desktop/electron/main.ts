@@ -107,7 +107,8 @@ import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython, type OcrStatus, readOcrInput } from './ocr';
 import { installTyphoon, typhoonBuild } from './typhoon';
 import { ReceiptOperations } from './receipt-operations';
-import { receiptVisionImages } from './receipt-image-input';
+import { RECEIPT_VISION_PAGES, receiptVisionImages } from './receipt-image-input';
+import { decodeReceiptImage } from './receipt-image-decode';
 import { readReceiptVision } from './receipt-vision-recheck';
 import { isReceiptGeminiApi, receiptReadingMode } from './receipt-status';
 import { combineUsage } from './usage';
@@ -2038,10 +2039,16 @@ async function main() {
   async function receiptImages(receipt: NonNullable<typeof lastReceipt>) {
     const pages =
       receipt.extension === 'pdf'
-        ? (await pdfPageImages(receipt.path, join(root, 'src/vendor/privacy'), { bytes: receipt.bytes, maxPages: 3 })).map(page =>
-            nativeImage.createFromBuffer(Buffer.from(page.data, 'base64')),
-          )
-        : [nativeImage.createFromBuffer(receipt.bytes)];
+        ? (
+            await pdfPageImages(receipt.path, join(root, 'src/vendor/privacy'), {
+              bytes: receipt.bytes,
+              maxPages: RECEIPT_VISION_PAGES,
+            }).catch(error => {
+              if (errorCode(error) === 'ATTACH_SCANNED_TOO_LONG') throw new Error('RECEIPT_VISION_PAGE_LIMIT');
+              throw error;
+            })
+          ).map(page => nativeImage.createFromBuffer(Buffer.from(page.data, 'base64')))
+        : [await decodeReceiptImage(receipt.bytes, receipt.extension)];
     return { ...receiptVisionImages(pages), pages };
   }
   async function readCentralReceipt(input: any, signal: AbortSignal, check: () => void) {
@@ -4209,10 +4216,13 @@ async function main() {
         // The case's own chat goes with it; a case whose chat is still answering is not deleted under it.
         const packetId = receiptPackets.get(input.id).id;
         const chats = store.list<Session>('session').filter(s => s.claimPacketId === packetId);
-        if (chats.some(s => service.isActive(s.id) || coordinator.has(s.id))) throw new Error('RUN_ALREADY_ACTIVE');
-        await receiptPackets.delete(packetId);
+        if (chats.some(s => s.status === 'queued' || service.isActive(s.id) || coordinator.has(s.id)))
+          throw new Error('RUN_ALREADY_ACTIVE');
+        const deleted = receiptPackets.delete(packetId, () => {
+          for (const s of chats) store.remove('session', s.id);
+        });
+        await deleted;
         for (const s of chats) {
-          store.remove('session', s.id);
           for (const [aid, a] of attachments) if (a.sessionId === s.id) attachments.delete(aid);
         }
         return true;
@@ -4231,6 +4241,7 @@ async function main() {
           const review = input.review as ReviewedReceipt;
           if (!source || !review || review.checked !== true || review.sourceToken !== receiptSourceToken(source.bytes))
             throw new Error('PACKET_REVIEW_STALE');
+          if (!['pdf', 'png', 'jpg', 'jpeg'].includes(source.extension)) throw new Error('PACKET_SOURCE_LIMIT');
           return receiptPackets.add(
             input.id,
             input.revision,
@@ -4395,18 +4406,12 @@ async function main() {
             const sources = [];
             for (const source of packet.documents) {
               if (!source.pages.some(page => page.included)) continue;
-              const original = await receiptPackets.sourceBytes(packet, source);
-              if (source.extension === 'pdf') sources.push({ source, bytes: original });
-              else {
-                const image = nativeImage.createFromBuffer(original),
-                  size = image.getSize();
-                if (image.isEmpty() || size.width * size.height > 40_000_000) throw new Error('PACKET_SOURCE_LIMIT');
-                sources.push({ source: { ...source, extension: 'png' as const }, bytes: image.toPNG() });
-              }
+              sources.push({ source, bytes: await receiptPackets.sourceBytes(packet, source) });
             }
             if (!sources.length && !voucher && !disbursement) throw new Error('PACKET_EMPTY');
             bytes = await mergePacketPdf(cover, voucher, sources, disbursement);
           }
+          receiptPackets.get(packet.id, packet.revision);
           await writeFile(saved.filePath, bytes);
           exportPaths.add(saved.filePath);
           return { path: saved.filePath };
@@ -4558,6 +4563,8 @@ async function main() {
           store.remove('session', session.id);
           throw new Error('HOOK_BLOCKED');
         }
+        // A case can be deleted while its new chat is awaiting an organization hook.
+        if (claimPacketId) receiptPackets.get(claimPacketId);
         if (input.model !== undefined || input.effort) {
           session.model = modelChoice(connection, input.model);
           session.effort = effortChoice(connection, session.model ?? connection.model, input.effort);
@@ -5163,6 +5170,7 @@ async function main() {
             ...(reason ? { reason } : {}),
           };
           if (reason) diagnose('attach-refused', { reason, extension: extname(path).toLowerCase().slice(0, 8) });
+          if (attachingSession.claimPacketId) receiptPackets.get(attachingSession.claimPacketId);
           attachments.set(view.id, {
             view,
             text: sourceUsable ? ocrAttachmentSource(report, 'attachment:' + view.id) : '',

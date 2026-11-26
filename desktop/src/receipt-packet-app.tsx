@@ -20,7 +20,7 @@ import {
 import './receipt-packet.css';
 import { PaymentVoucherForm } from './afp-payment-voucher-form';
 import { AfpEvidencePanel } from './afp-evidence-panel';
-import { suggestPacketKind } from './afp-evidence';
+import { evidenceChecklist, suggestPacketKind } from './afp-evidence';
 import { ClaimCaseChat, type CaseChatApi } from './claim-case-chat';
 import { caseAi } from './case-ai-picker';
 import { caseContext, caseListMarks, caseListStatus } from './claim-case';
@@ -31,6 +31,14 @@ const DROPPABLE = /\.(pdf|png|jpe?g)$/i;
 const hasFiles = (event: React.DragEvent) => Array.from(event.dataTransfer?.types || []).includes('Files');
 
 type PacketStep = 'details' | 'evidence' | 'draft';
+
+const PACKET_REVIEW_LABELS: Record<ReturnType<typeof packetAssessment>['missing'][number], string> = {
+  'case-details': 'กรอกชื่อเรื่อง โครงการ และวัตถุประสงค์ให้ครบ',
+  documents: 'เพิ่มหลักฐานและเลือกหน้าที่จะรวมในชุด',
+  'source-review': 'ระบุประเภทและตรวจเทียบหลักฐานทุกหน้าที่เลือก',
+  'voucher-review': 'กรอกและตรวจเทียบใบสำคัญรับเงิน',
+  'disbursement-review': 'กรอกและตรวจเทียบใบสำคัญจ่ายสำหรับ AFP',
+};
 
 type Props = {
   active: boolean;
@@ -58,6 +66,7 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
     [saving, setSaving] = useState(false);
   const [error, setError] = useState(''),
     [dirty, setDirty] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState('');
   const draft = useRef<ReceiptPacket | null>(null),
     saved = useRef<ReceiptPacket | null>(null);
   const version = useRef(0),
@@ -68,12 +77,21 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
   const readingQueue = useRef<Promise<unknown>>(Promise.resolve());
   const [dragging, setDragging] = useState(false);
   const dragDepth = useRef(0);
-  const current = (next: ReceiptPacket) => {
+  const current = (next: ReceiptPacket | null) => {
+    if (draft.current?.id !== next?.id) {
+      setPacketStep('details');
+      setFormMode('receipt');
+      setClaimWaiting(false);
+      setConfirmDelete('');
+      dragDepth.current = 0;
+      setDragging(false);
+    }
     draft.current = next;
     saved.current = next;
     version.current = savedVersion.current = 0;
     setPacket(next);
     setDirty(false);
+    if (!next) return;
     setList(items => [
       {
         id: next.id,
@@ -87,7 +105,7 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
     ]);
   };
   const mutate = (update: (value: ReceiptPacket) => ReceiptPacket) => {
-    if (!draft.current) return;
+    if (!draft.current || draft.current.id !== packet?.id || action.current) return;
     const next = update(draft.current);
     if (
       ['title', 'project', 'purpose', 'mode'].some(
@@ -105,10 +123,12 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
     setDirty(true);
   };
   const persist = () => {
+    const packetId = draft.current?.id;
     const operation = chain.current
       .catch(() => undefined)
       .then(async () => {
-        if (!draft.current || !saved.current || version.current === savedVersion.current) return;
+        if (!draft.current || draft.current.id !== packetId || saved.current?.id !== packetId || version.current === savedVersion.current)
+          return;
         const target = { ...draft.current, revision: saved.current.revision },
           revision = version.current;
         setSaving(true);
@@ -131,7 +151,7 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
             draft.current = next;
             setPacket(next);
             setDirty(false);
-          } else if (draft.current) {
+          } else if (draft.current?.id === packetId) {
             draft.current = { ...draft.current, revision: next.revision };
             setPacket(draft.current);
           }
@@ -162,7 +182,9 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
     setBusy(true);
     setError('');
     try {
+      // Even a delete or reload that discards draft edits waits for a save already sent to the host.
       if (save) await persist();
+      else await chain.current.catch(() => undefined);
       await fn();
       return true;
     } catch (failure) {
@@ -199,7 +221,10 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
   useEffect(() => {
     if (!dirty || busy) return;
     const timer = setTimeout(() => {
-      void persist().catch(failure => setError(explainError(failure)));
+      if (action.current || draft.current?.id !== packet?.id) return;
+      void persist().catch(failure => {
+        if (!action.current && draft.current?.id === packet?.id) setError(explainError(failure));
+      });
     }, 500);
     return () => clearTimeout(timer);
   }, [packet, dirty, busy]);
@@ -220,14 +245,18 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
       if (next && next.schema === 'step-receipt-packet/v1') current(next);
     });
   const updateItem = (packetId: string, batchId: string, sourceId: string, change: Partial<ReadingItem>) =>
-    setReadings(all => ({
-      ...all,
-      [packetId]: (all[packetId] || []).map(batch =>
-        batch.id === batchId
-          ? { ...batch, items: batch.items.map(item => (item.sourceId === sourceId ? { ...item, ...change } : item)) }
-          : batch,
-      ),
-    }));
+    setReadings(all => {
+      const batches = all[packetId];
+      if (!batches?.some(batch => batch.id === batchId)) return all;
+      return {
+        ...all,
+        [packetId]: batches.map(batch =>
+          batch.id === batchId
+            ? { ...batch, items: batch.items.map(item => (item.sourceId === sourceId ? { ...item, ...change } : item)) }
+            : batch,
+        ),
+      };
+    });
   // New files are read on this computer one at a time: the local OCR takes one file at a time, and each line updates as it is read.
   const readFiles = (packetId: string, sources: { id: string; name: string }[]) => {
     if (!sources.length) return;
@@ -251,7 +280,8 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
       });
   };
   /** Adds picked or dropped files, then reads the ones that are new to the case. */
-  const addFiles = (files?: { name: string; bytes: Uint8Array; path: string }[]) =>
+  const addFiles = (files?: { name: string; bytes: Uint8Array; path: string }[]) => {
+    if (!packet || draft.current?.id !== packet.id) return;
     void run(async () => {
       const value = draft.current!;
       const before = new Set(value.documents.map(doc => doc.id));
@@ -265,11 +295,12 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
         next.documents.filter(doc => !before.has(doc.id)),
       );
     });
+  };
   const dropFiles = async (list: File[]) => {
     const usable = list.filter(file => DROPPABLE.test(file.name) && file.size > 0 && file.size <= PACKET_LIMITS.sourceBytes);
     const left = list.filter(file => !usable.includes(file)).map(file => file.name);
     if (left.length) notify(t('ข้ามไฟล์ที่ไม่ใช่ PDF, PNG หรือ JPG หรือใหญ่เกิน 25 MB: {0}', left.join(', ')), 'info');
-    if (!usable.length || !draft.current) return;
+    if (!usable.length || !packet || draft.current?.id !== packet.id) return;
     if (usable.length > PACKET_LIMITS.documents) {
       notify(explainError(new Error('PACKET_DOCUMENT_LIMIT')), 'error');
       return;
@@ -282,7 +313,8 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
           path: window.step?.filePath?.(file) || '',
         })),
       );
-      addFiles(files);
+      if (draft.current?.id === packet.id && !action.current) addFiles(files);
+      else notify(t('กลับไปยังเรื่องเดิม แล้ววางไฟล์อีกครั้ง'), 'info');
     } catch (failure) {
       notify(explainError(failure), 'error');
     }
@@ -290,7 +322,7 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
   const caseReadings = packet ? readings[packet.id] || [] : [];
   const settleReading = (batchId: string, settled: ReadingBatch['settled']) => {
     const value = draft.current;
-    if (!value) return;
+    if (!value || value.id !== packet?.id || action.current) return;
     const batch = (readings[value.id] || []).find(item => item.id === batchId);
     if (!batch) return;
     if (settled === 'applied') mutate(packet => applyReadings(packet, batch.items));
@@ -302,7 +334,7 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
   // "ถาม AI" anywhere in a case asks in that case's own chat; the main chat never opens.
   const askInCase = async (text: string, attachments: string[] = []) => {
     const value = draft.current;
-    if (!value) return false;
+    if (!value || value.id !== packet?.id || action.current) return false;
     if (
       !caseAi(
         chat,
@@ -314,7 +346,7 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
     }
     try {
       const target = chat.sessions.find(s => s.claimPacketId === value.id)?.id || (await chat.open(value.id, value.title));
-      if (!target) return false;
+      if (!target || draft.current?.id !== value.id || action.current) return false;
       await chat.send(target, text, caseContext(value), attachments);
       return true;
     } catch (failure) {
@@ -323,30 +355,23 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
     }
   };
   // Deleting asks once, in place on the case's own row, so nothing jumps and no window opens.
-  const [confirmDelete, setConfirmDelete] = useState('');
   const deleteCase = (id: string) =>
     void run(async () => {
       await call('receiptPacketDelete', { id });
       setConfirmDelete('');
       setReadings(({ [id]: _gone, ...rest }) => rest);
       const rest = list.filter(item => item.id !== id);
-      setList(rest);
+      setList(items => items.filter(item => item.id !== id));
       if (draft.current?.id === id) {
+        current(null);
         if (rest.length) current(await call('receiptPacketGet', { id: rest[0].id }));
-        else {
-          draft.current = saved.current = null;
-          setPacket(null);
-          setDirty(false);
-        }
-        setPacketStep('details');
       }
       await chat.refresh?.();
       notify(t('ลบเรื่องแล้ว'), 'success');
-    }, draft.current?.id !== id);
+    }, false);
   const openCase = (id: string) =>
     void run(async () => {
       current(await call('receiptPacketGet', { id }));
-      setPacketStep('details');
     });
   const ErrorNotice = () => (
     <div className="packet-error" role="alert">
@@ -369,6 +394,9 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
   );
   const total = packet ? voucherTotal(packet.voucher) : null;
   const assessment = packet ? packetAssessment(packet) : null;
+  const missingEvidence = packet
+    ? evidenceChecklist(packet).filter(item => item.status === 'missing' && item.source !== 'need-source')
+    : [];
   const kindOptions = Object.entries(PACKET_DOCUMENT_LABELS).map(([kind, label]) => (
     <option key={kind} value={kind}>
       {t(label)}
@@ -404,7 +432,6 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
             onClick={() =>
               void run(async () => {
                 current(await call('receiptPacketCreate'));
-                setPacketStep('details');
               })
             }
           >
@@ -426,7 +453,7 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
                 <li key={item.id} className="case-confirm" role="group" aria-label={t('ยืนยันการลบ')}>
                   <span>{t('ลบ “{0}”?', title)}</span>
                   <div>
-                    <button type="button" className="danger" disabled={busy} onClick={() => deleteCase(item.id)}>
+                    <button type="button" className="danger" disabled={busy || !loaded} onClick={() => deleteCase(item.id)}>
                       {t('ลบ')}
                     </button>
                     <button type="button" className="quiet" disabled={busy} autoFocus onClick={() => setConfirmDelete('')}>
@@ -442,7 +469,7 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
                   className="case-open"
                   aria-current={open ? 'true' : undefined}
                   title={status}
-                  disabled={busy}
+                  disabled={busy || !loaded}
                   onClick={() => !open && openCase(item.id)}
                 >
                   <strong>{title}</strong>
@@ -464,7 +491,7 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
                   className="icon case-delete"
                   aria-label={t('ลบเรื่อง “{0}”', title)}
                   title={t('ลบเรื่อง')}
-                  disabled={busy}
+                  disabled={busy || !loaded}
                   onClick={() => setConfirmDelete(item.id)}
                 >
                   <Trash2 size={14} />
@@ -542,6 +569,7 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
             </header>
             {error && <ErrorNotice />}
             <ClaimCaseChat
+              key={packet.id}
               packet={packet}
               chat={chat}
               ask={askInCase}
@@ -552,7 +580,7 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
               notify={notify}
               readings={caseReadings}
               busy={busy}
-              onAttach={() => addFiles()}
+              onAttachEvidence={() => addFiles()}
               onSettleReading={settleReading}
             />
           </div>
@@ -1004,10 +1032,27 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
                 <div className="packet-export">
                   <div>
                     <strong>
-                      {assessment!.status === 'prepared-for-afp'
+                      {assessment!.status === 'prepared-for-afp' && !missingEvidence.length
                         ? t('ข้อมูลที่ระบุตรวจแล้ว · รอ AFP ตรวจ')
                         : t('ยังมีข้อมูลหรือหลักฐานรอตรวจ')}
                     </strong>
+                    {assessment!.missing.length > 0 && (
+                      <ul className="packet-review-items">
+                        {assessment!.missing.map(item => (
+                          <li key={item}>{t(PACKET_REVIEW_LABELS[item])}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {missingEvidence.length > 0 && (
+                      <>
+                        <p className="small muted">{t('หลักฐานตามกรณีที่ยังไม่พบ')}</p>
+                        <ul className="packet-review-items">
+                          {missingEvidence.map(item => (
+                            <li key={item.id}>{t(item.label)}</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
                     <p className="small muted">{t('PDF รวมมีหน้าสรุปและเลขหน้าของหลักฐาน การตรวจครบยังไม่ใช่การอนุมัติจ่ายเงิน')}</p>
                   </div>
                   <button

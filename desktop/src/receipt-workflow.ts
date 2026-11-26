@@ -1,5 +1,6 @@
 import { parseReceiptDate, type ClaimCategory, type ComplianceItem, type DocumentType } from './receipt-compliance';
-import { amount, RECEIPT_FIELDS, type ReceiptField } from './receipt-vision';
+import { amount, vatInSatang } from './receipt-money';
+import { RECEIPT_FIELDS, type ReceiptField } from './receipt-vision';
 import { formatThaiDate } from './thai-date';
 
 const digits = (value: string) => value.replace(/[๐-๙]/g, d => String('๐๑๒๓๔๕๖๗๘๙'.indexOf(d)));
@@ -14,10 +15,9 @@ export function formValues(input: Partial<Record<ReceiptField, string>>): Record
         if (date) value = formatThaiDate(date);
       }
       if (['subtotal', 'vat', 'total'].includes(key) && value) {
-        const number = amount(value);
+        const number = key === 'vat' ? vatInSatang(value) / 100 : amount(value);
         // Only format whole amounts or up to two decimal places; preserve other readings for review.
-        if (Number.isFinite(number) && Math.abs(number) < 1e12 && /^-?[\d,\s]+(?:\.\d{1,2})?(?:\s*(?:บาท|฿|THB))?$/i.test(value))
-          value = number.toFixed(2);
+        if (Number.isFinite(number) && Math.abs(number) < 1e12) value = number.toFixed(2);
       }
       if (key === 'taxId' && /^[\d\s-]+$/.test(value)) value = value.replace(/[\s-]/g, '');
       return [key, value];

@@ -1686,6 +1686,12 @@ export const en: Record<string, string> = {
   'การเชื่อมต่อ AI นี้ยังไม่รับภาพ (รวมถึง PDF สแกน) เลือกโมเดลที่อ่านภาพได้ หรือใช้ไฟล์ต้นฉบับที่มีข้อความ':
     "This AI connection doesn't take images (scanned PDFs included). Pick a model that reads images, or use the original file with text",
   'PDF สแกนยาวเกิน 30 หน้า แบ่งไฟล์แล้วแนบทีละส่วน': 'The scanned PDF is over 30 pages. Split it and attach one part at a time',
+  'การอ่านใบเสร็จด้วย AI รองรับ PDF ไม่เกิน 3 หน้า โปรดแบ่งไฟล์แล้วอ่านทีละส่วน':
+    'AI receipt reading supports PDFs of up to 3 pages. Split the file and read one part at a time.',
+  'AI เปิดภาพใบเสร็จนี้ไม่ได้ โปรดใช้ OCR ในเครื่อง หรือบันทึกสำเนาเป็น PNG หรือ JPG แล้วเลือกใหม่':
+    'AI could not open this receipt image. Use local OCR or save a PNG or JPG copy and select it again.',
+  'ให้ AI อ่านใหม่': 'Read again with AI',
+  'กำลังอ่านใบเสร็จใหม่…': 'Reading the receipt again…',
   'PDF นี้เป็นภาพสแกน แต่บัญชี AI ที่เลือกอยู่ (เช่น GitHub Copilot) ยังรับภาพไม่ได้ และ OCR ในเครื่องยังไม่เปิด เปิด OCR ในเครื่อง หรือเปลี่ยนเป็น ChatGPT, Claude หรือ Gemini ด้วย API key แล้วแนบใหม่':
     'This PDF is a scan, but the selected AI account (such as GitHub Copilot) cannot take images and on-device OCR is not running. Start on-device OCR, or switch to ChatGPT, Claude or Gemini with an API key, then attach it again',
   'ส่งภาพให้ AI อ่านโดยตรง ตรวจว่ามีสิทธิ์ส่งข้อมูลในภาพก่อนส่ง':

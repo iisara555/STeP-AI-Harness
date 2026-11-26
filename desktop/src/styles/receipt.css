@@ -737,6 +737,18 @@
 .receipt-review-section p {
   line-height: 1.75;
 }
+.receipt-values > header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+.receipt-values h3 {
+  margin: 0;
+  font-size: var(--text-sm);
+}
 .receipt-form .receipt-value-row {
   display: grid;
   grid-template-columns: minmax(115px, 0.8fr) minmax(0, 1.3fr);

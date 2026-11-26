@@ -50,7 +50,7 @@ export type PacketSource = {
   bytes: number;
   reviewedReceipt?: {
     comparedAt: string;
-    values: Pick<ReviewedReceipt, 'recipient' | 'date' | 'description' | 'total'>;
+    values: Pick<ReviewedReceipt, 'recipient' | 'date' | 'description' | 'total' | 'merchantAddress' | 'items'>;
     /** The category the person kept on the receipt check, and the sub-category code when the suggestion matched it. */
     category?: ClaimCategory;
     code?: string;
@@ -86,6 +86,8 @@ export type ReviewedReceipt = {
   date: string;
   description: string;
   total: string;
+  merchantAddress?: string;
+  items?: VoucherItem[];
   kind: DocumentType | '';
   category?: ClaimCategory;
   code?: string;
@@ -291,7 +293,7 @@ export function thaiBahtWords(satang: number): string {
 
 export function packetAssessment(packet: ReceiptPacket) {
   const pages = packet.documents.flatMap(doc => doc.pages.filter(page => page.included));
-  const missing: string[] = [];
+  const missing: ('case-details' | 'documents' | 'source-review' | 'voucher-review' | 'disbursement-review')[] = [];
   if (!packet.title.trim() || !packet.project.trim() || !packet.purpose.trim()) missing.push('case-details');
   if (!pages.length) missing.push('documents');
   if (pages.some(page => !page.checked || page.kind === 'other')) missing.push('source-review');
@@ -322,7 +324,13 @@ export function packetAssessment(packet: ReceiptPacket) {
 
 // Pages that prove a payment. An invoice, quotation, transfer slip or payment voucher for the same purchase is not
 // counted, so one purchase is never added twice.
-const PAYMENT_PROOF_KINDS: PacketDocumentKind[] = ['tax_invoice', 'abbreviated_tax_invoice', 'receipt', 'cash_bill', 'receipt_voucher'];
+export const PAYMENT_PROOF_KINDS: readonly PacketDocumentKind[] = [
+  'tax_invoice',
+  'abbreviated_tax_invoice',
+  'receipt',
+  'cash_bill',
+  'receipt_voucher',
+];
 const CAP_SATANG = 1_000_000;
 export type CategoryTotal = {
   key: string;

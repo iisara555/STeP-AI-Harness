@@ -219,7 +219,7 @@ try {
   await page.getByRole('button', { name: /ผู้ช่วยเบิกจ่าย/ }).click();
   await page.getByRole('button', { name: 'เลือกใบเสร็จ', exact: true }).click();
   await pending('vision');
-  await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'ตรวจ/แก้ข้อมูลที่อ่านได้', exact: true })).toBeVisible();
   const corrections = {
     'ผู้ออกใบเสร็จ / ร้านค้า': 'ร้านที่คนตรวจแก้',
     เลขที่ใบเสร็จ: 'PERSON-002',

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowUp, Check, ImagePlus, LoaderCircle, Paperclip, Plus, Square, X } from './icons';
 import { t } from './i18n';
 import { ContextWindowGauge } from './context-window-gauge';
@@ -6,7 +6,7 @@ import { RichText } from './ui';
 import { errorText, explainError } from './messages';
 import { appendStream, composerRequest, discardStream, sendBlocker, STREAM_LIMIT, turnBreak } from './run-flow';
 import { CaseAiPicker, caseAi, type CaseAiSource } from './case-ai-picker';
-import { ClaimInterview, type InterviewHandle } from './claim-interview-panel';
+import { ClaimInterview, inspectClaimAnswer, type InterviewHandle, type OpenInterviewQuestion } from './claim-interview-panel';
 import { applyClaimSummary, type ClaimSummary } from './claim-interview';
 import { applyClaimUpdate, claimUpdateRows, pendingClaimUpdate, splitClaimReply, type ClaimUpdate } from './claim-case';
 import type { ReceiptPacket } from './receipt-packet';
@@ -50,7 +50,7 @@ type Props = {
   /** Files added to this case and what reading each one found. */
   readings: ReadingBatch[];
   busy: boolean;
-  onAttach: () => void;
+  onAttachEvidence: () => void;
   onSettleReading: (batchId: string, settled: 'applied' | 'dismissed') => void;
 };
 
@@ -68,24 +68,28 @@ export function ClaimCaseChat({
   notify,
   readings,
   busy,
-  onAttach,
+  onAttachEvidence,
   onSettleReading,
 }: Props) {
   const session = chat.sessions.find(s => s.claimPacketId === packet.id);
   const interview = useRef<InterviewHandle>(null);
   const end = useRef<HTMLDivElement | null>(null);
   const [text, setText] = useState('');
-  const [question, setQuestion] = useState<'text' | 'amount' | 'date' | null>(null);
+  const [question, setQuestion] = useState<OpenInterviewQuestion | null>(null);
   const [stream, setStream] = useState('');
   const [sending, setSending] = useState(false);
   const [dismissed, setDismissed] = useState<Record<string, true>>({});
   const [interviewWaiting, setInterviewWaiting] = useState(false);
   // Files and pictures for the AI to read with the next message, like the main chat's; case evidence is separate.
   const [files, setFiles] = useState<Attachment[]>([]);
+  const attachmentOwners = useRef(new Map<string, string>());
+  const mounted = useRef(false);
   const [attaching, setAttaching] = useState(false);
   const running = sending || ['running', 'queued'].includes(session?.status || '');
   const id = session?.id;
   const ai = caseAi(chat, session);
+  const sendsToAi =
+    !question || files.length > 0 || (ai.ready && text.trim() && inspectClaimAnswer(question.id, text.trim(), true).kind === 'unread');
   useEffect(() => {
     if (!id) return;
     return onEvent(event => {
@@ -96,11 +100,15 @@ export function ClaimCaseChat({
       if (event.type === 'changed') setStream('');
     });
   }, [id, onEvent]);
-  useEffect(() => {
-    setText('');
-    setStream('');
-    setFiles([]);
-  }, [packet.id]);
+  useLayoutEffect(() => {
+    mounted.current = true;
+    const owners = attachmentOwners.current;
+    return () => {
+      mounted.current = false;
+      for (const [attachmentId, owner] of owners) void call('detach', { id: owner, attachmentId }).catch(() => {});
+      owners.clear();
+    };
+  }, [call]);
   const messages = (session?.messages || []).filter(message => message.role !== 'status' || message.text !== 'CANCELLED');
   const lastAnswer = messages.map(message => message.role).lastIndexOf('assistant');
   const proposal = (() => {
@@ -130,22 +138,31 @@ export function ClaimCaseChat({
     setAttaching(true);
     try {
       const target = id || (await chat.open(packet.id, packet.title));
+      if (!mounted.current) return;
       if (!target) return needAi();
       const file: Attachment | null = await call('attach', { id: target, vision });
-      if (file) setFiles(list => [...list.filter(f => f.id !== file.id), file]);
+      if (!file) return;
+      if (!mounted.current) {
+        await call('detach', { id: target, attachmentId: file.id }).catch(() => {});
+        return;
+      }
+      attachmentOwners.current.set(file.id, target);
+      setFiles(list => [...list.filter(f => f.id !== file.id), file]);
     } catch (failure) {
-      notify(explainError(failure), 'error');
+      if (mounted.current) notify(explainError(failure), 'error');
     } finally {
       setAttaching(false);
     }
   };
   const detach = (file: Attachment) => {
     setFiles(list => list.filter(f => f.id !== file.id));
-    if (id) void call('detach', { id, attachmentId: file.id }).catch(() => {});
+    const owner = attachmentOwners.current.get(file.id);
+    attachmentOwners.current.delete(file.id);
+    if (owner) void call('detach', { id: owner, attachmentId: file.id }).catch(() => {});
   };
   const submit = async () => {
     const value = text.trim();
-    if (running || attaching) return;
+    if (busy || running || attaching) return;
     if (files.length) {
       const blocker = sendBlocker({ preparingImage: false, busy: false, files });
       if (blocker) return notify(blocker.text, blocker.kind);
@@ -158,6 +175,7 @@ export function ClaimCaseChat({
           files.map(f => f.id),
         )
       ) {
+        for (const file of files) attachmentOwners.current.delete(file.id);
         setText(current => (current.trim() === value ? '' : current));
         setFiles([]);
       }
@@ -244,6 +262,12 @@ export function ClaimCaseChat({
         )}
         <div ref={end} className="case-chat-end" />
       </div>
+      <div className="case-evidence-tools">
+        <button type="button" className="quiet" disabled={busy} onClick={onAttachEvidence}>
+          <Paperclip size={15} />
+          {t('แนบหลักฐานในเครื่อง')}
+        </button>
+      </div>
       <form
         className="case-composer"
         onSubmit={event => {
@@ -275,8 +299,9 @@ export function ClaimCaseChat({
           rows={1}
           value={text}
           maxLength={4000}
-          inputMode={question === 'amount' ? 'decimal' : undefined}
-          placeholder={t(question ? HINT[question] : ai.ready ? 'ถามหรือพิมพ์ข้อมูลเรื่องนี้' : 'เลือก AI ก่อนถามเรื่องอื่น')}
+          disabled={busy}
+          inputMode={question?.input === 'amount' ? 'decimal' : undefined}
+          placeholder={t(question ? HINT[question.input] : ai.ready ? 'ถามหรือพิมพ์ข้อมูลเรื่องนี้' : 'เลือก AI ก่อนถามเรื่องอื่น')}
           onChange={event => setText(event.target.value)}
           onKeyDown={event => {
             if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -293,7 +318,7 @@ export function ClaimCaseChat({
             className="icon"
             aria-label={t('แนบไฟล์ให้ AI อ่าน')}
             title={t('ตรวจและแนบเอกสารให้ AI อ่านในเรื่องนี้')}
-            disabled={running || attaching}
+            disabled={busy || running || attaching}
             onClick={() => void attach(false)}
           >
             <Plus size={16} />
@@ -304,27 +329,17 @@ export function ClaimCaseChat({
               className="icon"
               aria-label={t('แนบภาพให้ AI')}
               title={t('ตรวจและแนบภาพต้นฉบับให้ AI')}
-              disabled={running || attaching}
+              disabled={busy || running || attaching}
               onClick={() => void attach(true)}
             >
               <ImagePlus size={16} />
             </button>
           )}
-          <button
-            type="button"
-            className="icon case-attach"
-            aria-label={t('แนบหลักฐานหลายไฟล์')}
-            title={t('เพิ่มเป็นหลักฐานในเรื่องนี้ (อ่านในเครื่อง ไม่ส่งให้ AI)')}
-            disabled={busy}
-            onClick={onAttach}
-          >
-            <Paperclip size={16} />
-          </button>
           <span className="spacer" />
           <CaseAiPicker
             source={chat}
             session={session}
-            disabled={running}
+            disabled={busy || running}
             call={call}
             open={connectionId => chat.open(packet.id, packet.title, connectionId)}
             refresh={chat.refresh}
@@ -335,13 +350,9 @@ export function ClaimCaseChat({
               <Square size={14} />
             </button>
           ) : (
-            <button
-              type="submit"
-              className="icon case-send"
-              aria-label={t('ส่ง')}
-              disabled={(!text.trim() && !files.length) || running || attaching}
-            >
+            <button type="submit" className="case-send" disabled={(!text.trim() && !files.length) || busy || running || attaching}>
               <ArrowUp size={16} />
+              {t(sendsToAi ? 'ส่งให้ AI' : 'ตอบ')}
             </button>
           )}
         </div>

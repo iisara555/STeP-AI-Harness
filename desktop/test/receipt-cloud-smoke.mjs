@@ -1,6 +1,7 @@
 // Actual Electron renderer -> IPC -> encrypted identity -> fixed central HTTP service. Synthetic accounts/images only.
 import { _electron as electron, expect } from '@playwright/test';
 import { build } from 'esbuild';
+import { PDFDocument } from 'pdf-lib';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -35,7 +36,11 @@ const server = createServer((req, res) => {
         text: JSON.stringify({
           fields: {
             merchant: { value: 'ร้านสังเคราะห์', evidence: 'ร้านสังเคราะห์' },
-            total: { value: '107.00', evidence: '107.00', region: { page: 1, x: 0.5, y: 0.6, width: 0.4, height: 0.1 } },
+            total: {
+              value: received.length === 1 ? '107.00' : '120.00',
+              evidence: received.length === 1 ? '107.00' : '120.00',
+              region: { page: 1, x: 0.5, y: 0.6, width: 0.4, height: 0.1 },
+            },
           },
           documentType: 'cash_bill',
           signatures: {
@@ -146,14 +151,42 @@ try {
   assert.equal(received.length, 0);
   await page.getByRole('button', { name: 'เลือกใบเสร็จ', exact: true }).click();
   await consent.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
-  await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
+  await expect(page.getByLabel('ยอดรวมที่ชำระ')).toBeVisible();
   await expect(page.getByLabel('ยอดรวมที่ชำระ')).toHaveValue('107.00');
   await expect(page.getByLabel('ลายเซ็นผู้รับเงิน', { exact: true })).toHaveValue('absent');
   await expect(page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/)).not.toBeChecked();
   assert.equal(received.length, 1);
+  const issuer = page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า');
+  const confirmation = page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/);
+  const reread = page.getByRole('button', { name: 'ให้ AI อ่านใหม่', exact: true });
+  await issuer.fill('ร้านที่ตรวจจากต้นฉบับ');
+  await confirmation.check();
+  await reread.click();
+  await consent.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
+  await expect(reread).toBeEnabled();
+  await expect(confirmation).toBeChecked();
+  assert.equal(received.length, 1);
+  await reread.click();
+  await consent.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
+  await expect(page.getByLabel('ยอดรวมที่ชำระ')).toHaveValue('120.00');
+  await expect(issuer).toHaveValue('ร้านที่ตรวจจากต้นฉบับ');
+  await expect(confirmation).not.toBeChecked();
+  assert.equal(received.length, 2);
   const snapshot = await page.evaluate(() => window.step.call('snapshot'));
   assert.equal(snapshot.connections[0].provider, 'antigravity');
   assert.ok(!JSON.stringify(snapshot).includes('synthetic.id.token'));
+  const pdf = await PDFDocument.create();
+  for (let index = 0; index < 4; index++) pdf.addPage();
+  const longFile = join(home, 'four-pages.pdf');
+  await writeFile(longFile, await pdf.save());
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+  }, longFile);
+  await page.getByRole('button', { name: 'เลือกใบเสร็จ', exact: true }).click();
+  await expect(page.locator('.receipt-error')).toContainText(
+    'การอ่านใบเสร็จด้วย AI รองรับ PDF ไม่เกิน 3 หน้า โปรดแบ่งไฟล์แล้วอ่านทีละส่วน',
+  );
+  assert.equal(received.length, 2, 'a PDF above the image-reading limit is rejected before transmission');
   await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ ...policy, features: { receiptVision: false } }));
   // Policy files are polled every five seconds; allow a complete poll plus renderer/host scheduling.
   await expect.poll(async () => (await page.evaluate(() => window.step.call('ocrStatus'))).vision, { timeout: 15000 }).toBe(false);
@@ -166,7 +199,7 @@ try {
     }
   });
   assert.match(denied, /VISION_DISABLED/);
-  assert.equal(received.length, 1);
+  assert.equal(received.length, 2);
   assert.deepEqual(errors, []);
   console.log(
     'Central OCR smoke passed: Antigravity chat, Google identity, cancellation, image grouping, source evidence, unconfirmed fields and policy denial; synthetic fixtures only.',
