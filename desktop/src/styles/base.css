@@ -1,6 +1,6 @@
 body {
   margin: 0;
-  font-family: 'IBM Plex Sans Thai', 'Leelawadee UI', 'Thonburi', system-ui, sans-serif;
+  font-family: var(--font-ui);
   color: var(--text);
   background: var(--surface);
   font-size: var(--text-base);
