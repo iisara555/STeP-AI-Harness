@@ -1998,6 +1998,7 @@ export const en: Record<string, string> = {
   'ชวนคิด เปิดมุมมองใหม่ เชื่อมจุด แล้วพาไปหาโอกาสและผลลัพธ์ที่มีความหมาย':
     'Asks questions, opens new perspectives, connects the dots and leads to opportunity and impact',
   สำเนียงภาษา: 'Dialect',
+  สำเนียงจะใช้เมื่อผู้ช่วยตอบเป็นภาษาไทย: 'Dialect applies to replies in Thai.',
   ใช้ร่วมกับสไตล์ด้านบนได้: 'Can be combined with the style above',
   ภาษาไทยมาตรฐาน: 'Standard Thai',
   ไม่เพิ่มสำเนียงท้องถิ่น: 'No regional dialect',

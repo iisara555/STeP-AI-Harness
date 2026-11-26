@@ -219,6 +219,7 @@ try {
   await earlierRuns.getByRole('button', { name: 'เปิดผล' }).click();
   await expect(jobs).toHaveCount(0);
   await page.locator('[data-tour="schedules"]').click();
+  await expect(earlierRuns.getByRole('button', { name: 'เปิดผล' })).toBeVisible();
   await page.screenshot({ path: 'release/qa/phase4-schedules.png' });
   await jobs.getByRole('button', { name: 'ลบงาน Updated recurring draft', exact: true }).click();
   await page

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AccountQuotaMenuSummary, InlineQuotaChip } from './usage';
 import {
   AlertTriangle,
@@ -50,6 +50,8 @@ import { toolRequests } from './tools';
 import { vimEdit } from './commands';
 import { CHAT_STARTERS, PERMISSION_SHORT, ScheduledTasks, SkillsHub, checkStillRunning } from './app-shared';
 import type { AppView } from './use-workspace';
+
+const caretAtEnd = (input: HTMLTextAreaElement) => input.selectionStart === input.value.length && input.selectionEnd === input.value.length;
 
 /** The chat: welcome, messages, plan and questions, and the composer; or the schedules and Skill pages. */
 export function ConversationView({ v }: { v: AppView }) {
@@ -127,6 +129,7 @@ export function ConversationView({ v }: { v: AppView }) {
     setPacksOpen,
     setPendingSource,
     setQuery,
+    setSlashAtCaret,
     setSlashIndex,
     setSuggestedSkill,
     setToolRequest,
@@ -137,6 +140,7 @@ export function ConversationView({ v }: { v: AppView }) {
     setWorkMode,
     setWorkflow,
     settings,
+    slashAtCaret,
     slashIndex,
     slash,
     slashMatches,
@@ -172,6 +176,13 @@ export function ConversationView({ v }: { v: AppView }) {
   // writes its answer from what it has read (the tool loop's final turn). Offered on the stop button after two minutes,
   // once per run.
   const [writeNowAt, setWriteNowAt] = useState(0);
+  const [expandedScheduleHistory, setExpandedScheduleHistory] = useState<string[]>([]);
+  const activeSlashOption = useRef<HTMLButtonElement>(null);
+  const activeSlashSkill =
+    !questionPending && slashAtCaret && !(snapshot.settings.vimMode && vimNormal) ? slashMatches[slashIndex] || slashMatches[0] : undefined;
+  useEffect(() => {
+    if (activeSlashSkill) activeSlashOption.current?.scrollIntoView({ block: 'nearest' });
+  }, [activeSlashSkill]);
   // A refresh can land after main saved the answer but before it reports the run finished; the saved message
   // then already shows the streamed text, so the live copy is hidden instead of appearing twice.
   const { liveText, streamSaved } = liveAnswer(stream, session?.messages.at(-1));
@@ -202,6 +213,13 @@ export function ConversationView({ v }: { v: AppView }) {
           defaultConnection={connectionId}
           workspace={snapshot.settings.workspace}
           onConnections={openAiSettings}
+          expandedHistory={expandedScheduleHistory}
+          onHistoryToggle={(id, open) =>
+            setExpandedScheduleHistory(ids => {
+              if (open === ids.includes(id)) return ids;
+              return open ? [...ids, id] : ids.filter(item => item !== id);
+            })
+          }
           onOpen={id =>
             void action(async () => {
               await refresh();
@@ -858,26 +876,32 @@ export function ConversationView({ v }: { v: AppView }) {
                   </button>
                 </div>
               )}
-              {slashMatches.length > 0 && (
-                <div className="slash-menu" role="listbox" aria-label={t('เลือก Skill')}>
-                  {slashMatches.map((s, i) => (
-                    <button
-                      key={s.name}
-                      type="button"
-                      role="option"
-                      aria-selected={i === slashIndex}
-                      className={i === slashIndex ? 'active' : ''}
-                      onMouseDown={e => e.preventDefault()}
-                      onClick={() => useSkill(s.name, true)}
-                    >
-                      <span className="slash-title">
-                        {s.title}
-                        {forTeam(s) && <small className="team-mark">{t('ทีมคุณ')}</small>}
-                      </span>
-                      <small className="slash-desc">{s.description}</small>
-                      <code>/{s.name}</code>
-                    </button>
-                  ))}
+              {activeSlashSkill && (
+                <div id="composer-skills" className="slash-menu" role="listbox" aria-label={t('เลือก Skill')}>
+                  {slashMatches.map(s => {
+                    const active = s.name === activeSlashSkill.name;
+                    return (
+                      <button
+                        key={s.name}
+                        id={`composer-skill-${s.name}`}
+                        ref={active ? activeSlashOption : undefined}
+                        type="button"
+                        tabIndex={-1}
+                        role="option"
+                        aria-selected={active}
+                        className={active ? 'active' : ''}
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => useSkill(s.name, true)}
+                      >
+                        <span className="slash-title">
+                          {s.title}
+                          {forTeam(s) && <small className="team-mark">{t('ทีมคุณ')}</small>}
+                        </span>
+                        <small className="slash-desc">{s.description}</small>
+                        <code>/{s.name}</code>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
               {!!session?.sideQuestions?.length && (
@@ -933,6 +957,8 @@ export function ConversationView({ v }: { v: AppView }) {
                 ref={composerRef}
                 hidden={questionPending}
                 aria-label={t('พิมพ์คำขอ')}
+                aria-controls={activeSlashSkill ? 'composer-skills' : undefined}
+                aria-activedescendant={activeSlashSkill ? `composer-skill-${activeSlashSkill.name}` : undefined}
                 placeholder={
                   forced
                     ? t('บอกงานสำหรับ {0}…', forced.title)
@@ -941,8 +967,13 @@ export function ConversationView({ v }: { v: AppView }) {
                       : t('พิมพ์งานที่อยากให้ช่วย หรือพิมพ์ / เพื่อเลือก Skill')
                 }
                 value={query}
+                onFocus={e => setSlashAtCaret(Boolean(slash) && caretAtEnd(e.currentTarget))}
+                onSelect={e => setSlashAtCaret(caretAtEnd(e.currentTarget))}
+                onBlur={() => setSlashAtCaret(false)}
                 onChange={e => {
-                  setQuery(e.target.value);
+                  const atEnd = caretAtEnd(e.currentTarget);
+                  setQuery(e.currentTarget.value);
+                  setSlashAtCaret(atEnd);
                   setSlashIndex(0);
                 }}
                 onPaste={e => {
@@ -964,16 +995,17 @@ export function ConversationView({ v }: { v: AppView }) {
                       return;
                     }
                   }
-                  if (slash && e.key === 'Escape') {
+                  const atSlash = slash && caretAtEnd(e.currentTarget) && !e.altKey && !e.ctrlKey && !e.metaKey;
+                  if (atSlash && e.key === 'Escape') {
                     e.preventDefault();
                     setQuery(query.slice(0, slash.start).trimEnd());
                     return;
                   }
-                  if (slashMatches.length && !e.shiftKey && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter'].includes(e.key)) {
+                  if (atSlash && activeSlashSkill && !e.shiftKey && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter'].includes(e.key)) {
                     e.preventDefault();
                     if (e.key === 'ArrowDown') setSlashIndex(i => Math.min(i + 1, slashMatches.length - 1));
                     else if (e.key === 'ArrowUp') setSlashIndex(i => Math.max(i - 1, 0));
-                    else useSkill(slashMatches[slashIndex]?.name || slashMatches[0].name, true);
+                    else useSkill(activeSlashSkill.name, true);
                     return;
                   }
                   if (e.key === 'Backspace' && !query && forcedSkill) {

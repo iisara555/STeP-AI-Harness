@@ -197,6 +197,9 @@
 .profile-photo-picker {
   margin-top: var(--space-2);
 }
+.profile-photo-error {
+  color: var(--danger);
+}
 .settings-content .avatar-picker {
   max-height: 290px;
   overflow-y: auto;

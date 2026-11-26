@@ -62,7 +62,7 @@ test('Standard adds nothing; a style adds its fragment below the wording-only ru
 
   for (const fragment of [...Object.values(INTERACTION_STYLES), ...Object.values(LANGUAGE_STYLES)].map(s => s.fragment))
     assert.match(fragment, /never (override|change) facts/);
-  assert.match(LANGUAGE_STYLES['northern-thai'].fragment, /formal artifacts[\s\S]*Standard Thai/);
+  assert.match(LANGUAGE_STYLES['northern-thai'].fragment, /formal Thai artifacts[\s\S]*Standard Thai/);
 
   assert.equal(interactionStyleId('witty'), 'witty');
   assert.equal(interactionStyleId(undefined), 'standard');
@@ -148,10 +148,14 @@ test('changing reply settings in an existing task applies to the next generic dr
   await service.run(session.id, 'ช่วยวางรายการงานสั้น ๆ', '');
   store.put('settings', 'main', { ...settings, chatLanguage: 'en', interactionStyle: 'ob-oon', languageStyle: 'northern-thai' });
   await service.run(session.id, 'ช่วยวางรายการอีกชุด', '');
-  assert.equal(systems.length, 2);
+  store.put('settings', 'main', { ...settings, chatLanguage: 'auto', languageStyle: 'northern-thai' });
+  await service.run(session.id, 'Please make another short list', '');
+  assert.equal(systems.length, 3);
   assert.match(systems[0], /Preferred language for chat replies: Thai/);
   assert.match(systems[0], /Witty[\s\S]*Northern Thai/);
   assert.match(systems[1], /Preferred language for chat replies: English/);
   assert.match(systems[1], /Ob-Oon/);
   assert.doesNotMatch(systems[1], /Reply in Thai\.|Northern Thai|Witty/);
+  assert.doesNotMatch(systems[2], /Preferred language for chat replies:/);
+  assert.match(systems[2], /When the reply is in Thai, use a light Northern Thai/);
 });

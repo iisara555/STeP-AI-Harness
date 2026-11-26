@@ -83,16 +83,27 @@ try {
     photo,
     Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGMw7Vz8HwAEuQJhv9Bd3QAAAABJRU5ErkJggg==', 'base64'),
   );
-  await app.evaluate(({ dialog }, file) => {
-    const original = dialog.showOpenDialog;
-    dialog.showOpenDialog = async () => {
-      dialog.showOpenDialog = original;
-      return { canceled: false, filePaths: [file] };
-    };
-  }, photo);
+  const selectPhoto = file =>
+    app.evaluate(({ dialog }, file) => {
+      const original = dialog.showOpenDialog;
+      dialog.showOpenDialog = async () => {
+        dialog.showOpenDialog = original;
+        return { canceled: false, filePaths: [file] };
+      };
+    }, file);
   await open();
   await page.getByRole('button', { name: 'เปลี่ยนรูป' }).click();
-  await page.getByRole('button', { name: 'เลือกรูปโปรไฟล์จากเครื่อง' }).click();
+  const photoPicker = page.getByRole('button', { name: 'เลือกรูปโปรไฟล์จากเครื่อง' });
+  const photoError = page.locator('.avatar-section').getByRole('alert');
+  const invalidPhoto = join(home, 'invalid.png');
+  await writeFile(invalidPhoto, 'Synthetic invalid image');
+  await selectPhoto(invalidPhoto);
+  await photoPicker.click();
+  await expect(photoError).toContainText('เลือก PNG หรือ JPEG ใหม่');
+  await expect(page.getByRole('button', { name: 'บันทึกการเปลี่ยนแปลง' })).toBeDisabled();
+  await selectPhoto(photo);
+  await photoPicker.click();
+  await expect(photoError).toHaveCount(0);
   const portrait = page.locator('.settings-profile-summary .custom-avatar img');
   await expect(portrait).toHaveAttribute('src', /^data:image\/png;base64,/);
   await save();

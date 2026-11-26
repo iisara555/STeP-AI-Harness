@@ -63,6 +63,8 @@ export function ScheduledTasks({
   defaultConnection,
   workspace,
   onConnections,
+  expandedHistory,
+  onHistoryToggle,
   onOpen,
 }: {
   api: DesktopAPI;
@@ -71,6 +73,8 @@ export function ScheduledTasks({
   defaultConnection: string;
   workspace: string;
   onConnections: () => void;
+  expandedHistory: string[];
+  onHistoryToggle: (id: string, open: boolean) => void;
   onOpen: (sessionId: string) => void;
 }) {
   const ready = connections.filter(c => c.ready && !c.policyBlocked);
@@ -221,7 +225,11 @@ export function ScheduledTasks({
                       </span>
                     )}
                     {earlierRuns.length > 0 && (
-                      <details className="schedule-run-history">
+                      <details
+                        className="schedule-run-history"
+                        open={expandedHistory.includes(job.id)}
+                        onToggle={e => onHistoryToggle(job.id, e.currentTarget.open)}
+                      >
                         <summary>{t('รอบก่อนหน้า {0} รายการ', earlierRuns.length)}</summary>
                         <ul>
                           {earlierRuns.map(previous => (
@@ -326,6 +334,7 @@ export function ScheduledTasks({
           onCancel={() => setRemove(null)}
           onConfirm={async () => {
             await api.call('automationRemove', { id: remove.id });
+            onHistoryToggle(remove.id, false);
             setRemove(null);
             await load();
           }}

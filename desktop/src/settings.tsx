@@ -160,6 +160,7 @@ export function SettingsPanel({
   const [interactionStyle, setInteractionStyle] = useState(interactionStyleId(snapshot.settings.interactionStyle)),
     [languageStyle, setLanguageStyle] = useState(languageStyleId(snapshot.settings.languageStyle));
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState<unknown>();
   const [settingsSearch, setSettingsSearch] = useState('');
   const [chatLanguage, setChatLanguage] = useState(snapshot.settings.chatLanguage || 'auto');
   const [saved, setSaved] = useState(false);
@@ -221,6 +222,22 @@ export function SettingsPanel({
       await refresh();
     } catch (e) {
       onError(e);
+    } finally {
+      setBusy('');
+    }
+  };
+  const selectAvatar = (value: string) => {
+    setAvatar(value);
+    setAvatarError(undefined);
+  };
+  const pickProfilePhoto = async () => {
+    setAvatarError(undefined);
+    setBusy('avatar');
+    try {
+      const photo = await call('profileAvatarPick');
+      if (typeof photo === 'string') selectAvatar(photo);
+    } catch (error) {
+      setAvatarError(error);
     } finally {
       setBusy('');
     }
@@ -349,20 +366,15 @@ export function SettingsPanel({
           </div>
           {avatarOpen && (
             <div className="avatar-section">
-              <button
-                type="button"
-                className="quiet profile-photo-picker"
-                disabled={Boolean(busy)}
-                onClick={() =>
-                  void run('avatar', async () => {
-                    const photo = await call('profileAvatarPick');
-                    if (typeof photo === 'string') setAvatar(photo);
-                  })
-                }
-              >
+              <button type="button" className="quiet profile-photo-picker" disabled={Boolean(busy)} onClick={() => void pickProfilePhoto()}>
                 {t('เลือกรูปโปรไฟล์จากเครื่อง')}
               </button>
               <p className="muted small">{t('เลือกรูป PNG หรือ JPEG รูปโปรไฟล์เก็บไว้ในเครื่องนี้')}</p>
+              {avatarError != null && (
+                <p className="small profile-photo-error" role="alert">
+                  {explainError(avatarError)}
+                </p>
+              )}
               <div className="avatar-picker" role="radiogroup" aria-label={t('รูปโปรไฟล์')}>
                 <button
                   type="button"
@@ -371,7 +383,8 @@ export function SettingsPanel({
                   aria-label={t('ใช้ตัวอักษรแรกของชื่อ')}
                   title={t('ใช้ตัวอักษรแรกของชื่อ')}
                   className="avatar-option"
-                  onClick={() => setAvatar('')}
+                  disabled={busy === 'avatar'}
+                  onClick={() => selectAvatar('')}
                 >
                   <Avatar fallback={initial(userName) || <UserRound size={20} />} />
                 </button>
@@ -384,7 +397,8 @@ export function SettingsPanel({
                     aria-label={t('ภาพที่ {0}', i + 1)}
                     title={t('ภาพที่ {0}', i + 1)}
                     className="avatar-option"
-                    onClick={() => setAvatar(a.id)}
+                    disabled={busy === 'avatar'}
+                    onClick={() => selectAvatar(a.id)}
                   >
                     <Avatar id={a.id} fallback="" />
                   </button>
@@ -504,6 +518,7 @@ export function SettingsPanel({
             </label>
           )}
           <h3>{t('สำเนียงภาษา')}</h3>
+          {chatLanguage === 'en' && <p className="muted small">{t('สำเนียงจะใช้เมื่อผู้ช่วยตอบเป็นภาษาไทย')}</p>}
           <div className="style-grid speaking-styles" role="radiogroup" aria-label={t('สำเนียงภาษา')}>
             {(
               [

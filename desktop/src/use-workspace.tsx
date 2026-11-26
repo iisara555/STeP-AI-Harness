@@ -172,7 +172,8 @@ export function useWorkspace() {
     // "ลองใช้ Skill": the Skill the Router finds clearly fits what is being typed, and the ones the person waved away.
     [suggestedSkill, setSuggestedSkill] = useState(''),
     [dismissedSkills, setDismissedSkills] = useState<string[]>([]),
-    [slashIndex, setSlashIndex] = useState(0);
+    [slashIndex, setSlashIndex] = useState(0),
+    [slashAtCaret, setSlashAtCaret] = useState(false);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const { toasts, setToasts, toastId, dismiss, notify } = useToasts();
   const runningIds = useRef(new Map<string, object>());
@@ -1462,6 +1463,8 @@ export function useWorkspace() {
     setDismissedSkills,
     slashIndex,
     setSlashIndex,
+    slashAtCaret,
+    setSlashAtCaret,
     composerRef,
     toasts,
     setToasts,
