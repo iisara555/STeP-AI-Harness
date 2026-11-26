@@ -8,7 +8,7 @@ _Last updated: 2026-11-26_
 
 ## In flight
 
-- **Chat composer layout (2026-11-26)**: group attachments and tool settings, give the model and send actions their own space, and place context and quota readings in a separate status row. The controls reflow with the chat pane width when the document panel is open. Remains: pull request review.
+- **Chat composer layout (2026-11-26)**: group attachments and tool settings, give the model and send actions their own space, and place context and quota readings in a separate status row. The controls reflow with the chat pane width when the document panel is open. The gauge names STeP's estimated input budget and only shows 100% once that budget is reached. Remains: pull request review.
 
 - **Add `sustainable-event` built-in Skill (Standard v3, `draft`, `skills/creative/sustainable-event/`, 2026-11-25)**: synthesized from TCEB / MICE sustainability, ESG, and low-carbon event methodology into original Thai instructions without copying copyrighted source text or hard-coding mutable emission factors. Covers Triple Bottom Line, UN SDGs, BCG/ESG, 5+1 planning, 25 basic guidelines (A–G), 7-step material/waste hierarchy, 8-step supply chain control across 9 vendor categories, Design for All / venue / F&B / 6-step food-allergen & 6 CSR risk checks, Cost vs. Impact 2x2 prioritization, 4 low-carbon levels, Scope 1/2/3 & 5-category avoidance activity logs (`NEED-SOURCE` for live EFs/prices via TCEB/TGO portals), TSEMS 3-pillar reporting templates, worked synthetic example, and 4-dimension evals (`evals/skills/sustainable-event.json`, `manifest/routing-staff-benchmark.json`). Registered under `cc` owner with `qs` reviewer (`stage: draft`); awaits CC/QS review and live model-side grading before promotion to `pilot`.
 
