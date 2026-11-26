@@ -114,3 +114,44 @@ test('the chosen styles reach the model after the governance rules and personal 
   assert.ok(at(INTERACTION_STYLES.witty.fragment) > at('Speaking style (user-selected'));
   assert.ok(at(LANGUAGE_STYLES['northern-thai'].fragment) > at(INTERACTION_STYLES.witty.fragment));
 });
+
+test('changing reply settings in an existing task applies to the next generic draft', async t => {
+  const store = new Store(':memory:');
+  t.after(() => store.close());
+  store.put('connection', 'c', { id: 'c', provider: 'openai', model: 'test', ready: true } as Connection);
+  const session = store.create('c', 'cc');
+  const settings = { ...store.settings(), workspace: tmpdir(), team: 'cc' };
+  const systems: string[] = [];
+  const service = new WorkService(
+    store,
+    {
+      root: tmpdir(),
+      route: async () => ({ routingContract: { mode: 'GENERAL', authority: { status: 'ALLOW' }, mandatoryReferences: [] } }),
+      contextPolicy: () => ({ history: 'ignore', carryover: false }),
+      privacy: privacy.evaluatePrivacyGate,
+      skillMetadata: async () => null,
+      documentPrivacy: async () => null,
+      nextOutput: async () => null,
+    },
+    async () => ({
+      context: { cwd: tmpdir(), env: {} },
+      adapter: {
+        run: async (_prompt, _connection, context) => {
+          systems.push(context.system || '');
+          return 'Synthetic draft.';
+        },
+      },
+    }),
+    () => {},
+  );
+  store.put('settings', 'main', { ...settings, chatLanguage: 'th', interactionStyle: 'witty', languageStyle: 'northern-thai' });
+  await service.run(session.id, 'ช่วยวางรายการงานสั้น ๆ', '');
+  store.put('settings', 'main', { ...settings, chatLanguage: 'en', interactionStyle: 'ob-oon', languageStyle: 'northern-thai' });
+  await service.run(session.id, 'ช่วยวางรายการอีกชุด', '');
+  assert.equal(systems.length, 2);
+  assert.match(systems[0], /Preferred language for chat replies: Thai/);
+  assert.match(systems[0], /Witty[\s\S]*Northern Thai/);
+  assert.match(systems[1], /Preferred language for chat replies: English/);
+  assert.match(systems[1], /Ob-Oon/);
+  assert.doesNotMatch(systems[1], /Reply in Thai\.|Northern Thai|Witty/);
+});

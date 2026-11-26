@@ -103,6 +103,7 @@ const allowed = new Set([
   'transmissionRevoke',
   'approvalRemove',
   'settings',
+  'profileAvatarPick',
   'acknowledgeData',
   'consentDeclined',
   'messageFeedback',

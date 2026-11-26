@@ -76,6 +76,22 @@
 .schedule-run-status.interrupted {
   color: var(--danger);
 }
+.schedule-run-history {
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.schedule-run-history summary {
+  cursor: pointer;
+}
+.schedule-run-history ul {
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0 0 0 var(--space-2);
+}
+.schedule-run-history li + li {
+  margin-top: var(--space-1);
+}
 .schedule-problem {
   font-size: var(--text-xs);
   margin-top: var(--space-1-5);

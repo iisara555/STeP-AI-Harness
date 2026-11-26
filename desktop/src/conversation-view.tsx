@@ -138,6 +138,7 @@ export function ConversationView({ v }: { v: AppView }) {
     setWorkflow,
     settings,
     slashIndex,
+    slash,
     slashMatches,
     snapshot,
     staffSkills,
@@ -197,13 +198,13 @@ export function ConversationView({ v }: { v: AppView }) {
         <ScheduledTasks
           api={api}
           connections={snapshot.connections}
+          sessions={snapshot.sessions}
           defaultConnection={connectionId}
           workspace={snapshot.settings.workspace}
           onConnections={openAiSettings}
           onOpen={id =>
             void action(async () => {
               await refresh();
-              navigate('chat');
               await selectSession(id);
             })
           }
@@ -862,13 +863,12 @@ export function ConversationView({ v }: { v: AppView }) {
                   {slashMatches.map((s, i) => (
                     <button
                       key={s.name}
+                      type="button"
                       role="option"
                       aria-selected={i === slashIndex}
                       className={i === slashIndex ? 'active' : ''}
-                      onMouseDown={e => {
-                        e.preventDefault();
-                        useSkill(s.name);
-                      }}
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => useSkill(s.name, true)}
                     >
                       <span className="slash-title">
                         {s.title}
@@ -964,12 +964,16 @@ export function ConversationView({ v }: { v: AppView }) {
                       return;
                     }
                   }
-                  if (slashMatches.length && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
+                  if (slash && e.key === 'Escape') {
+                    e.preventDefault();
+                    setQuery(query.slice(0, slash.start).trimEnd());
+                    return;
+                  }
+                  if (slashMatches.length && !e.shiftKey && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter'].includes(e.key)) {
                     e.preventDefault();
                     if (e.key === 'ArrowDown') setSlashIndex(i => Math.min(i + 1, slashMatches.length - 1));
                     else if (e.key === 'ArrowUp') setSlashIndex(i => Math.max(i - 1, 0));
-                    else if (e.key === 'Escape') setQuery('');
-                    else useSkill(slashMatches[slashIndex]?.name || slashMatches[0].name);
+                    else useSkill(slashMatches[slashIndex]?.name || slashMatches[0].name, true);
                     return;
                   }
                   if (e.key === 'Backspace' && !query && forcedSkill) {

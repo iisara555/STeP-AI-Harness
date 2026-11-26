@@ -2,7 +2,7 @@
 // styles (src/speaking-styles.ts), so nothing a person picked before goes missing. Uses an isolated profile and never
 // calls a provider. Pass a folder to also save a screenshot.
 import { _electron as electron, expect } from '@playwright/test';
-import { mkdtemp, mkdir, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
@@ -78,6 +78,33 @@ try {
   assert.equal(saved.personality, 'concise');
   assert.equal(saved.interactionStyle, 'standard');
   assert.equal(saved.languageStyle, 'northern-thai');
+  const photo = join(home, 'profile.png');
+  await writeFile(
+    photo,
+    Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGMw7Vz8HwAEuQJhv9Bd3QAAAABJRU5ErkJggg==', 'base64'),
+  );
+  await app.evaluate(({ dialog }, file) => {
+    const original = dialog.showOpenDialog;
+    dialog.showOpenDialog = async () => {
+      dialog.showOpenDialog = original;
+      return { canceled: false, filePaths: [file] };
+    };
+  }, photo);
+  await open();
+  await page.getByRole('button', { name: 'เปลี่ยนรูป' }).click();
+  await page.getByRole('button', { name: 'เลือกรูปโปรไฟล์จากเครื่อง' }).click();
+  const portrait = page.locator('.settings-profile-summary .custom-avatar img');
+  await expect(portrait).toHaveAttribute('src', /^data:image\/png;base64,/);
+  await save();
+  const avatar = (await settings(page)).avatar;
+  assert.match(avatar, /^data:image\/png;base64,/);
+  await page.reload();
+  await open();
+  await expect(portrait).toHaveAttribute('src', avatar);
+  await page.getByRole('button', { name: 'เปลี่ยนรูป' }).click();
+  await page.getByRole('radio', { name: 'ใช้ตัวอักษรแรกของชื่อ' }).click();
+  await save();
+  assert.equal((await settings(page)).avatar, '');
   assert.deepEqual(errors, []);
   console.log('Speaking styles smoke passed: presets and documented styles in one picker, custom wording, dialect.');
 } finally {

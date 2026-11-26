@@ -349,9 +349,20 @@ export function SettingsPanel({
           </div>
           {avatarOpen && (
             <div className="avatar-section">
-              <p className="muted small">
-                {t('เลือกภาพวาดที่ชอบ ภาพเป็นลายเส้นประกอบ ไม่ใช่รูปถ่ายของใคร และเก็บไว้ในเครื่องนี้เท่านั้น')}
-              </p>
+              <button
+                type="button"
+                className="quiet profile-photo-picker"
+                disabled={Boolean(busy)}
+                onClick={() =>
+                  void run('avatar', async () => {
+                    const photo = await call('profileAvatarPick');
+                    if (typeof photo === 'string') setAvatar(photo);
+                  })
+                }
+              >
+                {t('เลือกรูปโปรไฟล์จากเครื่อง')}
+              </button>
+              <p className="muted small">{t('เลือกรูป PNG หรือ JPEG รูปโปรไฟล์เก็บไว้ในเครื่องนี้')}</p>
               <div className="avatar-picker" role="radiogroup" aria-label={t('รูปโปรไฟล์')}>
                 <button
                   type="button"

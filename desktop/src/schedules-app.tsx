@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, CalendarClock, LoaderCircle, Pause, Pencil, Play, Plus, Power, Trash2 } from './icons';
 import type { Automation, AutomationRun } from '../electron/cron';
-import type { Connection, DesktopAPI } from './types';
+import type { Connection, DesktopAPI, Session } from './types';
 import { connectionName, explainError } from './messages';
 import { canGenerateImages } from './image-routing';
 import { locale, t } from './i18n';
@@ -59,6 +59,7 @@ const scheduleText = (cron: string) => {
 export function ScheduledTasks({
   api,
   connections,
+  sessions,
   defaultConnection,
   workspace,
   onConnections,
@@ -66,6 +67,7 @@ export function ScheduledTasks({
 }: {
   api: DesktopAPI;
   connections: Connection[];
+  sessions: Session[];
   defaultConnection: string;
   workspace: string;
   onConnections: () => void;
@@ -139,8 +141,17 @@ export function ScheduledTasks({
     });
     document.querySelector('.schedules')?.scrollTo({ top: 0 });
   };
-  const lastRun = (id: string) => data?.history.find(r => r.automationId === id);
   const enabled = data?.enabled;
+  const sessionIds = new Set(sessions.map(session => session.id));
+  const runLink = (sessionId?: string) =>
+    sessionId &&
+    sessionIds.has(sessionId) && (
+      <button type="button" className="text-link" onClick={() => onOpen(sessionId)}>
+        {t('เปิดผล')}
+      </button>
+    );
+  const runSummary = (run: AutomationRun) =>
+    t('{0} · {1}', new Date(run.at).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' }), t(STATUS[run.status]));
 
   return (
     <div className="schedules">
@@ -184,11 +195,11 @@ export function ScheduledTasks({
       )}
       {enabled && (
         <>
-          {/* The person's own jobs lead; with none yet, the page opens on the templates instead of an empty heading. */}
-          {data.jobs.length > 0 && <h2>{t('งานของฉัน')}</h2>}
-          <ul className="schedule-list">
+          <h2>{t('งานของฉัน')}</h2>
+          {!data.jobs.length && <p className="schedules-empty">{t('งานที่คุณตั้งเวลาและผลแต่ละรอบจะแสดงที่นี่')}</p>}
+          <ul className="schedule-list" aria-label={t('งานของฉัน')}>
             {data.jobs.map(job => {
-              const run = lastRun(job.id),
+              const [run, ...earlierRuns] = data.history.filter(item => item.automationId === job.id),
                 connection = connections.find(c => c.id === job.connectionId),
                 advice = scheduledRunAdvice(run);
               return (
@@ -205,17 +216,22 @@ export function ScheduledTasks({
                     </span>
                     {run && (
                       <span className={'small schedule-run-status ' + run.status}>
-                        {t(
-                          'ล่าสุด {0} · {1}',
-                          new Date(run.at).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' }),
-                          t(STATUS[run.status]),
-                        )}
-                        {run.sessionId && (
-                          <button className="text-link" onClick={() => onOpen(run.sessionId!)}>
-                            {t('เปิดผล')}
-                          </button>
-                        )}
+                        {t('รอบล่าสุด {0}', runSummary(run))}
+                        {runLink(run.sessionId)}
                       </span>
+                    )}
+                    {earlierRuns.length > 0 && (
+                      <details className="schedule-run-history">
+                        <summary>{t('รอบก่อนหน้า {0} รายการ', earlierRuns.length)}</summary>
+                        <ul>
+                          {earlierRuns.map(previous => (
+                            <li className={'small schedule-run-status ' + previous.status} key={previous.id}>
+                              {runSummary(previous)}
+                              {runLink(previous.sessionId)}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
                     )}
                     {advice && (
                       <div className="schedule-problem">

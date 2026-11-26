@@ -115,6 +115,16 @@ try {
   );
   await page.reload();
   await page.locator('.composer textarea').waitFor();
+  const skillComposer = page.getByRole('textbox', { name: 'พิมพ์คำขอ', exact: true });
+  await skillComposer.fill('Synthetic request /step-wri');
+  await page.getByRole('listbox', { name: 'เลือก Skill' }).getByRole('option').filter({ hasText: '/step-writing' }).click();
+  await expect(skillComposer).toHaveValue('Synthetic request');
+  await expect(page.locator('.skill-chip')).toContainText('/step-writing');
+  await page.getByRole('button', { name: 'เลิกใช้ Skill นี้' }).click();
+  await skillComposer.fill('Keep this sentence /');
+  await expect(page.getByRole('listbox', { name: 'เลือก Skill' })).toBeVisible();
+  await skillComposer.press('Escape');
+  await expect(skillComposer).toHaveValue('Keep this sentence');
   await page.locator('.composer textarea').fill('First message');
   await page.keyboard.press('Enter');
   const consent = page.getByRole('alertdialog', { name: 'ยืนยันการส่งข้อมูลให้ AI' });
