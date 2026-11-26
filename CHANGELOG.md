@@ -13,6 +13,14 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 - ชุดติดตั้งมีไฟล์ให้เปิดไฟล์เดียวที่หน้าแรก (`Install-STeP-AI`): ตัวอัปเดต แจ้งปัญหา และตรวจก่อนแนบ ย้ายไปอยู่ในโฟลเดอร์ `Tools` และเครื่องที่อัปเดตจะลบไฟล์เดิมที่หน้าแรกให้เอง (ย้อนกลับได้)
 - ตัวติดตั้งและ START-HERE ชี้ไปที่ไฟล์เดียว `Install-STeP-AI` ไม่มีข้อความ "วิธีติดตั้งแบบนี้เลิกใช้แล้ว" ขัดกันอีก หน้าต่างติดตั้ง อัปเดต และแจ้งปัญหาใช้ภาษาไทยทั้งหมด และ `step-ai --help` แยกคำสั่งของพนักงานออกจากคำสั่งผู้ดูแลระบบ
 
+## Desktop v0.6.45 (2026-11-26)
+
+- Chat: reorganized the composer for wide and narrow panes, added a labeled send button, and moved context and quota into a status row. The context gauge explains STeP's estimated input budget and displays 100% when that budget is reached.
+- Appearance: switch between looped and loopless Noto Sans Thai in Settings. Document export fonts are preserved.
+- Wave 1: hardened browser, preview, command, and file access checks. Fixed subagent cleanup and scheduled-task timing, reduced duplicate consent prompts, and improved large tool payload handling.
+- Wave 2: improved document template transitions, official PDF fonts, and export recovery. Connected Internal Media drafts to Chat and image generation, improved Skill Hub navigation, and corrected Morning Brief timing.
+- Wave 3: show receipt values before confirmation and let staff rerun AI reading while preserving manual corrections. Corrected zero-VAT and THB limit checks, case data isolation, and evidence tracking. Preserved JPEGs in exported PDFs, made alternate image decoding recoverable, and filled voucher lines from later reviewed receipts for the same payee.
+
 ## Desktop v0.6.44 (2026-11-26)
 
 - Desktop: ตรวจเพดานโทเคนและขนาด UTF-8 ของข้อความ Antigravity ก่อนลองส่งใหม่ รวมถึงข้อความที่ส่งต่อในแชตเดิม ย่อบริบทด้วยระดับ low effort ของทุก AI provider รักษาข้อความที่ค้นพบจากเอกสาร STeP ตามต้นฉบับ และแจ้ง `CONTEXT_LIMIT` หากเนื้อหาที่จำเป็นยังใส่ไม่พอ

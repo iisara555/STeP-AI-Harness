@@ -3574,4 +3574,13 @@ export const en: Record<string, string> = {
     'Applies to the app interface immediately · official documents still use TH Sarabun',
   มีหัว: 'Looped',
   ไม่มีหัว: 'Loopless',
+  'ช่องพิมพ์แชตจัดปุ่มใหม่ และแสดงงบบริบทของ STeP กับโควตาในแถบสถานะ':
+    'A rearranged chat composer with STeP context budget and quota in the status row',
+  'เปลี่ยนแบบอักษรภาษาไทยในหน้าจอได้ เลือกได้ทั้งแบบมีหัวและไม่มีหัว': 'Choose a looped or loopless Thai font for the app interface',
+  'ตรวจข้อมูลที่อ่านจากใบเสร็จก่อนยืนยัน ให้ AI อ่านใหม่ได้ และดูหลักฐานที่ยังขาดในเรื่องเบิกจ่าย':
+    'Review extracted receipt values, ask AI to read again, and see missing claim evidence',
+  'ปรับเครื่องมือร่างเอกสาร สื่อภายใน ศูนย์รวม Skill และสรุปตอนเช้า':
+    'Improvements to document drafting, internal media, Skill Hub, and Morning Brief',
+  'เพิ่มความปลอดภัยในการใช้เครื่องมือ ลดการขออนุญาตซ้ำ และปรับการทำงานตามกำหนดเวลา':
+    'Stronger tool safeguards, fewer repeated approval prompts, and more reliable scheduled tasks',
 };
