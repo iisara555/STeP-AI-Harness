@@ -9,6 +9,8 @@ import {
   type DocumentFeatures,
   type DocumentType,
 } from './receipt-compliance';
+import { amountInSatang, vatInSatang } from './receipt-money';
+export { amount, amountInSatang } from './receipt-money';
 
 export const RECEIPT_FIELDS = ['merchant', 'receiptNumber', 'date', 'taxId', 'subtotal', 'vat', 'total'] as const;
 export type ReceiptField = (typeof RECEIPT_FIELDS)[number];
@@ -279,21 +281,6 @@ export function parseVisionReading(reply: string): {
 }
 
 const digits = (value: string) => thaiDigits(value).replace(/\D/g, '');
-/** An amount as a number: Thai digits, commas, spaces, ฿ and บาท removed; NaN when it is not one amount. */
-export function amount(value: string) {
-  const cents = amountInSatang(value);
-  return Number.isFinite(cents) ? cents / 100 : NaN;
-}
-
-/** Parse only a complete amount with valid separators and no fractional satang. Never round OCR errors. */
-export function amountInSatang(value: string) {
-  const match = /^\s*(?:฿\s*)?(-?(?:\d+|\d{1,3}(?:,\d{3})+|\d{1,3}(?: \d{3})+)(?:\.\d{1,2})?)\s*(?:บาท|THB)?\s*$/i.exec(thaiDigits(value));
-  if (!match) return NaN;
-  const text = match[1].replace(/[, ]/g, '');
-  const [whole, fraction = ''] = text.replace(/^-/, '').split('.');
-  const cents = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
-  return Number.isSafeInteger(cents) ? (text.startsWith('-') ? -cents : cents) : NaN;
-}
 const loose = (value: string) =>
   thaiDigits(value)
     .toLowerCase()
@@ -302,8 +289,9 @@ const loose = (value: string) =>
 /** Whether two readings of one field say the same thing, compared the way the field is written. */
 export function sameValue(field: ReceiptField, a: string, b: string) {
   if (['subtotal', 'vat', 'total'].includes(field)) {
-    const x = amountInSatang(a),
-      y = amountInSatang(b);
+    const parse = field === 'vat' ? vatInSatang : amountInSatang;
+    const x = parse(a),
+      y = parse(b);
     return Number.isFinite(x) && Number.isFinite(y) && x === y;
   }
   if (field === 'date') {
@@ -390,27 +378,30 @@ export function thaiBahtWords(value: string) {
 }
 
 /**
- * Checks that need no AI: the seller's tax ID check digit, a seller ID that looks like the buyer's, VAT at 7% of the
- * amount before VAT, the amounts adding up, and the total written in words. Advisory only; the receipt page's own
- * review rules still decide what blocks.
+ * Local advisory checks for tax ID, nonzero VAT, and amount consistency. The receipt page's review rules
+ * still decide what blocks.
  */
 export function receiptRuleChecks(
   values: Partial<Record<ReceiptField, string>>,
   extra: { buyerTaxId?: string; amountInWords?: string; items?: ReceiptItem[]; itemsTotal?: string } = {},
 ) {
   const notes: { code: string; field: ReceiptField; itemIndex?: number }[] = [];
+  const amounts = {
+    subtotal: amountInSatang(values.subtotal || ''),
+    vat: vatInSatang(values.vat || ''),
+    total: amountInSatang(values.total || ''),
+  };
   for (const field of ['subtotal', 'vat', 'total'] as const)
-    if (values[field]?.trim() && !Number.isFinite(amountInSatang(values[field]!))) notes.push({ code: 'invalid_money', field });
+    if (values[field]?.trim() && !Number.isFinite(amounts[field])) notes.push({ code: 'invalid_money', field });
   const seller = digits(values.taxId || '');
   if (seller.length === 13 && !validThaiTaxId(values.taxId || '')) notes.push({ code: 'tax_id_checksum', field: 'taxId' });
   // The buyer's own ID in the issuer's box: the ID the receipt names for the buyer, or a government-body ID (0994…,
   // such as a university's) that a shop would not have.
   if (seller.length === 13 && (seller === digits(extra.buyerTaxId || '') || seller.startsWith('0994')))
     notes.push({ code: 'tax_id_may_be_buyer', field: 'taxId' });
-  const subtotal = amountInSatang(values.subtotal || ''),
-    vat = amountInSatang(values.vat || ''),
-    total = amountInSatang(values.total || '');
-  if (Number.isFinite(subtotal) && Number.isFinite(vat) && subtotal > 0 && Math.abs(vat - Math.round(subtotal * 0.07)) > 5)
+  const { subtotal, vat, total } = amounts;
+  // A zero VAT amount can be valid; still check that the document's amounts add up.
+  if (Number.isFinite(subtotal) && Number.isFinite(vat) && vat !== 0 && subtotal > 0 && Math.abs(vat - Math.round(subtotal * 0.07)) > 5)
     notes.push({ code: 'vat_not_7_percent', field: 'vat' });
   if (Number.isFinite(subtotal) && Number.isFinite(vat) && Number.isFinite(total) && subtotal + vat !== total)
     notes.push({ code: 'amounts_do_not_add_up', field: 'total' });

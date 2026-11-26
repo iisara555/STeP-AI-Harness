@@ -104,8 +104,11 @@ try {
 
   // A question that is not an interview answer goes to the AI in this case; the usage terms are asked first.
   const input = page.getByLabel('พิมพ์ในแชตเรื่องนี้', { exact: true });
+  const composer = page.locator('.case-composer');
+  await input.fill('ค่าน้ำดื่ม');
+  await expect(composer.getByRole('button', { name: 'ตอบ', exact: true })).toBeEnabled();
   await input.fill('ถ้ายืมเงินจากการเงินไปจ่ายแล้วต้องทำอะไรต่อ ต้องเคลียร์ภายในกี่วัน?');
-  await input.press('Enter');
+  await composer.getByRole('button', { name: 'ส่งให้ AI', exact: true }).click();
   const consent = page.getByRole('button', { name: 'รับทราบและส่ง', exact: true });
   await expect(consent).toBeVisible();
   await page.getByLabel('ฉันอ่านและรับทราบข้อตกลงการใช้งาน', { exact: true }).check();
@@ -211,11 +214,44 @@ try {
   const confirm = page.getByRole('group', { name: 'ยืนยันการลบ' });
   await confirm.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
   await expect(rows).toHaveCount(count);
+  // Hold the actual IPC save response while clicking delete. The renderer must wait for the save,
+  // then clear the old case and its composer before showing the remaining case.
+  await app.evaluate(({ ipcMain }) => {
+    const original = ipcMain._invokeHandlers.get('step:call');
+    const order = [];
+    const wait = new Promise(resolve => {
+      globalThis.releaseCaseSave = resolve;
+    });
+    globalThis.caseSaveOrder = order;
+    ipcMain.removeHandler('step:call');
+    ipcMain.handle('step:call', async (event, method, payload) => {
+      if (method === 'receiptPacketSave') {
+        order.push('save-start');
+        await wait;
+        const result = await original(event, method, payload);
+        order.push('save-return');
+        return result;
+      }
+      if (method === 'receiptPacketDelete') order.push('delete-start');
+      return original(event, method, payload);
+    });
+  });
+  await input.fill('OLD-CASE-UNSENT-TEXT');
+  await page.getByLabel('ชื่อเรื่องเบิก', { exact: true }).fill('ประชุมคณะทำงาน ข้อมูลสมมติ รอลบ');
+  await expect.poll(() => app.evaluate(() => globalThis.caseSaveOrder)).toEqual(['save-start']);
+  await expect(page.locator('.case-head [role="status"]')).toHaveText('กำลังบันทึก…');
   await doomed.hover();
-  await doomed.getByRole('button', { name: 'ลบเรื่อง “ประชุมคณะทำงาน ข้อมูลสมมติ”', exact: true }).click();
+  await doomed.getByRole('button', { name: 'ลบเรื่อง “ประชุมคณะทำงาน ข้อมูลสมมติ รอลบ”', exact: true }).click();
   await confirm.getByRole('button', { name: 'ลบ', exact: true }).click();
+  // Round-trip through the same channel before releasing the held call.
+  await snapshot();
+  await app.evaluate(() => globalThis.releaseCaseSave());
   await expect(rows).toHaveCount(count - 1);
   await expect(rows.filter({ hasText: 'ประชุมคณะทำงาน ข้อมูลสมมติ' })).toHaveCount(0);
+  assert.deepEqual(await app.evaluate(() => globalThis.caseSaveOrder), ['save-start', 'save-return', 'delete-start']);
+  await expect(input).toHaveValue('');
+  await expect(chat.locator('.message')).toHaveCount(0);
+  assert.equal((await page.evaluate(() => window.step.call('receiptPacketList'))).length, count - 1);
   await expect.poll(async () => (await snapshot()).sessions.filter(s => s.claimPacketId).length).toBe(0);
   await shot('7-case-deleted');
 

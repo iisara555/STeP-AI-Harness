@@ -36,7 +36,7 @@ try {
   const input = page.getByLabel('พิมพ์ในแชตเรื่องนี้', { exact: true });
   await expect(page.locator('.case-composer-ai')).toHaveText('ยังไม่ได้เลือก AI · ตอบจากกฎในเครื่อง');
   await input.fill('ค่าน้ำดื่มสำหรับประชุม');
-  await page.getByRole('button', { name: 'ส่ง', exact: true }).click();
+  await page.getByRole('button', { name: 'ตอบ', exact: true }).click();
   await expect(chat.locator('.claim-reply').first()).toHaveText('ค่าน้ำดื่ม');
   await expect(chat.locator('.claim-recommend')).toContainText('แนะนำ: ประชุม');
   await expect(chat.locator('.claim-option.recommended')).toHaveText('ประชุม');

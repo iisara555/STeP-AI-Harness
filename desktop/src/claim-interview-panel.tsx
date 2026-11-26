@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowLeft, MessageCircleQuestion, Pencil } from './icons';
 import { t } from './i18n';
 import {
@@ -16,6 +16,8 @@ import {
   type ClaimAnswers,
   type ClaimSummary,
   type Note,
+  type Question,
+  type QuestionId,
 } from './claim-interview';
 import type { ReceiptPacket } from './receipt-packet';
 import { BV_FORMULA } from './bv-travel-reason';
@@ -25,10 +27,19 @@ const WHY_WORD = /ทำไม|เพราะอะไร|why/i;
 /** A longer question typed while the interview waits is the person's own question, for the AI, not an answer. */
 const QUESTION = /ไหม|มั้ย|หรือเปล่า|หรือไม่|อย่างไร|ยังไง|เท่าไร|เท่าไหร่|อะไรบ้าง|\?/;
 
+export type OpenInterviewQuestion = Pick<Question, 'input'> & { id: QuestionId };
+
+/** Uses the same decision to label the composer action and to apply a submission. */
+export function inspectClaimAnswer(id: QuestionId, text: string, fallback: boolean) {
+  const long = text.trim().length > 24;
+  if (fallback ? WHY_WORD.test(text) && !long : WHY.test(text)) return { kind: 'why' } as const;
+  if (fallback && long && QUESTION.test(text)) return { kind: 'unread' } as const;
+  const value = parseAnswer(id, text);
+  return value === null ? ({ kind: 'unread' } as const) : ({ kind: 'answered', value } as const);
+}
+
 /** What the case chat's composer asks of the interview: it takes typed text while a question is open. */
 export type InterviewHandle = {
-  /** The question waiting for an answer, so the composer can show the right hint; null when none is open. */
-  pending: () => { input: 'text' | 'amount' | 'date' } | null;
   /**
    * Reads typed text as an answer or a "why". `unread` means it was not an answer; with `fallback` the caller sends it on
    * (to the AI) and the interview shows no hint.
@@ -46,7 +57,7 @@ export const ClaimInterview = forwardRef<
     /** True while a finished summary waits to be applied, so the page keeps one primary action. */
     onDecision: (waiting: boolean) => void;
     /** Tells the composer that the open question changed, so its hint follows. */
-    onQuestion?: (input: 'text' | 'amount' | 'date' | null) => void;
+    onQuestion?: (question: OpenInterviewQuestion | null) => void;
   }
 >(function ClaimInterview({ packet, onApply, onAskAi, onDecision, onQuestion }, ref) {
   const blank = packet.guidance.category === 'unsure' && packet.guidance.finance === 'unknown';
@@ -75,9 +86,9 @@ export const ClaimInterview = forwardRef<
     onDecision(open && Boolean(summary));
   }, [open, Boolean(summary)]);
   const openInput = open && question ? question.input : null;
-  useEffect(() => {
-    onQuestion?.(openInput);
-  }, [openInput]);
+  useLayoutEffect(() => {
+    onQuestion?.(openInput && pending ? { id: pending, input: openInput } : null);
+  }, [openInput, pending, onQuestion]);
   const answer = (value: string) => {
     if (!pending) return;
     setAnswers(current => applyAnswer(current, pending, value));
@@ -85,25 +96,14 @@ export const ClaimInterview = forwardRef<
     setHint(false);
   };
   useImperativeHandle(ref, () => ({
-    pending: () => (open && question ? { input: question.input } : null),
     take: (text, fallback) => {
       if (!open || !pending || !question) return 'closed';
       setHint(false);
-      // A "why" with nothing else in it is answered here from the rule's source; a longer question goes to the AI.
-      const long = text.trim().length > 24;
-      // With an AI to ask, only an explicit short "why" stays here; any other question goes to the AI.
-      if (fallback ? WHY_WORD.test(text) && !long : WHY.test(text)) {
-        setWhy(question.why);
-        return 'why';
-      }
-      if (fallback && long && QUESTION.test(text)) return 'unread';
-      const value = parseAnswer(pending, text);
-      if (value !== null) {
-        answer(value);
-        return 'answered';
-      }
-      if (!fallback) setHint(true);
-      return 'unread';
+      const decision = inspectClaimAnswer(pending, text, fallback);
+      if (decision.kind === 'why') setWhy(question.why);
+      else if (decision.kind === 'answered') answer(decision.value);
+      else if (!fallback) setHint(true);
+      return decision.kind;
     },
   }));
   if (!open)

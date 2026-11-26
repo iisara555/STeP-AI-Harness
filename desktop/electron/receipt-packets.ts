@@ -6,6 +6,8 @@ import {
   createReceiptPacket,
   editReceiptPacket,
   PACKET_LIMITS,
+  PAYMENT_PROOF_KINDS,
+  moneySatang,
   packetText,
   packetKind,
   parseExpenseCode,
@@ -13,10 +15,12 @@ import {
   type PacketListItem,
   type ReviewedReceipt,
   type PacketSource,
+  type VoucherItem,
 } from '../src/receipt-packet';
 import { blankPaymentVoucher, paymentVoucherFromReceipt } from '../src/afp-payment-voucher';
 import { storedEvidenceGuidance } from '../src/afp-evidence';
 import { parseClaimCategory } from '../src/receipt-compliance';
+import { amountInSatang } from '../src/receipt-money';
 
 type Records = {
   get<T>(kind: string, id: string): T | undefined;
@@ -33,26 +37,46 @@ const identifier = (value: unknown): string => {
   return value;
 };
 export const receiptSourceToken = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
+const paymentProof = new Set<string>(PAYMENT_PROOF_KINDS);
+const MAX_VOUCHER_ITEMS = 30;
+
+function receiptBaht(value: string): string {
+  if (moneySatang(value) !== null) return value;
+  const satang = amountInSatang(value);
+  if (!Number.isSafeInteger(satang) || satang < 0 || satang > 9_999_999_999_999) return '';
+  return `${Math.floor(satang / 100)}.${String(satang % 100).padStart(2, '0')}`;
+}
+
+function voucherRows(values: NonNullable<PacketSource['reviewedReceipt']>['values'], room: number): VoucherItem[] {
+  if (!room) return [];
+  const total = moneySatang(values.total);
+  if (total === null || total <= 0) return [];
+  const items = values.items || [];
+  const complete =
+    items.length > 0 && items.length <= room && items.every(item => item.description.trim() && moneySatang(item.amount) !== null);
+  if (complete && items.reduce((sum, item) => sum + moneySatang(item.amount)!, 0) === total) return items;
+  return [{ description: values.description, amount: values.total }];
+}
+
+const merchantKey = (value: string) => value.normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase();
 
 export async function loadPacketPdf(bytes: Uint8Array) {
   try {
     const pdf = await PDFDocument.load(bytes, { updateMetadata: false, throwOnInvalidObject: true });
-    if (
-      pdf.isEncrypted ||
-      pdf.getPageCount() < 1 ||
-      pdf.getPageCount() > PACKET_LIMITS.pages ||
-      pdf.context.enumerateIndirectObjects().length > 100_000
-    )
+    if (pdf.getPageCount() > PACKET_LIMITS.pages) throw new Error('PACKET_PAGE_LIMIT');
+    if (pdf.isEncrypted || pdf.getPageCount() < 1 || pdf.context.enumerateIndirectObjects().length > 100_000)
       throw new Error('PACKET_PDF_LIMIT');
     return pdf;
   } catch (error) {
-    if (error instanceof Error && error.message === 'PACKET_PDF_LIMIT') throw error;
+    if (error instanceof Error && ['PACKET_PDF_LIMIT', 'PACKET_PAGE_LIMIT'].includes(error.message)) throw error;
     throw new Error('PACKET_PDF_UNREADABLE');
   }
 }
 
 /** Store local immutable sources; renderer payloads cannot select paths or replace source metadata. */
 export class ReceiptPackets {
+  private readonly pendingAdds = new Map<string, Set<Promise<ReceiptPacket>>>();
+
   constructor(
     private records: Records,
     private root: string,
@@ -155,6 +179,19 @@ export class ReceiptPackets {
   }
   async add(id: unknown, revision: unknown, selected: SelectedSource[], reviewed?: ReviewedReceipt) {
     const current = this.get(id, revision);
+    const pending = this.pendingAdds.get(current.id) || new Set<Promise<ReceiptPacket>>();
+    const add = this.addSources(current, selected, reviewed);
+    pending.add(add);
+    this.pendingAdds.set(current.id, pending);
+    try {
+      return await add;
+    } finally {
+      pending.delete(add);
+      if (!pending.size) this.pendingAdds.delete(current.id);
+    }
+  }
+
+  private async addSources(current: ReceiptPacket, selected: SelectedSource[], reviewed?: ReviewedReceipt) {
     // A receipt checked after its file was already added links its values to that file instead of a second copy.
     const same =
       reviewed && selected.length === 1 ? current.documents.find(doc => doc.sha256 === receiptSourceToken(selected[0].bytes)) : undefined;
@@ -223,33 +260,54 @@ export class ReceiptPackets {
     }
   }
   private reviewValues(reviewed: ReviewedReceipt): NonNullable<PacketSource['reviewedReceipt']> {
+    const amount = packetText(reviewed.total, 40);
+    if (reviewed.items !== undefined && (!Array.isArray(reviewed.items) || reviewed.items.length > 100)) throw new Error('INVALID_INPUT');
+    const items = reviewed.items?.map(item => ({
+      description: packetText(item?.description, 1200),
+      amount: receiptBaht(packetText(item?.amount, 40)),
+    }));
     return {
       comparedAt: this.now(),
       values: {
         recipient: packetText(reviewed.recipient, 200),
         date: packetText(reviewed.date, 80),
         description: packetText(reviewed.description, 1200),
-        total: packetText(reviewed.total, 40),
+        total: receiptBaht(amount) || amount,
+        ...(reviewed.merchantAddress !== undefined ? { merchantAddress: packetText(reviewed.merchantAddress, 500) } : {}),
+        ...(items?.length ? { items } : {}),
       },
       category: parseClaimCategory(reviewed.category) || 'unsure',
       code: parseExpenseCode(reviewed.code),
     };
   }
-  /** What a checked receipt changes in the packet beside its own file: the category and the voucher's empty fields. */
+  /** Prefill draft fields from reviewed payment evidence for its single payee. */
   private applyReview(
     current: ReceiptPacket,
     next: ReceiptPacket,
     reviewed: ReviewedReceipt,
     values: NonNullable<PacketSource['reviewedReceipt']>,
+    alreadyReviewed = false,
   ) {
     // The category kept on the receipt check fills an unset packet category; a different one is shown, not overwritten.
     const kept = values.category;
     if (kept && kept !== 'unsure' && current.guidance.category === 'unsure') next.guidance = { ...current.guidance, category: kept };
-    next.voucher = { ...current.voucher, checked: false };
-    if (!next.voucher.recipient) next.voucher.recipient = reviewed.recipient;
-    if (!next.voucher.date) next.voucher.date = reviewed.date;
-    if (next.voucher.items.length === 1 && !next.voucher.items[0].description && !next.voucher.items[0].amount)
-      next.voucher.items = [{ description: reviewed.description, amount: reviewed.total }];
+    if (!paymentProof.has(reviewed.kind)) return;
+    const { recipient, merchantAddress, date } = values.values;
+    const earlier = current.documents.filter(doc => doc.reviewedReceipt && doc.pages.some(page => paymentProof.has(page.kind)));
+    const firstReceipt = !earlier.length;
+    const voucher = { ...current.voucher, checked: false };
+    if (!voucher.recipient) voucher.recipient = recipient;
+    const samePayee = Boolean(recipient.trim()) && merchantKey(voucher.recipient) === merchantKey(recipient);
+    if (!voucher.date && samePayee) voucher.date = date;
+    if (!voucher.address && samePayee && merchantAddress) voucher.address = merchantAddress;
+    const empty = voucher.items.every(item => !item.description.trim() && !item.amount.trim());
+    // The same saved source may be reviewed again. Keep any already-copied or manually edited rows.
+    if (!alreadyReviewed && samePayee && (empty || !firstReceipt)) {
+      const priorRows = empty ? [] : voucher.items;
+      const rows = voucherRows(values.values, MAX_VOUCHER_ITEMS - priorRows.length);
+      if (rows.length) voucher.items = [...priorRows, ...rows];
+    }
+    next.voucher = voucher;
   }
   /** Links checked receipt values to a file already in the packet; unclassified pages become the checked type. */
   private attachReview(current: ReceiptPacket, source: PacketSource, reviewed: ReviewedReceipt) {
@@ -272,16 +330,26 @@ export class ReceiptPackets {
       updatedAt: this.now(),
       paymentApproved: false,
     };
-    this.applyReview(current, next, reviewed, values);
+    this.applyReview(current, next, reviewed, values, Boolean(source.reviewedReceipt));
     this.records.put(KIND, next.id, next);
     return next;
   }
   /** Deletes a case and the app-owned copies of its files; the originals the person picked are never touched. */
-  async delete(id: unknown) {
+  async delete(id: unknown, deleteRelatedRecords?: () => void) {
     const packet = this.get(id);
     if (!this.records.remove) throw new Error('INVALID_INPUT');
-    this.records.remove(KIND, packet.id);
-    await rm(join(this.root, packet.id), { recursive: true, force: true });
+    const remove = this.records.remove.bind(this.records);
+    const commit = () => {
+      for (const source of packet.documents) remove('receipt-packet-origin', source.id);
+      remove(KIND, packet.id);
+      deleteRelatedRecords?.();
+    };
+    if (this.records.transaction) this.records.transaction(commit);
+    else commit();
+    // An import that started before deletion will fail its revision check. Wait for its file cleanup before removing the directory.
+    const pending = this.pendingAdds.get(packet.id);
+    if (pending) await Promise.allSettled(pending);
+    await rm(join(this.root, packet.id), { recursive: true, force: true, maxRetries: 3 });
     return true;
   }
   async remove(id: unknown, revision: unknown, sourceId: unknown) {
@@ -300,7 +368,12 @@ export class ReceiptPackets {
       updatedAt: this.now(),
       paymentApproved: false as const,
     };
-    this.records.put(KIND, next.id, next);
+    const commit = () => {
+      this.records.remove?.('receipt-packet-origin', source.id);
+      this.records.put(KIND, next.id, next);
+    };
+    if (this.records.transaction) this.records.transaction(commit);
+    else commit();
     // Only the app-owned copy is removed; the selected original is never modified.
     await rm(this.sourcePath(current.id, source), { force: true });
     return next;
@@ -353,7 +426,11 @@ export async function mergePacketPdf(
     if (!pages.length) continue;
     if (source.extension === 'pdf') await append(bytes, pages);
     else {
-      const image = source.extension === 'png' ? await output.embedPng(bytes) : await output.embedJpg(bytes);
+      // Legacy snapshots may use a filename extension that differs from their encoded PNG/JPEG format.
+      const jpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+      const image = await (jpeg ? output.embedJpg(bytes) : output.embedPng(bytes)).catch(() => {
+        throw new Error('PACKET_SOURCE_LIMIT');
+      });
       if (image.width * image.height > 40_000_000) throw new Error('PACKET_SOURCE_LIMIT');
       const page = output.addPage([595.28, 841.89]);
       const scale = Math.min(555.28 / image.width, 801.89 / image.height);

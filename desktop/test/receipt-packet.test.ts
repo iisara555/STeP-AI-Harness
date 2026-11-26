@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { PDFDocument, PDFName, PDFDict } from 'pdf-lib';
 import JSZip from 'jszip';
 import { Store } from '../electron/store';
-import { ReceiptPackets, receiptSourceToken, mergePacketPdf } from '../electron/receipt-packets';
+import { ReceiptPackets, receiptSourceToken, mergePacketPdf, loadPacketPdf } from '../electron/receipt-packets';
 import { receiptVoucherDocx, receiptVoucherHtml, receiptPacketCoverHtml, packetIndex } from '../electron/receipt-voucher';
 import { documentPrintFontCss } from '../electron/document-fonts';
 import {
@@ -19,6 +19,7 @@ import {
   packetAssessment,
   packetCategoryConflicts,
   packetCategoryTotals,
+  PACKET_LIMITS,
   type ReceiptPacket,
 } from '../src/receipt-packet';
 import { classifyFromText, parseDocumentType } from '../src/receipt-compliance';
@@ -146,11 +147,67 @@ test('checked OCR reuse binds to snapshot content and preserves manual voucher d
     packet = packets.save(packet);
     packet = await packets.add(packet.id, packet.revision, [{ name: 'test.pdf', extension: 'pdf', bytes }], review);
     assert.equal(packet.voucher.recipient, 'Manual payee');
-    assert.equal(packet.voucher.items[0].amount, '100.25');
+    assert.equal(packet.voucher.items[0].amount, '', 'a receipt for another recipient does not prefill the manual payee’s voucher');
+    assert.equal(packet.voucher.date, '');
     assert.equal(packet.voucher.checked, false);
     assert.equal(packet.documents[0].pages[0].checked, false);
     assert.equal(packet.documents[0].reviewedReceipt?.values.total, '100.25');
     assert.equal(packet.documents[0].sha256, token);
+  }));
+
+test('later checked receipts for the same payee fill an empty address and append reconciled items once', async () =>
+  fixture(async packets => {
+    let packet = packets.create();
+    const review = (bytes: Uint8Array, total: string, description: string) => ({
+      sourceToken: receiptSourceToken(bytes),
+      checked: true,
+      recipient: 'Synthetic shop',
+      date: '27/10/2569',
+      description,
+      total,
+      kind: 'receipt' as const,
+    });
+    const first = await pdfBytes([401]);
+    packet = await packets.add(
+      packet.id,
+      packet.revision,
+      [{ name: 'first.pdf', extension: 'pdf', bytes: first }],
+      review(first, '100.25', 'Original item'),
+    );
+    const edited = packets.save({
+      ...packet,
+      voucher: { ...packet.voucher, items: [{ description: 'Manually edited first item', amount: '100.25' }] },
+    });
+    const second = await pdfBytes([402]);
+    const source = { name: 'second.pdf', extension: 'pdf', bytes: second };
+    const secondReview = {
+      ...review(second, '30.30 THB', 'Second receipt'),
+      merchantAddress: 'Synthetic seller address',
+      items: [
+        { description: 'Second item A', amount: 'THB 10.10' },
+        { description: 'Second item B', amount: '20.20' },
+      ],
+    };
+    packet = await packets.add(edited.id, edited.revision, [source], secondReview);
+    assert.equal(packet.voucher.address, 'Synthetic seller address');
+    assert.deepEqual(packet.voucher.items, [
+      { description: 'Manually edited first item', amount: '100.25' },
+      { description: 'Second item A', amount: '10.10' },
+      { description: 'Second item B', amount: '20.20' },
+    ]);
+    assert.equal(voucherTotal(packet.voucher), 13_055);
+    assert.equal(packet.voucher.checked, false);
+    packet = await packets.add(packet.id, packet.revision, [source], secondReview);
+    assert.equal(packet.voucher.items.length, 3, 'rechecking the same bytes does not double count');
+    const other = await pdfBytes([403]);
+    packet = await packets.add(packet.id, packet.revision, [{ name: 'other.pdf', extension: 'pdf', bytes: other }], {
+      ...review(other, '40', 'Different payee'),
+      recipient: 'Another shop',
+      merchantAddress: 'Different synthetic address',
+    });
+    assert.equal(packet.voucher.items.length, 3, 'one voucher does not claim payment to different payees');
+    assert.equal(packet.voucher.address, 'Synthetic seller address');
+    assert.equal(packet.documents.at(-1)?.reviewedReceipt?.values.merchantAddress, 'Different synthetic address');
   }));
 
 test('a receipt checked after its file was added links to that file, and duplicates in a batch are skipped', async () =>
@@ -224,6 +281,12 @@ test('failed batch imports and concurrent edits leave no half-imported source se
     const entries = await readdir(join(root, 'sources', packet.id));
     assert.deepEqual(entries, []);
   }));
+
+test('packet PDFs allow the documented page limit and reject the next page with the matching error', async () => {
+  const widths = Array.from({ length: PACKET_LIMITS.pages }, () => 320);
+  assert.equal((await loadPacketPdf(await pdfBytes(widths))).getPageCount(), PACKET_LIMITS.pages);
+  await assert.rejects(loadPacketPdf(await pdfBytes([...widths, 320])), /PACKET_PAGE_LIMIT/);
+});
 
 test('PDF assembly retains selected page order and visible annotations without executable actions', async () => {
   const original = await PDFDocument.create();
@@ -375,21 +438,34 @@ test('the 10,000 baht cap sums every receipt in one sub-category, not each recei
 });
 
 test('deleting a case removes it and its app-owned file copies, never the original the person picked', async () =>
-  fixture(async (packets, root) => {
+  fixture(async (packets, root, store) => {
     const bytes = await pdfBytes(),
       original = join(root, 'original.pdf');
     await writeFile(original, bytes);
     let packet = packets.create();
-    const other = packets.create();
+    let other = packets.create();
     packet = await packets.add(packet.id, packet.revision, [{ name: 'original.pdf', extension: 'pdf', bytes, originalPath: original }]);
+    other = await packets.add(other.id, other.revision, [{ name: 'original.pdf', extension: 'pdf', bytes, originalPath: original }]);
     const copy = packets.path(packet.id, packet.documents[0].id);
-    assert.equal(await packets.delete(packet.id), true);
+    assert.equal(store.get('receipt-packet-origin', packet.documents[0].id), original);
+    const extra = await pdfBytes([555]);
+    const importing = assert.rejects(
+      packets.add(packet.id, packet.revision, [{ name: 'new.pdf', extension: 'pdf', bytes: extra, originalPath: original }]),
+      /PACKET_NOT_FOUND/,
+    );
+    const deleting = packets.delete(packet.id);
+    assert.throws(() => packets.save({ ...packet, title: 'Stale autosave' }), /PACKET_NOT_FOUND/);
+    assert.equal(await deleting, true);
+    await importing;
     assert.throws(() => packets.get(packet.id), /PACKET_NOT_FOUND/);
+    assert.equal(store.get('receipt-packet-origin', packet.documents[0].id), undefined);
+    assert.equal(store.get('receipt-packet-origin', other.documents[0].id), original);
     assert.deepEqual(
       packets.list().map(item => item.id),
       [other.id],
     );
     await assert.rejects(readFile(copy), /ENOENT/);
+    await assert.rejects(readdir(join(root, 'sources', packet.id)), /ENOENT/);
     assert.deepEqual(await readFile(original), bytes);
     await assert.rejects(packets.delete(packet.id), /PACKET_NOT_FOUND/);
     await assert.rejects(packets.delete('../elsewhere'), /INVALID_INPUT/);

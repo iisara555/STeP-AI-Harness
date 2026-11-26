@@ -4,6 +4,7 @@
 // whose source is not in the harness say so and send the person to AFP.
 
 import { parseThaiDate } from './thai-date';
+import { amount } from './receipt-money';
 
 export const DOCUMENT_TYPES = [
   'tax_invoice',
@@ -125,11 +126,6 @@ export type ComplianceItem = {
   vars?: (string | number)[];
   /** Applies only if the claim goes under category B; shown as "ถ้าเบิกหมวด B:" while the category is not chosen. */
   ifCategoryB?: boolean;
-};
-
-const AMOUNT = (value: string) => {
-  const n = Number(thaiDigits(value).replace(/บาท|฿|,|\s/g, ''));
-  return Number.isFinite(n) ? n : NaN;
 };
 
 /**
@@ -289,7 +285,7 @@ export function complianceChecklist(input: {
       text: 'บิลเงินสดจากร้านที่ไม่ได้จดทะเบียนภาษีมูลค่าเพิ่มไม่มีภาษีแยก ใช้เป็นหลักฐานการจ่ายได้หรือไม่ในกรณีนี้ ยังไม่มีแหล่งยืนยันในระบบ โปรดถาม AFP',
     });
 
-  const total = AMOUNT(values.total || '');
+  const total = amount(values.total || '');
   const date = parseReceiptDate(values.date || '');
   const withinB = category === 'B' || category === 'unsure';
   if (category === 'B' || category === 'BV' || category === 'emergency' || category === 'unsure') {

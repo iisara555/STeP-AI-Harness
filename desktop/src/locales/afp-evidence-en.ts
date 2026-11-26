@@ -55,7 +55,7 @@ export const afpEvidenceEn: Record<string, string> = {
   'อ่านยอดไม่ได้ {0} ใบ': '{0} with an unreadable amount',
   'รวมเฉพาะใบเสร็จที่เพิ่มจากหน้าตรวจใบเสร็จ ใบแจ้งหนี้และสลิปไม่นับซ้ำ':
     'Only receipts added from the receipt check are summed; invoices and slips are not counted again',
-  'ใบเสร็จรับเงิน / ใบสำคัญรับเงิน FM-AF-014': 'Receipt / receipt voucher FM-AF-014',
+  'ใบเสร็จรับเงิน / ใบกำกับภาษี / ใบสำคัญรับเงิน FM-AF-014': 'Receipt / tax invoice / receipt voucher FM-AF-014',
   'สำเนาบัตรผู้รับเงิน / ใบรับรองแทนใบเสร็จ FM-AF-035 หรือ FM-AF-036': 'Payee ID copy / receipt replacement FM-AF-035 or FM-AF-036',
   ตรวจเมื่อกิจกรรมมีผู้เข้าร่วมและเอกสารนี้เกี่ยวข้องกับเรื่องเบิก:
     'Review when the activity has attendees and this document is relevant to the claim',
