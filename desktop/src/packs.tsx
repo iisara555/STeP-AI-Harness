@@ -82,7 +82,7 @@ function CreateSkill({
     try {
       await job();
     } catch (e) {
-      if (alive.current) setError(explainError(e));
+      if (alive.current && (e as Error)?.message !== 'CANCELLED') setError(explainError(e));
     } finally {
       if (alive.current) setWorking(false);
     }
@@ -222,7 +222,7 @@ function FixSkill({
     try {
       await job();
     } catch (e) {
-      if (alive.current) setError(explainError(e));
+      if (alive.current && (e as Error)?.message !== 'CANCELLED') setError(explainError(e));
     } finally {
       if (alive.current) setWorking(false);
     }
@@ -356,7 +356,7 @@ export function PacksDialog({
       await api.call(method, input);
       await load();
     } catch (e) {
-      if (alive.current) setError(explainError(e));
+      if (alive.current && (e as Error)?.message !== 'CANCELLED') setError(explainError(e));
     } finally {
       if (alive.current) setBusy(false);
     }
@@ -391,7 +391,7 @@ export function PacksDialog({
       const result = await api.call('packInstall', { kind, name });
       if (result) await afterInstall(result);
     } catch (e) {
-      if (alive.current) setError(explainError(e));
+      if (alive.current && (e as Error)?.message !== 'CANCELLED') setError(explainError(e));
     } finally {
       if (alive.current) setBusy(false);
     }

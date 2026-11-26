@@ -410,6 +410,8 @@ export function AppDialogs({ v }: { v: AppView }) {
           onClose={() => setPacksOpen(false)}
           onSelect={text => {
             setPendingSource(text);
+            setSettings(false);
+            navigate('chat');
             notify(t('เพิ่มข้อมูลจาก Skill Pack แล้ว ตรวจบริการปลายทางก่อนส่ง'));
           }}
         />

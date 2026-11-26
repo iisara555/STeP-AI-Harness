@@ -43,6 +43,7 @@ export function briefDay(now: number) {
 
 const clock = (iso: string) => new Date(Date.parse(iso) + OFFSET_MS).toISOString().slice(11, 16);
 const text = (value: unknown, limit = 200) => (typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, limit) : '');
+export const MEET_URL = /^https:\/\/meet\.google\.com\/[a-z0-9-]+(?:\/[a-z0-9-]+)?(?:\?[a-z0-9_=&%-]*)?$/i;
 
 /** Pure: Google's raw event and task items to today's brief. The same input always gives the same brief. */
 export function summarizeDay(input: {
@@ -59,16 +60,21 @@ export function summarizeDay(input: {
     if (me?.responseStatus === 'declined') continue;
     const allDay = typeof e.start?.date === 'string';
     const start = allDay ? text(e.start.date, 10) : text(e.start?.dateTime, 40);
-    const end = allDay ? text(e.end?.date, 10) : text(e.end?.dateTime, 40);
+    const rawEnd = allDay ? text(e.end?.date, 10) : text(e.end?.dateTime, 40);
     if (!start || (!allDay && !Number.isFinite(Date.parse(start)))) continue;
-    const meet = text(e.hangoutLink, 120);
+    const end = allDay
+      ? rawEnd || start
+      : rawEnd && Number.isFinite(Date.parse(rawEnd))
+        ? rawEnd
+        : new Date(Date.parse(start) + 30 * 60_000).toISOString();
+    const meet = text(e.hangoutLink, 180);
     events.push({
       title: text(e.summary) || '(ไม่มีชื่อนัด)',
       start,
       end,
       allDay,
       ...(text(e.location) ? { location: text(e.location) } : {}),
-      ...(/^https:\/\/meet\.google\.com\//.test(meet) ? { meet } : {}),
+      ...(MEET_URL.test(meet) ? { meet } : {}),
       ...(e.status === 'tentative' || me?.responseStatus === 'needsAction' || me?.responseStatus === 'tentative'
         ? { tentative: true }
         : {}),
@@ -96,9 +102,9 @@ export function summarizeDay(input: {
   let cursor = dayStart,
     best: [number, number] | undefined;
   for (const e of timed) {
-    const s = Math.max(Date.parse(e.start), dayStart),
-      f = Math.min(Date.parse(e.end), dayEnd);
-    if (s > cursor && (!best || s - cursor > best[1] - best[0])) best = [cursor, Math.min(s, dayEnd)];
+    const s = Math.min(Math.max(Date.parse(e.start), dayStart), dayEnd),
+      f = Math.min(Math.max(Date.parse(e.end), dayStart), dayEnd);
+    if (s > cursor && (!best || s - cursor > best[1] - best[0])) best = [cursor, s];
     cursor = Math.max(cursor, f);
   }
   if (cursor < dayEnd && (!best || dayEnd - cursor > best[1] - best[0])) best = [cursor, dayEnd];

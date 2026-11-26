@@ -262,6 +262,17 @@ try {
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.setZoomFactor(1));
   await page.setViewportSize({ width: 1280, height: 1000 });
   await tab('การแสดงผลและภาษา');
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.fontStyle), 'looped');
+  assert.match(await page.evaluate(() => getComputedStyle(document.body).fontFamily), /Noto Sans Thai Looped/);
+  await expect(panel.getByRole('radio', { name: 'มีหัว (Noto Sans Thai Looped)', exact: true })).toBeChecked();
+  await panel.getByRole('radio', { name: 'ไม่มีหัว (Noto Sans Thai)', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.fontStyle)).toBe('loopless');
+  assert.match(await page.evaluate(() => getComputedStyle(document.body).fontFamily), /Noto Sans Thai/);
+  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.fontStyle, 'loopless');
+  await assert.rejects(
+    page.evaluate(() => window.step.call('settings', { assistant: 'STeP Mate', team: 'cc', theme: 'light', fontStyle: 'invalid' })),
+    /INVALID_SETTINGS/,
+  );
   await panel.getByRole('radio', { name: 'English', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Accounts and services', exact: true })).toBeVisible();
   await page.getByRole('tab', { name: 'General', exact: true }).click();
@@ -277,6 +288,8 @@ try {
   // Selecting an AI for a saved task updates that task, rather than claiming to set a global default.
   const task = await page.evaluate(() => window.step.call('create', { connectionId: 'ai-one', project: 'Synthetic selection task' }));
   await page.reload();
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.fontStyle)).toBe('loopless');
+  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.fontStyle, 'loopless');
   await page.locator('.session').filter({ hasText: 'Synthetic selection task' }).locator('.session-open').click();
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await page.getByRole('tab', { name: 'Connect AI', exact: true }).click();

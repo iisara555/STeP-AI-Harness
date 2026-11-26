@@ -176,4 +176,8 @@
   --motion: 160ms;
   --motion-slow: 240ms;
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --font-ui: 'Noto Sans Thai Looped', 'Leelawadee UI', 'Thonburi', system-ui, sans-serif;
+}
+:root[data-font-style='loopless'] {
+  --font-ui: 'Noto Sans Thai', 'Leelawadee UI', 'Thonburi', system-ui, sans-serif;
 }

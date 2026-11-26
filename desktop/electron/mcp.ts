@@ -9,7 +9,7 @@ import { tm } from './i18n';
 import { consentPreview } from './consent-preview';
 
 export type McpTool = { server: string; name: string; description: string; inputSchema: unknown };
-type Consent = (title: string, text: string, signal?: AbortSignal, technical?: string) => Promise<boolean>;
+type Consent = (title: string, text: string, signal?: AbortSignal, technical?: string, sessionId?: string) => Promise<boolean>;
 /** SDK capabilities are deliberately empty: servers cannot request sampling, roots or elicitation. */
 export class Mcp {
   localActive = 0;
@@ -147,7 +147,7 @@ export class Mcp {
     if (!server) throw new Error('MCP_SERVER_NOT_ALLOWED');
     return server;
   }
-  async search(name: string, query = '', signal?: AbortSignal) {
+  async search(name: string, query = '', signal?: AbortSignal, sessionId?: string) {
     const server = this.server(name),
       policy = this.policy(),
       identity = this.identity(),
@@ -170,6 +170,8 @@ export class Mcp {
         tm('ค้นหาเครื่องมือจาก MCP?'),
         tm('เชื่อมต่อ server ที่ผู้ดูแลกำหนด: {0}\nจะส่งเฉพาะข้อมูลเริ่มต้นของแอป', name),
         signal,
+        undefined,
+        sessionId,
       ))
     )
       throw new Error('CANCELLED');
@@ -201,7 +203,7 @@ export class Mcp {
         if (signal?.aborted || attempt >= 2 || (error as Error).message !== 'MCP_UNAVAILABLE') throw error;
       }
   }
-  async call(name: string, tool: string, args: Record<string, unknown>, signal?: AbortSignal) {
+  async call(name: string, tool: string, args: Record<string, unknown>, signal?: AbortSignal, sessionId?: string) {
     const server = this.server(name),
       policy = this.policy(),
       identity = this.identity();
@@ -230,6 +232,7 @@ export class Mcp {
         ),
         signal,
         text,
+        sessionId,
       ))
     )
       throw new Error('CANCELLED');

@@ -419,3 +419,85 @@ test('WorkService claims the global three-run capacity and cancellation frees it
   assert.equal(service.activeCount(), 0);
   store.close();
 });
+
+test('Automations.drain preserves nextAt updated mid-run by tick() without duplicate runs', async () => {
+  const { store, policy } = fixture();
+  let now = Date.parse('2026-10-01T00:00:00Z');
+  let release!: () => void;
+  const started = new Promise<void>(r => {
+    release = r;
+  });
+  let runs = 0;
+  const queue = new Automations(
+    store,
+    () => policy,
+    evaluatePrivacyGate,
+    async () => {
+      runs++;
+      await started;
+      return 'draft-1';
+    },
+    () => {},
+    () => now,
+  );
+  const job = queue.save({ name: 'Race', query: 'Draft a safe note', schedule: '* * * * *', connectionId: 'c', enabled: true });
+  queue.enqueue(job.id);
+  await pause(15);
+  now += 60_000;
+  queue.tick();
+  const nextScheduled = queue.list().find(j => j.id === job.id)!.nextAt;
+  assert.ok(nextScheduled > now - 1);
+  release();
+  await pause(20);
+  assert.equal(queue.list().find(j => j.id === job.id)!.nextAt, nextScheduled);
+  queue.tick();
+  await pause(15);
+  assert.equal(runs, 1);
+  await queue.closeAndWait();
+  store.close();
+});
+
+test('scheduled draftOnly + allowKnowledge loads STeP knowledge without enabling tools, and templates route cleanly', async () => {
+  const routing: any = await import('../../src/modules/router/service.js');
+  const { SCHEDULE_TEMPLATES } = await import('../src/schedules');
+  const { resolve } = await import('node:path');
+  const root = resolve('..');
+  for (const tpl of SCHEDULE_TEMPLATES) {
+    const r = await routing.queryStepRouter(tpl.query, { autoRoute: true, authorityChecks: true, team: 'cc', workspace: root });
+    assert.equal(r.routingContract.authority.status, 'ALLOW', tpl.id);
+    assert.notEqual(r.routingContract.mode, 'CLARIFY', tpl.id);
+  }
+  const { store } = fixture();
+  let seenPrompt = '';
+  const service = new WorkService(
+    store,
+    {
+      root,
+      route: (q, opts) => routing.queryStepRouter(q, { autoRoute: true, authorityChecks: true, ...opts }),
+      contextPolicy: () => ({ history: 'ignore', carryover: false }),
+      privacy: evaluatePrivacyGate,
+      skillMetadata: async () => null,
+      documentCatalog: async () => routing.loadDocumentCatalog(),
+      documentPrivacy: async () => null,
+      nextOutput: async () => null,
+    },
+    async () => ({
+      context: { cwd: tmpdir(), env: {} },
+      adapter: {
+        run: async prompt => {
+          seenPrompt = prompt;
+          return 'คำตอบจากเอกสาร';
+        },
+      },
+    }),
+    () => {},
+  );
+  const session = store.create('c', 'cc');
+  await service.run(session.id, SCHEDULE_TEMPLATES[2].query, '', true, undefined, 'draft', undefined, [], {
+    draftOnly: true,
+    allowKnowledge: true,
+  });
+  assert.match(seenPrompt, /<organization_knowledge>/);
+  assert.doesNotMatch(seenPrompt, /```step-tool/);
+  store.close();
+});
