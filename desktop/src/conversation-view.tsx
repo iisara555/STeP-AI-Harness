@@ -187,6 +187,7 @@ export function ConversationView({ v }: { v: AppView }) {
     offerWriteNow({ elapsedMs: now - startedAt, stream, liveText, progress }),
   );
   const messageCount = session?.messages.length;
+  const canCoordinate = snapshot.policy?.features.coordinator && workMode === 'draft' && !session?.documentTool && !forcedSkill;
   useEffect(() => {
     // An empty task shows the welcome from its greeting; only a conversation follows its latest message.
     if (messageCount || stream || running) conversationEnd.current?.scrollIntoView({ block: 'end' });
@@ -230,15 +231,15 @@ export function ConversationView({ v }: { v: AppView }) {
       ) : (
         <div className={`chat-content${!session?.messages.length ? ' is-empty' : ''}`}>
           <div className="conversation" aria-live="polite">
-            {session && (snapshot.policy?.features.coordinator || !!session.loadedContext?.length || session.compaction) && (
+            {session && (canCoordinate || !!session.loadedContext?.length || session.compaction) && (
               <div className="context-bar">
-                {snapshot.policy?.features.coordinator && (
+                {canCoordinate && (
                   <label>
                     <input
                       aria-label={t('แบ่งงานย่อย')}
                       type="checkbox"
                       checked={coordinated}
-                      disabled={running || workMode !== 'draft'}
+                      disabled={running || submitting}
                       onChange={e => setCoordinated(e.target.checked)}
                     />
                     {t('แบ่งงานย่อย')}

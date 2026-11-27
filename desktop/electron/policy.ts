@@ -210,7 +210,8 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // งานตั้งเวลา: employees schedule their own tasks while the app is open. Each job asks for consent when saved, passes
   // the privacy check and ends as a draft for review (owner's decision, 2026-10-17). IT can set it to false.
   cron: true,
-  coordinator: false,
+  // The draft composer offers this as an unchecked choice. Workers run only after the person reviews the plan.
+  coordinator: true,
   memoryTeam: false,
   // The local Router picks Skills and Playbooks and asks clarifying questions only when an administrator turns it on.
   // Off, the hybrid selection stage or the AI's governed Skill tool can choose the procedure.
@@ -332,6 +333,7 @@ function closedPolicy(): Policy {
   policy.features.googleWorkspace = false;
   policy.features.developmentMode = false;
   policy.features.learningReview = false;
+  policy.features.coordinator = false;
   policy.receiptLocalOnly = true;
   delete policy.googleWorkspace;
   // Prompts must not go to a default organization address on the strength of a policy file that failed to parse.

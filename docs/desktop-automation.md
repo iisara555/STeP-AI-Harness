@@ -1,10 +1,10 @@
 # Coordinator, scheduled drafts, MCP, sandbox and autopilot
 
-Phase 4 adds local orchestration to the Phase 0–3 governed Desktop host. It does not establish a production release. Scheduled tasks (`cron`) are on by default; the other features remain disabled until an administrator enables them in the managed policy file described in [Desktop policy](desktop-policy.md).
+Scheduled tasks (`cron`) and coordinated drafts (`coordinator`) are offered by default. MCP, Docker sandbox and autopilot require explicit configuration in the managed policy described in [Desktop policy](desktop-policy.md).
 
 ## Coordinator
 
-In Draft mode, select **แบ่งงานย่อย** in the conversation context bar. The first send requires consent. The planner uses the currently selected account through `WorkService`, then a second approval displays the proposed task graph. There are at most eight subtasks. Each has an independent session, the same account/model/team, and no inherited identifier exceptions or consent tokens. The shared service limit is three concurrent provider runs across ordinary chats, coordination and scheduled work.
+In Draft mode, select **แบ่งงานย่อย** in the conversation context bar. The option starts unchecked. The planner uses the currently selected account through `WorkService` and the normal send-time checks. Review and approve the proposed task graph before workers start. There are at most eight subtasks. Each has an independent session, the same account/model/team, and no inherited identifier exceptions or consent tokens. The shared service limit is three concurrent provider runs across ordinary chats, coordination and scheduled work. IT can set `features.coordinator: false` to disable the option.
 
 Explicit Playbook `consumes`/`produces` declarations determine dependencies. Missing declarations create sequential barriers. Repeated artifact names represent versions; consumers use the nearest earlier producer. Action steps are rejected. Model-generated plans cannot select trusted Skills or grant authority. Each child passes through routing, source privacy and the governed provider. Results are merged into a parent proposal for human review. Child and merge calls cannot run tools, native web search, memory retrieval or hidden workspace preferences. Cancellation and policy/workspace/account/model changes stop active children. Partial child drafts remain available for inspection; they are not business approvals.
 

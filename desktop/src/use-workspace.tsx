@@ -205,6 +205,7 @@ export function useWorkspace() {
   const workflowRef = useRef<Workflow | ''>('');
   workflowRef.current = workflow;
   const [workMode, setWorkMode] = useState<WorkMode>('chat');
+  useEffect(() => setCoordinated(false), [selected, workMode, forcedSkill]);
   const [advancedTools, setAdvancedTools] = useState(false);
   const [toolTab, setToolTab] = useState<ToolTab>('output'),
     [toolRequest, setToolRequest] = useState<ToolRequest>();

@@ -70,22 +70,18 @@ function parsePlan(text: string): Subtask[] {
   } catch {
     throw new Error('COORDINATOR_PLAN_INVALID');
   }
-  if (!Array.isArray(raw.tasks)) throw new Error('COORDINATOR_PLAN_INVALID');
+  if (!Array.isArray(raw?.tasks)) throw new Error('COORDINATOR_PLAN_INVALID');
   const tasks = raw.tasks.map((t: any) => {
     if (
+      !t ||
       typeof t.id !== 'string' ||
       typeof t.query !== 'string' ||
       !Array.isArray(t.dependsOn) ||
-      t.dependsOn.some((d: unknown) => typeof d !== 'string') ||
-      (t.skill !== undefined && t.skill !== null && typeof t.skill !== 'string')
+      t.dependsOn.some((d: unknown) => typeof d !== 'string')
     )
       throw new Error('COORDINATOR_PLAN_INVALID');
-    return {
-      id: t.id,
-      query: t.query,
-      dependsOn: t.dependsOn,
-      ...(typeof t.skill === 'string' && t.skill.trim() ? { skill: t.skill.trim() } : {}),
-    };
+    // Only the host router or a registered Playbook may assign a Skill to a worker.
+    return { id: t.id, query: t.query, dependsOn: t.dependsOn };
   });
   dependencyWaves(tasks);
   return tasks;

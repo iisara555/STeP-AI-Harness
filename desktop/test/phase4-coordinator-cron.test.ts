@@ -71,7 +71,8 @@ test('coordinator runs three actual WorkService calls concurrently and merges on
       context: { cwd: tmpdir(), env: {} },
       adapter: {
         run: async prompt => {
-          if (prompt.includes('Decompose the request')) return JSON.stringify({ tasks });
+          if (prompt.includes('Decompose the request'))
+            return JSON.stringify({ tasks: tasks.map(task => ({ ...task, skill: 'unapproved-model-choice' })) });
           const id = /TASK_([a-e])/.exec(prompt)?.[1];
           if (id) {
             if (id === 'e') assert.ok(finished.has('a') && finished.has('d'));
@@ -96,7 +97,10 @@ test('coordinator runs three actual WorkService calls concurrently and merges on
     service,
     () => policy,
     () => 'stable',
-    async () => true,
+    async (_id, proposedTasks) => {
+      assert.deepEqual(proposedTasks, tasks);
+      return true;
+    },
     route,
     () => {},
   );

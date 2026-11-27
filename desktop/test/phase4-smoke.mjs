@@ -33,7 +33,7 @@ await writeFile(
   JSON.stringify({
     // The coordinator dialog is part of the send-time privacy checks.
     checks: { authority: true, privacy: true },
-    features: { coordinator: true, cron: true, mcp: true, sandbox: false, toolLoop: false },
+    features: { cron: true, mcp: true, sandbox: false, toolLoop: false },
     mcpServers: [{ name: 'fixture', profile: 'google-workspace', transport: 'stdio', command: process.execPath, args: [mcp] }],
   }),
 );
@@ -94,7 +94,7 @@ try {
   // Establish the synthetic fixture before looking for a conditional control.
   // A failed profile/policy load should report its cause, not a label timeout.
   const initial = await page.evaluate(() => window.step.call('snapshot'));
-  assert.equal(initial.policy.features.coordinator, true, 'fixture coordinator policy loaded');
+  assert.equal(initial.policy.features.coordinator, true, 'coordinated drafting is available without a policy override');
   assert.equal(initial.sessions.find(s => s.id === 'parent')?.mode, 'draft', 'fixture parent draft loaded');
   stage = 'coordinator';
   const approve = async title => {
@@ -102,7 +102,15 @@ try {
     await dialog.waitFor();
     await dialog.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
   };
-  await page.getByLabel('แบ่งงานย่อย', { exact: true }).check();
+  const splitDraft = page.getByLabel('แบ่งงานย่อย', { exact: true });
+  await expect(splitDraft).not.toBeChecked();
+  await splitDraft.check();
+  const workMode = page.getByRole('combobox', { name: 'โหมดทำงาน' });
+  await workMode.selectOption('chat');
+  await expect(splitDraft).toHaveCount(0);
+  await workMode.selectOption('draft');
+  await expect(splitDraft).not.toBeChecked();
+  await splitDraft.check();
   await page.locator('.composer textarea').fill('Prepare a synthetic draft about two public topics.');
   await page.keyboard.press('Enter');
   const consent = page.getByRole('alertdialog', { name: 'ยืนยันการส่งข้อมูลให้ AI' });

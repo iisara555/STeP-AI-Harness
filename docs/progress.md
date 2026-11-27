@@ -4,10 +4,11 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-26_
+_Last updated: 2026-11-27_
 
 ## In flight
 
+- **Desktop coordinated drafting rollout (2026-11-27)**. Offered the unchecked draft coordinator by default and kept explicit managed denial, plan review and draft-only workers. The host discards model-supplied Skill IDs and assigns Skills through the router or registered Playbooks. Windows build, Desktop tests and Phase 4 Electron smoke passed with a synthetic provider. The installed Windows 0.6.45 build remains on its administrator-managed settings. MCP, Docker, voice and governed packs lack local prerequisites. The experimental tool transports and Skill review still await live acceptance.
 - **Claims acceptance on staff devices (2026-11-26)**. Wave 3 has synthetic provider and receipt coverage. Real receipt and staff-account acceptance remains open.
 - **Add `sustainable-event` built-in Skill (Standard v3, `draft`, `skills/creative/sustainable-event/`, 2026-11-25)**: synthesized from TCEB / MICE sustainability, ESG, and low-carbon event methodology into original Thai instructions without copying copyrighted source text or hard-coding mutable emission factors. Covers Triple Bottom Line, UN SDGs, BCG/ESG, 5+1 planning, 25 basic guidelines (A–G), 7-step material/waste hierarchy, 8-step supply chain control across 9 vendor categories, Design for All / venue / F&B / 6-step food-allergen & 6 CSR risk checks, Cost vs. Impact 2x2 prioritization, 4 low-carbon levels, Scope 1/2/3 & 5-category avoidance activity logs (`NEED-SOURCE` for live EFs/prices via TCEB/TGO portals), TSEMS 3-pillar reporting templates, worked synthetic example, and 4-dimension evals (`evals/skills/sustainable-event.json`, `manifest/routing-staff-benchmark.json`). Registered under `cc` owner with `qs` reviewer (`stage: draft`); awaits CC/QS review and live model-side grading before promotion to `pilot`.
 
