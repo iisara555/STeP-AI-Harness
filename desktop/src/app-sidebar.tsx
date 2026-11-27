@@ -113,6 +113,19 @@ export function AppSidebar({ v }: { v: AppView }) {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            data-tour="schedules"
+            className="scheduled-task-link"
+            aria-current={view === 'schedules' && !settings ? 'page' : undefined}
+            onClick={() => {
+              setSettings(false);
+              navigate('schedules');
+            }}
+          >
+            <CalendarClock size={16} />
+            {t('งานตั้งเวลา')}
+          </button>
           {filter !== 'all' && <div className="recent-label">{t('ร่างที่บันทึกแล้ว')}</div>}
           <div className="sessions">
             {groupSessions(filtered).map(group => (
@@ -236,20 +249,6 @@ export function AppSidebar({ v }: { v: AppView }) {
                 {t('Skill')}
               </span>
               <span className="count">{staffSkills ? staffSkills.length + toolCount : ''}</span>
-            </button>
-            <button
-              data-tour="schedules"
-              className={view === 'schedules' && !settings ? 'nav-active' : ''}
-              onClick={() => {
-                setSettings(false);
-                navigate('schedules');
-              }}
-            >
-              <CalendarClock size={17} />
-              <span className="nav-label">{t('งานตั้งเวลา')}</span>
-              <span className="nav-short" aria-hidden="true">
-                {t('ตั้งเวลา')}
-              </span>
             </button>
             <button
               data-tour="receipt"

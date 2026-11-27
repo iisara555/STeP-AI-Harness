@@ -121,6 +121,7 @@ try {
   stage = 'automation';
   await page.getByRole('menuitem', { name: 'งานตั้งเวลา', exact: true }).click();
   const jobs = page.locator('.schedules');
+  await expect(jobs.getByRole('heading', { name: 'งานของฉัน' })).toBeVisible();
   await jobs.getByRole('button', { name: 'ตั้งเวลางานใหม่', exact: true }).click();
   await jobs.getByLabel('ชื่องานตั้งเวลา', { exact: true }).fill('Synthetic recurring draft');
   await jobs.getByLabel('สิ่งที่ให้ผู้ช่วยทำ', { exact: true }).fill('Prepare a concise public draft.');
@@ -144,6 +145,7 @@ try {
   await expect(jobs.locator('.schedule-card')).toContainText('Updated recurring draft');
   await jobs.getByRole('button', { name: 'พักงาน Updated recurring draft', exact: true }).click();
   await expect(jobs.locator('.schedule-card')).toContainText('พักไว้');
+  await expect(jobs.locator('.schedule-card')).toHaveCSS('opacity', '1');
   await jobs.getByRole('button', { name: 'แก้ไขงาน Updated recurring draft', exact: true }).click();
   await expect(jobs.getByRole('checkbox', { name: 'เปิดใช้งานตามเวลาที่ตั้ง' })).not.toBeChecked();
   await expect(preview).toContainText('รอบถัดไปหากเปิดใช้');
@@ -205,6 +207,20 @@ try {
   assert.ok(history.history[0].sessionId);
   await expect(jobs.locator('.schedule-card')).toContainText('ร่างรอตรวจ');
   await expect(jobs.locator('.schedule-problem')).toHaveCount(0);
+  await jobs.getByRole('button', { name: 'ทำตอนนี้', exact: true }).click();
+  await approve('เริ่มงานตั้งเวลา?');
+  await expect
+    .poll(async () => {
+      const list = await page.evaluate(() => window.step.call('automationList'));
+      return list.history.filter(run => run.status === 'review').length;
+    })
+    .toBe(2);
+  const earlierRuns = jobs.locator('.schedule-run-history');
+  await earlierRuns.getByText('รอบก่อนหน้า 2 รายการ', { exact: true }).click();
+  await earlierRuns.getByRole('button', { name: 'เปิดผล' }).click();
+  await expect(jobs).toHaveCount(0);
+  await page.locator('[data-tour="schedules"]').click();
+  await expect(earlierRuns.getByRole('button', { name: 'เปิดผล' })).toBeVisible();
   await page.screenshot({ path: 'release/qa/phase4-schedules.png' });
   await jobs.getByRole('button', { name: 'ลบงาน Updated recurring draft', exact: true }).click();
   await page

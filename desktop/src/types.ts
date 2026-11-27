@@ -386,7 +386,7 @@ export type Settings = {
   onboarding: boolean;
   ocrDir?: string;
   userName?: string;
-  /** A bundled profile picture id (src/avatar-ids.ts); empty or missing shows the initial. */
+  /** A bundled picture ID or a bounded local PNG thumbnail. Empty or missing shows the initial. */
   avatar?: string;
   personality?: 'coworker' | 'professional' | 'concise' | 'custom';
   assistantTone?: string;

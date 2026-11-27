@@ -1998,6 +1998,7 @@ export const en: Record<string, string> = {
   'ชวนคิด เปิดมุมมองใหม่ เชื่อมจุด แล้วพาไปหาโอกาสและผลลัพธ์ที่มีความหมาย':
     'Asks questions, opens new perspectives, connects the dots and leads to opportunity and impact',
   สำเนียงภาษา: 'Dialect',
+  สำเนียงจะใช้เมื่อผู้ช่วยตอบเป็นภาษาไทย: 'Dialect applies to replies in Thai.',
   ใช้ร่วมกับสไตล์ด้านบนได้: 'Can be combined with the style above',
   ภาษาไทยมาตรฐาน: 'Standard Thai',
   ไม่เพิ่มสำเนียงท้องถิ่น: 'No regional dialect',
@@ -3070,6 +3071,8 @@ export const en: Record<string, string> = {
     'This Mac build cannot install updates itself; download version {0} and drag it to Applications',
   'ดาวน์โหลดเวอร์ชัน {0}': 'Download version {0}',
   รูปโปรไฟล์: 'Profile picture',
+  เลือกรูปโปรไฟล์จากเครื่อง: 'Choose a profile picture',
+  'เลือกรูป PNG หรือ JPEG รูปโปรไฟล์เก็บไว้ในเครื่องนี้': 'Choose a PNG or JPEG. Your profile picture stays on this device.',
   'เลือกภาพวาดที่ชอบ ภาพเป็นลายเส้นประกอบ ไม่ใช่รูปถ่ายของใคร และเก็บไว้ในเครื่องนี้เท่านั้น':
     'Choose a drawing you like. They are illustrations, not photos of anyone, and your choice stays on this computer',
   ใช้ตัวอักษรแรกของชื่อ: 'Use the first letter of your name',

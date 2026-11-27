@@ -59,7 +59,7 @@ import { PREVIEW_LIMIT, isHtmlPath, openHtmlPreview } from './html-preview';
 import { autoUpdater } from 'electron-updater';
 import { Updater, RELEASES_URL, type SelfInstall } from './updater';
 import { appBundlePath, canReplace, downloadVerified, macUpdateAsset, startSwap } from './mac-update';
-import { isAvatarId } from '../src/avatar-ids';
+import { isAvatarId, isCustomAvatar, PROFILE_AVATAR_PREFIX, PROFILE_AVATAR_SIDE } from '../src/avatar-ids';
 import { interactionStyleId, languageStyleId } from '../src/speaking-styles';
 import { Images } from './images';
 import { canGenerateImages, isImageRequest } from '../src/image-routing';
@@ -3267,9 +3267,38 @@ async function main() {
         acceptTerms();
         return true;
       }
+      case 'profileAvatarPick': {
+        const picked = await dialog.showOpenDialog(window, {
+          title: tm('เลือกรูปโปรไฟล์จากเครื่อง'),
+          properties: ['openFile'],
+          filters: [{ name: 'PNG / JPEG', extensions: ['png', 'jpg', 'jpeg'] }],
+        });
+        if (picked.canceled || !picked.filePaths[0]) return null;
+        const bytes = await readDocumentImage(picked.filePaths[0], path => {
+          if (sensitivePath(path) || deniedPath(path, policyState.policy.permission.pathRules, store.settings().workspace))
+            throw new Error('PATH_BLOCKED');
+        });
+        documentImageDimensions(bytes);
+        const image = nativeImage.createFromBuffer(bytes);
+        if (image.isEmpty()) throw new Error('DOCUMENT_IMAGE_INVALID');
+        const { width, height } = image.getSize();
+        const thumbnail =
+          Math.max(width, height) <= PROFILE_AVATAR_SIDE
+            ? image
+            : image.resize(width >= height ? { width: PROFILE_AVATAR_SIDE } : { height: PROFILE_AVATAR_SIDE });
+        const photo = PROFILE_AVATAR_PREFIX + thumbnail.toPNG().toString('base64');
+        if (!isCustomAvatar(photo)) throw new Error('DOCUMENT_IMAGE_LIMIT');
+        return photo;
+      }
       case 'settings': {
-        const avatarId = (value: unknown) => {
-          if (!isAvatarId(value)) throw new Error('INVALID_SETTINGS');
+        const avatarValue = (value: unknown) => {
+          if (isAvatarId(value)) return value;
+          if (!isCustomAvatar(value)) throw new Error('INVALID_SETTINGS');
+          const bytes = Buffer.from(value.slice(PROFILE_AVATAR_PREFIX.length), 'base64');
+          if (bytes.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') throw new Error('DOCUMENT_IMAGE_INVALID');
+          const size = documentImageDimensions(bytes);
+          if (Math.max(size.width, size.height) > PROFILE_AVATAR_SIDE || nativeImage.createFromBuffer(bytes).isEmpty())
+            throw new Error('DOCUMENT_IMAGE_INVALID');
           return value;
         };
         // An unknown speaking style is a bad request, not a silent fallback to Standard.
@@ -3295,7 +3324,7 @@ async function main() {
           theme,
           onboarding: true,
           userName: input.userName === undefined ? store.settings().userName : inputText(input.userName, 60).trim(),
-          avatar: input.avatar === undefined ? store.settings().avatar : input.avatar === '' ? '' : avatarId(input.avatar),
+          avatar: input.avatar === undefined ? store.settings().avatar : input.avatar === '' ? '' : avatarValue(input.avatar),
           personality,
           outputStyle,
           assistantTone: input.assistantTone === undefined ? store.settings().assistantTone : inputText(input.assistantTone, 300).trim(),

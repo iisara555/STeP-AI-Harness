@@ -51,6 +51,19 @@ nav button {
   color: var(--muted);
   margin: var(--space-7) var(--space-2) var(--space-2-5);
 }
+.sidebar .scheduled-task-link {
+  justify-content: flex-start;
+  margin: var(--space-1) 0 var(--space-2);
+  padding: var(--pad-control);
+  color: var(--muted);
+  background: transparent;
+  border-color: transparent;
+}
+.sidebar .scheduled-task-link:hover,
+.sidebar .scheduled-task-link[aria-current='page'] {
+  background: var(--selected);
+  color: var(--text);
+}
 .sessions {
   flex: 1;
   min-height: 150px;
@@ -565,11 +578,11 @@ nav button:hover,
 }
 /* Dark theme: avatars stay black ink on paper like a photo. Inverting them turned filled hair and clothes white,
    so faces read as photo negatives; the paper is only dimmed so it does not glare. */
-:root[data-theme='dark'] .avatar-badge.has-picture img {
+:root[data-theme='dark'] .avatar-badge.has-picture:not(.custom-avatar) img {
   filter: brightness(0.88);
 }
 @media (prefers-color-scheme: dark) {
-  :root[data-theme='system'] .avatar-badge.has-picture img {
+  :root[data-theme='system'] .avatar-badge.has-picture:not(.custom-avatar) img {
     filter: brightness(0.88);
   }
 }

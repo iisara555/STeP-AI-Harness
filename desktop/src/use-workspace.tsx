@@ -27,7 +27,7 @@ import { documentText, plainDocument as toDoc } from './draft';
 import { saveSidebarChoice } from './sidebar-rail';
 import { resolvePresentation } from './document-presentation';
 import { useAiChoice } from './ai-choice';
-import { composerCommand, typedSkill } from './composer-command';
+import { composerCommand, trailingSkillToken, typedSkill } from './composer-command';
 import {
   type ConsentAsk,
   type RunOptions,
@@ -172,7 +172,8 @@ export function useWorkspace() {
     // "ลองใช้ Skill": the Skill the Router finds clearly fits what is being typed, and the ones the person waved away.
     [suggestedSkill, setSuggestedSkill] = useState(''),
     [dismissedSkills, setDismissedSkills] = useState<string[]>([]),
-    [slashIndex, setSlashIndex] = useState(0);
+    [slashIndex, setSlashIndex] = useState(0),
+    [slashAtCaret, setSlashAtCaret] = useState(false);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const { toasts, setToasts, toastId, dismiss, notify } = useToasts();
   const runningIds = useRef(new Map<string, object>());
@@ -1054,27 +1055,27 @@ export function useWorkspace() {
   const staffSkills = useMemo(() => skills && skillsForStaff(skills, developerMode), [skills, developerMode]);
   const routedSkills = useMemo(() => (staffSkills || []).filter(s => s.status === 'routed'), [staffSkills]);
   // "/" lists the person's team first and also matches Thai descriptions and trigger words.
-  const slash = /^\/(\S*)$/.exec(query);
+  const slash = useMemo(() => trailingSkillToken(query), [query]);
   const myTeam = snapshot?.settings.team || '';
   const myTeamInfo = snapshot?.teams.find(team => team.id === myTeam);
   const myTeamName = myTeamInfo ? teamName(myTeamInfo) : '';
   const forTeam = useCallback((s: SkillEntry) => Boolean(myTeam) && (s.owner === myTeam || s.teams.includes(myTeam)), [myTeam]);
-  const slashQuery = slash?.[1];
+  const slashQuery = slash?.query;
   const slashMatches = useMemo(() => {
     if (slashQuery === undefined) return NO_SKILLS;
     const q = slashQuery.toLowerCase();
     return routedSkills
       .filter(s => !q || [s.name, s.title, s.description, ...s.triggers].some(v => v.toLowerCase().includes(q)))
-      .sort(
-        (a, b) =>
-          Number(!a.name.startsWith(slashQuery)) - Number(!b.name.startsWith(slashQuery)) || Number(!forTeam(a)) - Number(!forTeam(b)),
-      )
+      .sort((a, b) => Number(!a.name.startsWith(q)) - Number(!b.name.startsWith(q)) || Number(!forTeam(a)) - Number(!forTeam(b)))
       .slice(0, 8);
   }, [slashQuery, routedSkills, forTeam]);
-  const useSkill = (name: string) => {
-    if (guardSettingsExit(() => useSkill(name))) return;
+  const useSkill = (name: string, fromSlash = false) => {
+    if (guardSettingsExit(() => useSkill(name, fromSlash))) return;
     setForcedSkill(name);
-    setQuery('');
+    setQuery(current => {
+      const token = fromSlash ? trailingSkillToken(current) : undefined;
+      return token ? current.slice(0, token.start).trimEnd() : '';
+    });
     setSlashIndex(0);
     setSettings(false);
     setView('chat');
@@ -1090,6 +1091,7 @@ export function useWorkspace() {
     !forcedSkill &&
     !session?.skill &&
     !session?.documentTool &&
+    !slash &&
     !query.startsWith('/');
   useEffect(() => {
     setSuggestedSkill('');
@@ -1461,6 +1463,8 @@ export function useWorkspace() {
     setDismissedSkills,
     slashIndex,
     setSlashIndex,
+    slashAtCaret,
+    setSlashAtCaret,
     composerRef,
     toasts,
     setToasts,
