@@ -3615,4 +3615,16 @@ export const en: Record<string, string> = {
     'Improvements to document drafting, internal media, Skill Hub, and Morning Brief',
   'เพิ่มความปลอดภัยในการใช้เครื่องมือ ลดการขออนุญาตซ้ำ และปรับการทำงานตามกำหนดเวลา':
     'Stronger tool safeguards, fewer repeated approval prompts, and more reliable scheduled tasks',
+  'แชตถามกลับเมื่องานเข้าข่ายหลาย Skill และใช้ Skill ที่เลือกได้ทันที':
+    'Chat asks which Skill you want when several fit and continues with your choice',
+  'ตรวจคำตอบตามขั้นตอนของ Skill สำหรับ Claude และ Antigravity เปิดหรือปิดได้ในหน้าตั้งค่า':
+    'Skill Review for Claude and Antigravity can be turned on or off in Settings',
+  'แบ่งร่างเอกสารเป็นงานย่อย ตรวจแผนก่อนเริ่ม และทำต่อเฉพาะส่วนที่ค้างได้':
+    'Split a draft into subtasks, review the plan, and resume unfinished parts',
+  'พื้นที่เขียนโค้ดช่วยวางแผน ตรวจการแก้ไข และรันสคริปต์ของ frontend และ backend หลังอนุมัติ':
+    'The Coding workspace supports planning, change review, and approved frontend and backend scripts',
+  'เลือก Skill ด้วย / ต่อท้ายข้อความ เปิดผลของงานตั้งเวลา และตั้งรูปโปรไฟล์ได้':
+    'Pick a Skill with a trailing slash, open scheduled results, and set a profile photo',
+  'แก้ข้อความซ้อนเมื่อลองตอบใหม่ และจัดการไฟล์แนบเมื่อสลับหรือลบงาน':
+    'Retries replace earlier response text, and attachments stay with the correct task when switching or deleting tasks',
 };
