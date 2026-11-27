@@ -496,7 +496,7 @@ async function main() {
     antigravityBridge: () => policyState.policy.features.antigravityNativeBridge,
     nativeToolCalls: () => policyState.policy.features.nativeToolCalls,
     answerCheck: () => policyState.policy.features.answerCheck,
-    skillReview: () => policyState.policy.features.skillReview,
+    skillReview: () => policyState.policy.features.skillReview && store.settings().skillReview !== false,
     autoEffort: () => policyState.policy.features.autoEffort,
     skillMetadata: async id => {
       const m = await routing.loadSkillContextMetadata(id);
@@ -2649,6 +2649,11 @@ async function main() {
             for (const session of store.list<Session>('session')) if (session.connectionId === c.id) service.cancel(session.id);
           }
         }
+        return store.settings();
+      }
+      case 'skillReviewSetting': {
+        if (!policyState.policy.features.skillReview) throw new Error('FEATURE_DISABLED');
+        store.put('settings', 'main', { ...store.settings(), skillReview: input.enabled === true });
         return store.settings();
       }
       case 'learningReviewSetting': {

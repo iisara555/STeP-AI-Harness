@@ -272,7 +272,8 @@ export function SettingsPanel({
     ...(developerAccess ? ([['developer', t('นักพัฒนา / แอดมิน'), FileSearch]] as const) : []),
   ] as const;
   const keywords = {
-    general: 'ชื่อ ทีม ผู้ช่วย รูป โปรไฟล์ สไตล์ โฟลเดอร์ เริ่มโปรแกรม เปิดเครื่อง startup Windows chat language profile team style folder',
+    general:
+      'ชื่อ ทีม ผู้ช่วย รูป โปรไฟล์ สไตล์ โฟลเดอร์ ตรวจงาน Skill review เริ่มโปรแกรม เปิดเครื่อง startup Windows chat language profile team style folder',
     ai: 'AI บัญชี โมเดล ทดสอบ account model test',
     credentials: 'Google ปฏิทิน Gmail รหัสผ่าน ที่อยู่ พัก บัญชี password address pause calendar',
     appearance: 'ภาษา ธีม ฟอนต์ แบบอักษร มีหัว ไม่มีหัว language theme font looped loopless display',
@@ -530,6 +531,25 @@ export function SettingsPanel({
               ))}
             </select>
           </label>
+          {/* Shown only where the organization allows it; the employee's choice never overrides an IT off. */}
+          {snapshot.policy?.features.skillReview && (
+            <>
+              <label className="check-row">
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={snapshot.settings.skillReview !== false}
+                  disabled={busy === 'skillReview'}
+                  onChange={e => {
+                    const enabled = e.target.checked;
+                    void run('skillReview', () => call('skillReviewSetting', { enabled }));
+                  }}
+                />
+                {t('ตรวจงานกับขั้นตอนของ Skill ก่อนส่ง')}
+              </label>
+              <p className="small muted">{t('งานครบตาม Skill ขึ้น แต่ตอบช้าลงเล็กน้อย · ใช้กับ Claude และ Antigravity')}</p>
+            </>
+          )}
         </section>
       )}
       {page === 'general' && (

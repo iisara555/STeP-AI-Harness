@@ -64,6 +64,7 @@ const allowed = new Set([
   'learningDraft',
   'skillProposal',
   'learningReviewSetting',
+  'skillReviewSetting',
   'learningPropose',
   'learningRevise',
   'learningImport',

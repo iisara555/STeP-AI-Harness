@@ -369,6 +369,8 @@ export type Settings = {
   developmentMode?: boolean;
   /** Background review follows the release default when unset; explicit false preserves the employee's opt-out. IT may deny it. */
   learningReview?: boolean;
+  /** Skill Review follows the policy when unset; explicit false is the employee's opt-out. IT may deny it. */
+  skillReview?: boolean;
   keybindings?: import('./commands').Keybindings;
   vimMode?: boolean;
   outputStyle?: string;
