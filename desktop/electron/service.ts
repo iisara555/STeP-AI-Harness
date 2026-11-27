@@ -62,6 +62,7 @@ import {
   qualityFeedback,
   skillChecklist,
   skillReviewPrompt,
+  skillReviewSupported,
 } from './answer-review';
 import { autoEffort, auxiliaryConnection, modelOption, summaryEffort, taskSize } from './effort';
 import { selfContainedText } from './text-intent';
@@ -2303,9 +2304,14 @@ export class WorkService {
                 }).findings,
               );
               if (found) return found;
-              // Not for a general chat, a plan waiting for approval (plan mode), or a second time in one step.
+              // Not for a general chat, a connection whose model has not passed eval:review, a plan waiting for approval
+              // (plan mode), or a second time in one step.
               const checklist =
-                general || skillReviewed || !this.harness.skillReview?.() || this.harness.permissionMode?.() === 'plan'
+                general ||
+                skillReviewed ||
+                !this.harness.skillReview?.() ||
+                !skillReviewSupported(connection) ||
+                this.harness.permissionMode?.() === 'plan'
                   ? ''
                   : skillChecklist(activeSystem.selectedInstructions.join('\n\n'));
               if (!checklist) return undefined;

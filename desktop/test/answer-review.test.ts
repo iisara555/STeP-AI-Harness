@@ -212,10 +212,16 @@ test('cancelling while a reviewed answer is rewritten still cancels the run', as
 /** A WorkService on a Skill-routed chat request whose model replies through `reply`. */
 async function skillRun(
   reply: (system: string, emit?: (text: string) => void) => Promise<string>,
-  options: { permissionMode?: 'ask' | 'plan'; stepTimeoutMs?: number } = {},
+  options: { permissionMode?: 'ask' | 'plan'; stepTimeoutMs?: number; provider?: Connection['provider'] } = {},
 ) {
   const store = new Store(':memory:');
-  store.put('connection', 'c', { id: 'c', provider: 'openai', model: 'fixture', ready: true } as Connection);
+  store.put('connection', 'c', {
+    id: 'c',
+    provider: options.provider || 'antigravity',
+    mode: 'subscription',
+    model: 'fixture',
+    ready: true,
+  } as Connection);
   store.put('settings', 'main', { workspace: tmpdir(), team: 'cc' });
   const harness: Harness = {
     root: resolve('..'),
@@ -283,6 +289,8 @@ test('in the app, no Skill review runs in plan mode or after an answer turn too 
   const reply = async (system: string) => (isReview(system) ? '{"status":"continue","missing":["x"]}' : 'บรีฟ');
   const plan = await skillRun(reply, { permissionMode: 'plan' });
   assert.equal(plan.reviews, 0);
+  // A connection whose model has not passed eval:review (here an OpenAI-compatible one) is not reviewed either.
+  assert.equal((await skillRun(reply, { provider: 'compatible' })).reviews, 0);
   assert.equal(plan.text, 'บรีฟ');
   // The answer takes 60% of the step timeout: a rewrite could not fit, so the answer goes out unreviewed.
   const slow = await skillRun(async system => (isReview(system) ? '{"status":"continue","missing":["x"]}' : (await delay(600), 'บรีฟ')), {
