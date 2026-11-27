@@ -13,6 +13,7 @@ import {
   SlidersHorizontal,
   Trash2,
 } from './icons';
+import { CodeXml } from 'lucide-react';
 import { SidebarRail } from './sidebar-rail';
 import { TASK_ALERT_LABELS } from './task-alerts';
 import { UpdateCard, VersionLine } from './update';
@@ -52,9 +53,11 @@ export function AppSidebar({ v }: { v: AppView }) {
     setRenaming,
     setSettings,
     settings,
+    showPanel,
     snapshot,
     staffSkills,
     taskMeta,
+    toolTab,
     update,
     view,
   } = v;
@@ -71,9 +74,11 @@ export function AppSidebar({ v }: { v: AppView }) {
           settings={settings}
           receiptBusy={receiptBusy}
           needsYou={needsYou}
+          codingOpen={showPanel && toolTab === 'coding'}
           onNew={() => void action(create)}
           onSearch={() => setPalette(true)}
           onTasks={() => commandRef.current.left?.()}
+          onCoding={() => commandRef.current.coding?.()}
           onView={next => {
             setSettings(false);
             navigate(next);
@@ -249,6 +254,13 @@ export function AppSidebar({ v }: { v: AppView }) {
                 {t('Skill')}
               </span>
               <span className="count">{staffSkills ? staffSkills.length + toolCount : ''}</span>
+            </button>
+            <button className={showPanel && toolTab === 'coding' ? 'nav-active' : ''} onClick={() => commandRef.current.coding?.()}>
+              <CodeXml size={17} />
+              <span className="nav-label">{t('พื้นที่เขียนโค้ด')}</span>
+              <span className="nav-short" aria-hidden="true">
+                {t('โค้ด')}
+              </span>
             </button>
             <button
               data-tour="receipt"

@@ -4,6 +4,7 @@ import { useReducedMotion } from './reduced-motion';
 import {
   Blocks,
   CalendarClock,
+  CodeXml,
   FileText,
   LoaderCircle,
   Megaphone,
@@ -41,7 +42,7 @@ function RailButton({
   badge,
   onClick,
 }: {
-  icon: AnimatedIcon;
+  icon?: AnimatedIcon;
   stillIcon: LucideIcon;
   label: string;
   size?: number;
@@ -68,7 +69,7 @@ function RailButton({
       onFocus={start}
       onBlur={stop}
     >
-      {busy || (reduced ? <StillIcon size={size} className="rail-icon" /> : <Icon ref={icon} size={size} className="rail-icon" />)}
+      {busy || (!Icon || reduced ? <StillIcon size={size} className="rail-icon" /> : <Icon ref={icon} size={size} className="rail-icon" />)}
       {!!badge && (
         <span className="rail-badge" aria-hidden="true">
           {badge > 9 ? '9+' : badge}
@@ -109,10 +110,12 @@ export function SidebarRail({
   view,
   settings,
   receiptBusy,
+  codingOpen,
   needsYou = 0,
   onNew,
   onSearch,
   onTasks,
+  onCoding,
   onView,
   onSettings,
   onProfile,
@@ -123,11 +126,13 @@ export function SidebarRail({
   view: string;
   settings: boolean;
   receiptBusy: boolean;
+  codingOpen: boolean;
   /** Tasks waiting on the employee (src/task-alerts.ts), counted on the task list icon. */
   needsYou?: number;
   onNew: () => void;
   onSearch: () => void;
   onTasks: () => void;
+  onCoding: () => void;
   onView: (view: 'documents' | 'media' | 'skills' | 'schedules' | 'receipt') => void;
   onSettings: () => void;
   onProfile: () => void;
@@ -157,6 +162,7 @@ export function SidebarRail({
         <RailButton icon={MessageSquareIcon} stillIcon={MessageSquare} label={t('งานทั้งหมด')} badge={needsYou} onClick={onTasks} />
         <span className="rail-divider" aria-hidden="true" />
         <nav aria-label={t('เครื่องมือ')}>
+          <RailButton stillIcon={CodeXml} label={t('พื้นที่เขียนโค้ด')} className={codingOpen ? 'nav-active' : ''} onClick={onCoding} />
           {tools.map(([id, label, Icon, StillIcon]) => (
             <RailButton
               key={id}

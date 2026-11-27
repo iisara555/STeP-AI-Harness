@@ -277,7 +277,9 @@ export function useWorkspace() {
   // The output panel waits for something to show: a task with no draft yet gives the chat the whole width. Opening the
   // panel by hand (or opening a file, a proposal or a tool in it) keeps it open for this task even while it is empty.
   const [panelPinned, setPanelPinned] = useState(false);
-  useEffect(() => setPanelPinned(false), [selected]);
+  useEffect(() => {
+    if (toolTab !== 'coding') setPanelPinned(false);
+  }, [selected]);
   const openPanel = () => {
     setRight(true);
     setPanelPinned(true);
@@ -1202,6 +1204,14 @@ export function useWorkspace() {
     if (guardSettingsExit(showWizard)) return;
     setWizard(true);
   };
+  const showCoding = () => {
+    if (guardSettingsExit(showCoding)) return;
+    setSettings(false);
+    navigate('chat');
+    setToolRequest(undefined);
+    setToolTab('coding');
+    openPanel();
+  };
   const commands = {
     packs: () => setPacksOpen(true),
     palette: () => setPalette(p => !p),
@@ -1214,6 +1224,7 @@ export function useWorkspace() {
       setLearningOpen(true);
     },
     automations: () => setAutomationOpen(true),
+    coding: showCoding,
     settings: () => openSettings(),
     keyboard: () => setKeyboardOpen(true),
     // Absent when IT turned "แจ้งปัญหา / เสนอแนะ" off, so the palette and menu do not offer it.

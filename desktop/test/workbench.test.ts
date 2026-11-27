@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Store } from '../electron/store';
 import { Workbench, browserUrl } from '../electron/workbench';
+import { inspectCodingProject, resolveCodingCheck } from '../electron/coding-project';
 import { toolRemediationHint } from '../electron/tool-loop';
 import { toolRequests, loopRequests } from '../src/tools';
 import { defaultPolicy } from '../electron/policy';
@@ -13,11 +14,11 @@ import { promisify } from 'node:util';
 
 const replWorker = resolve('electron/repl-worker.cjs');
 
-async function fixture() {
+async function fixture(policy?: ReturnType<typeof defaultPolicy>) {
   const root = await mkdtemp(join(tmpdir(), 'step-tools-'));
   const store = new Store(':memory:');
   store.put('settings', 'main', { workspace: root });
-  const tools = new Workbench(store);
+  const tools = new Workbench(store, undefined, policy && (() => policy));
   return {
     root,
     store,
@@ -44,6 +45,52 @@ test('files stay inside the selected real workspace, including junctions and pri
       (await f.tools.files()).entries.map(e => e.name),
       ['public.txt'],
     );
+  } finally {
+    await f.close();
+    await rm(outside, { recursive: true, force: true });
+  }
+});
+test('coding project checks use discovered packages, inherit package managers and exclude linked or denied folders', async () => {
+  const policy = defaultPolicy();
+  policy.permission.pathRules = [{ pattern: 'packages/private*', allow: false }];
+  const f = await fixture(policy),
+    outside = await mkdtemp(join(tmpdir(), 'step-coding-outside-'));
+  try {
+    const root = await f.tools.root();
+    const rootManifest = { packageManager: 'pnpm@10.0.0', scripts: { prepare: 'node setup.cjs' } };
+    await writeFile(join(root, 'package.json'), JSON.stringify(rootManifest));
+    for (const [folder, manifest] of [
+      ['apps/web', { dependencies: { react: 'test' }, scripts: { test: 'node test.cjs' } }],
+      [
+        'services/api',
+        { packageManager: 'yarn@4.0.0', scripts: { prebuild: 'echo before', build: 'node build.cjs', postbuild: 'echo after' } },
+      ],
+      ['packages/private', { scripts: { test: 'node private.cjs' } }],
+    ] as const) {
+      await mkdir(join(root, folder), { recursive: true });
+      await writeFile(join(root, folder, 'package.json'), JSON.stringify(manifest));
+    }
+    await writeFile(join(outside, 'package.json'), JSON.stringify({ scripts: { test: 'node outside.cjs' } }));
+    await symlink(outside, join(root, 'frontend'), process.platform === 'win32' ? 'junction' : 'dir');
+    assert.deepEqual((await inspectCodingProject(f.tools)).packages, [
+      { directory: '.', kind: 'shared', manager: 'pnpm', checks: [] },
+      { directory: 'apps/web', kind: 'frontend', manager: 'pnpm', checks: ['test'] },
+      { directory: 'services/api', kind: 'backend', manager: 'yarn', checks: ['build'] },
+    ]);
+    const check = await resolveCodingCheck(f.tools, root, 'services/api', 'build');
+    assert.equal(check.cwd, join(root, 'services', 'api'));
+    assert.match(check.command, /^yarn(?:\.cmd)? run build$/);
+    assert.deepEqual(check.scripts, ['echo before', 'node build.cjs', 'echo after']);
+    for (const [directory, script] of [
+      ['../escape', 'test'],
+      ['frontend', 'test'],
+      ['packages/private', 'test'],
+      ['.', 'prepare'],
+      ['apps/web', 'test; echo unsafe'],
+    ])
+      await assert.rejects(resolveCodingCheck(f.tools, root, directory, script), /CODING_CHECK_UNAVAILABLE/);
+    await assert.rejects(resolveCodingCheck(f.tools, outside, 'apps/web', 'test'), /WORKSPACE_CHANGED/);
+    await assert.rejects(f.tools.start('unused', undefined, { workspace: outside, cwd: root }), /WORKSPACE_CHANGED/);
   } finally {
     await f.close();
     await rm(outside, { recursive: true, force: true });

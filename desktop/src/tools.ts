@@ -1,7 +1,7 @@
 import { toolArgsLimit, validateToolRequest } from './tool-registry';
 import { repairNotes, repairToolRequest } from './tool-repair';
 
-export type ToolTab = 'output' | 'browser' | 'terminal' | 'tasks' | 'files' | 'changes';
+export type ToolTab = 'output' | 'browser' | 'terminal' | 'tasks' | 'files' | 'changes' | 'coding';
 export type ToolRequest = { tool: 'browser' | 'terminal' | 'files' | 'changes'; input: string; content?: string };
 export type BackgroundTask = {
   id: string;
