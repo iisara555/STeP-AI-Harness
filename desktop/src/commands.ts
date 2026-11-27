@@ -9,6 +9,7 @@ export const COMMANDS = [
   ['vault', 'บัญชีและบริการ', ''],
   ['learning', 'กล่องบทเรียน', ''],
   ['schedules', 'งานตั้งเวลา', 'Mod+Shift+b'],
+  ['coding', 'พื้นที่เขียนโค้ด', ''],
   ['automations', 'เครื่องมือเพิ่มเติม (MCP และ Docker)', ''],
   ['settings', 'การตั้งค่า', 'Mod+,'],
   ['keyboard', 'คีย์ลัดแป้นพิมพ์', ''],

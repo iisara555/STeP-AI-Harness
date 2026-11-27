@@ -1,7 +1,7 @@
 // Real renderer/preload/main/provider/tool workers, isolated synthetic profile and files only.
 import { _electron as electron, expect } from '@playwright/test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 const home = await mkdtemp(join(tmpdir(), 'step-long-task-'));
@@ -9,6 +9,16 @@ const workspace = join(home, 'work'),
   executable = join(home, 'codex.mjs');
 await mkdir(workspace);
 await writeFile(join(workspace, 'main.ts'), 'const value: string = 123; export { value };');
+const frontend = join(workspace, 'apps', 'web'),
+  backend = join(workspace, 'services', 'api');
+for (const [folder, check, output, code] of [
+  [frontend, 'test', 'frontend-package-check', 0],
+  [backend, 'build', 'backend-package-check', 7],
+]) {
+  await mkdir(folder, { recursive: true });
+  await writeFile(join(folder, 'package.json'), JSON.stringify({ scripts: { [check]: 'node verify.cjs' } }));
+  await writeFile(join(folder, 'verify.cjs'), `console.log(${JSON.stringify(output)}); process.exitCode = ${code};`);
+}
 await writeFile(
   executable,
   `
@@ -194,8 +204,44 @@ try {
   await page.locator('.composer textarea').press('Enter');
   await expect.poll(async () => (await snapshot()).sessions.find(s => s.id === fresh.id)?.status).toBe('review');
   assert.equal((await current()).draft, retainedDraft);
+
+  await page.locator('.sidebar').getByRole('button', { name: 'พื้นที่เขียนโค้ด', exact: true }).click();
+  const coding = page.locator('.coding-workbench');
+  await expect(coding.getByText('Frontend · npm', { exact: true })).toBeVisible();
+  await expect(coding.getByText('Backend · npm', { exact: true })).toBeVisible();
+  await coding.getByRole('button', { name: 'วางแผนก่อนลงมือ', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'โหมดทำงาน' })).toHaveValue('plan');
+  await coding.getByRole('button', { name: 'เขียนและตรวจโค้ด', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'โหมดทำงาน' })).toHaveValue('coding');
+  const commandApproval = page.getByRole('alertdialog', { name: 'รันคำสั่งนี้บนเครื่อง?' });
+  const tasks = () => page.evaluate(() => window.step.call('toolTasks'));
+  const testButton = coding.getByRole('button', { name: 'test', exact: true });
+  const frontendManifest = join(frontend, 'package.json');
+  const originalManifest = await readFile(frontendManifest, 'utf8');
+  await testButton.click();
+  await expect(commandApproval).toContainText(await realpath(frontend));
+  assert.equal((await tasks()).length, 0, 'discovered checks must wait for a person');
+  await writeFile(frontendManifest, JSON.stringify({ scripts: { test: 'node changed.cjs' } }));
+  await commandApproval.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
+  await expect(coding.getByRole('alert')).toContainText('เปลี่ยนระหว่างรออนุญาต');
+  assert.equal((await tasks()).length, 0, 'an approval cannot run a changed manifest');
+  await writeFile(frontendManifest, originalManifest);
+  for (const [check, folder, output, code] of [
+    ['test', frontend, 'frontend-package-check', 0],
+    ['build', backend, 'backend-package-check', 7],
+  ]) {
+    const cwd = await realpath(folder);
+    await coding.getByRole('button', { name: check, exact: true }).click();
+    await expect(commandApproval).toContainText(cwd);
+    await commandApproval.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
+    const card = page.locator('.task-card').filter({ hasText: output });
+    await expect(card.locator('pre')).toContainText(output, { timeout: 15000 });
+    await expect(card.locator('.task-state')).toContainText(`รหัสจบงาน ${code}`);
+    await expect.poll(async () => (await tasks()).find(task => task.cwd === cwd)?.status).toBe(code ? 'failed' : 'done');
+    await page.locator('.workbench-tab-list').getByRole('button', { name: 'โค้ด', exact: true }).click();
+  }
   console.log(
-    'Long-task native smoke passed: detached/busy questions, localized document patch, bounded plan continuation, real language-service diagnostics, staged/applied code and recheck.',
+    'Long-task native smoke passed: detached/busy questions, targeted document patch, plan continuation, staged code and diagnostics, and approved frontend/backend checks with exit codes.',
   );
 } finally {
   await app.close();

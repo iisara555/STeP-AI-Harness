@@ -62,6 +62,23 @@ const pending = async () => {
   await new Promise(resolve => setImmediate(resolve));
 };
 
+test('a project script always asks once even when policy allows commands in auto mode', async () => {
+  const f = fixture();
+  try {
+    f.mode = 'auto';
+    f.policy.features.autoMode = true;
+    f.policy.features.shellByAi = true;
+    const command = { tool: 'terminal', readOnly: false, execute: true, command: 'npm run test' };
+    const run = f.gate.run(command, { ...detail, requireConfirmation: true }, () => assert.fail('rejected script must not run'));
+    await pending();
+    assert.equal(f.approval?.allowRemember, false);
+    f.approvals.respond(f.approval!.id, 'cancel');
+    assert.equal(await run, null);
+  } finally {
+    f.close();
+  }
+});
+
 test('reads run without consent; rejected writes do not execute; approved targets can be remembered and revoked', async () => {
   const f = fixture();
   let writes = 0;

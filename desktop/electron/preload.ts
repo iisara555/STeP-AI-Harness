@@ -181,6 +181,8 @@ const allowed = new Set([
   'toolReject',
   'toolDiff',
   'toolRun',
+  'codingProject',
+  'codingRunCheck',
   'toolTasks',
   'toolCancel',
   'toolBrowser',

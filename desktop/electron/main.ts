@@ -53,6 +53,7 @@ import { googleResultConsent } from './google-consent';
 import { executeGoogleRead } from './google-read-tool';
 import { PLAN_COMMENT_LIMIT } from '../src/plan-comments';
 import { Workbench, browserUrl } from './workbench';
+import { inspectCodingProject, resolveCodingCheck } from './coding-project';
 import { AgentBrowser } from './browser-agent';
 import { BrowserDock } from './browser-dock';
 import { PREVIEW_LIMIT, isHtmlPath, openHtmlPreview } from './html-preview';
@@ -2952,6 +2953,36 @@ async function main() {
       }
       case 'toolDiff':
         return gate.run({ tool: 'diff', readOnly: true }, { title: '', body: '', key: 'diff' }, () => workbench.diff());
+      case 'codingProject':
+        return gate.run({ tool: 'files', readOnly: true }, { title: '', body: '', key: 'coding-project' }, () =>
+          inspectCodingProject(workbench),
+        );
+      case 'codingRunCheck': {
+        const workspace = inputText(input.root, 2000),
+          directory = inputText(input.directory, 2000),
+          check = inputText(input.check, 24);
+        const selected = await resolveCodingCheck(workbench, workspace, directory, check);
+        const commands = [selected.command, ...selected.scripts].join('\n');
+        if (commands.length > 8000) throw new Error('CODING_CHECK_UNAVAILABLE');
+        const review = scanText(commands);
+        if (review.action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
+        return gate.run(
+          { tool: 'terminal', readOnly: false, execute: true, command: commands, path: selected.cwd },
+          {
+            title: tm('รันคำสั่งนี้บนเครื่อง?'),
+            body:
+              commands + '\n\nWorking directory: ' + selected.cwd + tm('\nคำสั่งทำงานด้วยสิทธิ์ของคุณ และอาจแก้ไฟล์หรือเชื่อมต่อเครือข่าย'),
+            key: selected.key,
+            privacyClass: review.classification === 'public' ? 'internal' : review.classification,
+            requireConfirmation: true,
+          },
+          async () => {
+            const current = await resolveCodingCheck(workbench, workspace, directory, check);
+            if (selected.key !== current.key) throw new Error('CODING_CHECK_CHANGED');
+            return workbench.start(current.command, undefined, { workspace, cwd: current.cwd });
+          },
+        );
+      }
       case 'toolTasks':
         return gate.run({ tool: 'tasks', readOnly: true }, { title: '', body: '', key: 'tasks' }, () => workbench.tasks());
       case 'toolCancel':
