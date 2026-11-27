@@ -41,6 +41,7 @@ export const FEATURES = [
   'memoryTeam',
   'autoRouting',
   'hybridSkillSelection',
+  'chatClarification',
   'skillSuggestions',
   'morningBrief',
   'receiptVision',
@@ -218,6 +219,11 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // Preload confidently matched named procedures, otherwise ask the same AI to choose from metadata before answering.
   // Text-only edits and explicitly selected workflows keep their existing path. IT can disable the extra selection call.
   hybridSkillSelection: true,
+  // In a new chat request that fits two or more Skills which would produce different work, the same selection call may
+  // ask the employee which one they mean (one question with 2–4 choices, at most once per request, no extra model call).
+  // Details a Skill needs are still asked by the answering AI. The old Router menus (autoRouting) asked on 78 of 224
+  // benchmark requests, so they stay off. IT can set it to false.
+  chatClarification: true,
   // While autoRouting is off, a Skill that clearly fits what the employee is typing is offered as one button above the
   // composer ("ลองใช้ Skill: …"); nothing changes unless they press it (owner's decision, 2026-10-18). Local matching
   // only, no model call. IT can set it to false.

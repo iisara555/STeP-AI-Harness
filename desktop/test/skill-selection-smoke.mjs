@@ -20,7 +20,9 @@ createInterface({input:process.stdin}).on('line',line=>{
  send({id:m.id,result:m.method==='thread/start'?{thread:{id:'fixture'}}:m.method==='model/list'?{data:[]}: {}});
  if(m.method!=='turn/start')return;
  const schema=m.params.outputSchema||{};
- let text=schema.properties?.skillId?JSON.stringify({skillId:'document-review',reason:'Review existing text'}):schema.properties?.unsupported?JSON.stringify({unsupported:[]}):system.includes('<skill_instructions>')&&system.includes('name: document-review')?'Hybrid loaded real document-review':'General text answer';
+ const request=String(m.params.input?.map(i=>i.text||'').join('')||'');
+ const asks=schema.properties?.ask&&request.includes('จ้างเหมา');
+ let text=asks?JSON.stringify({skillId:'document-review',reason:'Two reviews fit',ask:{question:'ต้องการให้ช่วยตรวจแบบไหน',options:[{skillId:'document-review',label:'ตรวจความครบของเอกสาร'},{skillId:'tor-review',label:'ตรวจ TOR ก่อนประกาศ'}]}}):schema.properties?.skillId?JSON.stringify({skillId:'document-review',reason:'Review existing text'}):system.includes('<skill_instructions>')&&system.includes('name: tor-review')?'Hybrid loaded real tor-review':schema.properties?.unsupported?JSON.stringify({unsupported:[]}):system.includes('<skill_instructions>')&&system.includes('name: document-review')?'Hybrid loaded real document-review':'General text answer';
  send({method:'thread/tokenUsage/updated',params:{tokenUsage:{total:{inputTokens:10,outputTokens:2,totalTokens:12}}}});
  send({method:'item/agentMessage/delta',params:{delta:text}});
  send({method:'turn/completed',params:{turn:{status:'completed'}}});
@@ -106,7 +108,24 @@ try {
   const explicit = await run('ช่วยตรวจร่างเอกสารนี้', 'document-review');
   assert.equal(explicit.runs.at(-1).skillSelection, undefined);
   assert.equal(explicit.messages.filter(m => m.role === 'assistant').at(-1).text, 'Hybrid loaded real document-review');
-  console.log('Hybrid selection RPC, actual Skill assembly, selection usage, text fast path and explicit Skill smoke passed');
+  // A request that fits two Skills: the selection's question appears as the question card above the composer, and
+  // one click loads the chosen Skill with no second selection call (policy chatClarification, on by default).
+  await page.locator('.composer textarea').fill('ช่วยดูเอกสารจ้างเหมาฉบับนี้ก่อนส่ง');
+  await page.keyboard.press('Enter');
+  const question = page.locator('.composer-area .tool-question');
+  await question.getByText('ต้องการให้ช่วยตรวจแบบไหน').waitFor({ timeout: 30000 });
+  await expect(question.getByRole('button')).toContainText(['ตรวจความครบของเอกสาร', 'ตรวจ TOR ก่อนประกาศ']);
+  await question.getByRole('button', { name: /ตรวจ TOR ก่อนประกาศ/ }).click();
+  await page.getByText('Hybrid loaded real tor-review', { exact: true }).waitFor({ timeout: 30000 });
+  await expect(question).toHaveCount(0);
+  const asked = (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s =>
+    s.messages.some(m => m.text === 'ช่วยดูเอกสารจ้างเหมาฉบับนี้ก่อนส่ง'),
+  );
+  assert.deepEqual(asked.runs.at(-1).skillSelection, { method: 'asked', skill: 'tor-review', asked: true });
+  assert.equal(asked.runs.at(-1).providerCalls.filter(c => c.kind === 'selection').length, 1);
+  console.log(
+    'Hybrid selection RPC, actual Skill assembly, selection usage, text fast path, explicit Skill and clarifying question smoke passed',
+  );
 } finally {
   await app.close();
   const target = resolve(home);

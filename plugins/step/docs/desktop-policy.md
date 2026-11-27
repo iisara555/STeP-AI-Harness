@@ -115,6 +115,8 @@ These guards stay on whatever `checks` says. They stop a page or file with hidde
 
 Self-contained language edits keep text scope and make no selection call. Explicit `/` Skills, fixed document tools, native workflows, plan mode and internal-browser tasks keep their existing routes. A continuing task can reuse its previous selection after the route is checked again. An invalid selection falls back to governed discovery; account, quota, network and cancellation failures stop normally without a hidden classifier retry. A valid `null` selection keeps Skill suggestions out of that answer's prompt.
 
+`features.chatClarification` is on by default and applies only to that selection call in a new chat request. When the request fits two or more registered Skills that would produce clearly different work and nothing in the request or source decides, the selector may return one question with 2 to 4 choices, each naming a Skill (or general help). The app shows it on the same question card as the AI's `ask_user` tool, above the composer; one click loads the chosen Skill with no second model call, a typed answer is added to the request and the selection runs once more without asking, and "ยกเลิกงานนี้" stops the request. The host accepts a question only when at least two choices are distinct registered Skills with readable labels; anything else is dropped and the selector's best choice is used. It asks only at the start of a chat (the selector does not see earlier messages, which may already say which work is meant), and never in a continued, retried or long task, in scheduled tasks, document drafting, plan mode, or when the Router's fast path or an explicit Skill already decided. Details a Skill needs (dates, names, amounts) are still asked by the answering AI inside the Skill. The question and answer are kept with the task (`decisions` in the task state). `{ "features": { "chatClarification": false } }` sends the selection exactly as before.
+
 Administrators can set `{ "features": { "hybridSkillSelection": false } }` to restore model-driven discovery: the AI sees Skill names/descriptions and opens full text through the `skill` tool. `/` remains available in both modes. Neither setting changes publication, credential, transmission or tool permissions.
 
 The Router still runs on every message:
@@ -122,7 +124,7 @@ The Router still runs on every message:
 - The privacy gate follows `checks.privacy`.
 - General help always loads the Human Approval and Data Classification rules.
 
-`{ "features": { "autoRouting": true } }` restores automatic Skill and Playbook selection and clarifying questions. See [STeP Router](step-router.md#manual-skill-selection-autoroute-false).
+`{ "features": { "autoRouting": true } }` restores the local Router's own Skill and Playbook selection and its fixed menu questions. It stays off: measured 2026-11-27 on the 224 requests of `../manifest/routing-staff-benchmark.json` as chat sends them, it asked back on 78 (35%, most of them a one-item "is it this?" menu) and picked 8 wrong Skills, where `chatClarification` lets the selection AI ask only when the request is really open. See [STeP Router](step-router.md#manual-skill-selection-autoroute-false).
 
 ## Pilot mode
 

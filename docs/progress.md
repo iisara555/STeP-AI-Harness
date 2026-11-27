@@ -4,10 +4,11 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-26_
+_Last updated: 2026-11-27_
 
 ## In flight
 
+- **Clarifying question in chat (`features.chatClarification`, 2026-11-27, owner asked to make it ready to use)**: the hybrid Skill selection call may return one question with 2–4 Skill choices when a new chat request fits several Skills that would produce different work; it shows on the `ask_user` question card and one click loads the chosen Skill (no extra model call). On by default; the old Router menus (`autoRouting`) stay off because on the 224 benchmark requests, sent as chat sends them, they asked back on 78 and picked 8 wrong Skills. Tested with unit tests (`test/skill-selection.test.ts`), `skill-selection-smoke.mjs` (clicks the card) and a fake provider only. Waits on: a live `STEP_EVAL_CLARIFY=both npm run eval:selection` run (Antigravity on the owner's PC) showing near-zero questions on clear requests and no fewer right Skills, before merge.
 - **Claims acceptance on staff devices (2026-11-26)**. Wave 3 has synthetic provider and receipt coverage. Real receipt and staff-account acceptance remains open.
 - **Add `sustainable-event` built-in Skill (Standard v3, `draft`, `skills/creative/sustainable-event/`, 2026-11-25)**: synthesized from TCEB / MICE sustainability, ESG, and low-carbon event methodology into original Thai instructions without copying copyrighted source text or hard-coding mutable emission factors. Covers Triple Bottom Line, UN SDGs, BCG/ESG, 5+1 planning, 25 basic guidelines (A–G), 7-step material/waste hierarchy, 8-step supply chain control across 9 vendor categories, Design for All / venue / F&B / 6-step food-allergen & 6 CSR risk checks, Cost vs. Impact 2x2 prioritization, 4 low-carbon levels, Scope 1/2/3 & 5-category avoidance activity logs (`NEED-SOURCE` for live EFs/prices via TCEB/TGO portals), TSEMS 3-pillar reporting templates, worked synthetic example, and 4-dimension evals (`evals/skills/sustainable-event.json`, `manifest/routing-staff-benchmark.json`). Registered under `cc` owner with `qs` reviewer (`stage: draft`); awaits CC/QS review and live model-side grading before promotion to `pilot`.
 

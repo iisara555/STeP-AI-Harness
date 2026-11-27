@@ -1,0 +1,41 @@
+{
+  "notes": [
+    "Synthetic staff-style requests written 2026-11-27 that fit two or more Skills which would produce different work, with nothing in the request saying which. Asking which one is meant is allowed here (not required); on the routing benchmark's clear requests it counts as over-asking.",
+    "Used by `npm run eval:selection` with STEP_EVAL_CLARIFY=1 or both. A question counts as fitting when at least two of its options are in `fits`."
+  ],
+  "cases": [
+    { "request": "ช่วยเรื่อง TOR จ้างทำเว็บไซต์หน่อย", "fits": ["tor-government-writing", "tor-review"] },
+    {
+      "request": "ทำเรื่องงานสัมมนาเดือนหน้าให้หน่อย",
+      "fits": ["event-concept", "event-run-of-show", "event-planner-pro", "sustainable-event"]
+    },
+    {
+      "request": "ช่วยเรื่อง ISO ของทีมหน่อย",
+      "fits": [
+        "iso9001-audit-readiness",
+        "document-record-control",
+        "audit-evidence-matrix",
+        "quality-objective-kpi-review",
+        "management-review-prep"
+      ]
+    },
+    { "request": "ช่วยเรื่องสไลด์ให้ผู้บริหารหน่อย", "fits": ["presentation-design", "executive-status-update", "decision-memo"] },
+    {
+      "request": "ทำเอกสารเรื่องโครงการบ่มเพาะให้หน่อย",
+      "fits": ["project-plan", "decision-memo", "thai-official-documents", "tor-government-writing"]
+    },
+    { "request": "ช่วยเรื่องแบบสอบถามลูกค้า", "fits": ["stakeholder-questionnaire", "voice-of-customer"] },
+    { "request": "ช่วยเรื่องข้อร้องเรียนจากลูกค้าที่เข้ามา", "fits": ["customer-support-faq-triage", "ncr-capa", "voice-of-customer"] },
+    { "request": "อยากได้ภาพสำหรับงาน Open House", "fits": ["step-image-prompt", "designer-brief", "creative-art-director"] },
+    {
+      "request": "ช่วยเรื่องเป้าหมายปีหน้าของทีม",
+      "fits": ["innovation-okr-mapping", "entrepreneur-annual-goal", "quality-objective-kpi-review"]
+    },
+    {
+      "request": "ช่วยเรื่องความเสี่ยงของโครงการนี้",
+      "fits": ["project-pre-mortem", "qms-risk-opportunity-review", "assumption-challenger"]
+    },
+    { "request": "ช่วยเรื่องเอกสารประชุมเมื่อวาน", "fits": ["meeting-summary", "thai-official-documents", "document-review"] },
+    { "request": "ช่วยเรื่องโพสต์ประชาสัมพันธ์ของ STeP", "fits": ["step-writing", "brand-tone-of-voice", "step-brand"] }
+  ]
+}

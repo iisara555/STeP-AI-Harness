@@ -7,6 +7,10 @@
  *   STEP_EVAL_APPROVE_LIVE=1 STEP_EVAL_PROVIDER=antigravity STEP_EVAL_ANTIGRAVITY_EXECUTABLE=<pinned agy.exe> \
  *   STEP_EVAL_MODELS=gemini-3.8-flash-medium,gemini-3.8-flash-low [STEP_EVAL_PER_SKILL=1] npm run eval:selection
  *
+ * STEP_EVAL_CLARIFY=both runs each request with and without the chatClarification question ("<model> +ask") and adds
+ * the open requests of eval/clarification-cases.json, so over-asking on clear requests and any change in the chosen Skill
+ * show side by side; STEP_EVAL_CLARIFY=1 runs only the question form.
+ *
  * Claude, OpenAI and Gemini use the same environment and caps as eval:golden (desktop/eval/runtime.ts: 50 calls and
  * 200,000 tokens per run; a selection call is about 7,000 tokens, so about 28 calls fit). Run the full set in parts of
  * 12 requests (24 calls with two models): STEP_EVAL_CASES=1-12, 13-24, 25-36, 37-48, 49-61 with STEP_EVAL_MAX_CALLS=26,
@@ -25,8 +29,10 @@ import { checkAntigravity } from '../electron/antigravity';
 import { evaluationRuntime } from './runtime';
 import type { Connection } from '../src/types';
 
-export type Case = { request: string; expected: string | null };
-export type Outcome = Case & { model: string; chosen?: string | null; code?: string; ms: number; output?: number };
+/** `fits`: a request that fits several Skills (eval/clarification-cases.json), where a question is allowed. */
+export type Case = { request: string; expected: string | null; fits?: string[] };
+/** `asked`: the targets of a valid selector question (policy chatClarification), `none` for a general-help option. */
+export type Outcome = Case & { model: string; chosen?: string | null; code?: string; ms: number; output?: number; asked?: string[] };
 
 /** The first `perSkill` requests of every Skill, then every general request (expected: no Skill). */
 export function sampleCases(suite: { skills: Record<string, string[]>; general: string[] }, perSkill: number): Case[] {
@@ -42,8 +48,9 @@ export function score(outcomes: Outcome[]) {
   const models = [...new Set(outcomes.map(o => o.model))];
   return models.map(model => {
     const mine = outcomes.filter(o => o.model === model);
-    const skill = mine.filter(o => o.expected);
-    const general = mine.filter(o => !o.expected);
+    const skill = mine.filter(o => o.expected && !o.fits);
+    const general = mine.filter(o => !o.expected && !o.fits);
+    const open = mine.filter(o => o.fits);
     const ms = mine
       .filter(o => !o.code)
       .map(o => o.ms)
@@ -57,6 +64,11 @@ export function score(outcomes: Outcome[]) {
       generalKept: general.filter(o => o.chosen === null).length,
       generalCases: general.length,
       invalid: mine.filter(o => o.code).length,
+      // Over-asking: a question on a request the benchmark treats as clear (or as general help).
+      askedClear: [...skill, ...general].filter(o => o.asked).length,
+      askedOpen: open.filter(o => o.asked).length,
+      askedOpenFitting: open.filter(o => (o.asked || []).filter(id => o.fits!.includes(id)).length >= 2).length,
+      openCases: open.length,
       p50Ms: ms.length ? ms[Math.ceil(ms.length / 2) - 1] : undefined,
       outputTokens: mine.reduce((n, o) => n + (o.output || 0), 0),
     };
@@ -65,6 +77,7 @@ export function score(outcomes: Outcome[]) {
 
 export function report(rows: ReturnType<typeof score>, outcomes: Outcome[]) {
   const seconds = (ms?: number) => (ms === undefined ? '-' : (ms / 1000).toFixed(1) + ' s');
+  const asking = rows.some(r => r.openCases || r.askedClear);
   const lines = [
     '| Model | Right Skill | Wrong Skill | No Skill | General kept general | Invalid / failed | p50 | Output tokens |',
     '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
@@ -73,6 +86,23 @@ export function report(rows: ReturnType<typeof score>, outcomes: Outcome[]) {
         `| ${r.model} | ${r.right}/${r.skillCases} | ${r.wrongSkill} | ${r.noSkill} | ${r.generalKept}/${r.generalCases} | ${r.invalid} | ${seconds(r.p50Ms)} | ${r.outputTokens.toLocaleString('en-US')} |`,
     ),
     '',
+    ...(asking
+      ? [
+          'Questions (chatClarification): asked on clear requests is over-asking; on open requests a question is allowed.',
+          '',
+          '| Model | Asked on clear | Asked on open | Open questions with fitting options |',
+          '| --- | ---: | ---: | ---: |',
+          ...rows.map(
+            r =>
+              `| ${r.model} | ${r.askedClear}/${r.skillCases + r.generalCases} | ${r.askedOpen}/${r.openCases} | ${r.askedOpenFitting}/${r.askedOpen} |`,
+          ),
+          '',
+          'Questions asked:',
+          '',
+          ...outcomes.filter(o => o.asked).map(o => `- ${o.model}: ${o.request} (${o.fits ? 'open' : 'clear'}) → ${o.asked!.join(' / ')}`),
+          '',
+        ]
+      : []),
     'Requests where the models disagree:',
     '',
   ];
@@ -170,8 +200,20 @@ async function main(env = process.env) {
   const perSkill = Number(env.STEP_EVAL_PER_SKILL || 1);
   if (!Number.isSafeInteger(perSkill) || perSkill < 1 || perSkill > 4) throw new Error('EVAL_PER_SKILL_INVALID');
   const suite = JSON.parse(await readFile(join(root, 'manifest/routing-staff-benchmark.json'), 'utf8'));
-  const cases = pickRange(sampleCases(suite, perSkill), env.STEP_EVAL_CASES);
-  const maxCalls = Number(env.STEP_EVAL_MAX_CALLS || cases.length * models.length);
+  // STEP_EVAL_CLARIFY=1 sends the selection with the chatClarification question; `both` runs every model with and
+  // without it (labelled "<model> +ask"), so over-asking and any change in the chosen Skill show side by side.
+  const clarify = env.STEP_EVAL_CLARIFY || '';
+  if (!['', '0', '1', 'both'].includes(clarify)) throw new Error('EVAL_CLARIFY_INVALID');
+  const variants = clarify === 'both' ? [false, true] : [clarify === '1'];
+  const open: Case[] = variants.includes(true)
+    ? JSON.parse(await readFile(join(here, 'clarification-cases.json'), 'utf8')).cases.map((c: any) => ({
+        request: c.request,
+        expected: null,
+        fits: c.fits,
+      }))
+    : [];
+  const cases = pickRange([...sampleCases(suite, perSkill), ...open], env.STEP_EVAL_CASES);
+  const maxCalls = Number(env.STEP_EVAL_MAX_CALLS || cases.length * models.length * variants.length);
   if (!Number.isSafeInteger(maxCalls) || maxCalls < 1 || maxCalls > 900) throw new Error('EVAL_CALL_LIMIT_INVALID');
   const skills: any = await import('../../src/modules/skills/catalog.js');
   const registry = ((await skills.createSkillCatalog(root)()) as any[]).filter(e => e.status === 'routed');
@@ -183,46 +225,53 @@ async function main(env = process.env) {
   try {
     // Models alternate per request, so a slow or failing stretch of the service hits both alike.
     for (const item of cases)
-      for (const model of models) {
-        if (stopped || calls >= maxCalls) break;
-        calls++;
-        const selection = prepareSkillSelection(registry, item.request, '');
-        const started = Date.now();
-        let output = 0;
-        try {
-          const reply = await live.run(
-            selection.prompt,
-            { ...live.connection, model },
-            {
-              ...live.context,
-              signal: new AbortController().signal,
-              system: selection.system,
-              jsonSchema: selection.schema,
-              emit: () => {},
-              onUsage: count => {
-                output = Math.max(output, count.output || 0);
+      for (const model of models)
+        for (const ask of variants) {
+          if (stopped || calls >= maxCalls) break;
+          calls++;
+          const label = ask && variants.length > 1 ? `${model} +ask` : model;
+          const selection = prepareSkillSelection(registry, item.request, '', { clarify: ask });
+          const started = Date.now();
+          let output = 0;
+          try {
+            const reply = await live.run(
+              selection.prompt,
+              { ...live.connection, model },
+              {
+                ...live.context,
+                signal: new AbortController().signal,
+                system: selection.system,
+                jsonSchema: selection.schema,
+                emit: () => {},
+                onUsage: count => {
+                  output = Math.max(output, count.output || 0);
+                },
               },
-            },
+            );
+            const chosen = selection.parse(reply);
+            const question = chosen === undefined ? undefined : selection.ask(reply);
+            outcomes.push({
+              ...item,
+              model: label,
+              chosen,
+              ...(question ? { asked: question.options.map(o => o.skillId || 'none') } : {}),
+              ...(chosen === undefined ? { code: 'INVALID_SKILL_SELECTION' } : {}),
+              ms: Date.now() - started,
+              output,
+            });
+          } catch (error) {
+            const code = error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'PROVIDER_REQUEST_FAILED';
+            outcomes.push({ ...item, model: label, code, ms: Date.now() - started, output });
+            if (['LOGIN_REQUIRED', 'PROVIDER_QUOTA', 'PROVIDER_PERMISSION_DENIED', 'EVAL_QUOTA_BOUND'].includes(code)) stopped = code;
+          }
+          // A broken runtime or an unknown model id fails every call; stop instead of spending the rest of the run on it.
+          failedInRow = outcomes.at(-1)!.code ? failedInRow + 1 : 0;
+          if (failedInRow >= 6) stopped ||= 'REPEATED_FAILURES';
+          const last = outcomes.at(-1)!;
+          console.log(
+            `${calls}/${cases.length * models.length * variants.length} ${label}: ${last.code || last.chosen || 'none'}${last.asked ? ' (asked: ' + last.asked.join(' / ') + ')' : ''}`,
           );
-          const chosen = selection.parse(reply);
-          outcomes.push({
-            ...item,
-            model,
-            chosen,
-            ...(chosen === undefined ? { code: 'INVALID_SKILL_SELECTION' } : {}),
-            ms: Date.now() - started,
-            output,
-          });
-        } catch (error) {
-          const code = error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'PROVIDER_REQUEST_FAILED';
-          outcomes.push({ ...item, model, code, ms: Date.now() - started, output });
-          if (['LOGIN_REQUIRED', 'PROVIDER_QUOTA', 'PROVIDER_PERMISSION_DENIED', 'EVAL_QUOTA_BOUND'].includes(code)) stopped = code;
         }
-        // A broken runtime or an unknown model id fails every call; stop instead of spending the rest of the run on it.
-        failedInRow = outcomes.at(-1)!.code ? failedInRow + 1 : 0;
-        if (failedInRow >= 6) stopped ||= 'REPEATED_FAILURES';
-        console.log(`${calls}/${cases.length * models.length} ${model}: ${outcomes.at(-1)!.code || outcomes.at(-1)!.chosen || 'none'}`);
-      }
   } finally {
     await live.close();
   }
@@ -237,6 +286,7 @@ async function main(env = process.env) {
         provider: live.connection.provider,
         models,
         perSkill,
+        clarify: clarify || '0',
         cases: env.STEP_EVAL_CASES || 'all',
         ...(stopped ? { stopped } : {}),
         rows,

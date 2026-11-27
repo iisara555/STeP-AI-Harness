@@ -524,3 +524,187 @@ test('WorkService records patched files in assistant message written list', asyn
     store.close();
   }
 });
+
+// Chat clarification (policy chatClarification): the selection call may ask which of several fitting Skills is meant.
+const REVIEW_REQUEST = 'อ่านร่างนี้ให้หน่อย มีตรงไหนงง ข้อมูลตกหล่น หรือบอกไม่เหมือนกันบ้าง';
+const REVIEW_SOURCE = 'ร่างจำลอง: นัดที่ห้องประชุม แต่ท้ายข้อความบอกออนไลน์';
+const ASKING =
+  '{"skillId":"document-review","reason":"Two kinds of review fit","ask":{"question":"ต้องการให้ช่วยแบบไหนครับ","options":[' +
+  '{"skillId":"document-review","label":"ตรวจความครบถ้วนของเอกสาร"},{"skillId":"tor-review","label":"ตรวจ TOR ก่อนประกาศ"}]}}';
+
+test('the selector question is validated: real choices between registered Skills only', () => {
+  const entries = ['document-review', 'tor-review'].map(name => ({ name, status: 'routed' }));
+  const off = prepareSkillSelection(entries, 'x', '');
+  assert.equal((off.schema.properties as any).ask, undefined);
+  assert.doesNotMatch(off.system, /"ask"/);
+  assert.equal(off.ask(ASKING), undefined);
+  // With the ask key the old schema refuses the reply, so a stray question can never pass unnoticed.
+  assert.equal(off.parse(ASKING), undefined);
+  const on = prepareSkillSelection(entries, 'x', '', { clarify: true });
+  assert.deepEqual(on.schema.required, ['skillId', 'reason', 'ask']);
+  assert.match(on.system, /Never ask for details a procedure collects itself/);
+  assert.equal(on.parse(ASKING), 'document-review');
+  assert.deepEqual(on.ask(ASKING), {
+    question: 'ต้องการให้ช่วยแบบไหนครับ',
+    options: [
+      { skillId: 'document-review', label: 'ตรวจความครบถ้วนของเอกสาร' },
+      { skillId: 'tor-review', label: 'ตรวจ TOR ก่อนประกาศ' },
+    ],
+  });
+  assert.equal(on.parse('{"skillId":"tor-review","reason":"Clear","ask":null}'), 'tor-review');
+  assert.equal(on.ask('{"skillId":"tor-review","reason":"Clear","ask":null}'), undefined);
+  const reply = (options: unknown, question = 'เลือกงาน') =>
+    JSON.stringify({ skillId: 'tor-review', reason: 'x', ask: { question, options } });
+  for (const bad of [
+    reply([{ skillId: 'tor-review', label: 'ตรวจ TOR' }]),
+    reply([
+      { skillId: 'tor-review', label: 'ตรวจ TOR' },
+      { skillId: null, label: 'อย่างอื่น' },
+    ]),
+    reply([
+      { skillId: 'tor-review', label: 'ตรวจ TOR' },
+      { skillId: 'tor-review', label: 'ตรวจ TOR อีกแบบ' },
+    ]),
+    reply([
+      { skillId: 'tor-review', label: 'ตรวจ TOR' },
+      { skillId: 'unknown-skill', label: 'อื่น ๆ' },
+    ]),
+    reply([
+      { skillId: 'tor-review', label: 'tor-review' },
+      { skillId: 'document-review', label: 'ตรวจเอกสาร' },
+    ]),
+    reply([
+      { skillId: 'tor-review', label: 'ตรวจ TOR', tool: 'terminal' },
+      { skillId: 'document-review', label: 'ตรวจเอกสาร' },
+    ]),
+    reply(
+      [
+        { skillId: 'tor-review', label: 'ตรวจ TOR' },
+        { skillId: 'document-review', label: 'ตรวจเอกสาร' },
+      ],
+      '',
+    ),
+  ])
+    assert.equal(on.ask(bad), undefined, bad);
+  // A dropped question still keeps the best choice.
+  assert.equal(on.parse(reply([{ skillId: 'tor-review', label: 'ตรวจ TOR' }])), 'tor-review');
+});
+
+function asking(answer: string | null, reply: string | ((model: string) => string) = ASKING, policy = true) {
+  const asked: { question: string; options: string[] }[] = [];
+  const f = fixture(reply, {
+    chatClarification: () => policy,
+    ask: async (_id, question, options) => {
+      asked.push({ question, options });
+      return answer;
+    },
+  });
+  return { ...f, asked };
+}
+
+test('a chosen option loads that Skill with no second selection call, and the answer stays with the task', async () => {
+  const f = asking('ตรวจ TOR ก่อนประกาศ');
+  try {
+    await f.service.run(f.session.id, REVIEW_REQUEST, REVIEW_SOURCE, true, undefined, 'chat', undefined, ['synthetic.txt']);
+    const done = f.store.session(f.session.id),
+      trace = done.runs!.at(-1)!;
+    assert.equal(done.status, 'review');
+    assert.deepEqual(f.asked, [{ question: 'ต้องการให้ช่วยแบบไหนครับ', options: ['ตรวจความครบถ้วนของเอกสาร', 'ตรวจ TOR ก่อนประกาศ'] }]);
+    assert.deepEqual(
+      f.calls.map(c => c.selection),
+      [true, false],
+    );
+    assert.equal(trace.route, 'skill:tor-review');
+    assert.deepEqual(trace.skillSelection, { method: 'asked', skill: 'tor-review', asked: true });
+    assert.deepEqual(done.followUps, ['ต้องการให้ช่วยแบบไหนครับ → ตรวจ TOR ก่อนประกาศ']);
+    assert.match(f.calls[1].prompt + f.calls[1].system, /ตรวจ TOR ก่อนประกาศ/);
+  } finally {
+    f.store.close();
+  }
+});
+
+test('a typed answer chooses again with it and never asks twice', async () => {
+  const replies: string[] = [];
+  const f = asking('ช่วยดูว่าข้อมูลตกหล่นตรงไหน', () => {
+    replies.push('');
+    return replies.length === 1 ? ASKING : '{"skillId":"document-review","reason":"Completeness review"}';
+  });
+  try {
+    await f.service.run(f.session.id, REVIEW_REQUEST, REVIEW_SOURCE, true, undefined, 'chat', undefined, ['synthetic.txt']);
+    const done = f.store.session(f.session.id),
+      trace = done.runs!.at(-1)!;
+    assert.equal(f.asked.length, 1);
+    assert.deepEqual(
+      f.calls.map(c => c.selection),
+      [true, true, false],
+    );
+    assert.match(f.calls[0].system, /"ask"/);
+    assert.doesNotMatch(f.calls[1].system, /"ask"/);
+    assert.match(JSON.parse(f.calls[1].prompt).request, /ช่วยดูว่าข้อมูลตกหล่นตรงไหน/);
+    assert.equal(trace.route, 'skill:document-review');
+    assert.deepEqual(trace.skillSelection, { method: 'model', skill: 'document-review', asked: true });
+  } finally {
+    f.store.close();
+  }
+});
+
+test('cancelling the question stops the run without an answer', async () => {
+  const f = asking(null);
+  try {
+    await f.service.run(f.session.id, REVIEW_REQUEST, REVIEW_SOURCE, true, undefined, 'chat', undefined, ['synthetic.txt']);
+    const done = f.store.session(f.session.id);
+    assert.equal(done.status, 'cancelled');
+    assert.equal(done.messages.at(-1)?.text, 'CANCELLED');
+    assert.deepEqual(
+      f.calls.map(c => c.selection),
+      [true],
+    );
+  } finally {
+    f.store.close();
+  }
+});
+
+test('with chatClarification off the selection prompt is unchanged and nothing is asked', async () => {
+  const f = asking('ตรวจ TOR ก่อนประกาศ', '{"skillId":"document-review","reason":"Review"}', false);
+  try {
+    await f.service.run(f.session.id, REVIEW_REQUEST, REVIEW_SOURCE, true, undefined, 'chat', undefined, ['synthetic.txt']);
+    const trace = f.store.session(f.session.id).runs!.at(-1)!;
+    assert.equal(f.asked.length, 0);
+    assert.doesNotMatch(f.calls[0].system, /"ask"/);
+    assert.deepEqual(trace.skillSelection, { method: 'model', skill: 'document-review' });
+  } finally {
+    f.store.close();
+  }
+});
+
+test('a selector that does not ask answers as before, in one selection call', async () => {
+  const f = asking('ไม่ควรถูกถาม', '{"skillId":"document-review","reason":"Clear","ask":null}');
+  try {
+    await f.service.run(f.session.id, REVIEW_REQUEST, REVIEW_SOURCE, true, undefined, 'chat', undefined, ['synthetic.txt']);
+    const trace = f.store.session(f.session.id).runs!.at(-1)!;
+    assert.equal(f.asked.length, 0);
+    assert.deepEqual(trace.skillSelection, { method: 'model', skill: 'document-review' });
+    assert.equal(trace.route, 'skill:document-review');
+  } finally {
+    f.store.close();
+  }
+});
+
+test('a request later in a conversation is never asked about: the selector cannot see what was said before', async () => {
+  const f = asking('ตรวจ TOR ก่อนประกาศ');
+  try {
+    const s = f.store.session(f.session.id);
+    s.messages.push(
+      { role: 'user', text: 'นี่คือ TOR จ้างทำเว็บไซต์ที่เพิ่งร่างเสร็จ', at: new Date().toISOString() },
+      { role: 'assistant', text: 'รับทราบครับ', at: new Date().toISOString() },
+    );
+    f.store.save(s);
+    await f.service.run(f.session.id, REVIEW_REQUEST, REVIEW_SOURCE, true, undefined, 'chat', undefined, ['synthetic.txt']);
+    const trace = f.store.session(f.session.id).runs!.at(-1)!;
+    assert.equal(f.asked.length, 0);
+    assert.doesNotMatch(f.calls[0].system, /"ask"/);
+    assert.equal(trace.skillSelection?.asked, undefined);
+  } finally {
+    f.store.close();
+  }
+});

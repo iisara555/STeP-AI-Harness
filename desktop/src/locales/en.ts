@@ -3204,6 +3204,8 @@ export const en: Record<string, string> = {
   ความจำที่ใช้ร่วมกันในทีม: 'Team-shared memory',
   'ให้ระบบเลือก Skill และถามเพิ่มให้เอง': 'Pick Skills and ask follow-up questions automatically',
   'เลือก Skill ที่เหมาะกับงานก่อนตอบ': 'Choose a suitable Skill before answering',
+  ถามก่อนเมื่อคำขอเข้าได้หลายงาน: 'Ask first when a request fits several kinds of work',
+  'คำตอบของคุณ: {0}': 'Your answer: {0}',
   อัปเดตแอปอัตโนมัติ: 'Automatic app updates',
   'ใช้แพ็กเกจ Claude Pro/Max': 'Use a Claude Pro/Max plan',
   ทบทวนหาบทเรียนอัตโนมัติ: 'Automatic lesson review',
