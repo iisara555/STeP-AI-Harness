@@ -29,6 +29,7 @@
     "eval:selection": "tsx eval/skill-selection-live.ts",
     "eval:knowledge": "tsx eval/knowledge-live.ts",
     "eval:features": "tsx eval/feature-matrix.ts",
+    "eval:coordinator:live": "tsx eval/coordinator-live.ts",
     "eval:context": "tsx eval/context-efficiency.ts",
     "eval:diagnostics": "tsx eval/diagnostics-summary.ts",
     "eval:long-task": "tsx eval/long-task-replay.ts",
