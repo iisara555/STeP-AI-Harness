@@ -358,10 +358,11 @@ export type RunOptions = {
   /** The coordinator already shows its plan; this run's steps follow its subtasks there instead of replacing it. */
   planOffset?: number;
   /**
-   * A coordinator subtask: the employee's request it is part of. Routing and the authority check read this text, so
-   * a part is checked exactly as the plain draft of the same request would be, not on the planner's wording of it.
+   * A coordinator run. Routing and the authority check read `request`, the employee's request this run is part of, so
+   * a part is checked exactly as the plain draft of it would be, not on the planner's wording. `rule` is the host's
+   * instruction for a worker's part; it goes to the system rules so the part's own text stays the document search.
    */
-  routeQuery?: string;
+  part?: { request: string; rule?: string };
   workflow?: Workflow;
   /** Called after the request has been stored, before potentially slow routing or model discovery. */
   onAccepted?: () => void;
@@ -1049,7 +1050,7 @@ export class WorkService {
     const artifacts = new Map<string, ArtifactRef>();
     try {
       status(tm('กำลังเตรียมงาน'), { quiet: true });
-      const routeQuery = options.routeQuery || session.originalQuery;
+      const routeQuery = options.part?.request || session.originalQuery;
       let routed = await this.harness.route(routeQuery, {
         team: session.team,
         workspaceDir,
@@ -1675,9 +1676,10 @@ export class WorkService {
           internal && internalSystemRule(internal, toolsEnabled),
           documentIndex && KNOWLEDGE_RULE + '\n' + documentIndex,
           skillIndex && SKILL_RULE + '\n' + skillIndex,
+          options.part?.rule,
           options.draftOnly &&
             options.mergeOnly &&
-            'Integrate the supplied subtask drafts, in their numbered order, into one coherent deliverable that answers the request. Cover the content of every subtask without dropping facts, figures or references; remove repetition between parts and make headings, terms and tone consistent. Preserve evidence, mark conflicts between parts and missing facts for review, add no facts that no part or source supports, and do not repeat the subtask execution.',
+            'Integrate the supplied subtask drafts, in their numbered order, into one coherent deliverable that answers the request. Cover the content of every subtask without dropping facts, figures or references; remove repetition between parts and make headings, terms and tone consistent. Preserve evidence, mark conflicts between parts and missing facts for review, add no facts that no part or source supports, drop greetings, chat lines and tips that a part carried, and do not repeat the subtask execution.',
           // A native workflow the employee picked (plan, execute, requirements, diagnose) shapes how this run works.
           // The employee's comments on plan tasks are their own text: masked like every other request before sending.
           options.workflow && workflowRule(options.workflow, maskedPlan(this.store.session(id).workPlan, masked)),

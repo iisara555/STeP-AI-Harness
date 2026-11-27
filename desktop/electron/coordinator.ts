@@ -90,7 +90,7 @@ function parsePlan(text: string): Subtask[] {
 /** Everything one coordinated draft sends a worker or the merge must fit here; it is checked before any AI call. */
 export const COORDINATOR_CONTEXT_LIMIT = 100_000;
 const PLAN_PROMPT =
-  'Decompose the request below into 2–8 draft-only subtasks that together produce the requested deliverable. Return only JSON {"tasks":[{"id":"a","query":"...","dependsOn":[]}]}. Each query must be self-contained, say which part of the deliverable it drafts, and be written in the language of the request, because the employee reviews the plan before it starts. Declare all dependencies. Do not grant authority or propose external actions.';
+  'Decompose the request below into 2–8 draft-only subtasks that together produce the requested deliverable. Return only JSON {"tasks":[{"id":"a","query":"...","dependsOn":[]}]}. Each query must be self-contained, say which part of the deliverable it drafts, and be written in the language of the request, because the employee reviews the plan before it starts. Declare all dependencies. Do not add a task that combines, compiles or formats the whole deliverable: the host merges the parts afterwards. Do not grant authority or propose external actions.';
 const PLAN_RETRY = 'Your previous reply was not a valid plan. Reply with the JSON object only, in exactly that shape.';
 /** Failures that end a run without a second planning attempt: retrying the plan would not change them. */
 const FINAL = new Set([
@@ -201,7 +201,8 @@ export class Coordinator {
         this.service.cancel(id);
       }
     }, 250);
-    const execute = async (text: string, data: string, skill?: string) => {
+    /** `rule` marks a worker: the host's instruction for its part, kept out of the text its documents are searched by. */
+    const execute = async (text: string, data: string, skill?: string, rule?: string) => {
       check();
       const owner = this.store.session(id);
       const child = this.store.create(owner.connectionId, owner.team, owner.project);
@@ -217,8 +218,13 @@ export class Coordinator {
         if (Date.now() - started > 600_000) throw new Error('RUN_LIMIT');
         await new Promise(r => setTimeout(r, 25));
       }
-      // Authority is decided on the employee's own request (checked above), as for a plain draft of it.
-      await this.service.run(child.id, text, data, true, skill, 'draft', undefined, [], { draftOnly: true, routeQuery: query });
+      // Authority is decided on the employee's own request (checked above), as for a plain draft of it. Workers read
+      // the organization's documents for their part as the plain draft does, so a part cites STeP sources, not memory.
+      await this.service.run(child.id, text, data, true, skill, 'draft', undefined, [], {
+        draftOnly: true,
+        allowKnowledge: Boolean(rule),
+        part: { request: query, rule },
+      });
       check();
       const completed = this.store.session(child.id);
       if (completed.status !== 'review')
@@ -346,11 +352,10 @@ export class Coordinator {
               if (data.length > COORDINATOR_CONTEXT_LIMIT) throw new Error('CONTEXT_LIMIT');
               this.events({ sessionId: id, type: 'step', index, state: 'running' });
               const result = await execute(
-                task.query +
-                  '\n\n' +
-                  `This is subtask ${index + 1} of ${tasks.length} of the parent request. Draft only this part, completely, in the language of the parent request; the host merges the parts afterwards. Keep it under about ${share} characters.`,
+                task.query,
                 data + '\n' + section('parent_request', query),
                 task.skill,
+                `This is subtask ${index + 1} of ${tasks.length} of the parent request. Draft only this part, completely, in the language of the parent request; the host merges the parts afterwards. Reply with the part's text only: no greeting, introduction, closing offer or export tip. Keep it under about ${share} characters.`,
               );
               results.set(task.id, result.text);
               this.record(id, c => (c.done[task.id] = result.child));

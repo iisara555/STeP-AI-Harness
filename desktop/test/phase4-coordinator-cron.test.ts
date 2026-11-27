@@ -695,6 +695,7 @@ test('a split draft meets the same authority check as the plain draft of its req
   const { store } = fixture();
   policy.features.coordinator = true;
   let calls = 0;
+  const parts: string[] = [];
   const service = new WorkService(
     store,
     {
@@ -703,6 +704,7 @@ test('a split draft meets the same authority check as the plain draft of its req
       contextPolicy: () => ({ history: 'ignore', carryover: false }),
       privacy: evaluatePrivacyGate,
       skillMetadata: async () => null,
+      documentCatalog: async () => routing.loadDocumentCatalog(),
       documentPrivacy: async () => null,
       nextOutput: async () => null,
     },
@@ -718,7 +720,12 @@ test('a split draft meets the same authority check as the plain draft of its req
                 { id: 'b', query: part, dependsOn: [] },
               ],
             });
-          return String(options?.system || '').includes('Integrate the supplied subtask drafts') ? 'ร่างรวม' : 'ร่างส่วนย่อย';
+          if (String(options?.system || '').includes('Integrate the supplied subtask drafts')) return 'ร่างรวม';
+          parts.push(prompt);
+          // The host's instruction for the part is a system rule; the part's own text stays the document search.
+          assert.match(String(options?.system || ''), /This is subtask \d of 2 .*no greeting/);
+          assert.doesNotMatch(prompt, /This is subtask/);
+          return 'ร่างส่วนย่อย';
         },
       },
     }),
@@ -739,6 +746,9 @@ test('a split draft meets the same authority check as the plain draft of its req
     assert.equal(store.session(parent.id).status, 'review');
     assert.equal(store.session(parent.id).proposals.at(-1)?.text, 'ร่างรวม');
     assert.equal(calls, 4, 'plan, two parts, merge');
+    // Each part reads the organization's documents, as the plain draft of the request would.
+    assert.equal(parts.length, 2);
+    for (const prompt of parts) assert.match(prompt, /<organization_knowledge>/);
     // A request that is itself the act is still refused before any AI call, split or not.
     const act = store.create('c', 'cc');
     await assert.rejects(

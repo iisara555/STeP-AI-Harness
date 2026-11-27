@@ -96,7 +96,12 @@ async function main() {
         const splitMs = Date.now() - started;
         const splitSession = store.session(split.id);
         const splitDraft = splitSession.proposals.at(-1)?.text || '';
-        const parts = coordinator.children(split.id).map(child => child.proposals.at(-1)?.text || child.draft || '');
+        // Parts in plan order, as the merge receives them (children finish in any order).
+        const children = new Map(coordinator.children(split.id).map(child => [child.id, child]));
+        const parts = (splitSession.coordination?.tasks || plan).map(task => {
+          const child = children.get(splitSession.coordination?.done[task.id] || '');
+          return child?.proposals.at(-1)?.text || child?.draft || '';
+        });
         summary.push({
           id: scenario.id,
           plain: { status: plainSession.status, ms: plainMs, chars: plainDraft.length },

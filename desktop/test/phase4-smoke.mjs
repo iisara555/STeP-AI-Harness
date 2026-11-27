@@ -21,7 +21,7 @@ readline.createInterface({input:process.stdin}).on('line',line=>{const m=JSON.pa
 if(m.method==='turn/start'){const p=(m.params.input||[]).filter(i=>i.type==='text').map(i=>i.text||'').join('');
 const retryCase=p.includes('Synthetic retry case');
 const text=p.includes('Decompose the request')?JSON.stringify({tasks:retryCase?[{id:'a',query:'Prepare topic C',dependsOn:[]},{id:'b',query:'Prepare topic FAILONCE',dependsOn:[]}]:[{id:'a',query:'Prepare topic A',dependsOn:[]},{id:'b',query:'Prepare topic B',dependsOn:[]}]}):'Phase 4 synthetic draft';
-const topic=/Prepare topic (C|FAILONCE)\\n\\nThis is subtask/.exec(p)?.[1];if(topic)fs.appendFileSync(${JSON.stringify(calls)},topic+'\\n');
+const topic=/"request":"Prepare topic (C|FAILONCE)"/.exec(p)?.[1];if(topic)fs.appendFileSync(${JSON.stringify(calls)},topic+'\\n');
 const failing=topic==='FAILONCE'&&!fs.existsSync(${JSON.stringify(calls)}+'.failed');if(failing)fs.writeFileSync(${JSON.stringify(calls)}+'.failed','1');
 setTimeout(()=>{if(failing){send({method:'turn/completed',params:{turn:{status:'failed',error:{message:'synthetic subtask failure'}}}});return;}send({method:'thread/tokenUsage/updated',params:{tokenUsage:{total:{inputTokens:10,outputTokens:5,totalTokens:15}}}});send({method:'item/agentMessage/delta',params:{delta:text}});send({method:'turn/completed',params:{turn:{status:'completed'}}});},40);}});`,
 );
