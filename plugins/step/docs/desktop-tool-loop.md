@@ -185,7 +185,7 @@ returns the latest answer. Two checks feed it (`desktop/electron/answer-review.t
 - Deterministic, no model call, always on: a table total that does not add up, a document code not in the sources, a
   claim that a file was written or a tool ran when it did not, a draft that lost its document envelope. Heading and
   placeholder warnings stay review notes only.
-- The Skill review, behind policy `skillReview` (off by default): one call compares the answer with the Skill's Output,
+- The Skill review, behind policy `skillReview` (on by default since 2026-11-27): one call compares the answer with the Skill's Output,
   Guardrails and Verification sections and returns done, continue or blocked. Only continue sends the model back; what
   needs the employee stays as `[รอยืนยัน]`, and an answer that asks the employee first, or a plan waiting for approval,
   is blocked, not missing. Verification lines about keeping the Skill in this repository (validate_repo, npm test, its
@@ -194,7 +194,8 @@ returns the latest answer. Two checks feed it (`desktop/electron/answer-review.t
 Limits that keep a review from costing the employee an answer (2026-11-27):
 
 - The Skill review runs only on connections whose models passed `npm run eval:review` (`skillReviewSupported` in
-  `answer-review.ts`: Antigravity and Claude). On 2026-11-27 local Qwen 3.5 4B and 9B judged 4 of 12 cases right and
+  `answer-review.ts`: Antigravity and Claude; 2026-11-27 on the corrected cases: claude-sonnet-5-5 12/12,
+  claude-haiku-5-5 11/12, gemini-3.8-flash-medium on agy 10/12 with one missed part, all with 0 false send-backs). On 2026-11-27 local Qwen 3.5 4B and 9B judged 4 of 12 cases right and
   the 4B sent 4 of 6 finished answers back, which would push the AI to invent the employee's `[รอยืนยัน]` facts.
 - The Skill review runs at most once per step (one extra call and at most one rewrite), and not in plan mode.
 - No review when the answer turn took more than half the step timeout (`REVIEW_TURN_SHARE`) or a rewrite would not fit
