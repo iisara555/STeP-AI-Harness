@@ -355,7 +355,7 @@ export class Coordinator {
                 task.query,
                 data + '\n' + section('parent_request', query),
                 task.skill,
-                `This is subtask ${index + 1} of ${tasks.length} of the parent request. Draft only this part, completely, in the language of the parent request; the host merges the parts afterwards. Reply with the part's text only: no greeting, introduction, closing offer or export tip. Take facts only from the request, the sources, earlier parts and the organization knowledge, and name the STeP document a rule comes from; a law section, figure, specification, date or name none of them gives goes in brackets as an assumption for review, never as a stated fact. Keep it under about ${share} characters.`,
+                `This is subtask ${index + 1} of ${tasks.length} of the parent request. Draft only this part, completely, in the language of the parent request; the host merges the parts afterwards. Reply with the part's text only: no greeting, introduction, closing offer or export tip. Take facts only from the request, the sources, earlier parts and the organization knowledge, and name the STeP document a rule comes from; a law section, figure, specification, date or name none of them gives goes in brackets as an assumption for review, never as a stated fact. Mark each assumption once, in one form (for a Thai request [ข้อสมมติ: ...]); a blank for the employee to fill stays a plain placeholder such as [ระบุ...] with no marker. Keep it under about ${share} characters.`,
               );
               results.set(task.id, result.text);
               this.record(id, c => (c.done[task.id] = result.child));
