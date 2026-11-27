@@ -8,6 +8,8 @@ import { join } from 'node:path';
 const home = await mkdtemp(join(tmpdir(), 'step-async-lifecycle-'));
 await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ receiptLocalOnly: false }));
 const receipt = join(home, 'synthetic.png');
+const source = join(home, 'synthetic-source.txt');
+await writeFile(source, 'Synthetic attachment for an async lifecycle check.');
 await writeFile(
   receipt,
   Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1AAAAAASUVORK5CYII=', 'base64'),
@@ -57,6 +59,11 @@ try {
         holdSnapshot: false,
         fakeVision: false,
         holdDialog: false,
+        attachmentFile: '',
+        holdAttachmentReply: false,
+        attached: '',
+        attachmentOwner: '',
+        detached: [],
         holdConsent: false,
         stopRendering: false,
         imageCalls: 0,
@@ -82,6 +89,15 @@ try {
           return { started: true };
         }
         if (method === 'send' || method === 'run' || method === 'connect') throw new Error('LIVE_PROVIDER_NOT_ALLOWED_IN_FIXTURE');
+        if (method === 'attach' && state.holdAttachmentReply) {
+          state.holdAttachmentReply = false;
+          const result = await original(event, method, input);
+          state.attached = (Array.isArray(result) ? result[0] : result).id;
+          state.attachmentOwner = input.id;
+          await wait('attachment-reply');
+          return result;
+        }
+        if (method === 'detach') state.detached.push(input);
         if (method === 'edit') {
           state.editCalls++;
           if (state.holdEdit) {
@@ -125,7 +141,7 @@ try {
       });
       dialog.showOpenDialog = async () => {
         if (state.holdDialog) await wait('dialog');
-        return { canceled: false, filePaths: [receipt] };
+        return { canceled: false, filePaths: [state.attachmentFile || receipt] };
       };
       dialog.showMessageBox = async () => {
         if (state.holdConsent) await wait('consent');
@@ -150,6 +166,64 @@ try {
     }, name);
   await page.reload();
   await page.locator('.sessions').waitFor();
+
+  // If the owning task is deleted during intake, the host must never register the pending attachment.
+  await configure({ holdDialog: true, attachmentFile: source });
+  const removed = await page.evaluate(async connectionId => {
+    const task = await window.step.call('create', { connectionId });
+    globalThis.deletedTaskAttachment = window.step.call('attach', { id: task.id, multiple: true }).then(
+      () => '',
+      error => error.message,
+    );
+    return task.id;
+  }, ids.connection);
+  await pending('dialog');
+  await page.evaluate(id => window.step.call('remove', { id }), removed);
+  await release('dialog');
+  assert.match(await page.evaluate(() => globalThis.deletedTaskAttachment), /SESSION_NOT_FOUND/);
+
+  // A reply after navigation must be detached from its original task and cannot populate the new composer.
+  await configure({ holdDialog: false, holdAttachmentReply: true });
+  const task = name => page.locator('.sessions').getByRole('button', { name: new RegExp('^Synthetic task ' + name) });
+  await task('A').click();
+  await expect(page.locator('.session.selected')).toContainText('Synthetic task A');
+  await page.getByRole('button', { name: 'ตรวจและแนบเอกสาร', exact: true }).click();
+  await pending('attachment-reply');
+  await task('B').click();
+  await expect(page.locator('.session.selected')).toContainText('Synthetic task B');
+  await release('attachment-reply');
+  const attached = await app.evaluate(() => globalThis.stepAsyncFixture.attached);
+  await expect.poll(() => app.evaluate(() => globalThis.stepAsyncFixture.detached)).toContainEqual({ id: ids.a, attachmentId: attached });
+  await expect(page.getByText('synthetic-source.txt', { exact: true })).toHaveCount(0);
+
+  await page.locator('[data-tour=new-work]').click();
+  await expect(page.locator('.session.selected')).toHaveCount(0);
+  await page.getByRole('button', { name: 'ตรวจและแนบเอกสาร', exact: true }).click();
+  const inspection = page.getByRole('dialog', { name: 'ตรวจข้อความแนบ' });
+  await expect(inspection.getByText('synthetic-source.txt', { exact: true })).toBeVisible();
+  await inspection.getByRole('button', { name: 'กลับไปที่งาน', exact: true }).click();
+  await page.locator('.session.selected').hover();
+  await page.locator('.session.selected').getByRole('button', { name: 'ลบงาน', exact: true }).click();
+  await page.getByRole('alertdialog', { name: 'ลบงานนี้?' }).getByRole('button', { name: 'ลบงาน', exact: true }).click();
+  await expect(page.locator('.attachments')).toHaveCount(0);
+
+  await configure({ holdAttachmentReply: true });
+  await page.locator('[data-tour=documents]').click();
+  await page
+    .locator('.document-tool-picker')
+    .getByRole('button', { name: /^ร่างบันทึกข้อความ/ })
+    .click();
+  await page.getByRole('button', { name: 'แนบต้นเรื่อง / แบบฟอร์มหน่วยงาน', exact: true }).click();
+  await pending('attachment-reply');
+  await release('attachment-reply');
+  const formAttachment = await app.evaluate(() => {
+    const fixture = globalThis.stepAsyncFixture;
+    return { id: fixture.attachmentOwner, attachmentId: fixture.attached };
+  });
+  await page.getByRole('button', { name: 'นำต้นเรื่องออก', exact: true }).click();
+  await expect.poll(() => app.evaluate(() => globalThis.stepAsyncFixture.detached)).toContainEqual(formAttachment);
+  await configure({ attachmentFile: '' });
+  await task('B').click();
 
   await configure({ slowSession: ids.a });
   await page

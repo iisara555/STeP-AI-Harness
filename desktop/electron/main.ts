@@ -5059,7 +5059,7 @@ async function main() {
         let temporaryDir: string | undefined;
         let temporaryPath: string | undefined;
         let clipboardPreview: string | undefined;
-        const attachOne = async (path: string): Promise<Attachment> => {
+        const prepareAttachment = async (path: string) => {
           const extension = extname(path).slice(1).toLowerCase();
           let nativeBytes: Buffer | undefined;
           let nativeDescription: Awaited<ReturnType<typeof inspectDocumentTemplate>> | undefined;
@@ -5170,16 +5170,14 @@ async function main() {
             ...(reason ? { reason } : {}),
           };
           if (reason) diagnose('attach-refused', { reason, extension: extname(path).toLowerCase().slice(0, 8) });
-          if (attachingSession.claimPacketId) receiptPackets.get(attachingSession.claimPacketId);
-          attachments.set(view.id, {
+          return {
             view,
             text: sourceUsable ? ocrAttachmentSource(report, 'attachment:' + view.id) : '',
             sessionId,
             images,
             nativeBytes,
             sourceUsable,
-          });
-          return view;
+          };
         };
         try {
           let filePaths: string[];
@@ -5209,10 +5207,13 @@ async function main() {
             if (result.canceled || !result.filePaths.length) return allowMultiple ? [] : null;
             filePaths = result.filePaths.slice(0, MAX_ATTACHMENTS_PER_SEND);
           }
-          if (!allowMultiple) return await attachOne(filePaths[0]);
-          const attached: Attachment[] = [];
-          for (const filePath of filePaths) attached.push(await attachOne(filePath));
-          return attached;
+          const prepared: Awaited<ReturnType<typeof prepareAttachment>>[] = [];
+          for (const filePath of filePaths) prepared.push(await prepareAttachment(filePath));
+          // The task can be deleted while the picker or a file inspection is still in progress.
+          store.session(sessionId);
+          if (attachingSession.claimPacketId) receiptPackets.get(attachingSession.claimPacketId);
+          for (const item of prepared) attachments.set(item.view.id, item);
+          return allowMultiple ? prepared.map(item => item.view) : prepared[0].view;
         } finally {
           if (temporaryPath) await rm(temporaryPath, { force: true }).catch(() => diagnose('clipboard-cleanup-failed'));
           if (temporaryDir) await rmdir(temporaryDir).catch(() => diagnose('clipboard-cleanup-failed'));

@@ -58,7 +58,7 @@ export function ConversationView({ v }: { v: AppView }) {
     activeModel,
     activeUsageAccount,
     activityAt,
-    addFiles,
+    attachFiles,
     aiLabel,
     aiPicker,
     aiPickerRef,
@@ -1018,22 +1018,7 @@ export function ConversationView({ v }: { v: AppView }) {
                     aria-label={t('ตรวจและแนบเอกสาร')}
                     title={t('ตรวจและแนบเอกสาร')}
                     disabled={running || pastingImage || (!session && connectionId === CLAUDE_CODE)}
-                    onClick={() =>
-                      void action(async () => {
-                        const id = session?.id || (await createTask())?.id;
-                        if (!id) return;
-                        const res = await api.call('attach', { id, multiple: true });
-                        const added = Array.isArray(res) ? res : res ? [res] : [];
-                        if (added.length) {
-                          addFiles(added);
-                          if (added.length === 1) setInspecting(added[0]);
-                          else {
-                            const refused = added.find(item => !item.usable);
-                            if (refused) setInspecting(refused);
-                          }
-                        }
-                      })
-                    }
+                    onClick={() => void action(() => attachFiles())}
                   >
                     <Plus size={18} />
                   </button>
@@ -1051,22 +1036,7 @@ export function ConversationView({ v }: { v: AppView }) {
                       aria-label={t('แนบภาพให้ AI')}
                       title={t('ตรวจและแนบภาพต้นฉบับให้ AI')}
                       disabled={running || pastingImage}
-                      onClick={() =>
-                        void action(async () => {
-                          const id = session?.id || (await createTask())?.id;
-                          if (!id) return;
-                          const res = await api.call('attach', { id, vision: true, multiple: true });
-                          const added = Array.isArray(res) ? res : res ? [res] : [];
-                          if (added.length) {
-                            addFiles(added);
-                            if (added.length === 1) setInspecting(added[0]);
-                            else {
-                              const refused = added.find(item => !item.usable);
-                              if (refused) setInspecting(refused);
-                            }
-                          }
-                        })
-                      }
+                      onClick={() => void action(() => attachFiles(true))}
                     >
                       <ImagePlus size={18} />
                     </button>
