@@ -325,6 +325,25 @@ export const en: Record<string, string> = {
   'การตรวจโค้ดใช้เวลาเกินขอบเขต ให้ใช้คำสั่งตรวจของโครงการแทน': 'Code diagnostics timed out. Use the project checks instead.',
   งานถูกขัดจังหวะ: 'Interrupted',
   เขียนและตรวจโค้ด: 'Code and verify',
+  พื้นที่เขียนโค้ด: 'Coding workspace',
+  เลือกโฟลเดอร์โปรเจกต์: 'Choose a project folder',
+  สคริปต์ตรวจโปรเจกต์: 'Project checks',
+  โหลดแพ็กเกจใหม่: 'Reload packages',
+  'กำลังอ่าน package.json…': 'Reading package.json…',
+  'กำลังขออนุญาตรันสคริปต์…': 'Waiting for script approval…',
+  ยกเลิกการรันสคริปต์แล้ว: 'Script run canceled',
+  'อ่านแพ็กเกจได้บางส่วน ลองเลือกโฟลเดอร์แพ็กเกจโดยตรง': 'Some packages could not be read. Try selecting the package folder directly.',
+  'ไม่พบ package.json ในตำแหน่งที่ตรวจ เปิดไฟล์งานหรือใช้ขั้นตอนเขียนโค้ดต่อได้':
+    'No package.json found in the scanned locations. You can still open files or use the coding workflow.',
+  'ไม่พบสคริปต์ตรวจใน package.json': 'No check scripts found in package.json',
+  โฟลเดอร์หลัก: 'Root folder',
+  ส่วนกลาง: 'Shared',
+  'Frontend และ Backend': 'Frontend and backend',
+  'สคริปต์ของ {0}': 'Scripts in {0}',
+  'รหัสจบงาน {0}': 'Exit code {0}',
+  'รันสคริปต์นี้ไม่ได้ ลองโหลดแพ็กเกจใหม่แล้วเลือกสคริปต์อีกครั้ง': 'This script cannot run. Reload packages and select a script again.',
+  'package.json หรือเครื่องมือรันสคริปต์เปลี่ยนระหว่างรออนุญาต ตรวจคำสั่งแล้วกดรันใหม่':
+    'The package.json or package manager changed while waiting for approval. Review the command and run it again.',
   ทำตามแผนแบบต่อเนื่อง: 'Continue through the plan',
   'สูงสุด 3 รอบ / 10 นาที หยุดรับงานเพิ่มเมื่อใช้ถึง 50,000 token ที่รายงาน':
     'Up to 3 rounds / 10 minutes; stop new calls at 50,000 reported tokens',
@@ -874,6 +893,9 @@ export const en: Record<string, string> = {
   'ตรวจคำตอบเรื่อง STeP กับเอกสาร': 'Check STeP answers against the documents',
   'ตรวจงานกับขั้นตอนของ Skill ก่อนส่ง': 'Check work against its Skill before showing it',
   'กำลังตรวจงานกับขั้นตอนของ Skill': 'Checking the work against its Skill',
+  กำลังเติมส่วนที่ยังขาด: 'Adding what was missing',
+  'งานครบตาม Skill ขึ้น แต่ตอบช้าลงเล็กน้อย · ใช้กับ Claude และ Antigravity':
+    'More complete Skill work, slightly slower replies · Claude and Antigravity',
   ปรับระดับการคิดตามขนาดงาน: 'Reasoning level by task size',
   'กำลังตรวจคำตอบกับเอกสาร STeP': 'Checking the answer against the STeP documents',
   เวลาตั้งแต่ส่งคำถามจนได้คำตอบ: 'Time from sending the request to the finished answer',
@@ -1649,8 +1671,12 @@ export const en: Record<string, string> = {
     "Your admin hasn't enabled subtasks, or this task type doesn't support them. Use draft mode without a specific Skill",
   'แผนงานย่อยไม่ครบถ้วน กรุณาลองใหม่หรือแบ่งคำขอเอง': 'The subtask plan is incomplete. Try again or split the request yourself',
   'แผนงานย่อยมีลำดับงานวนกลับ จึงเริ่มทำไม่ได้': "The subtask plan contains a loop, so it can't start",
-  'มีงานย่อยที่ทำไม่สำเร็จ กรุณาตรวจบทสนทนางานย่อย': 'Some subtasks failed. Check the subtask conversations',
-  'มีงานย่อยที่ต้องการข้อมูลเพิ่ม กรุณาตรวจบทสนทนางานย่อย': 'Some subtasks need more information. Check the subtask conversations',
+  'งานย่อยบางงานยังไม่สำเร็จ กด ลองอีกครั้ง เพื่อทำต่อเฉพาะงานที่ค้าง':
+    'Some subtasks did not finish. Choose Try again to run only the open ones',
+  'งานย่อยต้องการข้อมูลเพิ่ม เพิ่มรายละเอียดในคำขอแล้วส่งใหม่':
+    'A subtask needs more information. Add details to the request and send it again',
+  'แบ่งงานย่อยไม่สำเร็จ กด ลองอีกครั้ง เพื่อทำต่อจากงานที่ค้าง':
+    'Splitting the work did not finish. Choose Try again to continue from the open subtasks',
   ผู้ดูแลยังไม่เปิดงานตั้งเวลา: "Your admin hasn't enabled scheduled tasks",
   'ตารางงานไม่ถูกต้องหรือไม่มีรอบในปีถัดไป กรุณาเลือกรอบใหม่':
     'The schedule is invalid or has no run within the next year. Please choose another',
@@ -1998,6 +2024,7 @@ export const en: Record<string, string> = {
   'ชวนคิด เปิดมุมมองใหม่ เชื่อมจุด แล้วพาไปหาโอกาสและผลลัพธ์ที่มีความหมาย':
     'Asks questions, opens new perspectives, connects the dots and leads to opportunity and impact',
   สำเนียงภาษา: 'Dialect',
+  สำเนียงจะใช้เมื่อผู้ช่วยตอบเป็นภาษาไทย: 'Dialect applies to replies in Thai.',
   ใช้ร่วมกับสไตล์ด้านบนได้: 'Can be combined with the style above',
   ภาษาไทยมาตรฐาน: 'Standard Thai',
   ไม่เพิ่มสำเนียงท้องถิ่น: 'No regional dialect',
@@ -2592,7 +2619,8 @@ export const en: Record<string, string> = {
   'รอให้ลงชื่อ ChatGPT ในเบราว์เซอร์…': 'Waiting for ChatGPT sign-in in your browser…',
   'เปิดหน้าลงชื่อ Google แล้ว · รอการยืนยันจากเบราว์เซอร์': 'Google sign-in page opened · waiting for confirmation from the browser',
   กำลังวางแผนงานย่อย: 'Planning subtasks',
-  'กำลังทำงานย่อย {0}': 'Working on subtasks {0}',
+  'กำลังทำงานย่อย {0} จาก {1}': 'Working on subtask {0} of {1}',
+  รวมผลเป็นร่างรอตรวจ: 'Combine the results into a draft for review',
   กำลังรวมผลเป็นร่างรอตรวจ: 'Combining results into a draft for review',
   มีร่างที่ยังไม่บันทึก: 'You have an unsaved draft',
   'กลับไปบันทึกร่างก่อนปิด หรือเลือกปิดโดยไม่บันทึก': 'Go back and save the draft before closing, or close without saving',
@@ -2627,8 +2655,8 @@ export const en: Record<string, string> = {
   รับทราบและส่ง: 'Accept and send',
   ยืนยันเฉพาะข้อมูลที่คุณมีสิทธิ์ส่งผ่านบริการนี้: 'Confirm only data you are allowed to send through this service.',
   'ตรวจแผนงานย่อยก่อนเริ่ม?': 'Review the subtask plan before starting?',
-  'งาน {0}\n{1}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ':
-    'Task {0}\n{1}\nEach subtask uses the same AI account; the combined result is a draft for review',
+  '{0}\n{1}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ':
+    '{0}\n{1}\nEach subtask uses the same AI account; the combined result is a draft for review',
   งานตั้งเวลามีร่างรอตรวจแล้ว: 'A scheduled task has a draft to review',
   งานตั้งเวลาต้องการให้ตรวจสถานะ: 'A scheduled task needs your attention',
   บันทึกบทสนทนา: 'Save conversation',
@@ -3070,6 +3098,8 @@ export const en: Record<string, string> = {
     'This Mac build cannot install updates itself; download version {0} and drag it to Applications',
   'ดาวน์โหลดเวอร์ชัน {0}': 'Download version {0}',
   รูปโปรไฟล์: 'Profile picture',
+  เลือกรูปโปรไฟล์จากเครื่อง: 'Choose a profile picture',
+  'เลือกรูป PNG หรือ JPEG รูปโปรไฟล์เก็บไว้ในเครื่องนี้': 'Choose a PNG or JPEG. Your profile picture stays on this device.',
   'เลือกภาพวาดที่ชอบ ภาพเป็นลายเส้นประกอบ ไม่ใช่รูปถ่ายของใคร และเก็บไว้ในเครื่องนี้เท่านั้น':
     'Choose a drawing you like. They are illustrations, not photos of anyone, and your choice stays on this computer',
   ใช้ตัวอักษรแรกของชื่อ: 'Use the first letter of your name',
@@ -3204,6 +3234,8 @@ export const en: Record<string, string> = {
   ความจำที่ใช้ร่วมกันในทีม: 'Team-shared memory',
   'ให้ระบบเลือก Skill และถามเพิ่มให้เอง': 'Pick Skills and ask follow-up questions automatically',
   'เลือก Skill ที่เหมาะกับงานก่อนตอบ': 'Choose a suitable Skill before answering',
+  ถามก่อนเมื่อคำขอเข้าได้หลายงาน: 'Ask first when a request fits several kinds of work',
+  'คำตอบของคุณ: {0}': 'Your answer: {0}',
   อัปเดตแอปอัตโนมัติ: 'Automatic app updates',
   'ใช้แพ็กเกจ Claude Pro/Max': 'Use a Claude Pro/Max plan',
   ทบทวนหาบทเรียนอัตโนมัติ: 'Automatic lesson review',

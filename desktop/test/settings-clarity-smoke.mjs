@@ -165,6 +165,16 @@ try {
   });
   await startup.click();
   await expect(startup).not.toBeChecked();
+  // Skill Review is on by policy; the employee's switch saves at once and never touches the unsaved form.
+  const skillReview = panel.getByRole('switch', { name: 'ตรวจงานกับขั้นตอนของ Skill ก่อนส่ง' });
+  await expect(skillReview).toBeChecked();
+  await skillReview.click();
+  await expect(skillReview).not.toBeChecked();
+  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.skillReview, false);
+  await expect(panel.getByRole('button', { name: 'บันทึกการเปลี่ยนแปลง', exact: true })).toBeDisabled();
+  await skillReview.click();
+  await expect(skillReview).toBeChecked();
+  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.skillReview, true);
   await expect(panel.getByRole('radiogroup', { name: 'รูปโปรไฟล์', exact: true })).toHaveCount(0);
   await expect(panel.getByLabel('ชื่อเรียกของคุณ', { exact: true })).toHaveValue('Synthetic user');
   await panel.getByRole('button', { name: 'เปลี่ยนรูป', exact: true }).click();

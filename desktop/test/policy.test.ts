@@ -15,12 +15,14 @@ test('managed policy is optional, administrator-only and fail closed', async () 
     assert.equal(loadPolicy(path, () => false).policy.source, 'default');
     assert.equal(loadPolicy(path, () => false).policy.features.shellByAi, false);
     assert.equal(loadPolicy(path, () => false).policy.features.learningReview, false);
+    assert.equal(loadPolicy(path, () => false).policy.features.coordinator, false);
     if (process.platform === 'win32') assert.equal(trustedPolicyPath(path), false);
     assert.equal(loadPolicy(path, () => true).policy.features.shellByAi, true);
     await writeFile(path, '{broken');
     assert.equal(loadPolicy(path, () => true).policy.source, 'default');
     assert.equal(loadPolicy(path, () => true).policy.features.shellByAi, false);
     assert.equal(loadPolicy(path, () => true).policy.features.learningReview, false);
+    assert.equal(loadPolicy(path, () => true).policy.features.coordinator, false);
     assert.equal(loadPolicy(path, () => true).problems.length, 1);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -29,11 +31,15 @@ test('managed policy is optional, administrator-only and fail closed', async () 
 
 test('auto mode needs both organization feature and allowed mode', () => {
   const defaultValue = defaultPolicy();
-  for (const feature of ['shellByAi', 'mcp', 'autoMerge', 'autopilot', 'lineGateway', 'coordinator'] as const)
+  for (const feature of ['shellByAi', 'mcp', 'autoMerge', 'autopilot', 'lineGateway'] as const)
     assert.equal(defaultValue.features[feature], false);
   assert.equal(defaultValue.features.cron, true);
   assert.equal(defaultValue.features.hybridSkillSelection, true);
   assert.equal(parsePolicy({ features: { hybridSkillSelection: false } }).policy.features.hybridSkillSelection, false);
+  assert.equal(defaultValue.features.chatClarification, true);
+  assert.equal(parsePolicy({ features: { chatClarification: false } }).policy.features.chatClarification, false);
+  // The old Router menus asked on 78 of 224 benchmark requests; they stay off by default.
+  assert.equal(defaultValue.features.autoRouting, false);
   assert.equal(defaultValue.features.learningReview, true);
   assert.equal(parsePolicy({ features: { learningReview: false } }).policy.features.learningReview, false);
   // Images reach vision models and Full auto is offered by default, as in other AI apps; commands still need shellByAi.
@@ -49,6 +55,14 @@ test('auto mode needs both organization feature and allowed mode', () => {
   assert.deepEqual(p.problems, []);
   assert.equal(policyPath('win32', { ProgramData: 'D:\\Managed' }), 'D:\\Managed\\STeP\\desktop-policy.json');
   assert.equal(policyPath('darwin'), '/Library/Application Support/STeP/desktop-policy.json');
+});
+
+test('coordinated drafting is offered by default and honors managed denial', () => {
+  assert.equal(defaultPolicy().features.coordinator, true);
+  assert.equal(parsePolicy({ features: { coordinator: false } }).policy.features.coordinator, false);
+  const invalid = parsePolicy({ features: { coordinator: 'true' } });
+  assert.ok(invalid.problems.length);
+  assert.equal(invalid.policy.features.coordinator, false);
 });
 
 test('the release offers Claude developer opt-in while organization policy can disable it', () => {

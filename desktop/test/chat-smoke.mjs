@@ -115,6 +115,28 @@ try {
   );
   await page.reload();
   await page.locator('.composer textarea').waitFor();
+  const skillComposer = page.getByRole('textbox', { name: 'พิมพ์คำขอ', exact: true });
+  await skillComposer.fill('Synthetic request /step-wri');
+  await page.getByRole('listbox', { name: 'เลือก Skill' }).getByRole('option').filter({ hasText: '/step-writing' }).click();
+  await expect(skillComposer).toHaveValue('Synthetic request');
+  await expect(page.locator('.skill-chip')).toContainText('/step-writing');
+  await page.getByRole('button', { name: 'เลิกใช้ Skill นี้' }).click();
+  await skillComposer.fill('Keep this sentence /');
+  const skillMenu = page.getByRole('listbox', { name: 'เลือก Skill' });
+  await expect(skillMenu).toBeVisible();
+  await skillComposer.press(process.platform === 'darwin' ? 'Meta+ArrowLeft' : 'Home');
+  await expect(skillMenu).toBeHidden();
+  await skillComposer.press('ArrowRight');
+  assert.equal(await skillComposer.evaluate(el => el.selectionStart), 1);
+  await skillComposer.press(process.platform === 'darwin' ? 'Meta+ArrowRight' : 'End');
+  await expect(skillMenu).toBeVisible();
+  for (let option = 1; option < 8; option++) await skillComposer.press('ArrowDown');
+  const lastOption = skillMenu.getByRole('option').nth(7);
+  await expect(lastOption).toHaveAttribute('aria-selected', 'true');
+  await expect(lastOption).toBeInViewport();
+  await expect(skillComposer).toHaveAttribute('aria-activedescendant', await lastOption.getAttribute('id'));
+  await skillComposer.press('Escape');
+  await expect(skillComposer).toHaveValue('Keep this sentence');
   await page.locator('.composer textarea').fill('First message');
   await page.keyboard.press('Enter');
   const consent = page.getByRole('alertdialog', { name: 'ยืนยันการส่งข้อมูลให้ AI' });
@@ -275,8 +297,10 @@ try {
   await page.locator('.composer textarea').fill('Second message');
   await page.locator('.send').click();
   await page.getByText('Second answer received', { exact: true }).waitFor();
-  // Chat is the one everyday mode, like other AI apps; the drafting mode stays for tasks that use it.
-  await expect(page.getByRole('combobox', { name: 'โหมดทำงาน' }).locator('option[value="draft"]')).toHaveCount(0);
+  // Chat is the everyday mode, like other AI apps. Drafting stays in the list because coordinated drafting (on by
+  // default) starts there; its split option appears only in that mode, unchecked.
+  await expect(page.getByRole('combobox', { name: 'โหมดทำงาน' }).locator('option[value="draft"]')).toHaveCount(1);
+  await expect(page.getByLabel('แบ่งงานย่อย', { exact: true })).toHaveCount(0);
   // The earlier run saves its answer just before it releases the task; wait until a new run is accepted.
   await waitComplete(id);
   await expect

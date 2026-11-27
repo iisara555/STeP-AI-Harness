@@ -12,8 +12,21 @@ export function composerCommand(query: string): ComposerCommand | null {
   return null;
 }
 
-/** "/skill-name request" runs that Skill when it is one the person can use; otherwise the text is sent as typed. */
+/** A slash starts a picker at a word boundary, including after a request or on its next line. */
+export function trailingSkillToken(text: string) {
+  const match = /(?:^|\s)\/([\p{L}\p{M}\p{N}_-]*)$/u.exec(text);
+  if (!match) return undefined;
+  return { query: match[1], start: match.index + match[0].indexOf('/') };
+}
+
+/** A known Skill before or after a request is selected without sending the command token as part of the request. */
 export function typedSkill(request: string, known: (name: string) => boolean) {
-  const typed = /^\/([a-z0-9-]+)\s+([\s\S]+)$/.exec(request.trim());
-  return typed && known(typed[1]) ? { skill: typed[1], text: typed[2] } : { skill: '', text: request };
+  const trimmed = request.trim();
+  const prefix = /^\/([a-z0-9-]+)\s+([\s\S]+)$/i.exec(trimmed);
+  if (prefix && known(prefix[1].toLowerCase())) return { skill: prefix[1].toLowerCase(), text: prefix[2] };
+  const suffix = trailingSkillToken(trimmed);
+  const name = suffix?.query.toLowerCase();
+  return suffix?.start && name && known(name)
+    ? { skill: name, text: trimmed.slice(0, suffix.start).trimEnd() }
+    : { skill: '', text: request };
 }

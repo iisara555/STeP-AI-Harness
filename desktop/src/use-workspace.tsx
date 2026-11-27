@@ -27,7 +27,7 @@ import { documentText, plainDocument as toDoc } from './draft';
 import { saveSidebarChoice } from './sidebar-rail';
 import { resolvePresentation } from './document-presentation';
 import { useAiChoice } from './ai-choice';
-import { composerCommand, typedSkill } from './composer-command';
+import { composerCommand, trailingSkillToken, typedSkill } from './composer-command';
 import {
   type ConsentAsk,
   type RunOptions,
@@ -172,7 +172,8 @@ export function useWorkspace() {
     // "ลองใช้ Skill": the Skill the Router finds clearly fits what is being typed, and the ones the person waved away.
     [suggestedSkill, setSuggestedSkill] = useState(''),
     [dismissedSkills, setDismissedSkills] = useState<string[]>([]),
-    [slashIndex, setSlashIndex] = useState(0);
+    [slashIndex, setSlashIndex] = useState(0),
+    [slashAtCaret, setSlashAtCaret] = useState(false);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const { toasts, setToasts, toastId, dismiss, notify } = useToasts();
   const runningIds = useRef(new Map<string, object>());
@@ -205,6 +206,7 @@ export function useWorkspace() {
   const workflowRef = useRef<Workflow | ''>('');
   workflowRef.current = workflow;
   const [workMode, setWorkMode] = useState<WorkMode>('chat');
+  useEffect(() => setCoordinated(false), [selected, workMode, forcedSkill]);
   const [advancedTools, setAdvancedTools] = useState(false);
   const [toolTab, setToolTab] = useState<ToolTab>('output'),
     [toolRequest, setToolRequest] = useState<ToolRequest>();
@@ -276,7 +278,9 @@ export function useWorkspace() {
   // The output panel waits for something to show: a task with no draft yet gives the chat the whole width. Opening the
   // panel by hand (or opening a file, a proposal or a tool in it) keeps it open for this task even while it is empty.
   const [panelPinned, setPanelPinned] = useState(false);
-  useEffect(() => setPanelPinned(false), [selected]);
+  useEffect(() => {
+    if (toolTab !== 'coding') setPanelPinned(false);
+  }, [selected]);
   const openPanel = () => {
     setRight(true);
     setPanelPinned(true);
@@ -341,7 +345,11 @@ export function useWorkspace() {
       const version = ++snapshotVersion.current;
       const raw: Snapshot = await api.call('snapshot');
       const cases = raw.sessions.filter(s => s.claimPacketId);
-      const data = cases.length ? { ...raw, sessions: raw.sessions.filter(s => !s.claimPacketId) } : raw;
+      // A coordinated draft's planner and workers are part of their task, not tasks of their own.
+      const data =
+        cases.length || raw.sessions.some(s => s.subtask)
+          ? { ...raw, sessions: raw.sessions.filter(s => !s.claimPacketId && !s.subtask) }
+          : raw;
       if (version === snapshotVersion.current) {
         setSnapshot(data);
         setCaseSessions(current => (!cases.length && !current.length ? current : cases));
@@ -752,8 +760,8 @@ export function useWorkspace() {
     await api!.call('remove', { id: task.id }).catch(() => {});
     return null;
   }
-  async function detachDocument(sessionId: string, fileId: string) {
-    await api!.call('detach', { id: sessionId, fileId }).catch(() => {});
+  async function detachDocument(sessionId: string, attachmentId: string) {
+    await api!.call('detach', { id: sessionId, attachmentId }).catch(() => {});
     const targetSession = snapshot?.sessions.find(s => s.id === sessionId);
     if (targetSession && !targetSession.messages.length && !targetSession.draft.trim())
       await api!.call('remove', { id: sessionId }).catch(() => {});
@@ -844,12 +852,13 @@ export function useWorkspace() {
   function discardFiles() {
     if (selected) for (const file of files) void api!.call('detach', { id: selected, attachmentId: file.id }).catch(() => undefined);
     setFiles([]);
+    setInspecting(null);
   }
   function removeFile(attachmentId: string) {
     if (selected) void api!.call('detach', { id: selected, attachmentId }).catch(() => undefined);
     setFiles(current => current.filter(file => file.id !== attachmentId));
   }
-  function addFiles(incoming: Attachment[]) {
+  function addFiles(id: string, incoming: Attachment[]) {
     if (!incoming.length) return;
     setFiles(current => {
       const merged = [...current];
@@ -859,12 +868,26 @@ export function useWorkspace() {
         if (merged.length < 64) merged.push(item);
         else overflow.push(item);
       }
-      if (overflow.length && selected) {
-        for (const extra of overflow) void api!.call('detach', { id: selected, attachmentId: extra.id }).catch(() => undefined);
+      if (overflow.length) {
+        for (const extra of overflow) void api!.call('detach', { id, attachmentId: extra.id }).catch(() => undefined);
         notify(t('แนบได้สูงสุด {0} ไฟล์ต่อครั้ง', 64), 'info');
       }
       return merged;
     });
+  }
+  async function attachFiles(vision = false) {
+    const version = navigationVersion.current;
+    const id = selected || (await createTask(version))?.id;
+    if (!id || version !== navigationVersion.current) return;
+    const response = await api!.call('attach', { id, vision, multiple: true });
+    const added: Attachment[] = Array.isArray(response) ? response : response ? [response] : [];
+    if (version !== navigationVersion.current || currentId.current !== id) {
+      await Promise.all(added.map(({ id: attachmentId }) => api!.call('detach', { id, attachmentId })));
+      return;
+    }
+    addFiles(id, added);
+    const inspection = added.length === 1 ? added[0] : added.find(item => !item.usable);
+    if (inspection) setInspecting(inspection);
   }
   async function pasteImage(file: File) {
     if (running || sendInFlight.current || pasteInFlight.current) {
@@ -1054,27 +1077,27 @@ export function useWorkspace() {
   const staffSkills = useMemo(() => skills && skillsForStaff(skills, developerMode), [skills, developerMode]);
   const routedSkills = useMemo(() => (staffSkills || []).filter(s => s.status === 'routed'), [staffSkills]);
   // "/" lists the person's team first and also matches Thai descriptions and trigger words.
-  const slash = /^\/(\S*)$/.exec(query);
+  const slash = useMemo(() => trailingSkillToken(query), [query]);
   const myTeam = snapshot?.settings.team || '';
   const myTeamInfo = snapshot?.teams.find(team => team.id === myTeam);
   const myTeamName = myTeamInfo ? teamName(myTeamInfo) : '';
   const forTeam = useCallback((s: SkillEntry) => Boolean(myTeam) && (s.owner === myTeam || s.teams.includes(myTeam)), [myTeam]);
-  const slashQuery = slash?.[1];
+  const slashQuery = slash?.query;
   const slashMatches = useMemo(() => {
     if (slashQuery === undefined) return NO_SKILLS;
     const q = slashQuery.toLowerCase();
     return routedSkills
       .filter(s => !q || [s.name, s.title, s.description, ...s.triggers].some(v => v.toLowerCase().includes(q)))
-      .sort(
-        (a, b) =>
-          Number(!a.name.startsWith(slashQuery)) - Number(!b.name.startsWith(slashQuery)) || Number(!forTeam(a)) - Number(!forTeam(b)),
-      )
+      .sort((a, b) => Number(!a.name.startsWith(q)) - Number(!b.name.startsWith(q)) || Number(!forTeam(a)) - Number(!forTeam(b)))
       .slice(0, 8);
   }, [slashQuery, routedSkills, forTeam]);
-  const useSkill = (name: string) => {
-    if (guardSettingsExit(() => useSkill(name))) return;
+  const useSkill = (name: string, fromSlash = false) => {
+    if (guardSettingsExit(() => useSkill(name, fromSlash))) return;
     setForcedSkill(name);
-    setQuery('');
+    setQuery(current => {
+      const token = fromSlash ? trailingSkillToken(current) : undefined;
+      return token ? current.slice(0, token.start).trimEnd() : '';
+    });
     setSlashIndex(0);
     setSettings(false);
     setView('chat');
@@ -1090,6 +1113,7 @@ export function useWorkspace() {
     !forcedSkill &&
     !session?.skill &&
     !session?.documentTool &&
+    !slash &&
     !query.startsWith('/');
   useEffect(() => {
     setSuggestedSkill('');
@@ -1185,6 +1209,14 @@ export function useWorkspace() {
     if (guardSettingsExit(showWizard)) return;
     setWizard(true);
   };
+  const showCoding = () => {
+    if (guardSettingsExit(showCoding)) return;
+    setSettings(false);
+    navigate('chat');
+    setToolRequest(undefined);
+    setToolTab('coding');
+    openPanel();
+  };
   const commands = {
     packs: () => setPacksOpen(true),
     palette: () => setPalette(p => !p),
@@ -1197,6 +1229,7 @@ export function useWorkspace() {
       setLearningOpen(true);
     },
     automations: () => setAutomationOpen(true),
+    coding: showCoding,
     settings: () => openSettings(),
     keyboard: () => setKeyboardOpen(true),
     // Absent when IT turned "แจ้งปัญหา / เสนอแนะ" off, so the palette and menu do not offer it.
@@ -1461,6 +1494,8 @@ export function useWorkspace() {
     setDismissedSkills,
     slashIndex,
     setSlashIndex,
+    slashAtCaret,
+    setSlashAtCaret,
     composerRef,
     toasts,
     setToasts,
@@ -1578,7 +1613,7 @@ export function useWorkspace() {
     createTask,
     discardFiles,
     removeFile,
-    addFiles,
+    attachFiles,
     pasteImage,
     send,
     askAside,

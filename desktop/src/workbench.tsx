@@ -7,17 +7,35 @@ import { t } from './i18n';
 import { BrowserDockView } from './browser';
 import { FilePreview, type FilePreviewData } from './file-preview';
 import { fileExtension, previewable } from './file-kinds';
+import { CodingWorkbench } from './coding-workbench';
 type Props = {
   api: DesktopAPI;
   tab: ToolTab;
   session?: Session;
   workspace: string;
   request?: ToolRequest;
+  panelVisible: boolean;
+  workflow: string;
+  canChooseCodingWorkflow: boolean;
   onTab: (tab: ToolTab) => void;
+  onCodingWorkflow: (workflow: 'plan' | 'coding') => void;
   onSource: (text: string) => void;
   onBrowserTask: (url: string) => void;
 };
-export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, onSource, onBrowserTask }: Props) {
+export function WorkbenchPanel({
+  api,
+  tab,
+  session,
+  workspace,
+  request,
+  panelVisible,
+  workflow,
+  canChooseCodingWorkflow,
+  onTab,
+  onCodingWorkflow,
+  onSource,
+  onBrowserTask,
+}: Props) {
   const [path, setPath] = useState(''),
     [entries, setEntries] = useState<{ name: string; path: string; directory: boolean }[]>([]);
   const [file, setFile] = useState<{ path: string; text: string; offset?: number; total?: number; nextOffset?: number } | null>(null),
@@ -136,7 +154,9 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
         <>
           <div className="tool-context">
             <Folder size={14} />
-            <span title={workspace}>{workspace || t('เลือกโฟลเดอร์ทำงานเพื่อใช้แท็บไฟล์งานและคำสั่งขั้นสูง')}</span>
+            <span title={workspace}>
+              {workspace || (tab === 'coding' ? t('เลือกโฟลเดอร์โปรเจกต์') : t('เลือกโฟลเดอร์ทำงานเพื่อใช้แท็บไฟล์งานและคำสั่งขั้นสูง'))}
+            </span>
             <button
               className="quiet"
               onClick={() =>
@@ -149,6 +169,17 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
               {t('เลือกโฟลเดอร์')}
             </button>
           </div>
+          {tab === 'coding' && panelVisible && (
+            <CodingWorkbench
+              key={workspace}
+              api={api}
+              workspace={workspace}
+              workflow={workflow}
+              canChooseWorkflow={canChooseCodingWorkflow}
+              onWorkflow={onCodingWorkflow}
+              onTab={onTab}
+            />
+          )}
           {tab === 'browser' && (
             <BrowserDockView
               api={api}
@@ -212,7 +243,10 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                 <section className="task-card" key={task.id}>
                   <header>
                     <code>{task.command}</code>
-                    <span className={'task-state ' + task.status}>{task.status}</span>
+                    <span className={'task-state ' + task.status}>
+                      {task.status}
+                      {typeof task.code === 'number' && ` · ${t('รหัสจบงาน {0}', task.code)}`}
+                    </span>
                   </header>
                   <small>{task.cwd}</small>
                   <pre>{task.output || t('กำลังรอ output…')}</pre>

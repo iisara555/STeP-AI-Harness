@@ -52,6 +52,7 @@ const featureNames: Record<string, string> = localized({
   memoryTeam: 'ความจำที่ใช้ร่วมกันในทีม',
   autoRouting: 'เลือก Skill และถามข้อมูลที่ขาดให้อัตโนมัติ',
   hybridSkillSelection: 'เลือก Skill ที่เหมาะกับงานก่อนตอบ',
+  chatClarification: 'ถามก่อนเมื่อคำขอเข้าได้หลายงาน',
   skillSuggestions: 'แนะนำ Skill เหนือช่องพิมพ์',
   receiptVision: 'ให้ AI อ่านภาพใบเสร็จ',
   autoUpdate: 'อัปเดตแอปอัตโนมัติ',
@@ -78,6 +79,7 @@ const POLICY_GROUPS: [string, string[]][] = [
       'coordinator',
       'autoRouting',
       'hybridSkillSelection',
+      'chatClarification',
       'skillSuggestions',
       'autoEffort',
       'answerCheck',
@@ -160,6 +162,7 @@ export function SettingsPanel({
   const [interactionStyle, setInteractionStyle] = useState(interactionStyleId(snapshot.settings.interactionStyle)),
     [languageStyle, setLanguageStyle] = useState(languageStyleId(snapshot.settings.languageStyle));
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState<unknown>();
   const [settingsSearch, setSettingsSearch] = useState('');
   const [chatLanguage, setChatLanguage] = useState(snapshot.settings.chatLanguage || 'auto');
   const [saved, setSaved] = useState(false);
@@ -225,6 +228,22 @@ export function SettingsPanel({
       setBusy('');
     }
   };
+  const selectAvatar = (value: string) => {
+    setAvatar(value);
+    setAvatarError(undefined);
+  };
+  const pickProfilePhoto = async () => {
+    setAvatarError(undefined);
+    setBusy('avatar');
+    try {
+      const photo = await call('profileAvatarPick');
+      if (typeof photo === 'string') selectAvatar(photo);
+    } catch (error) {
+      setAvatarError(error);
+    } finally {
+      setBusy('');
+    }
+  };
   const values = {
     assistant,
     team,
@@ -272,7 +291,8 @@ export function SettingsPanel({
     ...(developerAccess ? ([['developer', t('นักพัฒนา / แอดมิน'), FileSearch]] as const) : []),
   ] as const;
   const keywords = {
-    general: 'ชื่อ ทีม ผู้ช่วย รูป โปรไฟล์ สไตล์ โฟลเดอร์ เริ่มโปรแกรม เปิดเครื่อง startup Windows chat language profile team style folder',
+    general:
+      'ชื่อ ทีม ผู้ช่วย รูป โปรไฟล์ สไตล์ โฟลเดอร์ ตรวจงาน Skill review เริ่มโปรแกรม เปิดเครื่อง startup Windows chat language profile team style folder',
     ai: 'AI บัญชี โมเดล ทดสอบ account model test',
     credentials: 'Google ปฏิทิน Gmail รหัสผ่าน ที่อยู่ พัก บัญชี password address pause calendar',
     appearance: 'ภาษา ธีม ฟอนต์ แบบอักษร มีหัว ไม่มีหัว language theme font looped loopless display',
@@ -349,9 +369,15 @@ export function SettingsPanel({
           </div>
           {avatarOpen && (
             <div className="avatar-section">
-              <p className="muted small">
-                {t('เลือกภาพวาดที่ชอบ ภาพเป็นลายเส้นประกอบ ไม่ใช่รูปถ่ายของใคร และเก็บไว้ในเครื่องนี้เท่านั้น')}
-              </p>
+              <button type="button" className="quiet profile-photo-picker" disabled={Boolean(busy)} onClick={() => void pickProfilePhoto()}>
+                {t('เลือกรูปโปรไฟล์จากเครื่อง')}
+              </button>
+              <p className="muted small">{t('เลือกรูป PNG หรือ JPEG รูปโปรไฟล์เก็บไว้ในเครื่องนี้')}</p>
+              {avatarError != null && (
+                <p className="small profile-photo-error" role="alert">
+                  {explainError(avatarError)}
+                </p>
+              )}
               <div className="avatar-picker" role="radiogroup" aria-label={t('รูปโปรไฟล์')}>
                 <button
                   type="button"
@@ -360,7 +386,8 @@ export function SettingsPanel({
                   aria-label={t('ใช้ตัวอักษรแรกของชื่อ')}
                   title={t('ใช้ตัวอักษรแรกของชื่อ')}
                   className="avatar-option"
-                  onClick={() => setAvatar('')}
+                  disabled={busy === 'avatar'}
+                  onClick={() => selectAvatar('')}
                 >
                   <Avatar fallback={initial(userName) || <UserRound size={20} />} />
                 </button>
@@ -373,7 +400,8 @@ export function SettingsPanel({
                     aria-label={t('ภาพที่ {0}', i + 1)}
                     title={t('ภาพที่ {0}', i + 1)}
                     className="avatar-option"
-                    onClick={() => setAvatar(a.id)}
+                    disabled={busy === 'avatar'}
+                    onClick={() => selectAvatar(a.id)}
                   >
                     <Avatar id={a.id} fallback="" />
                   </button>
@@ -493,6 +521,7 @@ export function SettingsPanel({
             </label>
           )}
           <h3>{t('สำเนียงภาษา')}</h3>
+          {chatLanguage === 'en' && <p className="muted small">{t('สำเนียงจะใช้เมื่อผู้ช่วยตอบเป็นภาษาไทย')}</p>}
           <div className="style-grid speaking-styles" role="radiogroup" aria-label={t('สำเนียงภาษา')}>
             {(
               [
@@ -530,6 +559,25 @@ export function SettingsPanel({
               ))}
             </select>
           </label>
+          {/* Shown only where the organization allows it; the employee's choice never overrides an IT off. */}
+          {snapshot.policy?.features.skillReview && (
+            <>
+              <label className="check-row">
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={snapshot.settings.skillReview !== false}
+                  disabled={busy === 'skillReview'}
+                  onChange={e => {
+                    const enabled = e.target.checked;
+                    void run('skillReview', () => call('skillReviewSetting', { enabled }));
+                  }}
+                />
+                {t('ตรวจงานกับขั้นตอนของ Skill ก่อนส่ง')}
+              </label>
+              <p className="small muted">{t('งานครบตาม Skill ขึ้น แต่ตอบช้าลงเล็กน้อย · ใช้กับ Claude และ Antigravity')}</p>
+            </>
+          )}
         </section>
       )}
       {page === 'general' && (

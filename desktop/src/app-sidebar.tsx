@@ -13,6 +13,7 @@ import {
   SlidersHorizontal,
   Trash2,
 } from './icons';
+import { CodeXml } from 'lucide-react';
 import { SidebarRail } from './sidebar-rail';
 import { TASK_ALERT_LABELS } from './task-alerts';
 import { UpdateCard, VersionLine } from './update';
@@ -52,9 +53,11 @@ export function AppSidebar({ v }: { v: AppView }) {
     setRenaming,
     setSettings,
     settings,
+    showPanel,
     snapshot,
     staffSkills,
     taskMeta,
+    toolTab,
     update,
     view,
   } = v;
@@ -71,9 +74,11 @@ export function AppSidebar({ v }: { v: AppView }) {
           settings={settings}
           receiptBusy={receiptBusy}
           needsYou={needsYou}
+          codingOpen={showPanel && toolTab === 'coding'}
           onNew={() => void action(create)}
           onSearch={() => setPalette(true)}
           onTasks={() => commandRef.current.left?.()}
+          onCoding={() => commandRef.current.coding?.()}
           onView={next => {
             setSettings(false);
             navigate(next);
@@ -113,6 +118,19 @@ export function AppSidebar({ v }: { v: AppView }) {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            data-tour="schedules"
+            className="scheduled-task-link"
+            aria-current={view === 'schedules' && !settings ? 'page' : undefined}
+            onClick={() => {
+              setSettings(false);
+              navigate('schedules');
+            }}
+          >
+            <CalendarClock size={16} />
+            {t('งานตั้งเวลา')}
+          </button>
           {filter !== 'all' && <div className="recent-label">{t('ร่างที่บันทึกแล้ว')}</div>}
           <div className="sessions">
             {groupSessions(filtered).map(group => (
@@ -237,18 +255,11 @@ export function AppSidebar({ v }: { v: AppView }) {
               </span>
               <span className="count">{staffSkills ? staffSkills.length + toolCount : ''}</span>
             </button>
-            <button
-              data-tour="schedules"
-              className={view === 'schedules' && !settings ? 'nav-active' : ''}
-              onClick={() => {
-                setSettings(false);
-                navigate('schedules');
-              }}
-            >
-              <CalendarClock size={17} />
-              <span className="nav-label">{t('งานตั้งเวลา')}</span>
+            <button className={showPanel && toolTab === 'coding' ? 'nav-active' : ''} onClick={() => commandRef.current.coding?.()}>
+              <CodeXml size={17} />
+              <span className="nav-label">{t('พื้นที่เขียนโค้ด')}</span>
               <span className="nav-short" aria-hidden="true">
-                {t('ตั้งเวลา')}
+                {t('โค้ด')}
               </span>
             </button>
             <button

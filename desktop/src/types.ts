@@ -203,7 +203,7 @@ export type RunTrace = {
   ms: number;
   steps: StepTrace[];
   contextWindow?: ContextWindowReading;
-  skillSelection?: { method: 'router' | 'model' | 'previous' | 'fallback'; skill?: string };
+  skillSelection?: { method: 'router' | 'model' | 'previous' | 'fallback' | 'asked'; skill?: string; asked?: boolean };
   /** Reasoning level sent for this run: the employee's choice, or picked by task size (auto). No level means the model default. */
   effort?: { size: 'small' | 'medium' | 'large'; auto: boolean; level?: string };
   /** Provider research before the first model step, when host-side search is enabled. */
@@ -297,6 +297,19 @@ export type Session = {
   /** Checks for an accepted AI draft, kept outside editable/exported document content. */
   documentReview?: { text: string; revision: number };
   parentId?: string;
+  /** A coordinator's worker or planner: hidden from the task list and removed with its parent task. */
+  subtask?: boolean;
+  /** The approved plan of a coordinated draft, so a failed or stopped run continues from the subtasks still open. */
+  coordination?: {
+    query: string;
+    source: string;
+    tasks: { id: string; query: string; dependsOn: string[]; skill?: string }[];
+    /** Subtask id → the child task holding its finished draft. */
+    done: Record<string, string>;
+    state: 'planning' | 'running' | 'merging' | 'failed' | 'done';
+    /** When the request was stored in the task; the merge answers that message. */
+    at: string;
+  };
   loadedContext?: string[];
   compaction?: { before: number; after: number; method: string; at: string };
   contextCheckpoint?: SummaryCheckpoint;
@@ -369,6 +382,8 @@ export type Settings = {
   developmentMode?: boolean;
   /** Background review follows the release default when unset; explicit false preserves the employee's opt-out. IT may deny it. */
   learningReview?: boolean;
+  /** Skill Review follows the policy when unset; explicit false is the employee's opt-out. IT may deny it. */
+  skillReview?: boolean;
   keybindings?: import('./commands').Keybindings;
   vimMode?: boolean;
   outputStyle?: string;
@@ -386,7 +401,7 @@ export type Settings = {
   onboarding: boolean;
   ocrDir?: string;
   userName?: string;
-  /** A bundled profile picture id (src/avatar-ids.ts); empty or missing shows the initial. */
+  /** A bundled picture ID or a bounded local PNG thumbnail. Empty or missing shows the initial. */
   avatar?: string;
   personality?: 'coworker' | 'professional' | 'concise' | 'custom';
   assistantTone?: string;

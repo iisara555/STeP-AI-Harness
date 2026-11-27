@@ -372,8 +372,9 @@ export async function runFeatureMatrix(options: {
         assert.ok(planned);
         assert.ok(peak >= 2 && peak <= 3);
         assert.equal(store.session(parent.id).status, 'review');
+        // Two workers; the planner's reply is only the plan and is not kept as a task.
         const children = store.list<any>('session').filter(s => s.parentId === parent.id);
-        assert.equal(children.length, 3);
+        assert.equal(children.length, 2);
         checks.push(
           'Two actual WorkService subtasks run concurrently before merge',
           'Decomposition and approval use fixed synthetic fixtures; no autonomous approval or tools',

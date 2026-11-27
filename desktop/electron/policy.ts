@@ -41,6 +41,7 @@ export const FEATURES = [
   'memoryTeam',
   'autoRouting',
   'hybridSkillSelection',
+  'chatClarification',
   'skillSuggestions',
   'morningBrief',
   'receiptVision',
@@ -210,7 +211,8 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // งานตั้งเวลา: employees schedule their own tasks while the app is open. Each job asks for consent when saved, passes
   // the privacy check and ends as a draft for review (owner's decision, 2026-10-17). IT can set it to false.
   cron: true,
-  coordinator: false,
+  // The draft composer offers this as an unchecked choice. Workers run only after the person reviews the plan.
+  coordinator: true,
   memoryTeam: false,
   // The local Router picks Skills and Playbooks and asks clarifying questions only when an administrator turns it on.
   // Off, the hybrid selection stage or the AI's governed Skill tool can choose the procedure.
@@ -218,6 +220,11 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // Preload confidently matched named procedures, otherwise ask the same AI to choose from metadata before answering.
   // Text-only edits and explicitly selected workflows keep their existing path. IT can disable the extra selection call.
   hybridSkillSelection: true,
+  // In a new chat request that fits two or more Skills which would produce different work, the same selection call may
+  // ask the employee which one they mean (one question with 2–4 choices, at most once per request, no extra model call).
+  // Details a Skill needs are still asked by the answering AI. The old Router menus (autoRouting) asked on 78 of 224
+  // benchmark requests, so they stay off. IT can set it to false.
+  chatClarification: true,
   // While autoRouting is off, a Skill that clearly fits what the employee is typing is offered as one button above the
   // composer ("ลองใช้ Skill: …"); nothing changes unless they press it (owner's decision, 2026-10-18). Local matching
   // only, no model call. IT can set it to false.
@@ -262,7 +269,7 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // Guardrails; when something required is missing that the AI can still do, it goes back to work with its tools (at
   // most two rounds, learned from OpenCode's goal judge). Off by default until a live comparison on the owner's
   // models shows it helps; each check is one more model call.
-  skillReview: false,
+  skillReview: true,
   // When the employee has not picked a reasoning level, a short chat question gets a light level and a large task (a
   // Playbook, plan mode, a long request or many files) a deeper one, within the levels the model offers (electron/effort.ts).
   // The employee's choice always wins. IT can set it to false to always use the model default.
@@ -332,6 +339,7 @@ function closedPolicy(): Policy {
   policy.features.googleWorkspace = false;
   policy.features.developmentMode = false;
   policy.features.learningReview = false;
+  policy.features.coordinator = false;
   policy.receiptLocalOnly = true;
   delete policy.googleWorkspace;
   // Prompts must not go to a default organization address on the strength of a policy file that failed to parse.

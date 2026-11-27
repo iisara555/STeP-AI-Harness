@@ -36,6 +36,7 @@ export function AppDialogs({ v }: { v: AppView }) {
     connectionId,
     consentAsk,
     dirtyRef,
+    discardFiles,
     dismiss,
     feedbackAsk,
     handoffAsk,
@@ -383,6 +384,7 @@ export function AppDialogs({ v }: { v: AppView }) {
           onConfirm={async () => {
             await api.call('remove', { id: removing.id });
             if (selected === removing.id) {
+              discardFiles();
               setSelected('');
               setDirty(false);
               dirtyRef.current = false;

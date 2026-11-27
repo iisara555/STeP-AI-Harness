@@ -34,6 +34,9 @@ export const schedulesEn: Record<string, string> = {
   'รอบล่าสุดทำงานไม่สำเร็จ ตรวจผลของรอบนั้นและการเชื่อมต่อ AI ก่อนกด "ทำตอนนี้" เพื่อลองใหม่':
     'The last run failed. Check its result and the AI connection before pressing "Run now" to try again',
   งานตั้งเวลา: 'Scheduled tasks',
+  งานที่คุณตั้งเวลาและผลแต่ละรอบจะแสดงที่นี่: 'Your scheduled tasks and each run’s results appear here.',
+  'รอบล่าสุด {0}': 'Latest run {0}',
+  'รอบก่อนหน้า {0} รายการ': 'Earlier runs ({0})',
   'ให้ผู้ช่วยทำงานซ้ำตามเวลา ผลเป็นร่างให้คุณตรวจ': 'Let the assistant repeat tasks on a schedule; each result is a draft for you to check',
   'ผู้ดูแลยังไม่เปิดงานตั้งเวลาบนเครื่องนี้ ถ้าต้องใช้ ติดต่อผู้ดูแลระบบ':
     'Your administrator has not turned on scheduled tasks on this computer. Contact them if you need it',

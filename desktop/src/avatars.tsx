@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { AVATAR_IDS, RETIRED_AVATAR_IDS } from './avatar-ids';
+import { AVATAR_IDS, RETIRED_AVATAR_IDS, isCustomAvatar } from './avatar-ids';
 
-// Bundled with the app, so a picture never loads from the network or the employee's disk.
+// Illustrations are bundled. Personal photos use a local thumbnail from Settings.
 const files = import.meta.glob<string>('./assets/avatars/*.webp', { eager: true, import: 'default' });
 export const AVATARS = AVATAR_IDS.map(id => ({ id, src: files[`./assets/avatars/${id}.webp`] })).filter(a => a.src);
 const byId = new Map(AVATARS.map(a => [a.id, a.src]));
@@ -11,9 +11,10 @@ export const pickableAvatars = (current?: string) => AVATARS.filter(a => !RETIRE
 
 /** The employee's chosen picture, or their initial in a circle when none is chosen. */
 export function Avatar({ id, fallback, className = '' }: { id?: string; fallback: ReactNode; className?: string }) {
-  const src = id ? byId.get(id) : undefined;
+  const custom = isCustomAvatar(id);
+  const src = custom ? id : id ? byId.get(id) : undefined;
   return (
-    <span className={`avatar-badge ${src ? 'has-picture' : ''} ${className}`} aria-hidden="true">
+    <span className={`avatar-badge ${src ? 'has-picture' : ''} ${custom ? 'custom-avatar' : ''} ${className}`} aria-hidden="true">
       {src ? <img src={src} alt="" draggable={false} /> : fallback}
     </span>
   );

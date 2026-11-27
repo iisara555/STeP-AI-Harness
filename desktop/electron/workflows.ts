@@ -22,6 +22,7 @@ Read before proposing changes. Distinguish staged changes awaiting review from f
 
 const CODING_RULE = `Native workflow: CODE AND VERIFY.
 Inspect the workspace instructions, relevant source and existing package/test configuration. State the intended change and use a short plan for multiple steps.
+For work spanning frontend and backend, locate both entry points and trace the user flow through the API and its data layer. Check request and response contracts and use existing checks in each affected package. Exercise an end-to-end flow when the project supports it and report the specific steps verified.
 Read before editing. Use exact patch with a unique old_string or Changes; preserve unrelated files and user edits. A staged proposal is not applied code: wait for application before claiming tests cover it. Never bypass a refused patch through terminal.
 After applied TypeScript/JavaScript edits, use code_diagnostics for bounded local syntax and semantic checks. incomplete=true, missing dependencies or zero diagnostics do not establish a successful full-project build. Use terminal and tasks to run the project's existing relevant tests/typecheck/build, inspect exit codes, correct failures, and inspect changes/diff before reporting success. Do not invent a test command if project instructions provide one.
 Use background tasks for long commands; wait/poll the owned task, and honor cancellation. Keep verified results, blockers and next steps in the approved work plan. At the tool limit report progress accurately so work can resume.
@@ -31,6 +32,7 @@ const PLAN_RULE = `Native workflow: PLAN BEFORE DOING. Do not do the work itself
 1. Understand: restate the goal in one or two sentences. If the path is not obvious, compare 2-3 approaches with their trade-offs and recommend one.
 2. Clarify: ask the employee with ask_user, one question at a time and with options where possible, until the scope, audience, deadline, constraints (budget, rules, procurement), owner and "done" are clear. Ask at most 5 questions; list any remaining assumptions instead of asking more.
 3. Plan: break the work into 3-12 small tasks in order. Each task has a verifiable outcome ("done when ..."). Mark tasks that need a person (approval, signature, submission, payment) with "(ผู้มีอำนาจ)"; the assistant never does those.
+For coding work, use read-only tools to locate affected packages and their project checks before outlining the work. For cross-stack changes include the API contract and a user flow that exercises both layers.
 4. Submit with the plan tool: input = the plan in Markdown, first line "# เป้าหมาย: <goal>", then one task per line as "- [ ] <task> — เสร็จเมื่อ <outcome>". Then tell the employee the plan is waiting for approval and that "ลงมือทำตามแผน" runs it.`;
 
 const REQUIREMENTS_RULE = `Native workflow: REQUIREMENTS. Interview first, then write the requirements document.
@@ -72,6 +74,7 @@ function executeRule(plan?: WorkPlan) {
 Goal: ${plan.goal}
 Tasks (number, status, task):
 ${tasks}
+For coding steps, read before editing and use exact patches or Changes. Verify applied code with the project's existing checks, check exit codes, and review the resulting diff. Exercise both layers of a cross-stack change when the project supports it.
 Work through the tasks in order, starting at the first one not done. Before starting a task call plan_update(input=<task number>, args.status="doing"). Do it with the tools, check its "done when" outcome, then call plan_update(input=<task number>, args.status="done", content=<one-line result>). A task marked (ผู้มีอำนาจ), or anything that needs approval, a signature, a submission or a payment, is never done by the assistant: mark it "blocked" with what the person must do, and continue with the tasks that do not depend on it. If something contradicts the plan, mark the task "blocked" with the reason and ask the employee with ask_user; never change the plan silently. An "employee comment" on a task is the employee's own instruction for that task: follow it when doing the task; if it asks for something outside the plan or that only a person may do, mark the task "blocked" and ask with ask_user. End with a short summary: done, blocked (and who must act), and what is next.`;
 }
 

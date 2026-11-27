@@ -216,6 +216,37 @@
   font-size: var(--text-xs);
   padding: var(--pad-control);
 }
+.coding-modes {
+  margin-top: 0;
+}
+.coding-modes button[aria-pressed='true'] {
+  background: var(--selected);
+  color: var(--accent-ink);
+}
+.coding-project-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-4);
+}
+.coding-project-heading h2 {
+  margin: 0;
+  flex: 1;
+}
+.coding-project-heading button {
+  font-size: var(--text-xs);
+}
+.coding-package {
+  border-top: 1px solid var(--line);
+  margin-top: var(--space-2-5);
+  padding-top: var(--space-2-5);
+}
+.coding-package h3,
+.coding-package p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
 .tool-error {
   padding: var(--pad-card);
   background: var(--selected);

@@ -53,13 +53,14 @@ import { googleResultConsent } from './google-consent';
 import { executeGoogleRead } from './google-read-tool';
 import { PLAN_COMMENT_LIMIT } from '../src/plan-comments';
 import { Workbench, browserUrl } from './workbench';
+import { inspectCodingProject, resolveCodingCheck } from './coding-project';
 import { AgentBrowser } from './browser-agent';
 import { BrowserDock } from './browser-dock';
 import { PREVIEW_LIMIT, isHtmlPath, openHtmlPreview } from './html-preview';
 import { autoUpdater } from 'electron-updater';
 import { Updater, RELEASES_URL, type SelfInstall } from './updater';
 import { appBundlePath, canReplace, downloadVerified, macUpdateAsset, startSwap } from './mac-update';
-import { isAvatarId } from '../src/avatar-ids';
+import { isAvatarId, isCustomAvatar, PROFILE_AVATAR_PREFIX, PROFILE_AVATAR_SIDE } from '../src/avatar-ids';
 import { interactionStyleId, languageStyleId } from '../src/speaking-styles';
 import { Images } from './images';
 import { canGenerateImages, isImageRequest } from '../src/image-routing';
@@ -492,11 +493,14 @@ async function main() {
     toolLoop: () => policyState.policy.features.toolLoop,
     assistantPolicy: () => assistantPolicyError(policyState.policy),
     hybridSkillSelection: () => policyState.policy.features.hybridSkillSelection,
+    chatClarification: () => policyState.policy.features.chatClarification,
+    // The same question card as the AI's ask_user tool; `questions` is created below, before any run starts.
+    ask: (sessionId, question, options, signal) => questions.ask(sessionId, question, options, signal),
     visionEnabled: () => policyState.policy.features.vision,
     antigravityBridge: () => policyState.policy.features.antigravityNativeBridge,
     nativeToolCalls: () => policyState.policy.features.nativeToolCalls,
     answerCheck: () => policyState.policy.features.answerCheck,
-    skillReview: () => policyState.policy.features.skillReview,
+    skillReview: () => policyState.policy.features.skillReview && store.settings().skillReview !== false,
     autoEffort: () => policyState.policy.features.autoEffort,
     skillMetadata: async id => {
       const m = await routing.loadSkillContextMetadata(id);
@@ -1880,24 +1884,26 @@ async function main() {
         connection ? connectionBinding(connection) : null,
       ]);
     },
-    (id, tasks, signal) =>
+    (id, tasks, signal, finished) =>
       phase4Consent(
         tm('ตรวจแผนงานย่อยก่อนเริ่ม?'),
         tm(
-          'งาน {0}\n{1}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ',
-          id,
+          '{0}\n{1}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ',
+          tm(store.session(id).title),
           tasks
             .map(
               (task, index) =>
-                `${index + 1}. ${task.query}${task.dependsOn.length ? '\n' + tm('รอขั้นตอน {0}', task.dependsOn.map(dependency => tasks.findIndex(t => t.id === dependency) + 1).join(', ')) : ''}`,
+                `${index + 1}. ${task.query}${finished.includes(task.id) ? ' · ' + tm('เสร็จแล้ว') : ''}${task.dependsOn.length ? '\n' + tm('รอขั้นตอน {0}', task.dependsOn.map(dependency => tasks.findIndex(t => t.id === dependency) + 1).join(', ')) : ''}`,
             )
             .join('\n'),
         ),
         signal,
         JSON.stringify(tasks, null, 2),
+        id,
       ),
     (query, team) => harness.route(query, { team, workspace: store.settings().workspace }),
     (id, text) => emit({ sessionId: id, type: 'activity', text }),
+    event => emit(event),
   );
   const automations = new Automations(
     store,
@@ -2651,6 +2657,11 @@ async function main() {
         }
         return store.settings();
       }
+      case 'skillReviewSetting': {
+        if (!policyState.policy.features.skillReview) throw new Error('FEATURE_DISABLED');
+        store.put('settings', 'main', { ...store.settings(), skillReview: input.enabled === true });
+        return store.settings();
+      }
       case 'learningReviewSetting': {
         if (!policyState.policy.features.learningReview) throw new Error('FEATURE_DISABLED');
         store.put('settings', 'main', { ...store.settings(), learningReview: input.enabled === true });
@@ -2952,6 +2963,36 @@ async function main() {
       }
       case 'toolDiff':
         return gate.run({ tool: 'diff', readOnly: true }, { title: '', body: '', key: 'diff' }, () => workbench.diff());
+      case 'codingProject':
+        return gate.run({ tool: 'files', readOnly: true }, { title: '', body: '', key: 'coding-project' }, () =>
+          inspectCodingProject(workbench),
+        );
+      case 'codingRunCheck': {
+        const workspace = inputText(input.root, 2000),
+          directory = inputText(input.directory, 2000),
+          check = inputText(input.check, 24);
+        const selected = await resolveCodingCheck(workbench, workspace, directory, check);
+        const commands = [selected.command, ...selected.scripts].join('\n');
+        if (commands.length > 8000) throw new Error('CODING_CHECK_UNAVAILABLE');
+        const review = scanText(commands);
+        if (review.action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
+        return gate.run(
+          { tool: 'terminal', readOnly: false, execute: true, command: commands, path: selected.cwd },
+          {
+            title: tm('รันคำสั่งนี้บนเครื่อง?'),
+            body:
+              commands + '\n\nWorking directory: ' + selected.cwd + tm('\nคำสั่งทำงานด้วยสิทธิ์ของคุณ และอาจแก้ไฟล์หรือเชื่อมต่อเครือข่าย'),
+            key: selected.key,
+            privacyClass: review.classification === 'public' ? 'internal' : review.classification,
+            requireConfirmation: true,
+          },
+          async () => {
+            const current = await resolveCodingCheck(workbench, workspace, directory, check);
+            if (selected.key !== current.key) throw new Error('CODING_CHECK_CHANGED');
+            return workbench.start(current.command, undefined, { workspace, cwd: current.cwd });
+          },
+        );
+      }
       case 'toolTasks':
         return gate.run({ tool: 'tasks', readOnly: true }, { title: '', body: '', key: 'tasks' }, () => workbench.tasks());
       case 'toolCancel':
@@ -3267,9 +3308,38 @@ async function main() {
         acceptTerms();
         return true;
       }
+      case 'profileAvatarPick': {
+        const picked = await dialog.showOpenDialog(window, {
+          title: tm('เลือกรูปโปรไฟล์จากเครื่อง'),
+          properties: ['openFile'],
+          filters: [{ name: 'PNG / JPEG', extensions: ['png', 'jpg', 'jpeg'] }],
+        });
+        if (picked.canceled || !picked.filePaths[0]) return null;
+        const bytes = await readDocumentImage(picked.filePaths[0], path => {
+          if (sensitivePath(path) || deniedPath(path, policyState.policy.permission.pathRules, store.settings().workspace))
+            throw new Error('PATH_BLOCKED');
+        });
+        documentImageDimensions(bytes);
+        const image = nativeImage.createFromBuffer(bytes);
+        if (image.isEmpty()) throw new Error('DOCUMENT_IMAGE_INVALID');
+        const { width, height } = image.getSize();
+        const thumbnail =
+          Math.max(width, height) <= PROFILE_AVATAR_SIDE
+            ? image
+            : image.resize(width >= height ? { width: PROFILE_AVATAR_SIDE } : { height: PROFILE_AVATAR_SIDE });
+        const photo = PROFILE_AVATAR_PREFIX + thumbnail.toPNG().toString('base64');
+        if (!isCustomAvatar(photo)) throw new Error('DOCUMENT_IMAGE_LIMIT');
+        return photo;
+      }
       case 'settings': {
-        const avatarId = (value: unknown) => {
-          if (!isAvatarId(value)) throw new Error('INVALID_SETTINGS');
+        const avatarValue = (value: unknown) => {
+          if (isAvatarId(value)) return value;
+          if (!isCustomAvatar(value)) throw new Error('INVALID_SETTINGS');
+          const bytes = Buffer.from(value.slice(PROFILE_AVATAR_PREFIX.length), 'base64');
+          if (bytes.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') throw new Error('DOCUMENT_IMAGE_INVALID');
+          const size = documentImageDimensions(bytes);
+          if (Math.max(size.width, size.height) > PROFILE_AVATAR_SIDE || nativeImage.createFromBuffer(bytes).isEmpty())
+            throw new Error('DOCUMENT_IMAGE_INVALID');
           return value;
         };
         // An unknown speaking style is a bad request, not a silent fallback to Standard.
@@ -3295,7 +3365,7 @@ async function main() {
           theme,
           onboarding: true,
           userName: input.userName === undefined ? store.settings().userName : inputText(input.userName, 60).trim(),
-          avatar: input.avatar === undefined ? store.settings().avatar : input.avatar === '' ? '' : avatarId(input.avatar),
+          avatar: input.avatar === undefined ? store.settings().avatar : input.avatar === '' ? '' : avatarValue(input.avatar),
           personality,
           outputStyle,
           assistantTone: input.assistantTone === undefined ? store.settings().assistantTone : inputText(input.assistantTone, 300).trim(),
@@ -4697,9 +4767,19 @@ async function main() {
           throw new Error('INVALID_DOCUMENT_VARIANT');
         const invitation =
           draftingTool?.id === 'letter' && variant === 'invitation' ? resolveInvitation(input.invitation ?? {}) : undefined;
-        const coordinated = input.coordinator === true;
+        // "Try again" on a coordinated draft that failed or was stopped continues its approved plan: finished subtasks
+        // keep their drafts and only the open ones run again.
+        const resuming =
+          input.retry === true &&
+          input.coordinator !== true &&
+          !input.skill &&
+          !draftingTool &&
+          workMode === 'draft' &&
+          policyState.policy.features.coordinator &&
+          coordinator.resumable(id);
+        const coordinated = input.coordinator === true || resuming;
         if (draftingTool && coordinated) throw new Error('INVALID_DOCUMENT_TOOL');
-        if (coordinated && (!policyState.policy.features.coordinator || workMode !== 'draft' || input.skill || input.retry))
+        if (coordinated && (!policyState.policy.features.coordinator || workMode !== 'draft' || input.skill || (input.retry && !resuming)))
           throw new Error('COORDINATOR_DISABLED');
         if (workMode === 'image' && !canGenerateImages(sendingConnection)) throw new Error('IMAGE_API_REQUIRED');
         const selectedImageModel = input.imageModel ? inputText(input.imageModel, 120) : undefined;
@@ -4886,6 +4966,8 @@ async function main() {
         // A conversation is one task: a different document starts here, and the earlier draft goes to version history.
         if (autoDocument && anotherDocument) store.startConversationDocument(id);
         const queued = store.session(id);
+        // A new request ends an earlier coordinated plan; "Try again" then repeats this request, not that plan.
+        if (!coordinated && queued.coordination) delete queued.coordination;
         const templateInfo =
           nativeTemplate && templateDescription && variant !== 'invitation'
             ? documentTemplates.save(id, nativeTemplate, draftingTool!.id, selected[0].view.name, templateDescription.font)
@@ -4907,11 +4989,13 @@ async function main() {
         ];
         const execution = (
           coordinated
-            ? coordinator.run(id, text, combinedSource, {
-                text: coordinatorScan!.redactedText,
-                files: requestFiles,
-                onAccepted: () => acceptRequest(),
-              })
+            ? resuming
+              ? coordinator.run(id, text, combinedSource, undefined, { onAccepted: () => acceptRequest() })
+              : coordinator.run(id, text, combinedSource, {
+                  text: coordinatorScan!.redactedText,
+                  files: requestFiles,
+                  onAccepted: () => acceptRequest(),
+                })
             : service.run(id, text, combinedSource, true, skill || undefined, workMode, selectedImageModel, requestFiles, {
                 retry: input.retry === true,
                 autoContinue: input.autoContinue === true,
@@ -4927,7 +5011,8 @@ async function main() {
         ).catch(error => {
           diagnose('run-rejected', { code: errorCode(error) });
           const failed = store.session(id);
-          failed.status = error.message === 'CANCELLED' ? 'interrupted' : 'error';
+          // An employee who stops a coordinated draft can continue it later with "Try again".
+          failed.status = error.message === 'CANCELLED' ? (coordinated ? 'cancelled' : 'interrupted') : 'error';
           if (failed.messages.at(-1)?.text !== errorCode(error))
             failed.messages.push({ role: 'status', text: errorCode(error), at: new Date().toISOString() });
           store.save(failed);
@@ -4986,6 +5071,8 @@ async function main() {
         const ended = await fireHook({ event: 'session_end', sessionId: id });
         if (ended.blocked) throw new Error('HOOK_BLOCKED');
         if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
+        // A coordinated draft's subtasks are part of it and go with it.
+        for (const child of coordinator.children(id)) store.remove('session', child.id);
         store.remove('session', id);
         documentTemplates.remove(id);
         documentAssets.remove(id);
@@ -5059,7 +5146,7 @@ async function main() {
         let temporaryDir: string | undefined;
         let temporaryPath: string | undefined;
         let clipboardPreview: string | undefined;
-        const attachOne = async (path: string): Promise<Attachment> => {
+        const prepareAttachment = async (path: string) => {
           const extension = extname(path).slice(1).toLowerCase();
           let nativeBytes: Buffer | undefined;
           let nativeDescription: Awaited<ReturnType<typeof inspectDocumentTemplate>> | undefined;
@@ -5170,16 +5257,14 @@ async function main() {
             ...(reason ? { reason } : {}),
           };
           if (reason) diagnose('attach-refused', { reason, extension: extname(path).toLowerCase().slice(0, 8) });
-          if (attachingSession.claimPacketId) receiptPackets.get(attachingSession.claimPacketId);
-          attachments.set(view.id, {
+          return {
             view,
             text: sourceUsable ? ocrAttachmentSource(report, 'attachment:' + view.id) : '',
             sessionId,
             images,
             nativeBytes,
             sourceUsable,
-          });
-          return view;
+          };
         };
         try {
           let filePaths: string[];
@@ -5209,10 +5294,13 @@ async function main() {
             if (result.canceled || !result.filePaths.length) return allowMultiple ? [] : null;
             filePaths = result.filePaths.slice(0, MAX_ATTACHMENTS_PER_SEND);
           }
-          if (!allowMultiple) return await attachOne(filePaths[0]);
-          const attached: Attachment[] = [];
-          for (const filePath of filePaths) attached.push(await attachOne(filePath));
-          return attached;
+          const prepared: Awaited<ReturnType<typeof prepareAttachment>>[] = [];
+          for (const filePath of filePaths) prepared.push(await prepareAttachment(filePath));
+          // The task can be deleted while the picker or a file inspection is still in progress.
+          store.session(sessionId);
+          if (attachingSession.claimPacketId) receiptPackets.get(attachingSession.claimPacketId);
+          for (const item of prepared) attachments.set(item.view.id, item);
+          return allowMultiple ? prepared.map(item => item.view) : prepared[0].view;
         } finally {
           if (temporaryPath) await rm(temporaryPath, { force: true }).catch(() => diagnose('clipboard-cleanup-failed'));
           if (temporaryDir) await rmdir(temporaryDir).catch(() => diagnose('clipboard-cleanup-failed'));

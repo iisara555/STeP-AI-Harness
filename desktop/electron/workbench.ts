@@ -936,14 +936,17 @@ export class Workbench {
       throw new Error('GIT_DIFF_UNAVAILABLE');
     }
   }
-  async start(command: string, sessionId?: string) {
+  async start(command: string, sessionId?: string, scope?: { workspace: string; cwd: string }) {
     this.executionAllowed();
     if (typeof command !== 'string' || !command.trim() || command.length > 2000 || command.includes('\0'))
       throw new Error('INVALID_COMMAND');
     if (this.children.size >= 4) throw new Error('TASK_LIMIT');
     // Hex UUIDs can resemble personal identifiers; letters keep host handles intact through privacy review.
-    const cwd = await this.root(),
-      id = randomUUID().replace(/[0-9a-f]/g, digit => String.fromCharCode(97 + Number.parseInt(digit, 16)));
+    const root = await this.root();
+    if (scope && scope.workspace !== root) throw new Error('WORKSPACE_CHANGED');
+    const cwd = scope ? await this.path(scope.cwd) : root;
+    if (scope && (!(await lstat(cwd)).isDirectory() || root !== (await this.root()))) throw new Error('WORKSPACE_CHANGED');
+    const id = randomUUID().replace(/[0-9a-f]/g, digit => String.fromCharCode(97 + Number.parseInt(digit, 16)));
     this.executionAllowed();
     if (this.children.size >= 4) throw new Error('TASK_LIMIT');
     const task: BackgroundTask = {
@@ -969,7 +972,9 @@ export class Workbench {
               '-NoProfile',
               '-NonInteractive',
               '-Command',
-              '$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); ' + command,
+              '$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); ' +
+                command +
+                (scope ? '; if ($?) { exit 0 }; if ($null -ne $LASTEXITCODE) { exit $LASTEXITCODE }; exit 1' : ''),
             ],
             { cwd, env, windowsHide: true },
           )

@@ -141,8 +141,21 @@ export async function recoverSessionTurn(
   resettable: (error: unknown) => boolean = resettableSessionError,
 ) {
   let observed: TokenCount = { input: 0, output: 0, total: 0 };
-  const attempt = {
+  let shown = 0;
+  const attempt: ProviderContext = {
     ...context,
+    emit: text => {
+      shown += text.length;
+      context.emit(text);
+    },
+    discard: context.discard
+      ? count => {
+          const removed = Math.min(count, shown);
+          if (removed <= 0) return;
+          shown -= removed;
+          context.discard!(removed);
+        }
+      : undefined,
     onUsage: (usage: TokenCount) => {
       observed = combineUsage(observed, usage, 'max');
       context.onUsage?.(observed);
@@ -154,6 +167,7 @@ export async function recoverSessionTurn(
     // Authentication and quota failures go to the host without a second provider call.
     if (!continuing || context.signal.aborted || !resettable(error)) throw error;
     await context.session?.closeAndWait();
+    attempt.discard?.(shown);
     const failed = observed;
     observed = { input: 0, output: 0, total: 0 };
     return turn({

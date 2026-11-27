@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AccountQuotaMenuSummary, InlineQuotaChip } from './usage';
 import {
   AlertTriangle,
@@ -19,6 +19,7 @@ import {
   Plus,
   ShieldCheck,
   Sparkles,
+  Split,
   Square,
   X,
 } from './icons';
@@ -51,6 +52,8 @@ import { vimEdit } from './commands';
 import { CHAT_STARTERS, PERMISSION_SHORT, ScheduledTasks, SkillsHub, checkStillRunning } from './app-shared';
 import type { AppView } from './use-workspace';
 
+const caretAtEnd = (input: HTMLTextAreaElement) => input.selectionStart === input.value.length && input.selectionEnd === input.value.length;
+
 /** The chat: welcome, messages, plan and questions, and the composer; or the schedules and Skill pages. */
 export function ConversationView({ v }: { v: AppView }) {
   const {
@@ -58,7 +61,7 @@ export function ConversationView({ v }: { v: AppView }) {
     activeModel,
     activeUsageAccount,
     activityAt,
-    addFiles,
+    attachFiles,
     aiLabel,
     aiPicker,
     aiPickerRef,
@@ -127,6 +130,7 @@ export function ConversationView({ v }: { v: AppView }) {
     setPacksOpen,
     setPendingSource,
     setQuery,
+    setSlashAtCaret,
     setSlashIndex,
     setSuggestedSkill,
     setToolRequest,
@@ -137,7 +141,9 @@ export function ConversationView({ v }: { v: AppView }) {
     setWorkMode,
     setWorkflow,
     settings,
+    slashAtCaret,
     slashIndex,
+    slash,
     slashMatches,
     snapshot,
     staffSkills,
@@ -171,6 +177,13 @@ export function ConversationView({ v }: { v: AppView }) {
   // writes its answer from what it has read (the tool loop's final turn). Offered on the stop button after two minutes,
   // once per run.
   const [writeNowAt, setWriteNowAt] = useState(0);
+  const [expandedScheduleHistory, setExpandedScheduleHistory] = useState<string[]>([]);
+  const activeSlashOption = useRef<HTMLButtonElement>(null);
+  const activeSlashSkill =
+    !questionPending && slashAtCaret && !(snapshot.settings.vimMode && vimNormal) ? slashMatches[slashIndex] || slashMatches[0] : undefined;
+  useEffect(() => {
+    if (activeSlashSkill) activeSlashOption.current?.scrollIntoView({ block: 'nearest' });
+  }, [activeSlashSkill]);
   // A refresh can land after main saved the answer but before it reports the run finished; the saved message
   // then already shows the streamed text, so the live copy is hidden instead of appearing twice.
   const { liveText, streamSaved } = liveAnswer(stream, session?.messages.at(-1));
@@ -187,6 +200,7 @@ export function ConversationView({ v }: { v: AppView }) {
     offerWriteNow({ elapsedMs: now - startedAt, stream, liveText, progress }),
   );
   const messageCount = session?.messages.length;
+  const canCoordinate = snapshot.policy?.features.coordinator && workMode === 'draft' && !session?.documentTool && !forcedSkill;
   useEffect(() => {
     // An empty task shows the welcome from its greeting; only a conversation follows its latest message.
     if (messageCount || stream || running) conversationEnd.current?.scrollIntoView({ block: 'end' });
@@ -197,13 +211,20 @@ export function ConversationView({ v }: { v: AppView }) {
         <ScheduledTasks
           api={api}
           connections={snapshot.connections}
+          sessions={snapshot.sessions}
           defaultConnection={connectionId}
           workspace={snapshot.settings.workspace}
           onConnections={openAiSettings}
+          expandedHistory={expandedScheduleHistory}
+          onHistoryToggle={(id, open) =>
+            setExpandedScheduleHistory(ids => {
+              if (open === ids.includes(id)) return ids;
+              return open ? [...ids, id] : ids.filter(item => item !== id);
+            })
+          }
           onOpen={id =>
             void action(async () => {
               await refresh();
-              navigate('chat');
               await selectSession(id);
             })
           }
@@ -230,20 +251,8 @@ export function ConversationView({ v }: { v: AppView }) {
       ) : (
         <div className={`chat-content${!session?.messages.length ? ' is-empty' : ''}`}>
           <div className="conversation" aria-live="polite">
-            {session && (snapshot.policy?.features.coordinator || !!session.loadedContext?.length || session.compaction) && (
+            {session && (!!session.loadedContext?.length || session.compaction) && (
               <div className="context-bar">
-                {snapshot.policy?.features.coordinator && (
-                  <label>
-                    <input
-                      aria-label={t('แบ่งงานย่อย')}
-                      type="checkbox"
-                      checked={coordinated}
-                      disabled={running || workMode !== 'draft'}
-                      onChange={e => setCoordinated(e.target.checked)}
-                    />
-                    {t('แบ่งงานย่อย')}
-                  </label>
-                )}
                 {!!session.loadedContext?.length && (
                   <details>
                     <summary>
@@ -553,55 +562,59 @@ export function ConversationView({ v }: { v: AppView }) {
                 )}
               </details>
             )}
-            {!running && (session?.status === 'error' || session?.status === 'interrupted') && lastRequest && (
-              <div className="retry-row">
-                {/* Use the reported failure code; only retry resumes the stopped task. */}
-                <button
-                  onClick={() => {
-                    if (failureCode === 'TOOL_DENIED') {
-                      openAiSettings();
-                      return;
-                    }
-                    if (failureCode === 'MODEL_NOT_AVAILABLE') {
-                      setAiPicker(true);
-                      composerRef.current?.scrollIntoView({ block: 'nearest' });
-                      return;
-                    }
-                    void action(() =>
-                      start(session.id, lastRequest, { skill: session.skill, mode: session.mode || workMode, imageModel, retry: true }),
-                    );
-                  }}
-                >
-                  {t(
-                    failureCode === 'TOOL_DENIED'
-                      ? 'ตรวจสอบการเชื่อมต่อ AI'
-                      : failureCode === 'MODEL_NOT_AVAILABLE'
-                        ? 'เปลี่ยนโมเดล'
-                        : 'ลองอีกครั้ง',
-                  )}
-                </button>
-                <button
-                  className="quiet"
-                  onClick={() => {
-                    setQuery(lastRequest);
-                    setTimeout(() => composerRef.current?.focus(), 0);
-                  }}
-                >
-                  {t('แก้คำขอ')}
-                </button>
-                {/^(PROVIDER_|CONNECTION_|COPILOT_|AUTH_|OAUTH_)/.test(failureCode) && (
-                  <button className="quiet" onClick={openAiSettings}>
-                    {t('ตรวจสอบการเชื่อมต่อ AI')}
+            {!running &&
+              (session?.status === 'error' ||
+                session?.status === 'interrupted' ||
+                (session?.status === 'cancelled' && session.coordination && session.coordination.state !== 'done')) &&
+              lastRequest && (
+                <div className="retry-row">
+                  {/* Use the reported failure code; only retry resumes the stopped task. */}
+                  <button
+                    onClick={() => {
+                      if (failureCode === 'TOOL_DENIED') {
+                        openAiSettings();
+                        return;
+                      }
+                      if (failureCode === 'MODEL_NOT_AVAILABLE') {
+                        setAiPicker(true);
+                        composerRef.current?.scrollIntoView({ block: 'nearest' });
+                        return;
+                      }
+                      void action(() =>
+                        start(session.id, lastRequest, { skill: session.skill, mode: session.mode || workMode, imageModel, retry: true }),
+                      );
+                    }}
+                  >
+                    {t(
+                      failureCode === 'TOOL_DENIED'
+                        ? 'ตรวจสอบการเชื่อมต่อ AI'
+                        : failureCode === 'MODEL_NOT_AVAILABLE'
+                          ? 'เปลี่ยนโมเดล'
+                          : 'ลองอีกครั้ง',
+                    )}
                   </button>
-                )}
-                {/^[A-Z_]+$/.test(failureCode) && (
-                  <details className="small muted retry-code">
-                    <summary>{t('ข้อมูลสำหรับแจ้งปัญหา')}</summary>
-                    <p>{t('รหัสสำหรับแจ้งผู้ดูแล: {0}', failureCode)}</p>
-                  </details>
-                )}
-              </div>
-            )}
+                  <button
+                    className="quiet"
+                    onClick={() => {
+                      setQuery(lastRequest);
+                      setTimeout(() => composerRef.current?.focus(), 0);
+                    }}
+                  >
+                    {t('แก้คำขอ')}
+                  </button>
+                  {/^(PROVIDER_|CONNECTION_|COPILOT_|AUTH_|OAUTH_)/.test(failureCode) && (
+                    <button className="quiet" onClick={openAiSettings}>
+                      {t('ตรวจสอบการเชื่อมต่อ AI')}
+                    </button>
+                  )}
+                  {/^[A-Z_]+$/.test(failureCode) && (
+                    <details className="small muted retry-code">
+                      <summary>{t('ข้อมูลสำหรับแจ้งปัญหา')}</summary>
+                      <p>{t('รหัสสำหรับแจ้งผู้ดูแล: {0}', failureCode)}</p>
+                    </details>
+                  )}
+                </div>
+              )}
             {!running && progress && <p className="muted small">{t(progress)}</p>}
             {/* Without tools the app searches ahead; with tools the AI decides, so nothing pops up while typing. */}
             {!running && workMode !== 'image' && !snapshot.policy?.features.toolLoop && needsPublicWebSearch(query) && (
@@ -857,27 +870,32 @@ export function ConversationView({ v }: { v: AppView }) {
                   </button>
                 </div>
               )}
-              {slashMatches.length > 0 && (
-                <div className="slash-menu" role="listbox" aria-label={t('เลือก Skill')}>
-                  {slashMatches.map((s, i) => (
-                    <button
-                      key={s.name}
-                      role="option"
-                      aria-selected={i === slashIndex}
-                      className={i === slashIndex ? 'active' : ''}
-                      onMouseDown={e => {
-                        e.preventDefault();
-                        useSkill(s.name);
-                      }}
-                    >
-                      <span className="slash-title">
-                        {s.title}
-                        {forTeam(s) && <small className="team-mark">{t('ทีมคุณ')}</small>}
-                      </span>
-                      <small className="slash-desc">{s.description}</small>
-                      <code>/{s.name}</code>
-                    </button>
-                  ))}
+              {activeSlashSkill && (
+                <div id="composer-skills" className="slash-menu" role="listbox" aria-label={t('เลือก Skill')}>
+                  {slashMatches.map(s => {
+                    const active = s.name === activeSlashSkill.name;
+                    return (
+                      <button
+                        key={s.name}
+                        id={`composer-skill-${s.name}`}
+                        ref={active ? activeSlashOption : undefined}
+                        type="button"
+                        tabIndex={-1}
+                        role="option"
+                        aria-selected={active}
+                        className={active ? 'active' : ''}
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => useSkill(s.name, true)}
+                      >
+                        <span className="slash-title">
+                          {s.title}
+                          {forTeam(s) && <small className="team-mark">{t('ทีมคุณ')}</small>}
+                        </span>
+                        <small className="slash-desc">{s.description}</small>
+                        <code>/{s.name}</code>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
               {!!session?.sideQuestions?.length && (
@@ -933,6 +951,8 @@ export function ConversationView({ v }: { v: AppView }) {
                 ref={composerRef}
                 hidden={questionPending}
                 aria-label={t('พิมพ์คำขอ')}
+                aria-controls={activeSlashSkill ? 'composer-skills' : undefined}
+                aria-activedescendant={activeSlashSkill ? `composer-skill-${activeSlashSkill.name}` : undefined}
                 placeholder={
                   forced
                     ? t('บอกงานสำหรับ {0}…', forced.title)
@@ -941,8 +961,13 @@ export function ConversationView({ v }: { v: AppView }) {
                       : t('พิมพ์งานที่อยากให้ช่วย หรือพิมพ์ / เพื่อเลือก Skill')
                 }
                 value={query}
+                onFocus={e => setSlashAtCaret(Boolean(slash) && caretAtEnd(e.currentTarget))}
+                onSelect={e => setSlashAtCaret(caretAtEnd(e.currentTarget))}
+                onBlur={() => setSlashAtCaret(false)}
                 onChange={e => {
-                  setQuery(e.target.value);
+                  const atEnd = caretAtEnd(e.currentTarget);
+                  setQuery(e.currentTarget.value);
+                  setSlashAtCaret(atEnd);
                   setSlashIndex(0);
                 }}
                 onPaste={e => {
@@ -964,12 +989,17 @@ export function ConversationView({ v }: { v: AppView }) {
                       return;
                     }
                   }
-                  if (slashMatches.length && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
+                  const atSlash = slash && caretAtEnd(e.currentTarget) && !e.altKey && !e.ctrlKey && !e.metaKey;
+                  if (atSlash && e.key === 'Escape') {
+                    e.preventDefault();
+                    setQuery(query.slice(0, slash.start).trimEnd());
+                    return;
+                  }
+                  if (atSlash && activeSlashSkill && !e.shiftKey && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter'].includes(e.key)) {
                     e.preventDefault();
                     if (e.key === 'ArrowDown') setSlashIndex(i => Math.min(i + 1, slashMatches.length - 1));
                     else if (e.key === 'ArrowUp') setSlashIndex(i => Math.max(i - 1, 0));
-                    else if (e.key === 'Escape') setQuery('');
-                    else useSkill(slashMatches[slashIndex]?.name || slashMatches[0].name);
+                    else useSkill(activeSlashSkill.name, true);
                     return;
                   }
                   if (e.key === 'Backspace' && !query && forcedSkill) {
@@ -1018,22 +1048,7 @@ export function ConversationView({ v }: { v: AppView }) {
                     aria-label={t('ตรวจและแนบเอกสาร')}
                     title={t('ตรวจและแนบเอกสาร')}
                     disabled={running || pastingImage || (!session && connectionId === CLAUDE_CODE)}
-                    onClick={() =>
-                      void action(async () => {
-                        const id = session?.id || (await createTask())?.id;
-                        if (!id) return;
-                        const res = await api.call('attach', { id, multiple: true });
-                        const added = Array.isArray(res) ? res : res ? [res] : [];
-                        if (added.length) {
-                          addFiles(added);
-                          if (added.length === 1) setInspecting(added[0]);
-                          else {
-                            const refused = added.find(item => !item.usable);
-                            if (refused) setInspecting(refused);
-                          }
-                        }
-                      })
-                    }
+                    onClick={() => void action(() => attachFiles())}
                   >
                     <Plus size={18} />
                   </button>
@@ -1051,22 +1066,7 @@ export function ConversationView({ v }: { v: AppView }) {
                       aria-label={t('แนบภาพให้ AI')}
                       title={t('ตรวจและแนบภาพต้นฉบับให้ AI')}
                       disabled={running || pastingImage}
-                      onClick={() =>
-                        void action(async () => {
-                          const id = session?.id || (await createTask())?.id;
-                          if (!id) return;
-                          const res = await api.call('attach', { id, vision: true, multiple: true });
-                          const added = Array.isArray(res) ? res : res ? [res] : [];
-                          if (added.length) {
-                            addFiles(added);
-                            if (added.length === 1) setInspecting(added[0]);
-                            else {
-                              const refused = added.find(item => !item.usable);
-                              if (refused) setInspecting(refused);
-                            }
-                          }
-                        })
-                      }
+                      onClick={() => void action(() => attachFiles(true))}
                     >
                       <ImagePlus size={18} />
                     </button>
@@ -1105,6 +1105,20 @@ export function ConversationView({ v }: { v: AppView }) {
                     )}
                     <option value="image">{t('สร้างรูป')}</option>
                   </select>
+                  {/* Beside the mode it belongs to, so a new task can choose it before its first message. */}
+                  {canCoordinate && (
+                    <label className="pill-select split-pill" title={t('ให้ AI แบ่งงานย่อยให้ผู้ช่วยหลายตัว')}>
+                      <input
+                        aria-label={t('แบ่งงานย่อย')}
+                        type="checkbox"
+                        checked={coordinated}
+                        disabled={running || submitting}
+                        onChange={e => setCoordinated(e.target.checked)}
+                      />
+                      <Split size={15} aria-hidden="true" />
+                      {coordinated && <span>{t('แบ่งงานย่อย')}</span>}
+                    </label>
+                  )}
                   {/* Permission as a small shield pill with a short word; the native list underneath keeps the full
                         wording, so opening it still explains each level. */}
                   {snapshot.policy && (

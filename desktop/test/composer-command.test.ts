@@ -28,3 +28,14 @@ test('"/skill request" picks a known Skill and keeps the rest as the request', (
   assert.deepEqual(typedSkill('/tor-writer', known), { skill: '', text: '/tor-writer' });
   assert.deepEqual(typedSkill(' ร่างจดหมาย ', known), { skill: '', text: ' ร่างจดหมาย ' });
 });
+
+test('a known Skill after a sentence keeps the sentence as the request', () => {
+  const known = (name: string) => name === 'tor-writer';
+  assert.deepEqual(typedSkill('ร่าง TOR จ้างที่ปรึกษา /tor-writer', known), {
+    skill: 'tor-writer',
+    text: 'ร่าง TOR จ้างที่ปรึกษา',
+  });
+  for (const text of ['https://example.invalid/tor-writer', 'ร่าง TOR /unknown', 'อ่านไฟล์ /tor-writer/test']) {
+    assert.deepEqual(typedSkill(text, known), { skill: '', text });
+  }
+});

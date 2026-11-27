@@ -85,6 +85,7 @@ export function SidePanel({ v }: { v: AppView }) {
     presentation,
     presentationRef,
     refresh,
+    running,
     save,
     selected,
     session,
@@ -104,13 +105,17 @@ export function SidePanel({ v }: { v: AppView }) {
     setRight,
     setToolTab,
     setWidth,
+    setWorkflow,
     setWorkMode,
     showPanel,
     snapshot,
     toolRequest,
     toolTab,
+    submitting,
     useProposal,
     width,
+    workflow,
+    workflowRef,
   } = v;
   useEffect(() => {
     setProposalMode('diff');
@@ -213,10 +218,9 @@ export function SidePanel({ v }: { v: AppView }) {
             style={showPanel ? undefined : { display: 'none' }}
           >
             <nav className="workbench-tabs" aria-label={t('เครื่องมือข้างร่าง')}>
-              {/* Three tabs most work needs; web, background jobs and commands sit behind the icon (or show while open). */}
               <div className="workbench-tab-list">
-                {(['output', 'files', 'changes', 'browser', 'tasks', 'terminal'] as ToolTab[])
-                  .filter(tab => advancedTools || toolTab === tab || ['output', 'files', 'changes'].includes(tab))
+                {(['output', 'files', 'changes', 'coding', 'browser', 'tasks', 'terminal'] as ToolTab[])
+                  .filter(tab => advancedTools || toolTab === tab || ['output', 'files', 'changes', 'coding'].includes(tab))
                   .map(tab => (
                     <button
                       key={tab}
@@ -235,6 +239,7 @@ export function SidePanel({ v }: { v: AppView }) {
                           tasks: t('งานเบื้องหลัง'),
                           files: t('ไฟล์งาน'),
                           changes: t('รายการแก้ไข'),
+                          coding: t('โค้ด'),
                         }[tab]
                       }
                     </button>
@@ -259,7 +264,16 @@ export function SidePanel({ v }: { v: AppView }) {
               session={session}
               workspace={snapshot.settings.workspace}
               request={toolRequest}
+              panelVisible={showPanel}
+              workflow={workflow}
+              canChooseCodingWorkflow={!running && !submitting}
               onTab={setToolTab}
+              onCodingWorkflow={next => {
+                setWorkMode('chat');
+                setWorkflow(next);
+                workflowRef.current = next;
+                composerRef.current?.focus();
+              }}
               onBrowserTask={url => {
                 setWorkMode('chat');
                 setQuery(t('ให้ผู้ช่วยทำงานบนเว็บ {0} โดย [ระบุสิ่งที่ต้องการทำ]', url === 'https://' ? t('[ใส่ URL]') : url));
