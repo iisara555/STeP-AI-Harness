@@ -203,7 +203,7 @@ export type RunTrace = {
   ms: number;
   steps: StepTrace[];
   contextWindow?: ContextWindowReading;
-  skillSelection?: { method: 'router' | 'model' | 'previous' | 'fallback'; skill?: string };
+  skillSelection?: { method: 'router' | 'model' | 'previous' | 'fallback' | 'asked'; skill?: string; asked?: boolean };
   /** Reasoning level sent for this run: the employee's choice, or picked by task size (auto). No level means the model default. */
   effort?: { size: 'small' | 'medium' | 'large'; auto: boolean; level?: string };
   /** Provider research before the first model step, when host-side search is enabled. */

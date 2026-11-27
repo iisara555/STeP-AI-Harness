@@ -493,6 +493,9 @@ async function main() {
     toolLoop: () => policyState.policy.features.toolLoop,
     assistantPolicy: () => assistantPolicyError(policyState.policy),
     hybridSkillSelection: () => policyState.policy.features.hybridSkillSelection,
+    chatClarification: () => policyState.policy.features.chatClarification,
+    // The same question card as the AI's ask_user tool; `questions` is created below, before any run starts.
+    ask: (sessionId, question, options, signal) => questions.ask(sessionId, question, options, signal),
     visionEnabled: () => policyState.policy.features.vision,
     antigravityBridge: () => policyState.policy.features.antigravityNativeBridge,
     nativeToolCalls: () => policyState.policy.features.nativeToolCalls,

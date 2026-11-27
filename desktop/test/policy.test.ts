@@ -36,6 +36,10 @@ test('auto mode needs both organization feature and allowed mode', () => {
   assert.equal(defaultValue.features.cron, true);
   assert.equal(defaultValue.features.hybridSkillSelection, true);
   assert.equal(parsePolicy({ features: { hybridSkillSelection: false } }).policy.features.hybridSkillSelection, false);
+  assert.equal(defaultValue.features.chatClarification, true);
+  assert.equal(parsePolicy({ features: { chatClarification: false } }).policy.features.chatClarification, false);
+  // The old Router menus asked on 78 of 224 benchmark requests; they stay off by default.
+  assert.equal(defaultValue.features.autoRouting, false);
   assert.equal(defaultValue.features.learningReview, true);
   assert.equal(parsePolicy({ features: { learningReview: false } }).policy.features.learningReview, false);
   // Images reach vision models and Full auto is offered by default, as in other AI apps; commands still need shellByAi.

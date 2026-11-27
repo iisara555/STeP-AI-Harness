@@ -140,6 +140,10 @@ export type Harness = {
   assistantPolicy?: () => string | undefined;
   /** Choose a registered procedure before ordinary chat; explicit Skills and fixed workflows keep their own route. */
   hybridSkillSelection?: () => boolean;
+  /** Policy chatClarification: the Skill selection may ask the employee which of several fitting Skills they mean. */
+  chatClarification?: () => boolean;
+  /** Ask the employee a question with options in the app (the ask_user card); null when they cancel. */
+  ask?: (sessionId: string, question: string, options: string[], signal: AbortSignal) => Promise<string | null>;
   /** Trusted host instructions for a restricted tool surface; execution and consent gates still apply. */
   toolInstructions?: () => string;
   /** Policy answerCheck: check chat answers about STeP against the document excerpts they used. */
@@ -1189,66 +1193,110 @@ export class WorkService {
           )
         ) {
           activity(tm('กำลังเลือก Skill ที่เหมาะกับงาน'), { stage: tm('เลือก Skill ที่เหมาะกับงาน') });
-          const selection = prepareSkillSelection(
-            skillRegistry,
-            session.originalQuery,
-            incomingSource || (continuing || revising || retrying ? masked(session.files?.at(-1)?.text || '') : ''),
+          const selectionSource = incomingSource || (continuing || revising || retrying ? masked(session.files?.at(-1)?.text || '') : '');
+          // The selector may ask the employee which work they mean, once per request, only at the start of a chat where
+          // someone is there to answer (policy chatClarification): it never sees earlier messages, which may already
+          // say which work is meant. The answering AI asks for the details a Skill needs itself.
+          const mayAsk = Boolean(
+            this.harness.chatClarification?.() &&
+            this.harness.ask &&
+            !history.length &&
+            !continuing &&
+            !revising &&
+            !retrying &&
+            !options.autoContinue,
           );
           const selectionRuntime = await this.runtime(connection, false);
-          // On Antigravity the selection first runs on the model's -low id (live comparison 2026-11-01: no wrong Skill,
-          // about 7 s faster, but 2 of 61 replies malformed). A malformed or failed -low reply asks the chosen model
-          // again, so a request never loses its Skill to the smaller model.
-          const lowFirst = auxiliaryConnection(connection);
-          const attempts = lowFirst.model !== connection.model ? [lowFirst, connection] : [connection];
-          for (const [index, attemptConnection] of attempts.entries()) {
-            const last = index === attempts.length - 1;
-            const calledAt = Date.now();
-            const call: ProviderCallTrace = {
-              ...promptMetrics(selection.system, selection.prompt),
-              kind: 'selection',
-              outcome: 'running',
-              ms: 0,
-            };
-            (trace.providerCalls ||= []).push(call);
-            let counted: TokenCount = { input: 0, output: 0, total: 0 };
-            try {
-              checkAbort();
-              const reply = await selectionRuntime.adapter.run(selection.prompt, attemptConnection, {
-                ...selectionRuntime.context,
-                signal: controller.signal,
-                system: selection.system,
-                jsonSchema: selection.schema,
-                effort: autoEffort(modelOption(attemptConnection)?.efforts, 'small'),
-                emit: () => {},
-                onUsage: count => {
-                  counted = combineUsage(counted, count, 'max');
-                },
-                onTransport: info => {
-                  call.transport = info;
-                },
-              });
-              checkAbort();
-              chosen = selection.parse(reply);
-              call.outcome = chosen === undefined ? 'error' : 'completed';
-              if (chosen === undefined) call.code = 'INVALID_SKILL_SELECTION';
-              if (chosen === undefined && !last) continue;
-              trace.skillSelection = { method: chosen === undefined ? 'fallback' : 'model', ...(chosen ? { skill: chosen } : {}) };
-              // A deliberate general-help decision keeps procedure suggestions out of this answer's prompt.
-              if (chosen === null) skillRegistry = [];
-              break;
-            } catch (error) {
-              call.outcome = 'error';
-              call.code = codeOf(error);
-              // Sign-in, quota, permission and cancellation apply to the chosen model too; anything else gets one more try.
-              if (last || ['CANCELLED', 'LOGIN_REQUIRED', 'PROVIDER_QUOTA', 'PROVIDER_PERMISSION_DENIED'].includes(call.code || ''))
-                throw error;
-            } finally {
-              call.ms = Date.now() - calledAt;
-              if (counted.total) call.usage = counted;
-              searchUsage = combineUsage(searchUsage, counted);
-              recordUsage(counted);
+          const select = async (request: string, clarify: boolean) => {
+            const selection = prepareSkillSelection(skillRegistry, request, selectionSource, { clarify });
+            // On Antigravity the selection first runs on the model's -low id (live comparison 2026-11-01: no wrong Skill,
+            // about 7 s faster, but 2 of 61 replies malformed). A malformed or failed -low reply asks the chosen model
+            // again, so a request never loses its Skill to the smaller model.
+            const lowFirst = auxiliaryConnection(connection);
+            const attempts = lowFirst.model !== connection.model ? [lowFirst, connection] : [connection];
+            for (const [index, attemptConnection] of attempts.entries()) {
+              const last = index === attempts.length - 1;
+              const calledAt = Date.now();
+              const call: ProviderCallTrace = {
+                ...promptMetrics(selection.system, selection.prompt),
+                kind: 'selection',
+                outcome: 'running',
+                ms: 0,
+              };
+              (trace.providerCalls ||= []).push(call);
+              let counted: TokenCount = { input: 0, output: 0, total: 0 };
+              try {
+                checkAbort();
+                const reply = await selectionRuntime.adapter.run(selection.prompt, attemptConnection, {
+                  ...selectionRuntime.context,
+                  signal: controller.signal,
+                  system: selection.system,
+                  jsonSchema: selection.schema,
+                  effort: autoEffort(modelOption(attemptConnection)?.efforts, 'small'),
+                  emit: () => {},
+                  onUsage: count => {
+                    counted = combineUsage(counted, count, 'max');
+                  },
+                  onTransport: info => {
+                    call.transport = info;
+                  },
+                });
+                checkAbort();
+                const picked = selection.parse(reply);
+                call.outcome = picked === undefined ? 'error' : 'completed';
+                if (picked === undefined) call.code = 'INVALID_SKILL_SELECTION';
+                if (picked === undefined && !last) continue;
+                return { picked, ask: picked === undefined ? undefined : selection.ask(reply) };
+              } catch (error) {
+                call.outcome = 'error';
+                call.code = codeOf(error);
+                // Sign-in, quota, permission and cancellation apply to the chosen model too; anything else gets one more try.
+                if (last || ['CANCELLED', 'LOGIN_REQUIRED', 'PROVIDER_QUOTA', 'PROVIDER_PERMISSION_DENIED'].includes(call.code || ''))
+                  throw error;
+              } finally {
+                call.ms = Date.now() - calledAt;
+                if (counted.total) call.usage = counted;
+                searchUsage = combineUsage(searchUsage, counted);
+                recordUsage(counted);
+              }
             }
-          }
+            return { picked: undefined, ask: undefined };
+          };
+          let { picked, ask } = await select(session.originalQuery, mayAsk);
+          let method: NonNullable<RunTrace['skillSelection']>['method'] = picked === undefined ? 'fallback' : 'model';
+          if (ask && mayAsk) {
+            const answer = await this.harness.ask!(
+              id,
+              ask.question,
+              ask.options.map(o => o.label),
+              controller.signal,
+            );
+            checkAbort();
+            // "ยกเลิกงานนี้" on the card (or no answer for 5 minutes) stops the request as the stop button does.
+            if (answer === null) {
+              controller.abort();
+              throw new Error('CANCELLED');
+            }
+            const option = ask.options.find(o => o.label === answer.trim());
+            const reply = option ? option.label : outgoing(answer.trim().slice(0, 2000), true);
+            const saved = this.store.session(id);
+            saved.followUps = [...(saved.followUps || []), `${ask.question} → ${reply}`].slice(-10);
+            this.store.save(saved);
+            session.followUps = saved.followUps;
+            activity(tm('คำตอบของคุณ: {0}', reply.slice(0, 120)));
+            if (option) {
+              picked = option.skillId;
+              method = 'asked';
+            } else {
+              // A typed answer is more context, not a choice: choose again with it, and never ask twice.
+              ({ picked } = await select(`${session.originalQuery}\n${reply}`, false));
+              method = picked === undefined ? 'fallback' : 'model';
+            }
+            trace.skillSelection = { method, ...(picked ? { skill: picked } : {}), asked: true };
+          } else trace.skillSelection = { method, ...(picked ? { skill: picked } : {}) };
+          if (picked !== undefined) chosen = picked;
+          // A deliberate general-help decision keeps procedure suggestions out of this answer's prompt.
+          if (picked === null) skillRegistry = [];
         }
         if (chosen) {
           const checked = await this.harness.route(routeQuery, {

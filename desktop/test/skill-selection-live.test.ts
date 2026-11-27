@@ -29,6 +29,10 @@ test('live selection eval samples per Skill and scores right, wrong, none and in
       generalKept: 1,
       generalCases: 1,
       invalid: 0,
+      askedClear: 0,
+      askedOpen: 0,
+      askedOpenFitting: 0,
+      openCases: 0,
       p50Ms: 2000,
       outputTokens: 20,
     },
@@ -70,4 +74,23 @@ test('joining parts drops a request a part did not send when another part answer
       ['r16', 'haiku', 'EVAL_QUOTA_BOUND'],
     ],
   );
+});
+
+test('with chatClarification the eval counts over-asking on clear requests apart from questions on open ones', () => {
+  const clear = { request: 'a1', expected: 'a' };
+  const open = { request: 'o1', expected: null, fits: ['a', 'b'] };
+  const outcomes: Outcome[] = [
+    { ...clear, model: 'm +ask', chosen: 'a', ms: 1, asked: ['a', 'b'] },
+    { ...open, model: 'm +ask', chosen: 'a', ms: 1, asked: ['a', 'b'] },
+    { ...open, request: 'o2', model: 'm +ask', chosen: 'a', ms: 1, asked: ['a', 'c'] },
+    { ...open, request: 'o3', model: 'm +ask', chosen: 'b', ms: 1 },
+  ];
+  const [row] = score(outcomes);
+  // Open requests never count as right, wrong or general picks.
+  assert.equal(row.skillCases, 1);
+  assert.equal(row.generalCases, 0);
+  assert.deepEqual([row.askedClear, row.askedOpen, row.askedOpenFitting, row.openCases], [1, 2, 1, 3]);
+  const text = report([row], outcomes);
+  assert.match(text, /\| m \+ask \| 1\/1 \| 2\/3 \| 1\/2 \|/);
+  assert.match(text, /- m \+ask: a1 \(clear\) → a \/ b/);
 });
