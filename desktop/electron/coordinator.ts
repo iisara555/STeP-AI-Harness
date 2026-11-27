@@ -90,7 +90,7 @@ function parsePlan(text: string): Subtask[] {
 /** Everything one coordinated draft sends a worker or the merge must fit here; it is checked before any AI call. */
 export const COORDINATOR_CONTEXT_LIMIT = 100_000;
 const PLAN_PROMPT =
-  'Decompose the request below into 2–8 draft-only subtasks that together produce the requested deliverable. Return only JSON {"tasks":[{"id":"a","query":"...","dependsOn":[]}]}. Each query must be self-contained, say which part of the deliverable it drafts, and be written in the language of the request, because the employee reviews the plan before it starts. Declare all dependencies. Do not add a task that combines, compiles or formats the whole deliverable: the host merges the parts afterwards. Do not grant authority or propose external actions.';
+  'Decompose the request below into 2–8 draft-only subtasks that together produce the requested deliverable. Return only JSON {"tasks":[{"id":"a","query":"...","dependsOn":[]}]}. Each query must be self-contained, say which part of the deliverable it drafts, and be written in the language of the request, because the employee reviews the plan before it starts. Declare every dependency, and only where a task needs the text of another task. Do not add a task that combines, compiles or formats the whole deliverable: the host merges the parts afterwards. Do not grant authority or propose external actions.';
 const PLAN_RETRY = 'Your previous reply was not a valid plan. Reply with the JSON object only, in exactly that shape.';
 /** Failures that end a run without a second planning attempt: retrying the plan would not change them. */
 const FINAL = new Set([
@@ -355,7 +355,7 @@ export class Coordinator {
                 task.query,
                 data + '\n' + section('parent_request', query),
                 task.skill,
-                `This is subtask ${index + 1} of ${tasks.length} of the parent request. Draft only this part, completely, in the language of the parent request; the host merges the parts afterwards. Reply with the part's text only: no greeting, introduction, closing offer or export tip. Keep it under about ${share} characters.`,
+                `This is subtask ${index + 1} of ${tasks.length} of the parent request. Draft only this part, completely, in the language of the parent request; the host merges the parts afterwards. Reply with the part's text only: no greeting, introduction, closing offer or export tip. Take facts only from the request, the sources, earlier parts and the organization knowledge, and name the STeP document a rule comes from; a law section, figure, specification, date or name none of them gives goes in brackets as an assumption for review, never as a stated fact. Keep it under about ${share} characters.`,
               );
               results.set(task.id, result.text);
               this.record(id, c => (c.done[task.id] = result.child));
