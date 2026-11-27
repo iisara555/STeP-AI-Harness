@@ -1013,6 +1013,9 @@ export class WorkService {
       this.emit({ sessionId: id, type: 'status', text: message, ...record(message, thought) });
     const activity = (message: string, thought: Thought = {}) =>
       this.emit({ sessionId: id, type: 'activity', text: message, ...record(message, thought) });
+    const discardLive = (count: number) => {
+      if (count > 0) this.emit({ sessionId: id, type: 'discard', count });
+    };
     // A host heartbeat means the app is responsive, not that the provider made progress.
     const heartbeat = setInterval(() => this.emit({ sessionId: id, type: 'heartbeat' }), 3000);
     const checkAbort = () => {
@@ -1954,6 +1957,7 @@ export class WorkService {
         else activity(tm('กำลังรอ AI เตรียมคำตอบ'), { quiet: true });
         // The runtime conversation stays open across this step's tool turns (closed below when the step ends).
         const providerSession = new ProviderSession();
+        let lastAnswerStreamChars = 0;
         // With the policy feature on, an Antigravity answer turn may call this step's tools through the governed
         // step_host bridge; each call runs through the same tool loop, gates and masking as a step-tool request.
         let bridgeLoop: ToolLoop | undefined;
@@ -1973,10 +1977,21 @@ export class WorkService {
           let reactiveRetried = false,
             retryCount = 0,
             partialTor = '';
+          let beganTurn = false;
+          let visibleChars = 0;
           for (;;) {
             stepTrace.attempts++;
             let receiving = false;
             let streamed = '';
+            let attemptChars = 0;
+            const discard = (chars: number) => {
+              const removed = Math.min(chars, attemptChars);
+              if (removed <= 0) return;
+              attemptChars -= removed;
+              visibleChars -= removed;
+              if (continueTor) streamed = streamed.slice(0, -removed);
+              discardLive(removed);
+            };
             let counted: TokenCount = { input: 0, output: 0, total: 0 };
             let completed = 0,
               searchFailed = false;
@@ -2012,8 +2027,12 @@ export class WorkService {
               if (!search && (analysisImage || options.images?.length) && !this.harness.visionEnabled?.())
                 throw new Error('VISION_DISABLED');
               stepTrace.promptChars = Math.max(stepTrace.promptChars, nextPrompt.length);
-              // Each model call is a stage of its own, so the reasoning it streams sits under it.
-              if (!search) status(tm('กำลังเตรียมคำตอบ'), { stage: tm('AI คิด'), turn: true });
+              // Only a new visible turn inserts a paragraph break. Retries and TOR continuations share the same turn.
+              if (!search) {
+                const announce = beganTurn || analysisImage ? activity : status;
+                announce(tm('กำลังเตรียมคำตอบ'), { stage: tm('AI คิด'), turn: true });
+                beganTurn = true;
+              }
               checkAbort();
               const answer = await selectedRuntime.adapter.run(nextPrompt, connection, {
                 ...selectedRuntime.context,
@@ -2059,6 +2078,8 @@ export class WorkService {
                 emit: delta => {
                   if (delta && call.ttftMs === undefined) call.ttftMs = Date.now() - calledAt;
                   if (search || analysisImage) return;
+                  attemptChars += delta.length;
+                  visibleChars += delta.length;
                   if (continueTor) streamed += delta;
                   if (!receiving) {
                     receiving = true;
@@ -2066,17 +2087,13 @@ export class WorkService {
                   }
                   this.emit({ sessionId: id, type: 'delta', text: delta });
                 },
-                discard: chars => {
-                  if (!search && !analysisImage) {
-                    if (continueTor) streamed = streamed.slice(0, Math.max(0, streamed.length - chars));
-                    this.emit({ sessionId: id, type: 'discard', count: chars });
-                  }
-                },
+                discard,
               });
               if (search && (searchFailed || !completed || !answer.trim())) throw new Error('WEB_SEARCH_UNAVAILABLE');
               if (partialTor && repeatedTorContinuation(partialTor, answer)) throw new Error('DOCUMENT_OUTPUT_INVALID');
               call.outcome = 'completed';
               if (!search && !analysisImage) {
+                lastAnswerStreamChars = visibleChars;
                 if (!partialTor) onSent?.(nextPrompt);
                 progressed();
               }
@@ -2097,6 +2114,7 @@ export class WorkService {
                 continue;
               }
               if (!search && !controller.signal.aborted && !reactiveRetried && promptTooLong(error)) {
+                discard(attemptChars);
                 reactiveRetried = true;
                 retryCount++;
                 const beforeAttempt = tokens(providerSystem + nextPrompt);
@@ -2163,8 +2181,9 @@ export class WorkService {
               }
               const retries = this.retryDelays.length;
               if (controller.signal.aborted || !RETRYABLE_CODES.has(codeOf(error)) || retryCount >= retries) throw error;
+              discard(attemptChars);
               retryCount++;
-              status(tm('บริการ AI ขัดข้องชั่วคราว กำลังลองใหม่ ({0}/{1})', retryCount, retries));
+              activity(tm('บริการ AI ขัดข้องชั่วคราว กำลังลองใหม่ ({0}/{1})', retryCount, retries));
               await pause(retryDelay(retryCount, error, this.retryDelays), controller.signal);
               arm();
             } finally {
@@ -2277,6 +2296,10 @@ export class WorkService {
             finalTurn: reason =>
               activity(reason === 'deadline' ? tm('ใกล้หมดเวลา กำลังเขียนคำตอบจากที่อ่านมา') : tm('อ่านครบแล้ว กำลังเขียนคำตอบ')),
             checkpointReads: requests => this.store.saveResumeReads(id, { step: index, requests, at: new Date().toISOString() }),
+            replaceReviewedAnswer: () => {
+              discardLive(lastAnswerStreamChars);
+              lastAnswerStreamChars = 0;
+            },
             // A finished answer is checked while the tools are still at hand, so the AI fixes what a check finds itself.
             review: async (answer, signal) => {
               const text = sanitizeModelOutput(masked(answer)) || answer;

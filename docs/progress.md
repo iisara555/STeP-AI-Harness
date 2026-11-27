@@ -8,6 +8,8 @@ _Last updated: 2026-11-27_
 
 ## In flight
 
+- **Desktop live reply replacement (2026-11-27)**. Retries and answer-review revisions now retract the text from the abandoned attempt before streaming its replacement. Earlier tool progress and accepted TOR continuation text stay visible. Tests reproduce two successive answer corrections, repeated provider failures, and recovery of a retained provider session after it has streamed text.
+
 - **Desktop attachment memory lifecycle (2026-11-27)**. An attachment completing after task deletion could reinsert data into the host's pending-attachment map. Commit intake only after the whole batch is ready and its task still exists. Release late replies against their originating task after navigation, clear attachment state on deletion, and send the correct attachment ID when removing a source from a document form. In a Windows Electron probe with 12 synthetic PNGs, main-process heap after garbage collection grew from 29.0 to 41.2 MiB before the fix and from 29.0 to 29.2 MiB after it. The fixed app rejected every attachment to a deleted task.
 
 - **Desktop workspace controls (2026-11-26)**. A trailing slash command selects a Skill without erasing the typed request. Scheduled tasks have a labeled sidebar entry and keep recent and earlier runs under each recurring job. The selected reply language and conversation style reach the next turn, including general drafts. Employees can choose a local PNG or JPEG profile photo. Verified on Windows with the Desktop test suite, build, and Electron smokes for chat, schedules, settings, and profile persistence. Real staff-device acceptance remains open.

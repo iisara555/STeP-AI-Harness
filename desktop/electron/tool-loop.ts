@@ -162,6 +162,8 @@ export type LoopHost = {
    * twice means the model is not making progress, and the latest answer is returned.
    */
   review?: (answer: string, signal: AbortSignal) => Promise<string | undefined>;
+  /** A revision will replace the candidate just reviewed. Keep earlier tool progress in the live stream. */
+  replaceReviewedAnswer?: () => void;
   /**
    * When the run ends, the static reads it made (requests only: tool, input and arguments, never their text), so a
    * stopped task can give them back on "ลองอีกครั้ง" or "ต่อ" instead of reading everything again.
@@ -624,6 +626,7 @@ export class ToolLoop {
             '\n</answer_check>\nA check of the answer above found the points in findings. Fix them: use tools to verify or read what is missing, then write the complete corrected answer (not only the changes). A point you cannot fix from the sources, say so in the answer and mark it [รอยืนยัน: ...]. Do not mention this check.';
           if (history.length + addition.length > MAX_HISTORY_CHARS) return result;
           history += addition;
+          this.host.replaceReviewedAnswer?.();
           continue;
         }
         if (final) {

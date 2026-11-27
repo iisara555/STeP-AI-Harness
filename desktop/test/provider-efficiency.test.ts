@@ -9,6 +9,7 @@ import {
   ClaudeAdapter,
   CompatibleAdapter,
   ProviderSession,
+  recoverSessionTurn,
   type ProviderContext,
   type TokenCount,
 } from '../electron/providers';
@@ -26,6 +27,33 @@ const response = (usage: any = { prompt_tokens: 10, completion_tokens: 2 }) =>
   new Response(event({ choices: [{ delta: { content: 'Done' } }], usage }) + 'data: [DONE]\n\n', {
     headers: { 'content-type': 'text/event-stream' },
   });
+
+test('recovering a retained session retracts its partial text before the fresh session writes', async () => {
+  let stream = 'สถานะก่อนหน้า ';
+  let calls = 0;
+  const answer = await recoverSessionTurn(
+    {
+      cwd: tmpdir(),
+      env: {},
+      signal: new AbortController().signal,
+      emit: text => (stream += text),
+      discard: count => (stream = stream.slice(0, -count)),
+    },
+    async context => {
+      context.emit('รายงานฉบับ');
+      if (++calls === 1) {
+        context.emit('ชั่วคราว');
+        context.discard?.('ชั่วคราว'.length);
+        throw new Error('PROVIDER_SESSION_INVALID');
+      }
+      context.emit('แก้ไข');
+      return 'รายงานฉบับแก้ไข';
+    },
+    true,
+  );
+  assert.equal(calls, 2);
+  assert.equal(stream, 'สถานะก่อนหน้า ' + answer);
+});
 
 test('compatible errors reach WorkService retry; quotas/auth/cancellation never replay, failed-stream usage is retained', async () => {
   for (const scenario of ['429', '503', 'network', 'quota', 'auth', 'cancel', 'partial']) {
