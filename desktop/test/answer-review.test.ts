@@ -8,6 +8,8 @@ import { resolve } from 'node:path';
 import { WorkService, type Harness } from '../electron/service';
 import { Store } from '../electron/store';
 import type { Connection } from '../src/types';
+import { discardStream, turnBreak } from '../src/run-flow';
+import { visibleStream } from '../src/tools';
 const routing: any = await import('../../src/modules/router/service.js');
 const boundary: any = await import('../../src/modules/router/task-boundary.js');
 const privacy: any = await import('../../src/modules/privacy/index.js');
@@ -86,7 +88,7 @@ test('the Skill review reads Output and Guardrails and sends back only work the 
   assert.equal(parseSkillReview('not json'), '');
 });
 
-test('in the app, a chat answer with a wrong total is fixed by the same AI before it is shown', async () => {
+test('in the app, two answer reviews replace the live draft and keep the earlier tool progress', async () => {
   const store = new Store(':memory:');
   store.put('connection', 'c', { id: 'c', provider: 'openai', model: 'fixture', ready: true } as Connection);
   store.put('settings', 'main', { workspace: tmpdir(), team: 'cc' });
@@ -111,7 +113,10 @@ test('in the app, a chat answer with a wrong total is fixed by the same AI befor
   const right = '| รายการ | บาท |\n|---|---|\n| ก | 100 |\n| ข | 200 |\n| รวม | 300 |';
   const systems: string[] = [];
   const prompts: string[] = [];
-  const replies = [wrong, right];
+  const progress = 'กำลังดูรายการตัวอย่าง';
+  const replies = [progress + '\n' + fenced({ tool: 'files', input: 'budget.md' }), wrong, wrong.replace('400', '500'), right];
+  const visibleAtEachReply: string[] = [];
+  let stream = '';
   const service = new WorkService(
     store,
     harness,
@@ -121,18 +126,28 @@ test('in the app, a chat answer with a wrong total is fixed by the same AI befor
         run: async (prompt, _c, context) => {
           systems.push(context.system || '');
           prompts.push(prompt);
-          return replies.shift() ?? right;
+          const reply = replies.shift() ?? right;
+          visibleAtEachReply.push(visibleStream(stream));
+          context.emit(reply);
+          return reply;
         },
       },
     }),
-    () => {},
+    event => {
+      if (event.type === 'status') stream = turnBreak(stream);
+      if (event.type === 'delta') stream += event.text;
+      if (event.type === 'discard') stream = discardStream(stream, event.count!);
+    },
   );
   try {
     const session = store.create('c', 'cc');
     await service.run(session.id, 'ทำตารางสรุปค่าใช้จ่ายสองรายการ', '', true, undefined, 'chat');
     const done = store.session(session.id);
     assert.equal(done.messages.at(-1)!.text.trim(), right);
-    assert.match(prompts[1], /<answer_check>/);
+    assert.equal(done.runs?.at(-1)?.steps[0].loop?.reviews, 2);
+    assert.match(prompts[2], /<answer_check>/);
+    assert.deepEqual(visibleAtEachReply, ['', progress, progress, progress]);
+    assert.equal(visibleStream(stream), progress + '\n\n' + right);
     // skillReview is off unless policy turns it on: no extra review call was made.
     assert.ok(systems.every(system => !/You check whether a finished answer meets the procedure/.test(system)));
   } finally {

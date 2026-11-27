@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Store } from '../electron/store';
 import { WorkService, STEP_TIMEOUT_MS, type Harness } from '../electron/service';
+import { discardStream, turnBreak } from '../src/run-flow';
 import { exportDocument } from '../electron/export';
 import ExcelJS from 'exceljs';
 import { createRequire } from 'node:module';
@@ -874,7 +875,7 @@ test('a busy provider is retried; a quota error is not', async () => {
       context: { cwd: tmpdir(), env: {} },
     }),
     e => {
-      if (e.type === 'status') statuses.push(e.text || '');
+      if (e.type === 'status' || e.type === 'activity') statuses.push(e.text || '');
     },
     STEP_TIMEOUT_MS,
     undefined,
@@ -909,6 +910,44 @@ test('a busy provider is retried; a quota error is not', async () => {
   assert.equal(quota, 1);
   assert.equal(store.session(other.id).messages.at(-1)?.text, 'PROVIDER_QUOTA');
   store.close();
+});
+
+test('retrying a provider that already streamed removes its abandoned reply before streaming again', async t => {
+  const { store, session } = fixture();
+  t.after(() => store.close());
+  const prefix = 'สรุปรายการตัวอย่าง';
+  const suffix = ' · ย้ำอีกครั้ง ' + prefix;
+  const final = prefix + suffix;
+  const starts: string[] = [];
+  let stream = '';
+  const service = new WorkService(
+    store,
+    harness,
+    async () => ({
+      adapter: {
+        run: async (_prompt, _connection, context) => {
+          starts.push(stream.trim());
+          context.emit(prefix);
+          if (starts.length < 3) throw new Error('PROVIDER_BUSY');
+          context.emit(suffix);
+          return final;
+        },
+      },
+      context: { cwd: tmpdir(), env: {} },
+    }),
+    event => {
+      if (event.type === 'status') stream = turnBreak(stream);
+      if (event.type === 'delta') stream += event.text;
+      if (event.type === 'discard') stream = discardStream(stream, event.count!);
+    },
+    STEP_TIMEOUT_MS,
+    undefined,
+    [0, 0],
+  );
+  await service.run(session.id, 'ช่วยเรียบเรียงข้อความตัวอย่างสำหรับทดสอบ', '', false, undefined, 'chat');
+  assert.equal(store.session(session.id).messages.at(-1)?.text, final);
+  assert.deepEqual(starts, ['', '', '']);
+  assert.equal(stream.trim(), final);
 });
 
 test('a Playbook that stops at step 2 continues from step 2 on retry', async () => {

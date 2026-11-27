@@ -46,6 +46,15 @@ readline.createInterface({input:process.stdin}).on('line',async line=>{
  if(m.params.outputSchema?.properties?.skillId){send({method:'item/agentMessage/delta',params:{delta:JSON.stringify({skillId:'meeting-summary',reason:'Synthetic'})}});send({method:'turn/completed',params:{turn:{status:'completed'}}});return;}
  if(m.params.outputSchema){send({method:'turn/completed',params:{turn:{status:'completed'}}});return;}
  thread+=m.params.input?.map(i=>i.text||'').join('')||'';
+ if(thread.includes('ตารางทดสอบการแก้ยอด')){
+  const revisions=[...thread.matchAll(/<answer_check>/g)].length;
+  const total=[400,500,300][revisions];
+  const text='ตารางค่าใช้จ่ายสังเคราะห์\\n\\n| รายการ | บาท |\\n|---|---|\\n| ก | 100 |\\n| ข | 200 |\\n| รวม | '+total+' |';
+  send({method:'item/agentMessage/delta',params:{delta:text}});
+  await wait(300);
+  send({method:'turn/completed',params:{turn:{status:'completed'}}});
+  return;
+ }
  const turn=turns[Math.min(turns.length-1,[...thread.matchAll(/<tool_results>/g)].length)];
  for(const piece of pieces(turn.think,9)){send({method:'item/reasoning/summaryTextDelta',params:{delta:piece}});await wait(70);}
  await wait(600);
@@ -192,6 +201,28 @@ try {
     assert.equal(report.textShrinks, 0, 'streamed words do not vanish');
     assert.equal(report.kindWithoutLabel, 0, 'the waiting mark changes only with the status line');
     for (const kind of ['think', 'write']) assert.ok(report.kinds.includes(kind), `the ${kind} mark shows`);
+  }
+  if (mode === 'chat') {
+    await page.evaluate(() => (window.__frames.length = 0));
+    await page.locator('.composer textarea').fill('แก้รายงานเดิม เพิ่มตารางทดสอบการแก้ยอด');
+    await page.keyboard.press('Enter');
+    await working.waitFor();
+    await expect(working).toHaveCount(0, { timeout: 20_000 });
+    const latest = page.locator('article.message.assistant .message-body').last();
+    await expect(latest).toContainText('300');
+    await expect(latest).toContainText('ตารางค่าใช้จ่ายสังเคราะห์');
+    const revised = (await page.evaluate(() => window.__frames))
+      .map(frame => frame.text)
+      .filter(text => text.includes('ตารางค่าใช้จ่ายสังเคราะห์'));
+    for (const total of ['400', '500', '300'])
+      assert.ok(
+        revised.some(text => text.includes(total)),
+        `displayed the ${total} candidate`,
+      );
+    assert.ok(
+      revised.every(text => text.split('ตารางค่าใช้จ่ายสังเคราะห์').length === 2),
+      'a correction occupies a single live answer',
+    );
   }
   assert.deepEqual(errors, []);
   console.log('Thinking steady smoke passed: the working area changes without blinking.');
