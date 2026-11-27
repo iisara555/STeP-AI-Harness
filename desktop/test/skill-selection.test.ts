@@ -586,6 +586,12 @@ test('the selector question is validated: real choices between registered Skills
     ),
   ])
     assert.equal(on.ask(bad), undefined, bad);
+  // Antigravity's own progress labels (seen live) do not make a reply unreadable; other extra keys still do.
+  const labelled =
+    '{"ask":null,"reason":"Official memo","skillId":"tor-review","toolAction":"Selecting skill","toolSummary":"Skill selection"}';
+  assert.equal(on.parse(labelled), 'tor-review');
+  assert.equal(off.parse('{"reason":"x","skillId":"tor-review","toolAction":"Selecting skill"}'), 'tor-review');
+  assert.equal(on.parse('{"ask":null,"reason":"x","skillId":"tor-review","toolAction":"a","tool":"terminal"}'), undefined);
   // A dropped question still keeps the best choice.
   assert.equal(on.parse(reply([{ skillId: 'tor-review', label: 'ตรวจ TOR' }])), 'tor-review');
 });

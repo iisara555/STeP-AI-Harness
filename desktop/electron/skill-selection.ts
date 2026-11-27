@@ -67,6 +67,8 @@ const ASK_RULE =
   'When you ask, write one short question in the language of the request (Thai when unclear) and 2 to 4 options. Each option names a skillId from skill_catalog (or null for general help) and a short label in plain work words, never the id. ' +
   '"skillId" is still your single best choice. ';
 
+const AGY_LABELS = ['toolAction', 'toolSummary'];
+
 /** Only metadata enters selection. References, scripts, history and credentials are not discovered here. */
 export function prepareSkillSelection(entries: Entry[], query: string, source: string, options: { clarify?: boolean } = {}) {
   const rows = entries
@@ -88,6 +90,9 @@ export function prepareSkillSelection(entries: Entry[], query: string, source: s
       if (!text || text.length > 4000) return undefined;
       const value = JSON.parse(text);
       if (!value || typeof value !== 'object' || typeof value.reason !== 'string') return undefined;
+      // Antigravity (agy) sometimes adds its own progress labels to a structured reply (live run 2026-11-27: 2 of 9
+      // replies). They carry no choice, so they are dropped; any other extra key still makes the reply unreadable.
+      for (const key of AGY_LABELS) delete value[key];
       if (Object.keys(value).some(key => !keys.includes(key))) return undefined;
       return value;
     } catch {
