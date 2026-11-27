@@ -355,6 +355,8 @@ export type RunOptions = {
   /** Scheduled draft runs still retrieve read-only organization knowledge even while tools are disabled. */
   allowKnowledge?: boolean;
   mergeOnly?: boolean;
+  /** The coordinator already shows its plan; this run's steps follow its subtasks there instead of replacing it. */
+  planOffset?: number;
   workflow?: Workflow;
   /** Called after the request has been stored, before potentially slow routing or model discovery. */
   onAccepted?: () => void;
@@ -1428,15 +1430,17 @@ export class WorkService {
         sources = saved!.sources;
         skillTitle = saved!.skillTitle;
       }
-      this.emit({
-        sessionId: id,
-        type: 'plan',
-        plan: steps.map((step: any) => ({
-          label: String(step.description || step.skill || step.skillId || tm('จัดทำร่าง')).slice(0, 300),
-          ...(isAction(step) ? { action: true } : {}),
-        })),
-      });
-      for (let index = 0; index < first; index++) this.emit({ sessionId: id, type: 'step', index, state: 'done' });
+      const planIndex = (index: number) => index + (options.planOffset || 0);
+      if (options.planOffset === undefined)
+        this.emit({
+          sessionId: id,
+          type: 'plan',
+          plan: steps.map((step: any) => ({
+            label: String(step.description || step.skill || step.skillId || tm('จัดทำร่าง')).slice(0, 300),
+            ...(isAction(step) ? { action: true } : {}),
+          })),
+        });
+      for (let index = 0; index < first; index++) this.emit({ sessionId: id, type: 'step', index: planIndex(index), state: 'done' });
       if (first) status(tm('ทำต่อจากขั้นที่ {0} โดยใช้ผลของขั้นที่ทำเสร็จแล้ว', first + 1));
       const requestText = masked([session.originalQuery, ...session.answers].join('\n'));
       for (const [index, step] of steps.entries()) {
@@ -1444,11 +1448,11 @@ export class WorkService {
         checkAbort();
         // External action steps are never executed by the drafting desktop.
         if (isAction(step)) {
-          this.emit({ sessionId: id, type: 'step', index, state: 'skipped' });
+          this.emit({ sessionId: id, type: 'step', index: planIndex(index), state: 'skipped' });
           status(tm('ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ'));
           break;
         }
-        this.emit({ sessionId: id, type: 'step', index, state: 'running' });
+        this.emit({ sessionId: id, type: 'step', index: planIndex(index), state: 'running' });
         stepLimit = Date.now() + STEP_PROGRESS_BUDGETS * this.stepTimeoutMs;
         arm();
         const stepStarted = Date.now();
@@ -1667,7 +1671,7 @@ export class WorkService {
           skillIndex && SKILL_RULE + '\n' + skillIndex,
           options.draftOnly &&
             options.mergeOnly &&
-            'Integrate the supplied subtask drafts into the requested deliverable. Preserve evidence, expose conflicts and missing facts, and do not repeat the subtask execution.',
+            'Integrate the supplied subtask drafts, in their numbered order, into one coherent deliverable that answers the request. Cover the content of every subtask without dropping facts, figures or references; remove repetition between parts and make headings, terms and tone consistent. Preserve evidence, mark conflicts between parts and missing facts for review, add no facts that no part or source supports, and do not repeat the subtask execution.',
           // A native workflow the employee picked (plan, execute, requirements, diagnose) shapes how this run works.
           // The employee's comments on plan tasks are their own text: masked like every other request before sending.
           options.workflow && workflowRule(options.workflow, maskedPlan(this.store.session(id).workPlan, masked)),
@@ -2395,7 +2399,7 @@ export class WorkService {
         stepTrace.ms = Date.now() - stepStarted;
         if (stepUsage.total) stepTrace.usage = stepUsage;
         stepUsage = { input: 0, output: 0, total: 0 };
-        this.emit({ sessionId: id, type: 'step', index, state: 'done' });
+        this.emit({ sessionId: id, type: 'step', index: planIndex(index), state: 'done' });
         checkAbort();
         handoff = masked(result);
         if (index < steps.length - 1) {

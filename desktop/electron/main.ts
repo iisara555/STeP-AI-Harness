@@ -1880,24 +1880,26 @@ async function main() {
         connection ? connectionBinding(connection) : null,
       ]);
     },
-    (id, tasks, signal) =>
+    (id, tasks, signal, finished) =>
       phase4Consent(
         tm('ตรวจแผนงานย่อยก่อนเริ่ม?'),
         tm(
-          'งาน {0}\n{1}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ',
-          id,
+          '{0}\n{1}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ',
+          tm(store.session(id).title),
           tasks
             .map(
               (task, index) =>
-                `${index + 1}. ${task.query}${task.dependsOn.length ? '\n' + tm('รอขั้นตอน {0}', task.dependsOn.map(dependency => tasks.findIndex(t => t.id === dependency) + 1).join(', ')) : ''}`,
+                `${index + 1}. ${task.query}${finished.includes(task.id) ? ' · ' + tm('เสร็จแล้ว') : ''}${task.dependsOn.length ? '\n' + tm('รอขั้นตอน {0}', task.dependsOn.map(dependency => tasks.findIndex(t => t.id === dependency) + 1).join(', ')) : ''}`,
             )
             .join('\n'),
         ),
         signal,
         JSON.stringify(tasks, null, 2),
+        id,
       ),
     (query, team) => harness.route(query, { team, workspace: store.settings().workspace }),
     (id, text) => emit({ sessionId: id, type: 'activity', text }),
+    event => emit(event),
   );
   const automations = new Automations(
     store,
@@ -4697,9 +4699,19 @@ async function main() {
           throw new Error('INVALID_DOCUMENT_VARIANT');
         const invitation =
           draftingTool?.id === 'letter' && variant === 'invitation' ? resolveInvitation(input.invitation ?? {}) : undefined;
-        const coordinated = input.coordinator === true;
+        // "Try again" on a coordinated draft that failed or was stopped continues its approved plan: finished subtasks
+        // keep their drafts and only the open ones run again.
+        const resuming =
+          input.retry === true &&
+          input.coordinator !== true &&
+          !input.skill &&
+          !draftingTool &&
+          workMode === 'draft' &&
+          policyState.policy.features.coordinator &&
+          coordinator.resumable(id);
+        const coordinated = input.coordinator === true || resuming;
         if (draftingTool && coordinated) throw new Error('INVALID_DOCUMENT_TOOL');
-        if (coordinated && (!policyState.policy.features.coordinator || workMode !== 'draft' || input.skill || input.retry))
+        if (coordinated && (!policyState.policy.features.coordinator || workMode !== 'draft' || input.skill || (input.retry && !resuming)))
           throw new Error('COORDINATOR_DISABLED');
         if (workMode === 'image' && !canGenerateImages(sendingConnection)) throw new Error('IMAGE_API_REQUIRED');
         const selectedImageModel = input.imageModel ? inputText(input.imageModel, 120) : undefined;
@@ -4886,6 +4898,8 @@ async function main() {
         // A conversation is one task: a different document starts here, and the earlier draft goes to version history.
         if (autoDocument && anotherDocument) store.startConversationDocument(id);
         const queued = store.session(id);
+        // A new request ends an earlier coordinated plan; "Try again" then repeats this request, not that plan.
+        if (!coordinated && queued.coordination) delete queued.coordination;
         const templateInfo =
           nativeTemplate && templateDescription && variant !== 'invitation'
             ? documentTemplates.save(id, nativeTemplate, draftingTool!.id, selected[0].view.name, templateDescription.font)
@@ -4907,11 +4921,13 @@ async function main() {
         ];
         const execution = (
           coordinated
-            ? coordinator.run(id, text, combinedSource, {
-                text: coordinatorScan!.redactedText,
-                files: requestFiles,
-                onAccepted: () => acceptRequest(),
-              })
+            ? resuming
+              ? coordinator.run(id, text, combinedSource, undefined, { onAccepted: () => acceptRequest() })
+              : coordinator.run(id, text, combinedSource, {
+                  text: coordinatorScan!.redactedText,
+                  files: requestFiles,
+                  onAccepted: () => acceptRequest(),
+                })
             : service.run(id, text, combinedSource, true, skill || undefined, workMode, selectedImageModel, requestFiles, {
                 retry: input.retry === true,
                 autoContinue: input.autoContinue === true,
@@ -4927,7 +4943,8 @@ async function main() {
         ).catch(error => {
           diagnose('run-rejected', { code: errorCode(error) });
           const failed = store.session(id);
-          failed.status = error.message === 'CANCELLED' ? 'interrupted' : 'error';
+          // An employee who stops a coordinated draft can continue it later with "Try again".
+          failed.status = error.message === 'CANCELLED' ? (coordinated ? 'cancelled' : 'interrupted') : 'error';
           if (failed.messages.at(-1)?.text !== errorCode(error))
             failed.messages.push({ role: 'status', text: errorCode(error), at: new Date().toISOString() });
           store.save(failed);
@@ -4986,6 +5003,8 @@ async function main() {
         const ended = await fireHook({ event: 'session_end', sessionId: id });
         if (ended.blocked) throw new Error('HOOK_BLOCKED');
         if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
+        // A coordinated draft's subtasks are part of it and go with it.
+        for (const child of coordinator.children(id)) store.remove('session', child.id);
         store.remove('session', id);
         documentTemplates.remove(id);
         documentAssets.remove(id);

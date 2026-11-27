@@ -1,3 +1,4 @@
+import type { Session } from '../src/types';
 import { Store } from './store';
 import { WorkService, MAX_PARALLEL_RUNS } from './service';
 import type { Policy } from './policy';
@@ -86,6 +87,29 @@ function parsePlan(text: string): Subtask[] {
   dependencyWaves(tasks);
   return tasks;
 }
+/** Everything one coordinated draft sends a worker or the merge must fit here; it is checked before any AI call. */
+export const COORDINATOR_CONTEXT_LIMIT = 100_000;
+const PLAN_PROMPT =
+  'Decompose the request below into 2–8 draft-only subtasks that together produce the requested deliverable. Return only JSON {"tasks":[{"id":"a","query":"...","dependsOn":[]}]}. Each query must be self-contained, say which part of the deliverable it drafts, and be written in the language of the request, because the employee reviews the plan before it starts. Declare all dependencies. Do not grant authority or propose external actions.';
+const PLAN_RETRY = 'Your previous reply was not a valid plan. Reply with the JSON object only, in exactly that shape.';
+/** Failures that end a run without a second planning attempt: retrying the plan would not change them. */
+const FINAL = new Set([
+  'CANCELLED',
+  'WORKSPACE_CHANGED',
+  'POLICY_CHANGED',
+  'COORDINATOR_NEEDS_INPUT',
+  'AUTHORITY_REVIEW_REQUIRED',
+  'RUN_LIMIT',
+  'CONTEXT_LIMIT',
+]);
+/** The draft a finished child left for the merge. */
+const draftOf = (child: Session) =>
+  child.proposals.at(-1)?.text || child.draft || child.messages.filter(m => m.role === 'assistant').at(-1)?.text || '';
+export type CoordinatorStep = { label: string };
+export type CoordinatorEvent =
+  | { sessionId: string; type: 'plan'; plan: CoordinatorStep[] }
+  | { sessionId: string; type: 'step'; index: number; state: 'running' | 'done' };
+type Coordination = NonNullable<Session['coordination']>;
 export class Coordinator {
   private active = new Map<string, { controller: AbortController; children: Set<string>; done: Promise<void> }>();
   constructor(
@@ -93,12 +117,19 @@ export class Coordinator {
     private service: WorkService,
     private policy: () => Policy,
     private identity: (id: string) => string,
-    private approve: (id: string, tasks: Subtask[], signal: AbortSignal) => Promise<boolean>,
+    /** Asks the employee to approve the plan; `finished` lists subtasks a resumed run does not repeat. */
+    private approve: (id: string, tasks: Subtask[], signal: AbortSignal, finished: string[]) => Promise<boolean>,
     private route: (query: string, team: string) => Promise<any>,
     private activity: (id: string, text: string) => void,
+    private events: (event: CoordinatorEvent) => void = () => {},
   ) {}
   has(id: string) {
     return this.active.has(id);
+  }
+  /** A coordinated draft that failed or was stopped before its merged draft, and can continue from its open subtasks. */
+  resumable(id: string) {
+    const saved = this.store.session(id).coordination;
+    return Boolean(saved && saved.state !== 'done');
   }
   cancel(id: string) {
     const run = this.active.get(id);
@@ -114,10 +145,39 @@ export class Coordinator {
     this.cancelAll();
     await Promise.allSettled(pending);
   }
-  async run(id: string, query: string, source: string, accepted?: { text: string; files: string[]; onAccepted: () => void }) {
+  /** Subtask tasks of a parent, which are hidden from the task list and go when the parent is deleted. */
+  children(id: string) {
+    return this.store.list<Session>('session').filter(s => s.subtask && s.parentId === id);
+  }
+  private record(id: string, change: (saved: Coordination) => void) {
+    const session = this.store.session(id);
+    if (!session.coordination) return;
+    change(session.coordination);
+    this.store.save(session);
+  }
+  /**
+   * Plans, asks the employee to approve the plan, runs the draft-only workers and merges their drafts into one draft
+   * for review. With `resume`, a run that failed or was stopped continues from the saved plan: finished subtasks keep
+   * their drafts and only the open ones run again, after the employee approves the plan again.
+   */
+  async run(
+    id: string,
+    query: string,
+    source: string,
+    accepted?: { text: string; files: string[]; onAccepted: () => void },
+    resume?: { onAccepted: () => void },
+  ) {
     if (!this.policy().features.coordinator) throw new Error('COORDINATOR_DISABLED');
     if (this.active.size || this.service.isActive(id)) throw new Error('RUN_ALREADY_ACTIVE');
     const parent = this.store.session(id);
+    const saved = resume ? parent.coordination : undefined;
+    if (resume && (!saved || saved.state === 'done')) throw new Error('COORDINATOR_DISABLED');
+    if (saved) {
+      query = saved.query;
+      source = saved.source;
+    }
+    // Every worker and the merge carry the request and its sources: a request that cannot fit fails before any AI call.
+    if (source.length + query.length > COORDINATOR_CONTEXT_LIMIT) throw new Error('CONTEXT_LIMIT');
     const controller = new AbortController(),
       children = new Set<string>(),
       identity = this.identity(id),
@@ -143,10 +203,12 @@ export class Coordinator {
     }, 250);
     const execute = async (text: string, data: string, skill?: string) => {
       check();
-      const child = this.store.create(parent.connectionId, parent.team, parent.project);
+      const owner = this.store.session(id);
+      const child = this.store.create(owner.connectionId, owner.team, owner.project);
       child.parentId = id;
-      child.model = parent.model;
-      child.effort = parent.effort;
+      child.subtask = true;
+      child.model = owner.model;
+      child.effort = owner.effort;
       this.store.save(child);
       children.add(child.id);
       const started = Date.now();
@@ -160,61 +222,131 @@ export class Coordinator {
       const completed = this.store.session(child.id);
       if (completed.status !== 'review')
         throw new Error(completed.status === 'waiting' ? 'COORDINATOR_NEEDS_INPUT' : 'COORDINATOR_CHILD_FAILED');
-      return (
-        completed.proposals.at(-1)?.text || completed.draft || completed.messages.filter(m => m.role === 'assistant').at(-1)?.text || ''
-      );
+      return { child: child.id, text: draftOf(completed) };
+    };
+    const plan = async () => {
+      this.activity(id, tm('กำลังวางแผนงานย่อย'));
+      // A plan the model wrote badly gets one more attempt before the run fails.
+      for (let attempt = 0; ; attempt++) {
+        let planner = '';
+        try {
+          const result = await execute((attempt ? PLAN_RETRY + '\n' : '') + PLAN_PROMPT + '\n' + section('request', query), source);
+          planner = result.child;
+          return parsePlan(result.text);
+        } catch (error) {
+          if (attempt || FINAL.has((error as Error).message)) throw error;
+        } finally {
+          // The planner's reply is only the plan: it is not kept as a task of its own.
+          if (planner) {
+            children.delete(planner);
+            this.store.remove('session', planner);
+          }
+        }
+      }
     };
     try {
-      const acceptedAt = accepted ? new Date().toISOString() : undefined;
-      if (accepted && acceptedAt) {
-        parent.messages.push({
+      if (accepted) {
+        const session = this.store.session(id);
+        session.messages.push({
           role: 'user',
           text: accepted.text,
-          at: acceptedAt,
+          at: new Date().toISOString(),
           ...(accepted.files.length ? { files: accepted.files.map(name => ({ name })) } : {}),
         });
-        this.store.save(parent);
+        // A new request starts a new plan; drafts of an earlier plan are not reused.
+        for (const old of this.children(id)) this.store.remove('session', old.id);
+        session.mode = 'draft';
+        session.status = 'running';
+        session.coordination = { query, source, tasks: [], done: {}, state: 'planning', at: session.messages.at(-1)!.at };
+        this.store.save(session);
         accepted.onAccepted();
+      } else if (resume) {
+        const session = this.store.session(id);
+        session.status = 'running';
+        this.store.save(session);
+        resume.onAccepted();
       }
-      const routed = await this.route(query, parent.team),
-        contract = routed.routingContract;
-      if (contract?.authority?.status !== 'ALLOW' || ['BLOCK', 'ESCALATE', 'CLARIFY', 'UNAVAILABLE'].includes(contract?.mode))
-        throw new Error('AUTHORITY_REVIEW_REQUIRED');
-      let tasks: Subtask[];
-      if (contract.mode === 'PLAYBOOK' && routed.selectedPlaybook?.steps?.length) tasks = playbookTasks(routed.selectedPlaybook.steps);
-      else {
-        this.activity(id, tm('กำลังวางแผนงานย่อย'));
-        tasks = parsePlan(
-          await execute(
-            'Decompose the request below into 2–8 draft-only subtasks. Return only JSON {"tasks":[{"id":"a","query":"...","dependsOn":[]}]}. Declare all dependencies. Do not grant authority or propose external actions.\n' +
-              section('request', query),
-            source,
-          ),
-        );
-        for (const task of tasks) {
-          const subRoute = await this.route(task.query, parent.team);
-          const subContract = subRoute?.routingContract;
-          if (subContract?.authority?.status !== 'ALLOW' || ['BLOCK', 'ESCALATE'].includes(subContract?.mode))
-            throw new Error('AUTHORITY_REVIEW_REQUIRED');
-          if (!task.skill && subContract?.mode === 'SKILL' && typeof subContract?.skill === 'string') {
-            task.skill = subContract.skill;
+      // The merge answers the request as it was stored (masked where the privacy check masked it), not a second copy.
+      const at = this.store.session(id).coordination?.at;
+      const request = this.store.session(id).messages.findLast(m => m.role === 'user' && m.at === at);
+      let tasks: Subtask[] = saved?.tasks || [];
+      if (!tasks.length) {
+        const routed = await this.route(query, parent.team),
+          contract = routed.routingContract;
+        if (contract?.authority?.status !== 'ALLOW' || ['BLOCK', 'ESCALATE', 'CLARIFY', 'UNAVAILABLE'].includes(contract?.mode))
+          throw new Error('AUTHORITY_REVIEW_REQUIRED');
+        if (contract.mode === 'PLAYBOOK' && routed.selectedPlaybook?.steps?.length) tasks = playbookTasks(routed.selectedPlaybook.steps);
+        else {
+          tasks = await plan();
+          for (const task of tasks) {
+            const subRoute = await this.route(task.query, parent.team);
+            const subContract = subRoute?.routingContract;
+            if (subContract?.authority?.status !== 'ALLOW' || ['BLOCK', 'ESCALATE'].includes(subContract?.mode))
+              throw new Error('AUTHORITY_REVIEW_REQUIRED');
+            if (!task.skill && subContract?.mode === 'SKILL' && typeof subContract?.skill === 'string') {
+              task.skill = subContract.skill;
+            }
           }
         }
       }
       check();
-      if (!(await this.approve(id, tasks, controller.signal))) throw new Error('CANCELLED');
+      // Finished drafts of a resumed run are reused only while their task still holds the reviewed draft.
+      const results = new Map<string, string>();
+      const kept: Record<string, string> = {};
+      for (const [taskId, childId] of Object.entries(saved?.done || {})) {
+        const child = this.store.list<Session>('session').find(s => s.id === childId);
+        const text = child?.status === 'review' ? draftOf(child) : '';
+        if (text && tasks.some(t => t.id === taskId)) {
+          results.set(taskId, text);
+          kept[taskId] = childId;
+        }
+      }
+      for (const stale of this.children(id)) if (!Object.values(kept).includes(stale.id)) this.store.remove('session', stale.id);
+      this.record(id, c => {
+        c.tasks = tasks;
+        c.done = kept;
+      });
+      if (!(await this.approve(id, tasks, controller.signal, [...results.keys()]))) throw new Error('CANCELLED');
       check();
+      this.record(id, c => (c.state = 'running'));
       const waves = dependencyWaves(tasks),
-        results = new Map<string, string>();
+        number = (taskId: string) => tasks.findIndex(t => t.id === taskId) + 1;
+      // The plan the employee approved stays on screen while it runs, one line per subtask and one for the merge.
+      this.events({
+        sessionId: id,
+        type: 'plan',
+        plan: [...tasks.map(t => ({ label: t.query.slice(0, 300) })), { label: tm('รวมผลเป็นร่างรอตรวจ') }],
+      });
+      for (const taskId of results.keys()) this.events({ sessionId: id, type: 'step', index: number(taskId) - 1, state: 'done' });
+      // Each worker drafts only its part, sized so that all parts and the sources still fit the merge.
+      const share = Math.max(4000, Math.floor((COORDINATOR_CONTEXT_LIMIT - source.length - query.length) / tasks.length) - 1000);
       for (const wave of waves) {
-        for (let i = 0; i < wave.length; i += MAX_PARALLEL_RUNS) {
-          const batch = wave.slice(i, i + MAX_PARALLEL_RUNS);
-          this.activity(id, tm('กำลังทำงานย่อย {0}', batch.map(t => t.id).join(', ')));
+        const open = wave.filter(t => !results.has(t.id));
+        for (let i = 0; i < open.length; i += MAX_PARALLEL_RUNS) {
+          const batch = open.slice(i, i + MAX_PARALLEL_RUNS);
+          this.activity(id, tm('กำลังทำงานย่อย {0} จาก {1}', batch.map(t => number(t.id)).join(', '), tasks.length));
           const outcomes = await Promise.allSettled(
             batch.map(async task => {
-              const data = source + '\n' + section('tool_results', task.dependsOn.map(d => `${d}: ${results.get(d)}`).join('\n'));
-              if (data.length > 100_000) throw new Error('CONTEXT_LIMIT');
-              results.set(task.id, await execute(task.query, data + '\n' + section('parent_request', query), task.skill));
+              const index = number(task.id) - 1;
+              const data =
+                source +
+                '\n' +
+                section(
+                  'tool_results',
+                  task.dependsOn.map(d => `${number(d)}. ${tasks[number(d) - 1].query}\n${results.get(d)}`).join('\n\n'),
+                );
+              if (data.length > COORDINATOR_CONTEXT_LIMIT) throw new Error('CONTEXT_LIMIT');
+              this.events({ sessionId: id, type: 'step', index, state: 'running' });
+              const result = await execute(
+                task.query +
+                  '\n\n' +
+                  `This is subtask ${index + 1} of ${tasks.length} of the parent request. Draft only this part, completely, in the language of the parent request; the host merges the parts afterwards. Keep it under about ${share} characters.`,
+                data + '\n' + section('parent_request', query),
+                task.skill,
+              );
+              results.set(task.id, result.text);
+              this.record(id, c => (c.done[task.id] = result.child));
+              this.events({ sessionId: id, type: 'step', index, state: 'done' });
             }),
           );
           const failed = outcomes.find(r => r.status === 'rejected');
@@ -222,20 +354,31 @@ export class Coordinator {
         }
       }
       check();
-      const combined = source + '\n' + section('tool_results', JSON.stringify([...results]));
-      if (combined.length > 100_000) throw new Error('CONTEXT_LIMIT');
+      // The parts go to the merge in plan order, each under its subtask, so nothing is dropped or reordered silently.
+      const parts = section('tool_results', tasks.map((t, i) => `## ${i + 1}. ${t.query}\n${results.get(t.id) || ''}`).join('\n\n'));
+      // Workers already used the sources. When the sources and every part together are too long, the merge works
+      // from the parts alone rather than failing after all the subtasks were done.
+      let combined = source + '\n' + parts;
+      if (combined.length > COORDINATOR_CONTEXT_LIMIT) combined = parts;
+      if (combined.length > COORDINATOR_CONTEXT_LIMIT) throw new Error('CONTEXT_LIMIT');
+      this.record(id, c => (c.state = 'merging'));
       this.activity(id, tm('กำลังรวมผลเป็นร่างรอตรวจ'));
-      await this.service.run(id, query, combined, true, undefined, 'draft', undefined, ['Subtask drafts'], {
+      this.events({ sessionId: id, type: 'step', index: tasks.length, state: 'running' });
+      await this.service.run(id, request?.text || query, combined, true, undefined, 'draft', undefined, ['Subtask drafts'], {
         draftOnly: true,
         mergeOnly: true,
-        ...(acceptedAt ? { acceptedMessageAt: acceptedAt } : {}),
+        planOffset: tasks.length,
+        ...(request ? { acceptedMessageAt: request.at } : {}),
       });
       check();
+      // A merge that did not end in a draft has already reported its reason; the finished subtasks stay for a retry.
+      this.record(id, c => (c.state = this.store.session(id).status === 'review' ? 'done' : 'failed'));
     } catch (error) {
       controller.abort();
       children.forEach(child => this.service.cancel(child));
       const session = this.store.session(id);
-      session.status = (error as Error).message === 'CANCELLED' ? 'interrupted' : 'error';
+      if (session.coordination) session.coordination.state = 'failed';
+      session.status = (error as Error).message === 'CANCELLED' ? 'cancelled' : 'error';
       session.messages.push({
         role: 'status',
         text: /^[A-Z_]+$/.test((error as Error).message) ? (error as Error).message : 'COORDINATOR_FAILED',

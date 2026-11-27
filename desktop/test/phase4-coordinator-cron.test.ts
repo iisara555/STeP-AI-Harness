@@ -70,10 +70,10 @@ test('coordinator runs three actual WorkService calls concurrently and merges on
     async () => ({
       context: { cwd: tmpdir(), env: {} },
       adapter: {
-        run: async prompt => {
+        run: async (prompt, _connection, options) => {
           if (prompt.includes('Decompose the request'))
             return JSON.stringify({ tasks: tasks.map(task => ({ ...task, skill: 'unapproved-model-choice' })) });
-          const id = /TASK_([a-e])/.exec(prompt)?.[1];
+          const id = !String(options?.system).includes('Integrate the supplied subtask drafts') && /TASK_([a-e])/.exec(prompt)?.[1];
           if (id) {
             if (id === 'e') assert.ok(finished.has('a') && finished.has('d'));
             active++;
@@ -125,9 +125,12 @@ test('coordinator runs three actual WorkService calls concurrently and merges on
     assert.equal(contexts, 0);
     assert.ok(merge);
     assert.equal(store.session(parent.id).proposals[0].text, 'Merged draft');
+    // Five workers; the planner's reply was only the plan and is not kept as a task.
     const children = store.list<any>('session').filter(s => s.parentId === parent.id);
-    assert.equal(children.length, 6);
-    assert.ok(children.every(s => s.connectionId === 'c' && !s.allowedIdentifiers));
+    assert.equal(children.length, 5);
+    assert.ok(children.every(s => s.subtask && s.connectionId === 'c' && !s.allowedIdentifiers));
+    assert.equal(store.session(parent.id).coordination?.state, 'done');
+    assert.equal(coordinator.resumable(parent.id), false);
   } finally {
     await coordinator.closeAndWait();
     await service.closeAndWait();
@@ -171,6 +174,8 @@ test('coordinator declined plan does not execute subtasks; authority denial star
   );
   await assert.rejects(coordinator.run(parent.id, 'Prepare a synthetic draft', ''), /CANCELLED/);
   assert.equal(calls, 1);
+  // Declining the plan is the employee stopping the task, not the app closing under it.
+  assert.equal(store.session(parent.id).status, 'cancelled');
   const blocked = new Coordinator(
     store,
     service,
@@ -504,4 +509,174 @@ test('scheduled draftOnly + allowKnowledge loads STeP knowledge without enabling
   assert.match(seenPrompt, /<organization_knowledge>/);
   assert.doesNotMatch(seenPrompt, /```step-tool/);
   store.close();
+});
+
+function coordinatorService(store: Store, run: (prompt: string, system: string) => Promise<string>, emit: (event: any) => void = () => {}) {
+  return new WorkService(
+    store,
+    {
+      root: tmpdir(),
+      route,
+      contextPolicy: () => ({ history: 'ignore', carryover: false }),
+      privacy: evaluatePrivacyGate,
+      skillMetadata: async () => null,
+      documentPrivacy: async () => null,
+      nextOutput: async () => null,
+    },
+    async () => ({
+      context: { cwd: tmpdir(), env: {} },
+      adapter: { run: async (prompt, _connection, options) => run(prompt, String(options?.system || '')) },
+    }),
+    emit,
+  );
+}
+test('a failed subtask keeps finished drafts; Try again runs only the open ones and merges every part in plan order', async () => {
+  const { store, policy } = fixture(),
+    parent = store.create('c', 'cc');
+  const plan = {
+    tasks: [
+      { id: 'a', query: 'ส่วน ก ภูมิหลัง', dependsOn: [] },
+      { id: 'b', query: 'ส่วน ข งบประมาณ', dependsOn: [] },
+      { id: 'c', query: 'ส่วน ค สรุป', dependsOn: ['a', 'b'] },
+    ],
+  };
+  const calls: string[] = [],
+    events: any[] = [];
+  let failB = true,
+    mergePrompt = '';
+  const service = coordinatorService(
+    store,
+    async (prompt, system) => {
+      if (prompt.includes('Decompose the request')) {
+        calls.push('plan');
+        return JSON.stringify(plan);
+      }
+      if (system.includes('Integrate the supplied subtask drafts')) {
+        calls.push('merge');
+        mergePrompt = prompt;
+        return 'ร่างรวม';
+      }
+      const part = /ส่วน (ก|ข|ค)/.exec(prompt)![1];
+      calls.push(part);
+      if (part === 'ข' && failB) {
+        failB = false;
+        throw new Error('PROVIDER_BAD_REQUEST');
+      }
+      if (part === 'ค') assert.ok(prompt.includes('ผลส่วน ก') && prompt.includes('ผลส่วน ข'), 'the summary reads both earlier parts');
+      return `ผลส่วน ${part}`;
+    },
+    event => event.sessionId === parent.id && events.push(event),
+  );
+  const approvals: string[][] = [];
+  const coordinator = new Coordinator(
+    store,
+    service,
+    () => policy,
+    () => 'stable',
+    async (_id, _tasks, _signal, finished) => {
+      approvals.push(finished);
+      return true;
+    },
+    route,
+    () => {},
+    event => events.push(event),
+  );
+  try {
+    // The stored request was masked by the privacy check, so it differs from the text the employee typed.
+    await assert.rejects(
+      coordinator.run(parent.id, 'ร่างโครงการให้ คุณสมชาย', 'แหล่งข้อมูลสังเคราะห์', {
+        text: 'ร่างโครงการให้ [ชื่อ]',
+        files: [],
+        onAccepted: () => {},
+      }),
+      /COORDINATOR_CHILD_FAILED/,
+    );
+    let saved = store.session(parent.id);
+    assert.equal(saved.status, 'error');
+    assert.equal(saved.coordination?.state, 'failed');
+    assert.deepEqual(Object.keys(saved.coordination!.done), ['a']);
+    assert.ok(coordinator.resumable(parent.id));
+    assert.deepEqual(calls.sort(), ['plan', 'ก', 'ข'].sort());
+    assert.deepEqual(
+      events.find(e => e.type === 'plan').plan.map((step: any) => step.label),
+      ['ส่วน ก ภูมิหลัง', 'ส่วน ข งบประมาณ', 'ส่วน ค สรุป', 'รวมผลเป็นร่างรอตรวจ'],
+    );
+    calls.length = 0;
+    events.length = 0;
+    let accepted = false;
+    await coordinator.run(parent.id, 'ignored on resume', '', undefined, { onAccepted: () => (accepted = true) });
+    assert.ok(accepted);
+    // Only the open subtasks ran again, after the employee approved the plan again with part ก marked finished.
+    assert.deepEqual(calls, ['ข', 'ค', 'merge']);
+    assert.deepEqual(approvals, [[], ['a']]);
+    assert.ok(events.some(e => e.type === 'step' && e.index === 0 && e.state === 'done'));
+    assert.ok(
+      events.some(e => e.type === 'step' && e.index === 3 && e.state === 'done'),
+      'the merge is the last step of the shown plan',
+    );
+    assert.ok(!events.some(e => e.type === 'plan' && e.plan.length === 1), "the merge does not replace the coordinator's plan");
+    const order = ['## 1. ส่วน ก', '## 2. ส่วน ข', '## 3. ส่วน ค'].map(heading => mergePrompt.indexOf(heading));
+    assert.ok(
+      order.every((at, i) => at >= 0 && (i === 0 || at > order[i - 1])),
+      'every part reaches the merge in plan order',
+    );
+    assert.ok(mergePrompt.includes('แหล่งข้อมูลสังเคราะห์'), 'the merge still sees the sources');
+    saved = store.session(parent.id);
+    assert.equal(saved.status, 'review');
+    assert.equal(saved.proposals.at(-1)?.text, 'ร่างรวม');
+    assert.equal(saved.coordination?.state, 'done');
+    assert.deepEqual(
+      saved.messages.filter(m => m.role === 'user').map(m => m.text),
+      ['ร่างโครงการให้ [ชื่อ]'],
+    );
+    // The failed attempt of part ข is gone; each subtask keeps one finished draft.
+    const children = coordinator.children(parent.id);
+    assert.equal(children.length, 3);
+    assert.ok(children.every(child => child.status === 'review'));
+  } finally {
+    await coordinator.closeAndWait();
+    await service.closeAndWait();
+    store.close();
+  }
+});
+test('a malformed plan gets one more attempt; a request too long for the merge fails before any AI call', async () => {
+  const { store, policy } = fixture(),
+    parent = store.create('c', 'cc');
+  let plans = 0,
+    calls = 0;
+  const service = coordinatorService(store, async (prompt, system) => {
+    calls++;
+    if (prompt.includes('Decompose the request')) {
+      plans++;
+      if (!prompt.includes('not a valid plan')) return 'Here is my plan: first background, then budget.';
+      return '{"tasks":[{"id":"a","query":"Part A","dependsOn":[]},{"id":"b","query":"Part B","dependsOn":[]}]}';
+    }
+    return system.includes('Integrate the supplied subtask drafts') ? 'Merged' : 'Part draft';
+  });
+  const coordinator = new Coordinator(
+    store,
+    service,
+    () => policy,
+    () => 'stable',
+    async () => true,
+    route,
+    () => {},
+  );
+  try {
+    await assert.rejects(coordinator.run(parent.id, 'Prepare', 'x'.repeat(100_001)), /CONTEXT_LIMIT/);
+    assert.equal(calls, 0);
+    await coordinator.run(parent.id, 'Prepare a two-part synthetic draft for Somchai', 'Public source', {
+      // The privacy check masked part of the stored request; the merge must still find it.
+      text: 'Prepare a two-part synthetic draft for [ชื่อ]',
+      files: [],
+      onAccepted: () => {},
+    });
+    assert.equal(plans, 2);
+    assert.equal(store.session(parent.id).proposals.at(-1)?.text, 'Merged');
+    assert.equal(coordinator.children(parent.id).length, 2, 'planner replies are not kept');
+  } finally {
+    await coordinator.closeAndWait();
+    await service.closeAndWait();
+    store.close();
+  }
 });

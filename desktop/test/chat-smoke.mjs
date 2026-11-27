@@ -275,8 +275,10 @@ try {
   await page.locator('.composer textarea').fill('Second message');
   await page.locator('.send').click();
   await page.getByText('Second answer received', { exact: true }).waitFor();
-  // Chat is the one everyday mode, like other AI apps; the drafting mode stays for tasks that use it.
-  await expect(page.getByRole('combobox', { name: 'โหมดทำงาน' }).locator('option[value="draft"]')).toHaveCount(0);
+  // Chat is the everyday mode, like other AI apps. Drafting stays in the list because coordinated drafting (on by
+  // default) starts there; its split option appears only in that mode, unchecked.
+  await expect(page.getByRole('combobox', { name: 'โหมดทำงาน' }).locator('option[value="draft"]')).toHaveCount(1);
+  await expect(page.getByLabel('แบ่งงานย่อย', { exact: true })).toHaveCount(0);
   // The earlier run saves its answer just before it releases the task; wait until a new run is accepted.
   await waitComplete(id);
   await expect
