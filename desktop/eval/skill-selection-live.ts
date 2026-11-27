@@ -32,7 +32,16 @@ import type { Connection } from '../src/types';
 /** `fits`: a request that fits several Skills (eval/clarification-cases.json), where a question is allowed. */
 export type Case = { request: string; expected: string | null; fits?: string[] };
 /** `asked`: the targets of a valid selector question (policy chatClarification), `none` for a general-help option. */
-export type Outcome = Case & { model: string; chosen?: string | null; code?: string; ms: number; output?: number; asked?: string[] };
+export type Outcome = Case & {
+  model: string;
+  chosen?: string | null;
+  code?: string;
+  ms: number;
+  output?: number;
+  asked?: string[];
+  /** The start of a reply the host could not read, so a malformed selection can be diagnosed. Synthetic data only. */
+  raw?: string;
+};
 
 /** The first `perSkill` requests of every Skill, then every general request (expected: no Skill). */
 export function sampleCases(suite: { skills: Record<string, string[]>; general: string[] }, perSkill: number): Case[] {
@@ -115,6 +124,14 @@ export function report(rows: ReturnType<typeof score>, outcomes: Outcome[]) {
         `- ${request} (expected ${all[0].expected ?? 'none'}): ${all.map(o => `${o.model} → ${o.code || o.chosen || 'none'}`).join(', ')}`,
       );
   }
+  const unreadable = outcomes.filter(o => o.raw);
+  if (unreadable.length)
+    lines.push(
+      '',
+      'Unreadable replies (start):',
+      '',
+      ...unreadable.map(o => `- ${o.model}: ${o.request} → ${JSON.stringify(o.raw!.slice(0, 400))}`),
+    );
   return lines.join('\n') + '\n';
 }
 
@@ -212,7 +229,14 @@ async function main(env = process.env) {
         fits: c.fits,
       }))
     : [];
-  const cases = pickRange([...sampleCases(suite, perSkill), ...open], env.STEP_EVAL_CASES);
+  // STEP_EVAL_MATCH keeps requests containing any of its |-separated texts; STEP_EVAL_REPEAT (1–5) sends each one that
+  // many times, to tell a repeatable malformed reply from noise.
+  const match = (env.STEP_EVAL_MATCH || '').split('|').filter(Boolean);
+  const repeat = Number(env.STEP_EVAL_REPEAT || 1);
+  if (!Number.isSafeInteger(repeat) || repeat < 1 || repeat > 5) throw new Error('EVAL_REPEAT_INVALID');
+  const cases = pickRange([...sampleCases(suite, perSkill), ...open], env.STEP_EVAL_CASES)
+    .filter(c => !match.length || match.some(m => c.request.includes(m)))
+    .flatMap(c => Array.from({ length: repeat }, () => c));
   const maxCalls = Number(env.STEP_EVAL_MAX_CALLS || cases.length * models.length * variants.length);
   if (!Number.isSafeInteger(maxCalls) || maxCalls < 1 || maxCalls > 900) throw new Error('EVAL_CALL_LIMIT_INVALID');
   const skills: any = await import('../../src/modules/skills/catalog.js');
@@ -255,7 +279,7 @@ async function main(env = process.env) {
               model: label,
               chosen,
               ...(question ? { asked: question.options.map(o => o.skillId || 'none') } : {}),
-              ...(chosen === undefined ? { code: 'INVALID_SKILL_SELECTION' } : {}),
+              ...(chosen === undefined ? { code: 'INVALID_SKILL_SELECTION', raw: reply.slice(0, 1200) } : {}),
               ms: Date.now() - started,
               output,
             });
