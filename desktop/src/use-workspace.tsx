@@ -753,8 +753,8 @@ export function useWorkspace() {
     await api!.call('remove', { id: task.id }).catch(() => {});
     return null;
   }
-  async function detachDocument(sessionId: string, fileId: string) {
-    await api!.call('detach', { id: sessionId, fileId }).catch(() => {});
+  async function detachDocument(sessionId: string, attachmentId: string) {
+    await api!.call('detach', { id: sessionId, attachmentId }).catch(() => {});
     const targetSession = snapshot?.sessions.find(s => s.id === sessionId);
     if (targetSession && !targetSession.messages.length && !targetSession.draft.trim())
       await api!.call('remove', { id: sessionId }).catch(() => {});
@@ -845,12 +845,13 @@ export function useWorkspace() {
   function discardFiles() {
     if (selected) for (const file of files) void api!.call('detach', { id: selected, attachmentId: file.id }).catch(() => undefined);
     setFiles([]);
+    setInspecting(null);
   }
   function removeFile(attachmentId: string) {
     if (selected) void api!.call('detach', { id: selected, attachmentId }).catch(() => undefined);
     setFiles(current => current.filter(file => file.id !== attachmentId));
   }
-  function addFiles(incoming: Attachment[]) {
+  function addFiles(id: string, incoming: Attachment[]) {
     if (!incoming.length) return;
     setFiles(current => {
       const merged = [...current];
@@ -860,12 +861,26 @@ export function useWorkspace() {
         if (merged.length < 64) merged.push(item);
         else overflow.push(item);
       }
-      if (overflow.length && selected) {
-        for (const extra of overflow) void api!.call('detach', { id: selected, attachmentId: extra.id }).catch(() => undefined);
+      if (overflow.length) {
+        for (const extra of overflow) void api!.call('detach', { id, attachmentId: extra.id }).catch(() => undefined);
         notify(t('แนบได้สูงสุด {0} ไฟล์ต่อครั้ง', 64), 'info');
       }
       return merged;
     });
+  }
+  async function attachFiles(vision = false) {
+    const version = navigationVersion.current;
+    const id = selected || (await createTask(version))?.id;
+    if (!id || version !== navigationVersion.current) return;
+    const response = await api!.call('attach', { id, vision, multiple: true });
+    const added: Attachment[] = Array.isArray(response) ? response : response ? [response] : [];
+    if (version !== navigationVersion.current || currentId.current !== id) {
+      await Promise.all(added.map(({ id: attachmentId }) => api!.call('detach', { id, attachmentId })));
+      return;
+    }
+    addFiles(id, added);
+    const inspection = added.length === 1 ? added[0] : added.find(item => !item.usable);
+    if (inspection) setInspecting(inspection);
   }
   async function pasteImage(file: File) {
     if (running || sendInFlight.current || pasteInFlight.current) {
@@ -1582,7 +1597,7 @@ export function useWorkspace() {
     createTask,
     discardFiles,
     removeFile,
-    addFiles,
+    attachFiles,
     pasteImage,
     send,
     askAside,

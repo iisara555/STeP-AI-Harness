@@ -8,6 +8,8 @@ _Last updated: 2026-11-27_
 
 ## In flight
 
+- **Desktop attachment memory lifecycle (2026-11-27)**. An attachment completing after task deletion could reinsert data into the host's pending-attachment map. Commit intake only after the whole batch is ready and its task still exists. Release late replies against their originating task after navigation, clear attachment state on deletion, and send the correct attachment ID when removing a source from a document form. In a Windows Electron probe with 12 synthetic PNGs, main-process heap after garbage collection grew from 29.0 to 41.2 MiB before the fix and from 29.0 to 29.2 MiB after it. The fixed app rejected every attachment to a deleted task.
+
 - **Desktop workspace controls (2026-11-26)**. A trailing slash command selects a Skill without erasing the typed request. Scheduled tasks have a labeled sidebar entry and keep recent and earlier runs under each recurring job. The selected reply language and conversation style reach the next turn, including general drafts. Employees can choose a local PNG or JPEG profile photo. Verified on Windows with the Desktop test suite, build, and Electron smokes for chat, schedules, settings, and profile persistence. Real staff-device acceptance remains open.
   - **Usability pass (2026-11-27)**. The slash picker follows the caret and keeps the keyboard-highlighted option visible. Scheduled run history stays expanded when returning from a result, and paused jobs keep their results and controls readable. Profile photo errors appear beside the picker, and the Northern Thai wording rules apply to Thai replies. Regenerated the Claude plugin from the updated scheduling guide and verified the root test suite passes.
 
