@@ -48,6 +48,12 @@ const FOLD_GROWTH = 1.5;
 const FINAL_REFUSALS = 1;
 /** Rounds of answer review per run: enough to fix what a check found, never a loop. */
 export const MAX_REVIEWS = 2;
+/**
+ * A rewrite under this share of a reviewed answer of at least REVISION_FLOOR_CHARS lost most of it (the model wrote only
+ * the changes, or stopped early): the reviewed answer is kept, so a review never leaves the employee with less.
+ */
+const REVISION_MIN_SHARE = 0.5;
+const REVISION_FLOOR_CHARS = 1000;
 /** Characters of the reviewed answer given back with the feedback; a whole TOR runs to about 30,000. */
 const REVIEWED_ANSWER_CHARS = 40_000;
 const WRAP_UP = `\n\n<tool_limit>\nNo more tool turns are available for this message. Do not request tools. Reply to the user now: what is done, what the results so far show, and exactly what remains, so they can reply "ต่อ" (continue) to carry on.\n</tool_limit>`;
@@ -162,8 +168,8 @@ export type LoopHost = {
    * twice means the model is not making progress, and the latest answer is returned.
    */
   review?: (answer: string, signal: AbortSignal) => Promise<string | undefined>;
-  /** A revision will replace the candidate just reviewed. Keep earlier tool progress in the live stream. */
-  replaceReviewedAnswer?: () => void;
+  /** A revision replaces the candidate just reviewed while keeping earlier tool progress in the live stream. */
+  revising?: (answer: string) => void;
   /**
    * When the run ends, the static reads it made (requests only: tool, input and arguments, never their text), so a
    * stopped task can give them back on "ลองอีกครั้ง" or "ต่อ" instead of reading everything again.
@@ -232,7 +238,24 @@ function extraToolRequests(reply: string, accepted: number) {
   return { pending, overflow: false };
 }
 
-export type LoopStats = { folds: number; repeats: number; seeded: number; final?: 'deadline' | 'reread'; reviews?: number };
+/** What a review sends back to the model: the answer it checked, what it found, and how to fix it. */
+export function answerCheckTurn(answer: string, findings: string) {
+  return (
+    '\n\n<answer_check>\n' +
+    fence(JSON.stringify({ answer: answer.slice(0, REVIEWED_ANSWER_CHARS), findings })) +
+    '\n</answer_check>\nA check of the answer above found the points in findings. Fix them: use tools to verify or read what is missing, then write the complete corrected answer (not only the changes). A point you cannot fix from the sources, say so in the answer and mark it [รอยืนยัน: ...]. Do not mention this check.'
+  );
+}
+
+export type LoopStats = {
+  folds: number;
+  repeats: number;
+  seeded: number;
+  final?: 'deadline' | 'reread';
+  reviews?: number;
+  /** The rewrite after a review failed, ran out of turns or lost most of the answer, so the reviewed answer was kept. */
+  reviewKept?: 'error' | 'limit' | 'shorter';
+};
 /** Reads given back to a resumed task, at most. */
 export const MAX_SEED_READS = 12;
 const SEEDED =
@@ -513,7 +536,15 @@ export class ToolLoop {
       refusals = 0,
       foldedAt = 0,
       reviews = 0,
-      lastReview = '';
+      lastReview = '',
+      // The last answer a review sent back. Whatever goes wrong while it is rewritten, the employee still gets it.
+      reviewed = '';
+    const keep = (why: NonNullable<LoopStats['reviewKept']>) => {
+      this.stats.reviewKept = why;
+      return reviewed;
+    };
+    const wrapUp = (next: string, notice?: string) =>
+      reviewed ? Promise.resolve(keep('limit')) : this.wrapUp(next, provider, signal, notice);
     try {
       const seeds = this.host.enabled()
         ? seed
@@ -595,24 +626,26 @@ export class ToolLoop {
             (invalid.length ? ',' + invalid.map(row => fence(JSON.stringify(row))).join(',') : '') +
             ']' +
             '\n</tool_results>\nNo requests in that batch were executed. Reconstruct and send smaller batches.';
-          if (history.length + notice.length > MAX_HISTORY_CHARS) return await this.wrapUp(next, provider, signal);
+          if (history.length + notice.length > MAX_HISTORY_CHARS) return await wrapUp(next);
           history += notice;
-          if (++oversized > UNREADABLE_RETRIES || turn + 1 === this.maxTurns) return await this.wrapUp(prompt + history, provider, signal);
+          if (++oversized > UNREADABLE_RETRIES || turn + 1 === this.maxTurns) return await wrapUp(prompt + history);
           continue;
         }
         oversized = 0;
         unreadable = !requests.length && broken.length ? unreadable + 1 : 0;
         if (!requests.length && broken.length && unreadable <= UNREADABLE_RETRIES && turn + 1 < this.maxTurns) {
-          if (history.length + JSON.stringify(broken).length + 2000 > MAX_HISTORY_CHARS) return await this.wrapUp(next, provider, signal);
+          if (history.length + JSON.stringify(broken).length + 2000 > MAX_HISTORY_CHARS) return await wrapUp(next);
           history +=
             '\n\n<tool_results>\n' +
             fence(JSON.stringify(broken.map(problem => ({ ok: false, code: 'INVALID_TOOL_REQUEST', text: problem })))) +
             '\n</tool_results>\nYour step-tool request could not be read and nothing was run. Send it again as valid JSON: escape every double quote as \\" and every line break as \\n inside strings.';
           continue;
         }
-        if (history.length > MAX_HISTORY_CHARS) return await this.wrapUp(next, provider, signal);
+        if (history.length > MAX_HISTORY_CHARS) return await wrapUp(next);
         if (!requests.length) {
           // A finished answer is checked while turns and tools remain; past the deadline it goes out as it is.
+          if (reviewed && reviewed.length >= REVISION_FLOOR_CHARS && result.length < reviewed.length * REVISION_MIN_SHARE)
+            return keep('shorter');
           if (final || !this.host.review || reviews >= MAX_REVIEWS || turn + 1 >= this.maxTurns || broken.length) return result;
           const feedback = (await this.host.review(result, signal))?.trim().slice(0, 4000);
           if (signal.aborted) throw new Error('CANCELLED');
@@ -620,13 +653,11 @@ export class ToolLoop {
           reviews++;
           this.stats.reviews = reviews;
           lastReview = feedback;
-          const addition =
-            '\n\n<answer_check>\n' +
-            fence(JSON.stringify({ answer: result.slice(0, REVIEWED_ANSWER_CHARS), findings: feedback })) +
-            '\n</answer_check>\nA check of the answer above found the points in findings. Fix them: use tools to verify or read what is missing, then write the complete corrected answer (not only the changes). A point you cannot fix from the sources, say so in the answer and mark it [รอยืนยัน: ...]. Do not mention this check.';
+          const addition = answerCheckTurn(result, feedback);
           if (history.length + addition.length > MAX_HISTORY_CHARS) return result;
           history += addition;
-          this.host.replaceReviewedAnswer?.();
+          reviewed = result;
+          this.host.revising?.(result);
           continue;
         }
         if (final) {
@@ -658,8 +689,7 @@ export class ToolLoop {
         last = key;
         // Out of turns, or asking for the same thing again and again: do not perform effects there is no turn left to
         // explain. The AI reports progress instead, and the employee continues with "ต่อ".
-        if (turn + 1 === this.maxTurns || (repeated >= REPEATS && !(waitingTask && repeated <= MAX_TASK_WAITS)))
-          return await this.wrapUp(next, provider, signal);
+        if (turn + 1 === this.maxTurns || (repeated >= REPEATS && !(waitingTask && repeated <= MAX_TASK_WAITS))) return await wrapUp(next);
         // Reserve space for JSON-escaped result previews before performing effects, so results can be reported.
         const requestHistory = fence(JSON.stringify({ requests }));
         const fixedSize = requestHistory.length + JSON.stringify(broken).length + 2000;
@@ -670,7 +700,7 @@ export class ToolLoop {
             1000,
           0,
         );
-        if (history.length + fixedSize + previewReserve > MAX_HISTORY_CHARS) return await this.wrapUp(next, provider, signal);
+        if (history.length + fixedSize + previewReserve > MAX_HISTORY_CHARS) return await wrapUp(next);
         const results: ToolResult[] = [];
         for (let i = 0; i < requests.length;) {
           if (!this.host.readOnly(requests[i])) results.push(await this.execute(requests[i++], signal));
@@ -699,7 +729,7 @@ export class ToolLoop {
         if (history.length + addition.length > MAX_HISTORY_CHARS) throw new Error('CONTEXT_LIMIT');
         history += addition;
         // Failing again and again with different requests: stop and ask the employee instead of using up every turn.
-        if (failedTurns >= FAILED_TURNS) return await this.wrapUp(prompt + history, provider, signal, STUCK);
+        if (failedTurns >= FAILED_TURNS) return await wrapUp(prompt + history, STUCK);
         // Asking only for what it already has, turn after turn (a high reasoning level re-checking): write now.
         if (rereadTurns >= REREAD_TURNS && !final) {
           final = true;
@@ -709,6 +739,9 @@ export class ToolLoop {
       throw new Error('TOOL_TURN_LIMIT');
     } catch (error) {
       if (code(error) === 'CANCELLED') this.host.cancel?.();
+      // A rewrite that fails (a provider error, the tool-turn limit) leaves the reviewed answer, never no answer.
+      // Cancelling, or the step's own timeout, still ends the run: both abort the signal.
+      if (reviewed && !signal.aborted && code(error) !== 'CANCELLED') return keep('error');
       throw error;
     } finally {
       this.running = undefined;

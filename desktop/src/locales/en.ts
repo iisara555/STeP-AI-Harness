@@ -893,6 +893,9 @@ export const en: Record<string, string> = {
   'ตรวจคำตอบเรื่อง STeP กับเอกสาร': 'Check STeP answers against the documents',
   'ตรวจงานกับขั้นตอนของ Skill ก่อนส่ง': 'Check work against its Skill before showing it',
   'กำลังตรวจงานกับขั้นตอนของ Skill': 'Checking the work against its Skill',
+  กำลังเติมส่วนที่ยังขาด: 'Adding what was missing',
+  'งานครบตาม Skill ขึ้น แต่ตอบช้าลงเล็กน้อย · ใช้กับ Claude และ Antigravity':
+    'More complete Skill work, slightly slower replies · Claude and Antigravity',
   ปรับระดับการคิดตามขนาดงาน: 'Reasoning level by task size',
   'กำลังตรวจคำตอบกับเอกสาร STeP': 'Checking the answer against the STeP documents',
   เวลาตั้งแต่ส่งคำถามจนได้คำตอบ: 'Time from sending the request to the finished answer',
