@@ -69,6 +69,11 @@ try {
   );
   await page.reload();
   await page.locator('.statusbar .status-dot.ok').waitFor();
+  const waitForReview = async matches => {
+    const session = async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(matches);
+    await expect.poll(async () => (await session())?.status, { timeout: 30000 }).toBe('review');
+    return session();
+  };
   const run = async (text, skill) => {
     const created = await page.evaluate(() => window.step.call('create', { connectionId: 'fake', project: 'hybrid smoke' }));
     let sent = await page.evaluate(({ id, text, skill }) => window.step.call('send', { id, text, skill, mode: 'chat', attachments: [] }), {
@@ -82,16 +87,7 @@ try {
         { id: created.id, text, skill, consent: sent.consent.token },
       );
     assert.equal(sent.started, true);
-    await expect
-      .poll(
-        async () => {
-          const s = (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === created.id);
-          return s.status;
-        },
-        { timeout: 30000 },
-      )
-      .toBe('review');
-    return (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === created.id);
+    return waitForReview(s => s.id === created.id);
   };
   const selected = await run('อ่านร่างนี้ว่ามีข้อมูลอะไรขาดบ้าง');
   const trace = selected.runs.at(-1);
@@ -110,7 +106,8 @@ try {
   assert.equal(explicit.messages.filter(m => m.role === 'assistant').at(-1).text, 'Hybrid loaded real document-review');
   // A request that fits two Skills: the selection's question appears as the question card above the composer, and
   // one click loads the chosen Skill with no second selection call (policy chatClarification, on by default).
-  await page.locator('.composer textarea').fill('ช่วยดูเอกสารจ้างเหมาฉบับนี้ก่อนส่ง');
+  const ambiguousRequest = 'ช่วยดูเอกสารจ้างเหมาฉบับนี้ก่อนส่ง';
+  await page.locator('.composer textarea').fill(ambiguousRequest);
   await page.keyboard.press('Enter');
   const question = page.locator('.composer-area .tool-question');
   await question.getByText('ต้องการให้ช่วยตรวจแบบไหน').waitFor({ timeout: 30000 });
@@ -118,9 +115,8 @@ try {
   await question.getByRole('button', { name: /ตรวจ TOR ก่อนประกาศ/ }).click();
   await page.getByText('Hybrid loaded real tor-review', { exact: true }).waitFor({ timeout: 30000 });
   await expect(question).toHaveCount(0);
-  const asked = (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s =>
-    s.messages.some(m => m.text === 'ช่วยดูเอกสารจ้างเหมาฉบับนี้ก่อนส่ง'),
-  );
+  // The streamed answer can appear before the session and its run trace are saved.
+  const asked = await waitForReview(s => s.messages.some(m => m.role === 'user' && m.text === ambiguousRequest));
   assert.deepEqual(asked.runs.at(-1).skillSelection, { method: 'asked', skill: 'tor-review', asked: true });
   assert.equal(asked.runs.at(-1).providerCalls.filter(c => c.kind === 'selection').length, 1);
   console.log(
