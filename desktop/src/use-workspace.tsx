@@ -206,6 +206,7 @@ export function useWorkspace() {
   const workflowRef = useRef<Workflow | ''>('');
   workflowRef.current = workflow;
   const [workMode, setWorkMode] = useState<WorkMode>('chat');
+  useEffect(() => setCoordinated(false), [selected, workMode, forcedSkill]);
   const [advancedTools, setAdvancedTools] = useState(false);
   const [toolTab, setToolTab] = useState<ToolTab>('output'),
     [toolRequest, setToolRequest] = useState<ToolRequest>();
@@ -344,7 +345,11 @@ export function useWorkspace() {
       const version = ++snapshotVersion.current;
       const raw: Snapshot = await api.call('snapshot');
       const cases = raw.sessions.filter(s => s.claimPacketId);
-      const data = cases.length ? { ...raw, sessions: raw.sessions.filter(s => !s.claimPacketId) } : raw;
+      // A coordinated draft's planner and workers are part of their task, not tasks of their own.
+      const data =
+        cases.length || raw.sessions.some(s => s.subtask)
+          ? { ...raw, sessions: raw.sessions.filter(s => !s.claimPacketId && !s.subtask) }
+          : raw;
       if (version === snapshotVersion.current) {
         setSnapshot(data);
         setCaseSessions(current => (!cases.length && !current.length ? current : cases));

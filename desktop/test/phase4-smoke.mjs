@@ -1,7 +1,7 @@
 import { _electron as electron, expect } from '@playwright/test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -9,17 +9,21 @@ const home = await mkdtemp(join(tmpdir(), 'step-phase4-smoke-')),
   workspace = join(home, 'work'),
   movedWorkspace = join(home, 'other-work'),
   executable = join(home, 'codex.mjs'),
+  calls = join(home, 'calls.log'),
   mcp = join(home, 'mcp.mjs');
 await mkdir(workspace);
 await mkdir(movedWorkspace);
 await mkdir('release/qa', { recursive: true });
 await writeFile(
   executable,
-  `import readline from 'node:readline';const send=o=>console.log(JSON.stringify({jsonrpc:'2.0',...o}));
+  `import readline from 'node:readline';import fs from 'node:fs';const send=o=>console.log(JSON.stringify({jsonrpc:'2.0',...o}));
 readline.createInterface({input:process.stdin}).on('line',line=>{const m=JSON.parse(line);if(m.id===undefined)return;send({id:m.id,result:m.method==='thread/start'?{thread:{id:'synthetic'}}:{}});
 if(m.method==='turn/start'){const p=(m.params.input||[]).filter(i=>i.type==='text').map(i=>i.text||'').join('');
-const text=p.includes('Decompose the request')?JSON.stringify({tasks:[{id:'a',query:'Prepare topic A',dependsOn:[]},{id:'b',query:'Prepare topic B',dependsOn:[]}]}):'Phase 4 synthetic draft';
-setTimeout(()=>{send({method:'thread/tokenUsage/updated',params:{tokenUsage:{total:{inputTokens:10,outputTokens:5,totalTokens:15}}}});send({method:'item/agentMessage/delta',params:{delta:text}});send({method:'turn/completed',params:{turn:{status:'completed'}}});},40);}});`,
+const retryCase=p.includes('Synthetic retry case');
+const text=p.includes('Decompose the request')?JSON.stringify({tasks:retryCase?[{id:'a',query:'Prepare topic C',dependsOn:[]},{id:'b',query:'Prepare topic FAILONCE',dependsOn:[]}]:[{id:'a',query:'Prepare topic A',dependsOn:[]},{id:'b',query:'Prepare topic B',dependsOn:[]}]}):'Phase 4 synthetic draft';
+const topic=/"request":"Prepare topic (C|FAILONCE)"/.exec(p)?.[1];if(topic)fs.appendFileSync(${JSON.stringify(calls)},topic+'\\n');
+const failing=topic==='FAILONCE'&&!fs.existsSync(${JSON.stringify(calls)}+'.failed');if(failing)fs.writeFileSync(${JSON.stringify(calls)}+'.failed','1');
+setTimeout(()=>{if(failing){send({method:'turn/completed',params:{turn:{status:'failed',error:{message:'synthetic subtask failure'}}}});return;}send({method:'thread/tokenUsage/updated',params:{tokenUsage:{total:{inputTokens:10,outputTokens:5,totalTokens:15}}}});send({method:'item/agentMessage/delta',params:{delta:text}});send({method:'turn/completed',params:{turn:{status:'completed'}}});},40);}});`,
 );
 await writeFile(
   mcp,
@@ -33,7 +37,7 @@ await writeFile(
   JSON.stringify({
     // The coordinator dialog is part of the send-time privacy checks.
     checks: { authority: true, privacy: true },
-    features: { coordinator: true, cron: true, mcp: true, sandbox: false, toolLoop: false },
+    features: { cron: true, mcp: true, sandbox: false, toolLoop: false },
     mcpServers: [{ name: 'fixture', profile: 'google-workspace', transport: 'stdio', command: process.execPath, args: [mcp] }],
   }),
 );
@@ -94,7 +98,7 @@ try {
   // Establish the synthetic fixture before looking for a conditional control.
   // A failed profile/policy load should report its cause, not a label timeout.
   const initial = await page.evaluate(() => window.step.call('snapshot'));
-  assert.equal(initial.policy.features.coordinator, true, 'fixture coordinator policy loaded');
+  assert.equal(initial.policy.features.coordinator, true, 'coordinated drafting is available without a policy override');
   assert.equal(initial.sessions.find(s => s.id === 'parent')?.mode, 'draft', 'fixture parent draft loaded');
   stage = 'coordinator';
   const approve = async title => {
@@ -102,12 +106,25 @@ try {
     await dialog.waitFor();
     await dialog.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
   };
-  await page.getByLabel('แบ่งงานย่อย', { exact: true }).check();
+  const splitDraft = page.getByLabel('แบ่งงานย่อย', { exact: true });
+  await expect(splitDraft).not.toBeChecked();
+  await splitDraft.check();
+  const workMode = page.getByRole('combobox', { name: 'โหมดทำงาน' });
+  await workMode.selectOption('chat');
+  await expect(splitDraft).toHaveCount(0);
+  await workMode.selectOption('draft');
+  await expect(splitDraft).not.toBeChecked();
+  await splitDraft.check();
   await page.locator('.composer textarea').fill('Prepare a synthetic draft about two public topics.');
   await page.keyboard.press('Enter');
   const consent = page.getByRole('alertdialog', { name: 'ยืนยันการส่งข้อมูลให้ AI' });
   await consent.waitFor();
   await consent.getByRole('button', { name: 'มีสิทธิ์ส่งข้อมูลนี้', exact: true }).click();
+  // The plan names the task, not its internal id, and lists each subtask in the employee's order.
+  const planDialog = page.getByRole('alertdialog', { name: 'ตรวจแผนงานย่อยก่อนเริ่ม?' });
+  await expect(planDialog).toContainText('Phase 4 fixture');
+  await expect(planDialog).toContainText('1. Prepare topic A');
+  await expect(planDialog).not.toContainText('งาน parent');
   await approve('ตรวจแผนงานย่อยก่อนเริ่ม?');
   await expect
     .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === 'parent').status, {
@@ -115,8 +132,50 @@ try {
     })
     .toBe('review');
   const coordinated = await page.evaluate(() => window.step.call('snapshot'));
-  assert.equal(coordinated.sessions.filter(s => s.parentId === 'parent').length, 3);
+  // Two workers; the planner's reply was only the plan. Workers stay out of the task list.
+  const workers = coordinated.sessions.filter(s => s.parentId === 'parent');
+  assert.equal(workers.length, 2);
+  assert.ok(workers.every(s => s.subtask && s.status === 'review'));
+  assert.equal(coordinated.sessions.find(s => s.id === 'parent').coordination.state, 'done');
   assert.equal(coordinated.sessions.find(s => s.id === 'parent').proposals[0].text, 'Phase 4 synthetic draft');
+  await expect(page.locator('.sidebar .session-open', { hasText: 'Prepare topic' })).toHaveCount(0);
+  await expect(page.locator('.sidebar .session-open', { hasText: 'Decompose' })).toHaveCount(0);
+  stage = 'coordinator-retry';
+  // A subtask that fails keeps the finished ones: "Try again" asks to approve the same plan and runs only the open one.
+  await page.getByRole('button', { name: 'เริ่มงานใหม่' }).click();
+  await workMode.selectOption('draft');
+  // A new, empty task offers the split beside the drafting mode, before its first message.
+  await page.locator('.composer').screenshot({ path: 'release/qa/phase4-split-off.png' });
+  await splitDraft.check();
+  await page.locator('.composer').screenshot({ path: 'release/qa/phase4-split-on.png' });
+  await page.locator('.composer textarea').fill('Synthetic retry case with two public topics.');
+  await page.keyboard.press('Enter');
+  await consent.waitFor();
+  await consent.getByRole('button', { name: 'มีสิทธิ์ส่งข้อมูลนี้', exact: true }).click();
+  await approve('ตรวจแผนงานย่อยก่อนเริ่ม?');
+  await page.getByText('งานย่อยบางงานยังไม่สำเร็จ', { exact: false }).first().waitFor({ timeout: 30000 });
+  const retryTask = async () =>
+    (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s =>
+      s.messages.some(m => m.text?.includes('Synthetic retry case')),
+    );
+  const failedRun = await retryTask();
+  assert.equal(failedRun.status, 'error');
+  assert.equal(failedRun.coordination.state, 'failed');
+  assert.deepEqual(Object.keys(failedRun.coordination.done), ['a']);
+  await page.getByRole('button', { name: 'ลองอีกครั้ง', exact: true }).click();
+  const resumeConsent = page.getByRole('alertdialog', { name: 'ยืนยันการส่งข้อมูลให้ AI' });
+  const resumePlan = page.getByRole('alertdialog', { name: 'ตรวจแผนงานย่อยก่อนเริ่ม?' });
+  await expect(resumeConsent.or(resumePlan)).toBeVisible();
+  if (await resumeConsent.isVisible()) await resumeConsent.getByRole('button', { name: 'มีสิทธิ์ส่งข้อมูลนี้', exact: true }).click();
+  await expect(resumePlan).toContainText('1. Prepare topic C · เสร็จแล้ว');
+  await approve('ตรวจแผนงานย่อยก่อนเริ่ม?');
+  await expect.poll(async () => (await retryTask()).status, { timeout: 30000 }).toBe('review');
+  const resumed = await retryTask();
+  assert.equal(resumed.coordination.state, 'done');
+  assert.equal(resumed.messages.filter(m => m.role === 'user').length, 1, 'Try again adds no second request');
+  assert.deepEqual((await readFile(calls, 'utf8')).trim().split('\n').sort(), ['C', 'FAILONCE', 'FAILONCE'], 'topic C ran once');
+  await page.screenshot({ path: 'release/qa/phase4-coordinator-resumed.png' });
+  await page.locator('.sidebar .session-open', { hasText: 'Phase 4 fixture' }).click();
   await page.getByRole('button', { name: 'ตัวเลือกงานนี้' }).click();
   stage = 'automation';
   await page.getByRole('menuitem', { name: 'งานตั้งเวลา', exact: true }).click();
@@ -255,7 +314,7 @@ try {
       {
         passed: true,
         synthetic: true,
-        coordinatorChildSessions: 3,
+        coordinatorChildSessions: 2,
         cronCrudHistory: true,
         mcpDiscoveryCall: true,
         sandboxProtectedPathDenied: true,

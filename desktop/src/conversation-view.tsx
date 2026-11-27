@@ -19,6 +19,7 @@ import {
   Plus,
   ShieldCheck,
   Sparkles,
+  Split,
   Square,
   X,
 } from './icons';
@@ -199,6 +200,7 @@ export function ConversationView({ v }: { v: AppView }) {
     offerWriteNow({ elapsedMs: now - startedAt, stream, liveText, progress }),
   );
   const messageCount = session?.messages.length;
+  const canCoordinate = snapshot.policy?.features.coordinator && workMode === 'draft' && !session?.documentTool && !forcedSkill;
   useEffect(() => {
     // An empty task shows the welcome from its greeting; only a conversation follows its latest message.
     if (messageCount || stream || running) conversationEnd.current?.scrollIntoView({ block: 'end' });
@@ -249,20 +251,8 @@ export function ConversationView({ v }: { v: AppView }) {
       ) : (
         <div className={`chat-content${!session?.messages.length ? ' is-empty' : ''}`}>
           <div className="conversation" aria-live="polite">
-            {session && (snapshot.policy?.features.coordinator || !!session.loadedContext?.length || session.compaction) && (
+            {session && (!!session.loadedContext?.length || session.compaction) && (
               <div className="context-bar">
-                {snapshot.policy?.features.coordinator && (
-                  <label>
-                    <input
-                      aria-label={t('แบ่งงานย่อย')}
-                      type="checkbox"
-                      checked={coordinated}
-                      disabled={running || workMode !== 'draft'}
-                      onChange={e => setCoordinated(e.target.checked)}
-                    />
-                    {t('แบ่งงานย่อย')}
-                  </label>
-                )}
                 {!!session.loadedContext?.length && (
                   <details>
                     <summary>
@@ -572,55 +562,59 @@ export function ConversationView({ v }: { v: AppView }) {
                 )}
               </details>
             )}
-            {!running && (session?.status === 'error' || session?.status === 'interrupted') && lastRequest && (
-              <div className="retry-row">
-                {/* Use the reported failure code; only retry resumes the stopped task. */}
-                <button
-                  onClick={() => {
-                    if (failureCode === 'TOOL_DENIED') {
-                      openAiSettings();
-                      return;
-                    }
-                    if (failureCode === 'MODEL_NOT_AVAILABLE') {
-                      setAiPicker(true);
-                      composerRef.current?.scrollIntoView({ block: 'nearest' });
-                      return;
-                    }
-                    void action(() =>
-                      start(session.id, lastRequest, { skill: session.skill, mode: session.mode || workMode, imageModel, retry: true }),
-                    );
-                  }}
-                >
-                  {t(
-                    failureCode === 'TOOL_DENIED'
-                      ? 'ตรวจสอบการเชื่อมต่อ AI'
-                      : failureCode === 'MODEL_NOT_AVAILABLE'
-                        ? 'เปลี่ยนโมเดล'
-                        : 'ลองอีกครั้ง',
-                  )}
-                </button>
-                <button
-                  className="quiet"
-                  onClick={() => {
-                    setQuery(lastRequest);
-                    setTimeout(() => composerRef.current?.focus(), 0);
-                  }}
-                >
-                  {t('แก้คำขอ')}
-                </button>
-                {/^(PROVIDER_|CONNECTION_|COPILOT_|AUTH_|OAUTH_)/.test(failureCode) && (
-                  <button className="quiet" onClick={openAiSettings}>
-                    {t('ตรวจสอบการเชื่อมต่อ AI')}
+            {!running &&
+              (session?.status === 'error' ||
+                session?.status === 'interrupted' ||
+                (session?.status === 'cancelled' && session.coordination && session.coordination.state !== 'done')) &&
+              lastRequest && (
+                <div className="retry-row">
+                  {/* Use the reported failure code; only retry resumes the stopped task. */}
+                  <button
+                    onClick={() => {
+                      if (failureCode === 'TOOL_DENIED') {
+                        openAiSettings();
+                        return;
+                      }
+                      if (failureCode === 'MODEL_NOT_AVAILABLE') {
+                        setAiPicker(true);
+                        composerRef.current?.scrollIntoView({ block: 'nearest' });
+                        return;
+                      }
+                      void action(() =>
+                        start(session.id, lastRequest, { skill: session.skill, mode: session.mode || workMode, imageModel, retry: true }),
+                      );
+                    }}
+                  >
+                    {t(
+                      failureCode === 'TOOL_DENIED'
+                        ? 'ตรวจสอบการเชื่อมต่อ AI'
+                        : failureCode === 'MODEL_NOT_AVAILABLE'
+                          ? 'เปลี่ยนโมเดล'
+                          : 'ลองอีกครั้ง',
+                    )}
                   </button>
-                )}
-                {/^[A-Z_]+$/.test(failureCode) && (
-                  <details className="small muted retry-code">
-                    <summary>{t('ข้อมูลสำหรับแจ้งปัญหา')}</summary>
-                    <p>{t('รหัสสำหรับแจ้งผู้ดูแล: {0}', failureCode)}</p>
-                  </details>
-                )}
-              </div>
-            )}
+                  <button
+                    className="quiet"
+                    onClick={() => {
+                      setQuery(lastRequest);
+                      setTimeout(() => composerRef.current?.focus(), 0);
+                    }}
+                  >
+                    {t('แก้คำขอ')}
+                  </button>
+                  {/^(PROVIDER_|CONNECTION_|COPILOT_|AUTH_|OAUTH_)/.test(failureCode) && (
+                    <button className="quiet" onClick={openAiSettings}>
+                      {t('ตรวจสอบการเชื่อมต่อ AI')}
+                    </button>
+                  )}
+                  {/^[A-Z_]+$/.test(failureCode) && (
+                    <details className="small muted retry-code">
+                      <summary>{t('ข้อมูลสำหรับแจ้งปัญหา')}</summary>
+                      <p>{t('รหัสสำหรับแจ้งผู้ดูแล: {0}', failureCode)}</p>
+                    </details>
+                  )}
+                </div>
+              )}
             {!running && progress && <p className="muted small">{t(progress)}</p>}
             {/* Without tools the app searches ahead; with tools the AI decides, so nothing pops up while typing. */}
             {!running && workMode !== 'image' && !snapshot.policy?.features.toolLoop && needsPublicWebSearch(query) && (
@@ -1111,6 +1105,20 @@ export function ConversationView({ v }: { v: AppView }) {
                     )}
                     <option value="image">{t('สร้างรูป')}</option>
                   </select>
+                  {/* Beside the mode it belongs to, so a new task can choose it before its first message. */}
+                  {canCoordinate && (
+                    <label className="pill-select split-pill" title={t('ให้ AI แบ่งงานย่อยให้ผู้ช่วยหลายตัว')}>
+                      <input
+                        aria-label={t('แบ่งงานย่อย')}
+                        type="checkbox"
+                        checked={coordinated}
+                        disabled={running || submitting}
+                        onChange={e => setCoordinated(e.target.checked)}
+                      />
+                      <Split size={15} aria-hidden="true" />
+                      {coordinated && <span>{t('แบ่งงานย่อย')}</span>}
+                    </label>
+                  )}
                   {/* Permission as a small shield pill with a short word; the native list underneath keeps the full
                         wording, so opening it still explains each level. */}
                   {snapshot.policy && (

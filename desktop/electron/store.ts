@@ -93,6 +93,8 @@ export class Store {
     delete s.checkpoint;
     delete s.contextCheckpoint;
     delete s.longTask;
+    delete s.coordination;
+    delete s.subtask;
     delete s.sideQuestions;
     delete s.lastRun;
     delete s.resumeReads;

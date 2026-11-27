@@ -79,6 +79,7 @@ import {
   Settings2 as StillSettings2,
   ShieldCheck as StillShieldCheck,
   SlidersHorizontal as StillSlidersHorizontal,
+  Split as StillSplit,
   Sparkles as StillSparkles,
   Square as StillSquare,
   Sun as StillSun,
@@ -247,6 +248,7 @@ export const SeparatorHorizontal = /* @__PURE__ */ animated(StillSeparatorHorizo
 export const Settings2 = /* @__PURE__ */ animated(StillSettings2, 'Settings2', 'turn');
 export const ShieldCheck = /* @__PURE__ */ animated(StillShieldCheck, 'ShieldCheck', 'pulse');
 export const SlidersHorizontal = /* @__PURE__ */ animated(StillSlidersHorizontal, 'SlidersHorizontal', 'turn');
+export const Split = /* @__PURE__ */ animated(StillSplit, 'Split', 'pulse');
 export const Sparkles = /* @__PURE__ */ animated(StillSparkles, 'Sparkles', 'pulse');
 export const Square = /* @__PURE__ */ animated(StillSquare, 'Square', 'pulse');
 export const Sun = /* @__PURE__ */ animated(StillSun, 'Sun', 'turn');
