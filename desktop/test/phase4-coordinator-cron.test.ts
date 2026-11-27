@@ -680,3 +680,75 @@ test('a malformed plan gets one more attempt; a request too long for the merge f
     store.close();
   }
 });
+test('a split draft meets the same authority check as the plain draft of its request, not the planner wording', async () => {
+  const routing: any = await import('../../src/modules/router/service.js');
+  const { resolve } = await import('node:path');
+  const policy = defaultPolicy();
+  // Desktop routes with its policy; this organization turned the authority check on.
+  policy.checks.authority = true;
+  const desktopRoute = (q: string, opts: any = {}) =>
+    routing.queryStepRouter(q, { autoRoute: policy.features.autoRouting, authorityChecks: policy.checks.authority, ...opts });
+  const request = 'ร่างบันทึกข้อความขออนุมัติจัดซื้อคอมพิวเตอร์โน้ตบุ๊ก 5 เครื่อง ให้มีเหตุผลความจำเป็น และข้อเสนอเพื่อพิจารณา';
+  // Read alone, the planner's wording of a part reads as the act itself; it is still only a part of the draft.
+  const part = 'จัดทำส่วนข้อเสนอเพื่อพิจารณา ขออนุมัติจัดซื้อคอมพิวเตอร์โน้ตบุ๊ก 5 เครื่อง วงเงิน 162,500 บาท';
+  assert.equal((await desktopRoute(part, { team: 'cc' })).routingContract.authority.status, 'BLOCK');
+  const { store } = fixture();
+  policy.features.coordinator = true;
+  let calls = 0;
+  const service = new WorkService(
+    store,
+    {
+      root: resolve('..'),
+      route: desktopRoute,
+      contextPolicy: () => ({ history: 'ignore', carryover: false }),
+      privacy: evaluatePrivacyGate,
+      skillMetadata: async () => null,
+      documentPrivacy: async () => null,
+      nextOutput: async () => null,
+    },
+    async () => ({
+      context: { cwd: tmpdir(), env: {} },
+      adapter: {
+        run: async (prompt, _connection, options) => {
+          calls++;
+          if (prompt.includes('Decompose the request'))
+            return JSON.stringify({
+              tasks: [
+                { id: 'a', query: 'ร่างส่วนเหตุผลความจำเป็นของการจัดซื้อ', dependsOn: [] },
+                { id: 'b', query: part, dependsOn: [] },
+              ],
+            });
+          return String(options?.system || '').includes('Integrate the supplied subtask drafts') ? 'ร่างรวม' : 'ร่างส่วนย่อย';
+        },
+      },
+    }),
+    () => {},
+  );
+  const coordinator = new Coordinator(
+    store,
+    service,
+    () => policy,
+    () => 'stable',
+    async () => true,
+    (q, team) => desktopRoute(q, { team }),
+    () => {},
+  );
+  try {
+    const parent = store.create('c', 'cc');
+    await coordinator.run(parent.id, request, 'ข้อมูลสังเคราะห์', { text: request, files: [], onAccepted: () => {} });
+    assert.equal(store.session(parent.id).status, 'review');
+    assert.equal(store.session(parent.id).proposals.at(-1)?.text, 'ร่างรวม');
+    assert.equal(calls, 4, 'plan, two parts, merge');
+    // A request that is itself the act is still refused before any AI call, split or not.
+    const act = store.create('c', 'cc');
+    await assert.rejects(
+      coordinator.run(act.id, 'อนุมัติจัดซื้อคอมพิวเตอร์โน้ตบุ๊ก 5 เครื่อง วงเงิน 162,500 บาท', ''),
+      /AUTHORITY_REVIEW_REQUIRED/,
+    );
+    assert.equal(calls, 4);
+  } finally {
+    await coordinator.closeAndWait();
+    await service.closeAndWait();
+    store.close();
+  }
+});

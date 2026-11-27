@@ -33,7 +33,18 @@ const SCENARIOS = [
 
 async function main() {
   const root = resolve(fileURLToPath(new URL('../..', import.meta.url))),
-    harness = await evaluationHarness(root);
+    golden = await evaluationHarness(root);
+  // Route as Desktop does with its default policy, so both drafts meet the same Skill and authority checks staff do.
+  const desktopPolicy = defaultPolicy();
+  const harness: typeof golden = {
+    ...golden,
+    route: (query: string, options: any = {}) =>
+      golden.route(query, {
+        autoRoute: desktopPolicy.features.autoRouting,
+        authorityChecks: desktopPolicy.checks.authority,
+        ...options,
+      }),
+  };
   const prepared = await evaluationRuntime();
   const only = (process.env.STEP_EVAL_ONLY || '').split(',').filter(Boolean);
   const date = new Date().toISOString();

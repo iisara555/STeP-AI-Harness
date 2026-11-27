@@ -357,6 +357,11 @@ export type RunOptions = {
   mergeOnly?: boolean;
   /** The coordinator already shows its plan; this run's steps follow its subtasks there instead of replacing it. */
   planOffset?: number;
+  /**
+   * A coordinator subtask: the employee's request it is part of. Routing and the authority check read this text, so
+   * a part is checked exactly as the plain draft of the same request would be, not on the planner's wording of it.
+   */
+  routeQuery?: string;
   workflow?: Workflow;
   /** Called after the request has been stored, before potentially slow routing or model discovery. */
   onAccepted?: () => void;
@@ -1044,7 +1049,8 @@ export class WorkService {
     const artifacts = new Map<string, ArtifactRef>();
     try {
       status(tm('กำลังเตรียมงาน'), { quiet: true });
-      let routed = await this.harness.route(session.originalQuery, {
+      const routeQuery = options.routeQuery || session.originalQuery;
+      let routed = await this.harness.route(routeQuery, {
         team: session.team,
         workspaceDir,
         clarificationAnswer: session.answers.join('\n'),
@@ -1238,7 +1244,7 @@ export class WorkService {
           }
         }
         if (chosen) {
-          const checked = await this.harness.route(session.originalQuery, {
+          const checked = await this.harness.route(routeQuery, {
             team: session.team,
             workspaceDir,
             skill: chosen,

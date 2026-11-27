@@ -217,7 +217,8 @@ export class Coordinator {
         if (Date.now() - started > 600_000) throw new Error('RUN_LIMIT');
         await new Promise(r => setTimeout(r, 25));
       }
-      await this.service.run(child.id, text, data, true, skill, 'draft', undefined, [], { draftOnly: true });
+      // Authority is decided on the employee's own request (checked above), as for a plain draft of it.
+      await this.service.run(child.id, text, data, true, skill, 'draft', undefined, [], { draftOnly: true, routeQuery: query });
       check();
       const completed = this.store.session(child.id);
       if (completed.status !== 'review')
@@ -273,17 +274,24 @@ export class Coordinator {
       if (!tasks.length) {
         const routed = await this.route(query, parent.team),
           contract = routed.routingContract;
-        if (contract?.authority?.status !== 'ALLOW' || ['BLOCK', 'ESCALATE', 'CLARIFY', 'UNAVAILABLE'].includes(contract?.mode))
+        if (contract?.authority?.status !== 'ALLOW' || ['BLOCK', 'ESCALATE', 'UNAVAILABLE'].includes(contract?.mode))
           throw new Error('AUTHORITY_REVIEW_REQUIRED');
+        // A request the router would ask about first goes back to the employee, as a plain draft would.
+        if (contract?.mode === 'CLARIFY') throw new Error('COORDINATOR_NEEDS_INPUT');
         if (contract.mode === 'PLAYBOOK' && routed.selectedPlaybook?.steps?.length) tasks = playbookTasks(routed.selectedPlaybook.steps);
         else {
           tasks = await plan();
+          // A part's own wording only suggests its Skill. Its authority is the request's: the planner's phrasing of
+          // "the proposal for consideration" must not turn a draft the plain path accepts into a refusal.
           for (const task of tasks) {
             const subRoute = await this.route(task.query, parent.team);
             const subContract = subRoute?.routingContract;
-            if (subContract?.authority?.status !== 'ALLOW' || ['BLOCK', 'ESCALATE'].includes(subContract?.mode))
-              throw new Error('AUTHORITY_REVIEW_REQUIRED');
-            if (!task.skill && subContract?.mode === 'SKILL' && typeof subContract?.skill === 'string') {
+            if (
+              subContract?.authority?.status === 'ALLOW' &&
+              subContract?.mode === 'SKILL' &&
+              !task.skill &&
+              typeof subContract?.skill === 'string'
+            ) {
               task.skill = subContract.skill;
             }
           }
