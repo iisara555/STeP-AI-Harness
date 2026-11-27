@@ -4,10 +4,11 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-26_
+_Last updated: 2026-11-27_
 
 ## In flight
 
+- **Skill Review ready to turn on (`desktop/electron/answer-review.ts`, 2026-11-27, branch `claude/skill-review-ready`)**. One Skill review per step, none in plan mode or when a rewrite would not fit the time; the reviewed answer is kept if the rewrite fails, runs out of turns or shrinks below half; the reviewed answer leaves the screen while it is rewritten; repo-upkeep Verification lines are not given to the review; only Antigravity and Claude connections are reviewed. `npm run eval:review` (12 synthetic cases): claude-haiku-5-5 and claude-sonnet-5-5 10/12 right, 6/6 missing parts caught, 6/6 rewrites fixed, 0 invalid, review p50 about 5 s; local Qwen 3.5 4B and 9B 4/12 (excluded). Several false send-backs pointed at real flaws in the "complete" fixtures, which were then corrected, and the review prompt now says Guardrails are rules, not headings; the Claude rerun on the corrected cases and the Antigravity run (needs Remote Control on the owner's Windows PC) are open. `features.skillReview` stays false until the owner decides.
 - **Claims acceptance on staff devices (2026-11-26)**. Wave 3 has synthetic provider and receipt coverage. Real receipt and staff-account acceptance remains open.
 - **Add `sustainable-event` built-in Skill (Standard v3, `draft`, `skills/creative/sustainable-event/`, 2026-11-25)**: synthesized from TCEB / MICE sustainability, ESG, and low-carbon event methodology into original Thai instructions without copying copyrighted source text or hard-coding mutable emission factors. Covers Triple Bottom Line, UN SDGs, BCG/ESG, 5+1 planning, 25 basic guidelines (A–G), 7-step material/waste hierarchy, 8-step supply chain control across 9 vendor categories, Design for All / venue / F&B / 6-step food-allergen & 6 CSR risk checks, Cost vs. Impact 2x2 prioritization, 4 low-carbon levels, Scope 1/2/3 & 5-category avoidance activity logs (`NEED-SOURCE` for live EFs/prices via TCEB/TGO portals), TSEMS 3-pillar reporting templates, worked synthetic example, and 4-dimension evals (`evals/skills/sustainable-event.json`, `manifest/routing-staff-benchmark.json`). Registered under `cc` owner with `qs` reviewer (`stage: draft`); awaits CC/QS review and live model-side grading before promotion to `pilot`.
 
