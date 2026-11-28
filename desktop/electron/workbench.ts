@@ -79,12 +79,24 @@ export class Workbench {
     session.approvedPlan = text;
     this.store.save(session);
   }
+  /** Clears a finished or dismissed plan from the task so follow-up turns run cleanly. */
+  clearWorkPlan(sessionId: string) {
+    const session = this.store.session(sessionId);
+    delete session.workPlan;
+    delete session.approvedPlan;
+    delete session.longTask;
+    this.store.save(session);
+  }
   /** Ticks one task of the approved plan (1-based number); returns how many tasks are not done yet. */
   updateWorkTask(sessionId: string, number: number, status: WorkTask['status'], note: string) {
     const session = this.store.session(sessionId);
     const plan = session.workPlan;
     if (!plan || !Number.isSafeInteger(number) || !plan.tasks[number - 1]) throw new Error('PLAN_TASK_UNKNOWN');
-    plan.tasks[number - 1] = { ...plan.tasks[number - 1], status, ...(note ? { note } : {}) };
+    const previous = plan.tasks[number - 1];
+    const nextTask: WorkTask = { ...previous, status };
+    if (note) nextTask.note = note;
+    else if (status !== previous.status) delete nextTask.note;
+    plan.tasks[number - 1] = nextTask;
     this.store.save(session);
     return plan.tasks.filter(t => t.status !== 'done').length;
   }
@@ -409,8 +421,8 @@ export class Workbench {
     return this.artifactStore.save(sessionId, id, title, kind, content);
   }
 
-  getArtifact(sessionId: string, id: string) {
-    return this.artifactStore.get(sessionId, id);
+  getArtifact(sessionId: string, id: string, version?: number) {
+    return this.artifactStore.get(sessionId, id, version);
   }
 
   listArtifacts(sessionId: string) {
@@ -419,6 +431,10 @@ export class Workbench {
 
   deleteArtifact(sessionId: string, id: string) {
     return this.artifactStore.delete(sessionId, id);
+  }
+
+  deleteSessionArtifacts(sessionId: string) {
+    return this.artifactStore.deleteBySession(sessionId);
   }
 
   /** Starts a subagent for this task; `run` is the service's tool-limited delegate, so no subagent runs without one. */

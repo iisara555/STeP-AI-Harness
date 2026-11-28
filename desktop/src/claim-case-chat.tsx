@@ -1,6 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowUp, Check, ImagePlus, LoaderCircle, Paperclip, Plus, Square, X } from './icons';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { AlertTriangle, ArrowUp, BookOpen, Check, ImagePlus, LoaderCircle, Paperclip, Plus, ShieldCheck, Square, X } from './icons';
 import { t } from './i18n';
+import { ArtifactDialog, ArtifactsList, type OpenedArtifact } from './artifacts-list';
+import { checkStillRunning } from './app-shared';
 import { ContextWindowGauge } from './context-window-gauge';
 import { RichText } from './ui';
 import { errorText, explainError } from './messages';
@@ -82,9 +84,16 @@ export function ClaimCaseChat({
   const [interviewWaiting, setInterviewWaiting] = useState(false);
   // Files and pictures for the AI to read with the next message, like the main chat's; case evidence is separate.
   const [files, setFiles] = useState<Attachment[]>([]);
+  const [viewingArtifact, setViewingArtifact] = useState<OpenedArtifact | null>(null);
   const attachmentOwners = useRef(new Map<string, string>());
   const mounted = useRef(false);
   const [attaching, setAttaching] = useState(false);
+  const openLink = useCallback(
+    (url: string) => {
+      void call('toolBrowser', { url }).catch(failure => notify(explainError(failure), 'error'));
+    },
+    [call, notify],
+  );
   const running = sending || ['running', 'queued'].includes(session?.status || '');
   const id = session?.id;
   const ai = caseAi(chat, session);
@@ -208,20 +217,97 @@ export function ClaimCaseChat({
         {messages.map((message, index) => {
           if (message.role === 'user')
             return (
-              <article key={index} className="message user" aria-label={t('คุณ')}>
+              <article key={`${id || 'case'}:${index}`} className="message user" aria-label={t('คุณ')}>
                 <div className="message-body">{message.text}</div>
+                {!!message.files?.length && (
+                  <div className="message-files" aria-label={t('ไฟล์ที่ส่งกับข้อความนี้')}>
+                    {message.files.map((file, i) =>
+                      file.preview?.startsWith('data:image/jpeg;base64,') ? (
+                        <figure key={i} className="message-image">
+                          <img src={file.preview} alt={t('ภาพที่ส่งให้ AI: {0}', file.name)} />
+                          <figcaption>{file.name}</figcaption>
+                        </figure>
+                      ) : (
+                        <span key={i}>
+                          <Paperclip size={12} />
+                          {file.name}
+                        </span>
+                      ),
+                    )}
+                  </div>
+                )}
               </article>
             );
           if (message.role === 'status')
             return (
-              <article key={index} className="message status" aria-label={t('สถานะงาน')}>
+              <article key={`${id || 'case'}:${index}`} className="message status" aria-label={t('สถานะงาน')}>
                 <div className="message-body">{errorText[message.text] || t(message.text)}</div>
               </article>
             );
           const reply = splitClaimReply(message.text);
           return (
-            <article key={index} className="message assistant" aria-label={t('ผู้ช่วยเบิกจ่าย')}>
-              <RichText className="message-body" text={reply.text} />
+            <article key={`${id || 'case'}:${index}`} className="message assistant" aria-label={t('ผู้ช่วยเบิกจ่าย')}>
+              <RichText className="message-body" text={reply.text} onLink={openLink} />
+              {!!message.docSources?.length && (
+                <p className="doc-sources small muted">
+                  <BookOpen size={13} />
+                  <span>
+                    {t('อ้างอิงเอกสาร STeP')}: {message.docSources.join(' · ')}
+                  </span>
+                </p>
+              )}
+              {!!message.artifacts?.length && id && (
+                <ArtifactsList
+                  artifacts={message.artifacts}
+                  onOpen={artifact =>
+                    void call('artifactOpen', { sessionId: id, id: artifact.id, version: artifact.version })
+                      .then((opened: OpenedArtifact | null) => {
+                        if (opened) setViewingArtifact(opened);
+                      })
+                      .catch(failure => notify(explainError(failure), 'error'))
+                  }
+                  onInlineHtml={async artifact => {
+                    try {
+                      return (await call('artifactOpen', {
+                        sessionId: id,
+                        id: artifact.id,
+                        version: artifact.version,
+                        inline: true,
+                      })) as OpenedArtifact | null;
+                    } catch (failure) {
+                      notify(explainError(failure), 'error');
+                      return null;
+                    }
+                  }}
+                />
+              )}
+              {!message.check && checkStillRunning(message.checkPending) && (
+                <p className="answer-check pending small muted" role="status">
+                  <LoaderCircle size={13} className="spin" aria-hidden="true" />
+                  {t('กำลังตรวจคำตอบกับเอกสาร STeP')}
+                </p>
+              )}
+              {message.check &&
+                (message.check.unsupported.length ? (
+                  <div className="answer-check warn" role="note">
+                    <p>
+                      <AlertTriangle size={14} />
+                      {t('ข้อความเหล่านี้ไม่พบในเอกสาร STeP โปรดตรวจก่อนใช้')}
+                    </p>
+                    <ul>
+                      {message.check.unsupported.map((item, i) => (
+                        <li key={i}>
+                          “{item.claim}”{item.reason && <span className="muted"> · {item.reason}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="answer-check ok small muted">
+                    <ShieldCheck size={13} />
+                    {t('ตรวจกับเอกสาร STeP แล้ว ไม่พบข้อความที่ขัดกับเอกสาร')}
+                  </p>
+                ))}
               {index === lastAnswer && proposal && (
                 <ProposalCard
                   update={proposal}
@@ -244,7 +330,7 @@ export function ClaimCaseChat({
         {running && (
           <article className="message assistant" aria-label={t('ผู้ช่วยเบิกจ่าย')}>
             {stream.trim() ? (
-              <RichText className="message-body streaming" text={splitClaimReply(stream).text} />
+              <RichText className="message-body streaming" text={splitClaimReply(stream, true).text} onLink={openLink} />
             ) : (
               <p className="message-body muted">{t('กำลังหาคำตอบจากเอกสาร STeP…')}</p>
             )}
@@ -357,6 +443,7 @@ export function ClaimCaseChat({
           )}
         </div>
       </form>
+      {viewingArtifact && <ArtifactDialog artifact={viewingArtifact} onLink={openLink} onClose={() => setViewingArtifact(null)} />}
     </section>
   );
 }

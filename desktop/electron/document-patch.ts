@@ -15,7 +15,10 @@ const digits = (text: string) => text.replace(/[๐-๙]/g, c => String(c.charCo
 export function documentTarget(document: DraftNode, request: string, revision: number): DocumentTarget | undefined {
   request = digits(request);
   const nodes = document.content || [];
-  const section = /(?:ข้อ|หัวข้อ|section)\s*(?:ที่\s*)?(\d+(?:\.\d+)*)/i.exec(request);
+  const sectionMatches = [...request.matchAll(/(?:ข้อ|หัวข้อ|section)\s*(?:ที่\s*)?(\d+(?:\.\d+)*)/gi)];
+  const uniqueSections = [...new Set(sectionMatches.map(m => m[1]))];
+  if (uniqueSections.length > 1) return undefined;
+  const section = sectionMatches[0];
   const paragraph = /(?:ย่อหน้า(?:ที่)?|paragraph)\s*(\d+)/i.exec(request);
   const candidates = nodes.flatMap((node, index) => {
     if (!heading(node)) return [];
@@ -42,7 +45,19 @@ export function documentTarget(document: DraftNode, request: string, revision: n
     start = paragraphs[Number(paragraph[1]) - 1];
     end = start + 1;
   } else {
-    if (!section && !/(?:เฉพาะ|เท่านั้น|\bonly\b|\bjust\b)/i.test(request)) return undefined;
+    if (
+      section &&
+      candidates.length === 0 &&
+      /(?:เพิ่ม|แทรก|สร้าง|ต่อท้าย|\badd\b|\binsert\b|\bappend\b)\s*(?:ข้อ|หัวข้อ|section)\s*(?:ที่\s*)?\d/i.test(request)
+    )
+      return undefined;
+    if (!section) {
+      if (!/(?:เฉพาะ|เท่านั้น|\bonly\b|\bjust\b)/i.test(request)) return undefined;
+      if (candidates.length === 0) {
+        if (!/(?:เฉพาะ|เท่านั้น)[^\n]{0,16}(?:ข้อ|หัวข้อ|หมวด(?!หมู่)|ส่วน|ย่อหน้า|section|paragraph)/i.test(request)) return undefined;
+        throw new Error('DOCUMENT_TARGET_AMBIGUOUS');
+      }
+    }
     if (candidates.length !== 1) throw new Error('DOCUMENT_TARGET_AMBIGUOUS');
     start = candidates[0];
     end = sectionEnd(start);
@@ -76,7 +91,8 @@ export function applyDocumentPatch(reply: string, target: DocumentTarget, base: 
   if (!match || reply.length > 150000) throw new Error('DOCUMENT_PATCH_INVALID');
   let patch: any;
   try {
-    patch = JSON.parse(match[1]);
+    const raw = match[1].replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?\s*```\s*$/, '');
+    patch = JSON.parse(raw);
   } catch {
     throw new Error('DOCUMENT_PATCH_INVALID');
   }

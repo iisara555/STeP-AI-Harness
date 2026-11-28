@@ -157,7 +157,8 @@ export class Store {
       restoredFrom: version.restoredFrom ?? version.revision,
     };
     const sameDocument =
-      !version.documentTool || (version.documentTool === session.documentTool && version.documentVariant === session.documentVariant);
+      (version.documentTool || undefined) === (session.documentTool || undefined) &&
+      (version.documentVariant || undefined) === (session.documentVariant || undefined);
     if (sameDocument) return this.edit(id, version.text, session.revision, version.document, version.presentation || {}, restoredMeta);
     if (['running', 'queued'].includes(session.status)) throw new Error('RUN_ALREADY_ACTIVE');
     if (version.document)
@@ -169,7 +170,8 @@ export class Store {
     session.draftMeta = restoredMeta;
     if (version.document) session.document = version.document;
     if (version.presentation) session.presentation = version.presentation;
-    session.documentTool = version.documentTool;
+    if (version.documentTool) session.documentTool = version.documentTool;
+    else delete session.documentTool;
     if (version.documentVariant) session.documentVariant = version.documentVariant;
     else delete session.documentVariant;
     if (version.task) {
@@ -196,11 +198,11 @@ export class Store {
       ...(session.documentTool ? { documentTool: session.documentTool } : {}),
       ...(session.documentVariant ? { documentVariant: session.documentVariant } : {}),
     };
-    // Versions saved before document types were recorded, or under this type, belong to the document being shelved.
+    // Legacy untagged versions of the current document get tagged once; already-shelved generic drafts stay untyped.
     if (session.documentTool)
       for (const version of session.versions)
         if (
-          !version.documentTool ||
+          (!version.documentTool && !version.task && version.origin !== 'shelved') ||
           (version.documentTool === session.documentTool && version.documentVariant === session.documentVariant && !version.task)
         )
           Object.assign(version, kind, { task });

@@ -22,6 +22,8 @@ export type RunOptions = {
   isolated?: boolean;
   /** A side question answered beside the task without changing it. */
   aside?: boolean;
+  /** Explicitly overrides the composer's workflow (for example clicking Proceed on an approved plan). */
+  workflow?: Workflow;
   autoContinue?: boolean;
   documentVariant?: string;
   invitation?: InvitationPresentation;
@@ -73,6 +75,7 @@ export function runPayload(
   run: Resolved,
   workflow: Workflow | '',
 ): Record<string, unknown> & { workflow?: Workflow; autoImage?: boolean; allowIdentifiers?: string[]; sourceText?: string } {
+  const effectiveWorkflow = run.workflow ?? workflow;
   return {
     id,
     text,
@@ -90,7 +93,7 @@ export function runPayload(
     invitation: run.invitation,
     attachmentRole: run.attachmentRole,
     autoContinue: run.autoContinue,
-    ...(run.isolated ? { autoImage: false } : run.mode === 'chat' && workflow ? { workflow } : {}),
+    ...(run.isolated ? { autoImage: false } : run.mode === 'chat' && effectiveWorkflow ? { workflow: effectiveWorkflow } : {}),
   };
 }
 

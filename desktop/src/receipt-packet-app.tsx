@@ -347,8 +347,7 @@ export function ReceiptPacketApp({ active, call, review, notify, chat, onEvent }
     try {
       const target = chat.sessions.find(s => s.claimPacketId === value.id)?.id || (await chat.open(value.id, value.title));
       if (!target || draft.current?.id !== value.id || action.current) return false;
-      await chat.send(target, text, caseContext(value), attachments);
-      return true;
+      return await chat.send(target, text, caseContext(value), attachments);
     } catch (failure) {
       notify(explainError(failure), 'error');
       return false;

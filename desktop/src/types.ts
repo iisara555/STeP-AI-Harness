@@ -239,6 +239,10 @@ export type Message = {
   google?: import('./google-changes').GoogleChange[];
   /** Artifacts the AI saved in this answer's run, opened from the answer (IPC artifactOpen). */
   artifacts?: ArtifactRef[];
+  /** Generated images belonging to this answer (IDs into session.images, loaded via imageRead). */
+  imageIds?: string[];
+  /** Router clarification prompt; never staged as a draft document. */
+  clarification?: boolean;
   /** The stages and reasoning on the way to this answer, shown folded above it; never sent to a model. */
   thinking?: import('./thinking').Thinking;
 };

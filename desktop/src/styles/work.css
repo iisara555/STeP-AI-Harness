@@ -233,6 +233,14 @@
   margin-left: auto;
   font-size: var(--text-xs);
 }
+.work-plan-dismiss {
+  flex-shrink: 0;
+  padding: var(--space-0-5);
+  color: var(--muted);
+}
+.work-plan-dismiss:hover {
+  color: var(--text);
+}
 .work-plan-goal {
   margin: var(--space-2) 0 var(--space-1);
   color: var(--muted);
@@ -326,6 +334,16 @@
   gap: var(--space-1-5);
   margin-top: var(--space-3);
   font-size: var(--text-xs);
+}
+.work-plan-proceed {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.work-plan-proceed .work-plan-run {
+  margin-top: 0;
 }
 /* A finished task shrinks to one line so the tasks still to do come into view. */
 .work-plan li.done > span {

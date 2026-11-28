@@ -46,11 +46,17 @@ export class ArtifactStore {
     };
 
     this.store.put('artifact', key, record);
+    this.store.put('artifact-version', `${key}:v${record.version}`, record);
     return record;
   }
 
-  get(sessionId: string, id: string): ArtifactRecord | undefined {
-    return this.store.get<ArtifactRecord>('artifact', `${sessionId}:${id}`);
+  get(sessionId: string, id: string, version?: number): ArtifactRecord | undefined {
+    const key = `${sessionId}:${id}`;
+    if (typeof version === 'number' && Number.isSafeInteger(version) && version > 0) {
+      const snapshot = this.store.get<ArtifactRecord>('artifact-version', `${key}:v${version}`);
+      if (snapshot) return snapshot;
+    }
+    return this.store.get<ArtifactRecord>('artifact', key);
   }
 
   list(sessionId: string): ArtifactRecord[] {
@@ -62,10 +68,20 @@ export class ArtifactStore {
 
   delete(sessionId: string, id: string): boolean {
     const key = `${sessionId}:${id}`;
-    if (this.store.get('artifact', key)) {
+    const existing = this.store.get<ArtifactRecord>('artifact', key);
+    if (existing) {
       this.store.remove('artifact', key);
+      for (let v = 1; v <= existing.version; v++) this.store.remove('artifact-version', `${key}:v${v}`);
       return true;
     }
     return false;
+  }
+
+  deleteBySession(sessionId: string): number {
+    let removed = 0;
+    for (const artifact of this.list(sessionId)) {
+      if (this.delete(sessionId, artifact.id)) removed++;
+    }
+    return removed;
   }
 }

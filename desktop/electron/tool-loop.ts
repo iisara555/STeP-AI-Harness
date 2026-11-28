@@ -170,6 +170,8 @@ export type LoopHost = {
   review?: (answer: string, signal: AbortSignal) => Promise<string | undefined>;
   /** A revision replaces the candidate just reviewed while keeping earlier tool progress in the live stream. */
   revising?: (answer: string) => void;
+  /** The loop kept the previously reviewed answer after a rewrite shrank, failed or hit a limit. */
+  kept?: (answer: string, why: NonNullable<LoopStats['reviewKept']>) => void;
   /**
    * When the run ends, the static reads it made (requests only: tool, input and arguments, never their text), so a
    * stopped task can give them back on "ลองอีกครั้ง" or "ต่อ" instead of reading everything again.
@@ -541,6 +543,7 @@ export class ToolLoop {
       reviewed = '';
     const keep = (why: NonNullable<LoopStats['reviewKept']>) => {
       this.stats.reviewKept = why;
+      this.host.kept?.(reviewed, why);
       return reviewed;
     };
     const wrapUp = (next: string, notice?: string) =>
