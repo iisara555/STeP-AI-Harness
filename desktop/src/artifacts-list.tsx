@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Check, Copy, Download, Eye, FileText, X } from './icons';
 import { ChatMarkdown, useDarkTheme } from './chat-markdown';
 import { t } from './i18n';
-import { resolveSandboxedHtmlSrc } from './inline-preview';
+import { buildSandboxedHtmlSrc } from './inline-preview';
 import type { ArtifactRef } from './types';
 
 export type OpenedArtifact = ArtifactRef & { content: string };
@@ -48,19 +48,10 @@ const KIND_NAMES: Record<ArtifactRef['kind'], string> = {
   json: 'JSON',
 };
 
+/** A static preview of an HTML artifact: sandbox="" runs no scripts; the Web tab is where the page works. */
 function InlineHtmlFrame({ html, title, dark }: { html: string; title: string; dark: boolean }) {
-  const [src, setSrc] = useState('');
-  useEffect(() => {
-    let alive = true;
-    void resolveSandboxedHtmlSrc(html, dark).then(url => {
-      if (alive) setSrc(url);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [html, dark]);
-  if (!src) return null;
-  return <iframe className="chat-preview-frame chat-html-frame" title={title} sandbox="allow-scripts" src={src} />;
+  const src = useMemo(() => buildSandboxedHtmlSrc(html, dark), [html, dark]);
+  return <iframe className="chat-preview-frame chat-html-frame" title={title} sandbox="" src={src} />;
 }
 
 /** Under an answer: each working document the AI saved in this run, with a way to open it. */
@@ -157,7 +148,7 @@ export function ArtifactsList({
             </div>
           </header>
           <InlineHtmlFrame html={opened.content} title={opened.title} dark={dark} />
-          <p className="chat-preview-note small muted">{t('แสดงผลในกล่องแยกออฟไลน์ (ไม่เชื่อมอินเทอร์เน็ต)')}</p>
+          <p className="chat-preview-note small muted">{t('ภาพนิ่ง ไม่รันสคริปต์')}</p>
         </div>
       ))}
     </div>
@@ -195,7 +186,7 @@ function fenced(code: string, lang: string) {
 
 /**
  * The artifact's saved content. Markdown, code, JSON and tables render cleanly without raw HTML; HTML artifacts
- * open in the Web tab's isolated preview instead (main process), never in this window.
+ * work in the Web tab's isolated preview (main process). In this window they are only ever a script-free picture.
  */
 export function ArtifactDialog({
   artifact,

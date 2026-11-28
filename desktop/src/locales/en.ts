@@ -40,7 +40,10 @@ export const en: Record<string, string> = {
     'This pending change was no longer found. It may already have been applied or rejected.',
   'สิทธิ์เครื่องมือถูกล็อกเป็นอ่านอย่างเดียวโดยนโยบายองค์กร จึงยังลงมือทำตามแผนไม่ได้':
     'Tool permissions are locked to read-only by organization policy, so the plan cannot be executed yet.',
-  'เปลี่ยนสิทธิ์เป็น “ถามก่อนแก้ไข” เพื่อลงมือทำตามแผน': 'Switched permissions to “Ask before editing” to execute the plan.',
+  'เปลี่ยนสิทธิ์เป็น “ถามก่อนแก้ไข”?': 'Switch permissions to “Ask before editing”?',
+  เปลี่ยนแล้วลงมือทำ: 'Switch and run',
+  'ตอนนี้อ่านอย่างเดียว การทำตามแผนต้องแก้ไฟล์ได้ ระบบจะถามก่อนแก้ทุกครั้ง และสิทธิ์นี้คงอยู่จนกว่าคุณเปลี่ยนในตั้งค่า':
+    'Tools are read-only now. Running the plan needs to edit files. STeP will ask before every edit, and this setting stays until you change it in Settings.',
   จัดการแล้ว: 'Handled',
   ดาวน์โหลดรูป: 'Download image',
   'ภาพที่ AI สร้าง': 'AI-generated image',
@@ -3655,7 +3658,7 @@ export const en: Record<string, string> = {
   แสดงตัวอย่าง: 'Preview',
   'ตัวอย่างภาพ SVG': 'SVG graphic preview',
   'ตัวอย่างหน้าเว็บ HTML': 'HTML page preview',
-  'แสดงผลในกล่องแยกออฟไลน์ (ไม่เชื่อมอินเทอร์เน็ต)': 'Rendered in an offline sandbox (no internet access)',
+  'ภาพนิ่ง ไม่รันสคริปต์': 'Static preview, scripts off',
   ดูในแชต: 'Preview here',
   ซ่อนตัวอย่าง: 'Hide preview',
   เปิดในแท็บเว็บ: 'Open in Web tab',

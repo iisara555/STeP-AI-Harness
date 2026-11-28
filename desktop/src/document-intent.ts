@@ -17,8 +17,10 @@ const GENERIC =
 
 const NON_DOCUMENT_DELIVERABLE =
   /(?:แคปชัน|แคปชั่น|โพสต์|คอนเทนต์|อีเมล|เมล|สคริปต์|สคริป|ข่าวประชาสัมพันธ์|ข่าวสั้น|ข้อความประชาสัมพันธ์|ข้อความแจ้ง|ข้อความสั้น|บรีฟ|สไลด์|พรีเซนต์|พรีเซนเทชัน|โปสเตอร์|แบนเนอร์|โบรชัวร์|อินโฟกราฟิก|บทความ|คำกล่าว|สุนทรพจน์|บทพูด|พิธีกร|โค้ด|สูตร|สโลแกน|แท็กไลน์|แฮชแท็ก|แบบสอบถาม|แบบสำรวจ|\b(?:caption|post|email|mail|script|slide|deck|brief|poster|banner|article|blog|copy|slogan|tagline|code|prompt|quiz|survey)\b)/i;
+// Only words that make "โครงการ" the subject of a non-document deliverable. Generic words (รายละเอียด, ข้อมูล, สำหรับ,
+// ของ, ใน) stay out: "เขียนรายละเอียดโครงการ" is a project proposal and must not fall through to another document type.
 const BARE_PROJECT_CONTEXT =
-  /(?:ประชาสัมพันธ์|โปรโมต|โปรโมท|สื่อสาร|กิจกรรม|อบรม|สัมมนา|นิทรรศการ|บูธ|ภาพ|คลิป|วิดีโอ|สื่อ|โปสเตอร์|ข่าว|รายละเอียด|ข้อมูล|เกี่ยวกับ|ของ|ใน|สำหรับ)\s*$/i;
+  /(?:ประชาสัมพันธ์|โปรโมต|โปรโมท|สื่อสาร|กิจกรรม|อบรม|สัมมนา|นิทรรศการ|บูธ|ภาพ|คลิป|วิดีโอ|สื่อ|โปสเตอร์|ข่าว)\s*$/i;
 const BARE_NOTICE_CONTEXT = /(?:แจ้ง|ข้อความ|โพสต์|แคปชัน|แคปชั่น|อีเมล|เมล|ข่าว|ไลน์|\bline\b)\s*$/i;
 
 const TYPES: { id: DocumentToolId; pattern: RegExp }[] = [

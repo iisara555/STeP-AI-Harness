@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Desktop: แชตแสดงแผนภาพ Mermaid สูตรคณิต กล่องหมายเหตุ และตัวอย่าง SVG/HTML ได้ในคำตอบ ตัวอย่าง HTML ในแชตเป็นภาพนิ่งไม่รันสคริปต์ หน้าเว็บที่ต้องใช้งานจริงเปิดในแท็บเว็บ
+- Desktop: ปุ่ม "ลงมือทำตามแผน" ถามก่อนเปลี่ยนสิทธิ์จากอ่านอย่างเดียวเป็น "ถามก่อนแก้ไข" คำขอ "เขียนรายละเอียดโครงการ…" เปิดเครื่องมือแบบเสนอโครงการตามเดิม และการคัดลอกคำตอบเก็บบรรทัดว่างในโค้ดไว้ครบ
 - Desktop distribution: GitHub Actions checks Windows and macOS installer trust and integrity before publishing. A separate workflow builds and tests the Windows x64 MSIX for submission through Partner Center.
 - Developer tooling: เพิ่ม Skill และตัวตรวจข้อมูลออฟไลน์เพื่อทบทวนรายการนำเข้าจาก MIS, Gmail และ Google Sheets ก่อนอัปเดตคลังความรู้
 - อัปเดตบน Windows ครั้งแรกหลังย้ายตัวอัปเดตไปโฟลเดอร์ `Tools` ไม่ขึ้นข้อความ "The batch file cannot be found." ตอนปิดหน้าต่างอีก ไฟล์ `Update-STeP-AI` เดิมที่หน้าแรกจะพาไปตัวอัปเดตใหม่ และถูกลบให้เองในการอัปเดตครั้งถัดไป
