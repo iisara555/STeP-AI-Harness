@@ -121,12 +121,16 @@ export function readClaimUpdate(raw: string): ClaimUpdate | null {
 }
 
 /** The reply without its proposal blocks, and the last readable proposal in it. */
-export function splitClaimReply(text: string): { text: string; update: ClaimUpdate | null } {
+export function splitClaimReply(text: string, streaming = false): { text: string; update: ClaimUpdate | null } {
   let update: ClaimUpdate | null = null;
-  const rest = text.replace(FENCE, (_, body: string) => {
+  let rest = text.replace(FENCE, (_, body: string) => {
     update = readClaimUpdate(body.trim()) || update;
     return '';
   });
+  if (streaming) {
+    rest = rest.replace(/```claim-update[\s\S]*$/g, '');
+    if ((rest.match(/```/g) || []).length % 2 === 1) rest = rest.replace(/```[a-z-]*$/, '');
+  }
   return { text: rest.replace(/\n{3,}/g, '\n\n').trim(), update };
 }
 

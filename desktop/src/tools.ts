@@ -193,10 +193,23 @@ export function toolRequests(text: string): ToolRequest[] {
  * between them (step-tool fences, a json fence or bare JSON holding {"tool": ...}), including one still being typed.
  */
 export function visibleStream(text: string) {
+  // Preserve <think> text inside fenced code examples while stripping reasoning and internal document envelopes outside fences.
   let shown = text
-    .replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '')
+    .split(/(```[\s\S]*?```)/g)
+    .map((segment, index) =>
+      index % 2 === 1
+        ? segment
+        : segment
+            .replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '')
+            .replace(/<document_patch>[\s\S]*?(?:<\/document_patch>|$)/gi, '')
+            .replace(/<document_review>[\s\S]*?(?:<\/document_review>|$)/gi, '')
+            .replace(/<\/?document_draft>/gi, '')
+            .replace(/<(?:\/?document_(?:draft|patch|review)|\/?think)[^>]*$/i, ''),
+    )
+    .join('')
     .replace(/```(?:step-tool|json)?[ \t]*\n?\s*\{\s*"tool"\s*:[\s\S]*?(?:```|$)/g, '')
     .replace(/```step-tool[\s\S]*?(?:```|$)/g, '')
+    .replace(/```claim-update[\s\S]*?(?:```|$)/g, '')
     .replace(/(^|\n\n)\s*\{\s*"tool"\s*:[\s\S]*?(?=\n\n|$)/g, '$1');
   // A fence just opened (its language not yet known) may still become a tool request; wait for the next characters.
   if ((shown.match(/```/g) || []).length % 2 === 1) shown = shown.replace(/```[a-z-]*$/, '');

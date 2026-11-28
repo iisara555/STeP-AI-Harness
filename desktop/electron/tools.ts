@@ -325,7 +325,7 @@ export class DesktopTools {
     return {
       approved: true,
       tasks: parsed.tasks.length,
-      canProceedInline: this.mode() !== 'plan',
+      canProceedInline: false,
       next: 'tell the employee to press ลงมือทำตามแผน',
     };
   }
@@ -698,9 +698,21 @@ export class DesktopTools {
     // Without the service's delegate there is no AI to hand the task to; refuse before asking the employee.
     if (subagent && !scope.delegate) throw new Error('TOOL_UNAVAILABLE');
     if (reviewed && this.harness.privacy(reviewed).action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
+    const planReadOnly = this.mode() === 'plan' || scope.workflow === 'plan';
     if (
-      this.mode() === 'plan' &&
-      ['changes', 'patch', 'sheet_edit', 'sheet_create', 'slides_create', 'image_generate', 'repl_eval', 'invoke_subagent'].includes(r.tool)
+      planReadOnly &&
+      [
+        'changes',
+        'patch',
+        'sheet_edit',
+        'sheet_create',
+        'slides_create',
+        'image_generate',
+        'repl_eval',
+        'invoke_subagent',
+        'terminal',
+        'sandbox',
+      ].includes(r.tool)
     )
       throw new Error('PLAN_MODE_BLOCKED');
     const request = {
@@ -727,6 +739,7 @@ export class DesktopTools {
     return this.gate.run(
       request,
       {
+        ...(planReadOnly ? { effectiveMode: 'plan' as const } : {}),
         title: cancelTask
           ? tm('หยุดงานเบื้องหลังนี้?')
           : r.tool === 'image_generate'
@@ -1180,8 +1193,12 @@ export class DesktopTools {
           }
           case 'plan': {
             if (!target.trim()) throw new Error('INVALID_INPUT');
-            // The native plan workflow always asks: the employee approves the plan that "execute" will follow.
-            if (scope.workflow === 'plan') return this.approveWorkPlan(target, scope);
+            // Produce an approved checklist card in plan workflow, and for checklist plans in coding or read-only plan mode.
+            if (
+              scope.workflow === 'plan' ||
+              ((scope.workflow === 'coding' || this.mode() === 'plan') && parsePlan(target).tasks.length > 0)
+            )
+              return this.approveWorkPlan(target, scope);
             // A plan grants nothing beyond drafting; each side-effect tool still asks on its own. Pilot mode skips this dialog.
             // Nobody reviewed it, so it is not stored as an approved plan.
             if (this.policy().pilot)
@@ -1218,7 +1235,7 @@ export class DesktopTools {
             if (a.action === 'list') return this.workbench.snapshots();
             if (a.action === 'restore') {
               if (typeof a.id !== 'string') throw new Error('INVALID_INPUT');
-              if (this.mode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
+              if (this.mode() === 'plan' || scope.workflow === 'plan') throw new Error('PLAN_MODE_BLOCKED');
               return this.workbench.restoreSnapshot(a.id);
             }
             if (a.action && a.action !== 'create') throw new Error('INVALID_INPUT');

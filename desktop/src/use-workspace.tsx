@@ -20,7 +20,7 @@ import { type PaletteItem, matchesSession } from './ui';
 import { RELEASE_NOTES, type ReleaseNote, compareVersions, unseenNotes } from './whats-new';
 import { TASK_SEEN_KEY, initialSeen, needsYouCount, taskAlert } from './task-alerts';
 import { type ToolRequest, type ToolTab } from './tools';
-import { resetThinking, setHeartbeatAt, setStream, think, tickLiveClock } from './live-run';
+import { clearLiveSession, focusLiveSession, resetThinking, setHeartbeatAt, setStream, think, tickLiveClock } from './live-run';
 import type { VaultPrompt } from './vault-prompt';
 import { commandForKey, commandPalette } from './commands';
 import { documentText, plainDocument as toDoc } from './draft';
@@ -86,7 +86,15 @@ export function useWorkspace() {
     [coordinated, setCoordinated] = useState(false);
   const [searchMatches, setSearchMatches] = useState<{ query: string; ids: string[] }>();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null),
-    [selected, setSelected] = useState('');
+    [selected, setSelectedState] = useState('');
+  const currentId = useRef('');
+  const setSelected = useCallback((id: string) => {
+    currentId.current = id;
+    focusLiveSession(id);
+    setSelectedState(id);
+  }, []);
+  const snapshotRef = useRef<Snapshot | null>(null);
+  snapshotRef.current = snapshot;
   const snapshotVersion = useRef(0),
     navigationVersion = useRef(0);
   const [settings, setSettingsState] = useState(false),
@@ -111,8 +119,21 @@ export function useWorkspace() {
     setSettingsState(visible);
   };
   const [filter, setFilter] = useState<'all' | 'artifacts'>('all');
-  const [progress, setProgress] = useState(''),
+  const [progressBySession, setProgressBySession] = useState<Record<string, string>>({}),
     [running, setRunning] = useState(false);
+  const progress = progressBySession[selected] || '';
+  const setProgressFor = useCallback((id: string, update: string | ((prev: string) => string)) => {
+    if (!id) return;
+    setProgressBySession(prev => {
+      const current = prev[id] || '';
+      const next = typeof update === 'function' ? update(current) : update;
+      return next === current ? prev : { ...prev, [id]: next };
+    });
+  }, []);
+  const setProgress = useCallback(
+    (update: string | ((prev: string) => string)) => setProgressFor(currentId.current, update),
+    [setProgressFor],
+  );
   const [activityAt, setActivityAt] = useState(0);
   const [error, setError] = useState(''),
     [files, setFiles] = useState<Attachment[]>([]),
@@ -142,7 +163,27 @@ export function useWorkspace() {
     setExportInfo,
   } = useExportOptions(selected);
   const [authCode, setAuthCode] = useState<{ id: string; code: string } | null>(null);
-  const [plan, setPlan] = useState<(PlanStep & { state: string })[]>([]);
+  const [plans, setPlans] = useState<Record<string, (PlanStep & { state: string })[]>>({});
+  const plan = plans[selected] || [];
+  const setPlanFor = useCallback(
+    (
+      id: string,
+      update: (PlanStep & { state: string })[] | ((prev: (PlanStep & { state: string })[]) => (PlanStep & { state: string })[]),
+    ) => {
+      if (!id) return;
+      setPlans(prev => {
+        const current = prev[id] || [];
+        const next = typeof update === 'function' ? update(current) : update;
+        return next === current ? prev : { ...prev, [id]: next };
+      });
+    },
+    [],
+  );
+  const setPlan = useCallback(
+    (update: (PlanStep & { state: string })[] | ((prev: (PlanStep & { state: string })[]) => (PlanStep & { state: string })[])) =>
+      setPlanFor(currentId.current, update),
+    [setPlanFor],
+  );
   const [workActions, setWorkActions] = useState<Record<string, WorkAction[]>>({});
   const [view, setView] = useState<'chat' | 'receipt' | 'skills' | 'documents' | 'media' | 'schedules'>('chat');
   const [welcomeVisit, setWelcomeVisit] = useState(0);
@@ -177,7 +218,13 @@ export function useWorkspace() {
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const { toasts, setToasts, toastId, dismiss, notify } = useToasts();
   const runningIds = useRef(new Map<string, object>());
-  const [startedAt, setStartedAt] = useState(0);
+  const [startedAts, setStartedAts] = useState<Record<string, number>>({});
+  const startedAt = startedAts[selected] || 0;
+  const setStartedAtFor = useCallback((id: string, value: number) => {
+    if (!id) return;
+    setStartedAts(prev => ((prev[id] || 0) === value ? prev : { ...prev, [id]: value }));
+  }, []);
+  const setStartedAt = useCallback((value: number) => setStartedAtFor(currentId.current, value), [setStartedAtFor]);
   const [feedbackAsk, setFeedbackAsk] = useState<FeedbackAsk | null>(null);
   const [reportAsk, setReportAsk] = useState<ReportAsk | null>(null);
   const [chatMenu, setChatMenu] = useState(false);
@@ -268,11 +315,14 @@ export function useWorkspace() {
   sessionRef.current = session;
   const dirtyRef = useRef(false);
   dirtyRef.current = dirty;
-  const currentId = useRef(selected);
-  currentId.current = selected;
-  // Whether the running task drafts (each step replaces the live text) or chats (the live text grows turn by turn).
+  useEffect(() => {
+    focusLiveSession(selected);
+  }, [selected]);
+  // Whether each running task drafts (each step replaces the live text) or chats (the live text grows turn by turn).
   const sessionMode = useRef<string | undefined>(undefined);
   sessionMode.current = session?.mode === 'draft' || workMode === 'draft' ? 'draft' : 'chat';
+  const sessionModes = useRef<Record<string, string>>({});
+  if (selected) sessionModes.current[selected] = sessionMode.current;
   useEffect(() => setChatMenu(false), [selected, view]);
   const saveInFlight = useRef<Promise<void> | null>(null);
   // The output panel waits for something to show: a task with no draft yet gives the chat the whole width. Opening the
@@ -286,14 +336,23 @@ export function useWorkspace() {
     setPanelPinned(true);
   };
   const hasOutput = Boolean(
-    session?.draft?.trim() || session?.proposals?.length || session?.documentTool || dirty || (running && session?.mode === 'draft'),
+    session?.draft?.trim() ||
+    session?.proposals?.length ||
+    session?.documentTool ||
+    session?.images?.length ||
+    dirty ||
+    (running && session?.mode === 'draft'),
   );
   const showPanel = right && !settings && view === 'chat' && (hasOutput || panelPinned);
   const fullSidebar = left && (roomy || !showPanel || leftPeek);
   const questionPending = questions.some(q => q.sessionId === selected);
   const runFailed = !running && session?.status === 'error';
-  // The code of the last failure in this task, to explain it next to "try again".
-  const failureCode = runFailed ? [...(session?.messages || [])].reverse().find(m => m.role === 'status')?.text || '' : '';
+  // The code of the last failure in this task, skipping trailing human notes (such as Playbook resume hints).
+  const failureCode = runFailed
+    ? [...(session?.messages || [])].reverse().find(m => m.role === 'status' && /^[A-Z][A-Z0-9_]+$/.test(m.text))?.text ||
+      [...(session?.messages || [])].reverse().find(m => m.role === 'status')?.text ||
+      ''
+    : '';
   useEffect(() => {
     if (showPanel) setLeftPeek(false);
   }, [showPanel]);
@@ -473,25 +532,32 @@ export function useWorkspace() {
           openPanel();
           setToolTab('browser');
         }
-        if (event.sessionId === currentId.current) {
-          if (['heartbeat', 'status', 'activity', 'delta', 'reasoning'].includes(event.type)) setHeartbeatAt(Date.now());
+        if (event.sessionId) {
+          const sid = event.sessionId;
+          const modeForSession =
+            sessionModes.current[sid] || (snapshotRef.current?.sessions.find(s => s.id === sid)?.mode === 'draft' ? 'draft' : 'chat');
+          if (['heartbeat', 'status', 'activity', 'delta', 'reasoning'].includes(event.type)) setHeartbeatAt(Date.now(), sid);
           if (event.type === 'activity') {
             const label = event.text || '';
-            setProgress(label);
-            setActivityAt(Date.now());
+            setProgressFor(sid, label);
+            if (sid === currentId.current) setActivityAt(Date.now());
           }
-          if (event.type === 'delta') setStream(s => appendStream(s, event.text || '', STREAM_LIMIT));
-          if (event.type === 'discard' && event.count) setStream(s => discardStream(s, event.count!));
-          think(event);
-          if (event.type === 'plan') setPlan((event.plan || []).map(step => ({ ...step, state: 'pending' })));
+          if (event.type === 'delta') setStream(s => appendStream(s, event.text || '', STREAM_LIMIT), sid);
+          if (event.type === 'discard' && event.count) setStream(s => discardStream(s, event.count!), sid);
+          think(event, sid);
+          if (event.type === 'plan')
+            setPlanFor(
+              sid,
+              (event.plan || []).map(step => ({ ...step, state: 'pending' })),
+            );
           if (event.type === 'step' && event.index !== undefined)
-            setPlan(steps => steps.map((step, i) => (i === event.index ? { ...step, state: event.state || step.state } : step)));
+            setPlanFor(sid, steps => steps.map((step, i) => (i === event.index ? { ...step, state: event.state || step.state } : step)));
           // Each draft step rewrites the whole draft, so a new step replaces the streamed text. In chat, and between the
           // model turns of one draft step, the text of every turn stays on screen while the assistant works (as in Claude,
           // ChatGPT and Cursor), each turn after the last: clearing it at every turn made the words blink away and back.
           if (event.type === 'status') {
-            setProgress(errorText[event.text || ''] || event.text || '');
-            setStream(sessionMode.current === 'draft' && !event.turn ? '' : turnBreak);
+            setProgressFor(sid, errorText[event.text || ''] || event.text || '');
+            setStream(modeForSession === 'draft' && !event.turn ? '' : turnBreak, sid);
           }
         }
         if (event.type === 'changed') {
@@ -499,23 +565,27 @@ export function useWorkspace() {
             void refresh();
             return;
           }
-          if (event.sessionId === currentId.current) {
-            setRunning(false);
-            setStream('');
-            resetThinking();
-            setPlan([]);
-            setStartedAt(0);
-            // The authority notice stays visible after the run; main sends it in the chosen language.
-            setProgress(p =>
-              p === 'ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ' || p === t('ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ') ? p : '',
-            );
-          }
-          const attempt = runningIds.current.get(event.sessionId);
-          const finished = attempt ? event.sessionId : '';
+          const changedId = event.sessionId;
+          const attempt = runningIds.current.get(changedId);
+          const finished = attempt ? changedId : '';
           void refresh().then(data => {
-            const done = finished && data?.sessions.find(s => s.id === finished);
+            const updated = data?.sessions.find(s => s.id === changedId);
+            const stillRunning = Boolean(updated && ['running', 'queued'].includes(updated.status));
+            if (!stillRunning) {
+              clearLiveSession(changedId);
+              setPlanFor(changedId, []);
+              setStartedAtFor(changedId, 0);
+              // The authority notice stays visible after the run; main sends it in the chosen language.
+              setProgressFor(changedId, p =>
+                p === 'ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ' || p === t('ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ') ? p : '',
+              );
+              if (changedId === currentId.current) setRunning(false);
+            } else if (changedId === currentId.current) {
+              setRunning(true);
+            }
+            const done = finished && updated;
             if (!done || runningIds.current.get(done.id) !== attempt) return;
-            if (['running', 'queued'].includes(done.status)) return;
+            if (stillRunning) return;
             runningIds.current.delete(done.id);
             const text = finishedNotice(done.status, done.title);
             if (!text) return;
@@ -666,19 +736,23 @@ export function useWorkspace() {
     const version = ++navigationVersion.current;
     await save();
     if (version !== navigationVersion.current) return;
-    if (!['running', 'queued'].includes(snapshot?.sessions.find(s => s.id === id)?.status || '')) await api!.call('sessionResume', { id });
+    const beforeResume = snapshotRef.current?.sessions.find(s => s.id === id);
+    if (!['running', 'queued'].includes(beforeResume?.status || '')) await api!.call('sessionResume', { id });
     if (version !== navigationVersion.current) return;
     setView('chat');
     setWelcomeVisit(value => value + 1);
     setSelected(id);
-    const chosen = snapshot?.sessions.find(s => s.id === id);
+    currentId.current = id;
+    focusLiveSession(id);
+    const chosen = snapshotRef.current?.sessions.find(s => s.id === id);
+    setWorkflow('');
+    workflowRef.current = '';
+    setForcedSkill('');
+    setSuggestedSkill('');
     setWorkMode(chosen?.mode || (chosen?.draft ? 'draft' : 'chat'));
     setRunning(['running', 'queued'].includes(chosen?.status || ''));
     setPendingSource('');
     discardFiles();
-    setStream('');
-    resetThinking();
-    setProgress('');
     setDirty(false);
     dirtyRef.current = false;
     setSettings(false);
@@ -708,10 +782,11 @@ export function useWorkspace() {
     }
     await save();
     const s = await api!.call('create', { connectionId, project: t('ผู้ช่วยเบิกจ่าย') });
-    await start(s.id, text, { allowIds, sourceText, mode: 'chat', imageModel, coordinator: false, isolated: true });
+    const started = await start(s.id, text, { allowIds, sourceText, mode: 'chat', imageModel, coordinator: false, isolated: true });
     setView('chat');
     setWorkMode('chat');
     setSelected(s.id);
+    if (started && runningIds.current.has(s.id)) setRunning(true);
   }
   /** The chat of one disbursement case, made on first use; it runs beside the main chat and never opens it. */
   async function openCaseChat(packetId: string, title: string, chosen?: string) {
@@ -821,14 +896,18 @@ export function useWorkspace() {
     if (version !== navigationVersion.current) return;
     setWelcomeVisit(value => value + 1);
     setSelected('');
+    currentId.current = '';
+    focusLiveSession('');
     setRunning(false);
+    setWorkflow('');
+    workflowRef.current = '';
+    setForcedSkill('');
+    setSuggestedSkill('');
     setWorkMode('chat');
     setPendingSource('');
     setView('chat');
     setSettings(false);
     discardFiles();
-    setStream('');
-    setProgress('');
     setDirty(false);
     dirtyRef.current = false;
     setTimeout(() => composerRef.current?.focus(), 0);
@@ -994,35 +1073,37 @@ export function useWorkspace() {
       // A new run must never show the prior assistant's actions as its own. A rejected concurrent start keeps the active run.
       if (!previousAttempt) setWorkActions(previous => (previous[id] ? { ...previous, [id]: [] } : previous));
       runningIds.current.set(id, attempt);
-      currentId.current = id;
-      setRunning(true);
-      setStream('');
-      resetThinking();
-      setProgress(t('กำลังส่งข้อความ'));
-      setStartedAt(Date.now());
-      setHeartbeatAt(Date.now());
-      setActivityAt(Date.now());
+      sessionModes.current[id] = mode === 'draft' ? 'draft' : 'chat';
+      if (currentId.current === id) setRunning(true);
+      setStream('', id);
+      resetThinking(Date.now(), id);
+      setPlanFor(id, []);
+      setProgressFor(id, t('กำลังส่งข้อความ'));
+      const now = Date.now();
+      setStartedAtFor(id, now);
+      setHeartbeatAt(now, id);
+      if (currentId.current === id) setActivityAt(now);
     }
     let result;
     try {
       result = await api!.call(aside ? 'sideQuestion' : 'send', runPayload(id, text, run, workflowRef.current));
     } catch (e) {
       if (aside) throw e;
-      setRunning(false);
+      if (currentId.current === id) setRunning(false);
       if (runningIds.current.get(id) === attempt) {
         if (previousAttempt && String(e).includes('RUN_ALREADY_ACTIVE')) runningIds.current.set(id, previousAttempt);
         else runningIds.current.delete(id);
       }
-      setProgress('');
-      setStartedAt(0);
+      setProgressFor(id, '');
+      setStartedAtFor(id, 0);
       throw e;
     }
     if (result.consent) {
       if (!aside) {
-        setRunning(false);
+        if (currentId.current === id) setRunning(false);
         if (runningIds.current.get(id) === attempt) runningIds.current.delete(id);
-        setProgress('');
-        setStartedAt(0);
+        setProgressFor(id, '');
+        setStartedAtFor(id, 0);
       }
       setTermsAccepted(false);
       const { consent: _token, ...ask } = run;
@@ -1033,16 +1114,17 @@ export function useWorkspace() {
       setQuery(current => (current === submittedQuery ? '' : current));
       const updated = await refresh();
       if (!aside) {
-        setRunning(['running', 'queued'].includes(updated?.sessions.find(s => s.id === id)?.status || ''));
+        if (currentId.current === id) setRunning(['running', 'queued'].includes(updated?.sessions.find(s => s.id === id)?.status || ''));
         runningIds.current.delete(id);
-        setProgress('');
-        setStartedAt(0);
+        setProgressFor(id, '');
+        setStartedAtFor(id, 0);
       }
       return false;
     }
     if (result.started && result.warning) notify(t('ส่งแล้ว ข้อความนี้มีคำที่อาจเป็นข้อมูลอ่อนไหว อย่าใส่ชื่อหรือรหัสของบุคคลในงานนี้'));
     else if (result.started && result.masked?.length) notify(t('ระบบปิดบังก่อนส่งให้ AI: {0}', result.masked.join(', ')));
     if (result.started) {
+      sessionModes.current[id] = result.mode === 'draft' ? 'draft' : 'chat';
       const focused = currentId.current === id;
       if (result.newDocument && focused) notify(t('เริ่มเอกสารใหม่ในงานนี้ ร่างเดิมอยู่ในประวัติเวอร์ชัน'), 'info');
       if (documentTool) setConsumedDocumentTask(id);
@@ -1054,14 +1136,15 @@ export function useWorkspace() {
       const updated = await refresh();
       const state = updated?.sessions.find(s => s.id === id)?.status;
       if (state && !['queued', 'running'].includes(state)) {
-        setRunning(false);
-        setProgress('');
-        setStartedAt(0);
-        setStream('');
+        clearLiveSession(id);
+        setProgressFor(id, '');
+        setStartedAtFor(id, 0);
+        if (currentId.current === id) setRunning(false);
       }
       if (focused && (result.mode === 'image' || result.mode === 'draft')) {
         if (result.mode === 'draft' && mode === 'chat') {
           setWorkflow('');
+          workflowRef.current = '';
           setWorkMode('draft');
         }
         setToolTab('output');

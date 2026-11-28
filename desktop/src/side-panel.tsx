@@ -53,7 +53,7 @@ const originLabel = (origin?: DraftVersionOrigin) => {
 
 const docTypeLabel = (toolId?: DraftVersion['documentTool'], variant?: string) => {
   const tool = documentTool(toolId);
-  if (!tool) return '';
+  if (!tool) return t('ร่างทั่วไป');
   const variantLabel = variant ? tool.variants.find(item => item.id === variant)?.label : undefined;
   return variantLabel || tool.title;
 };
@@ -81,6 +81,7 @@ export function SidePanel({ v }: { v: AppView }) {
     format,
     history,
     notify,
+    openLink,
     panelOpened,
     presentation,
     presentationRef,
@@ -129,7 +130,8 @@ export function SidePanel({ v }: { v: AppView }) {
     : [];
   const isSameDoc = (item: DraftVersion) =>
     Boolean(session) &&
-    (!item.documentTool || (item.documentTool === session!.documentTool && item.documentVariant === session!.documentVariant));
+    (item.documentTool || undefined) === (session!.documentTool || undefined) &&
+    (item.documentVariant || undefined) === (session!.documentVariant || undefined);
   const sameDocVersions = nonEmptyVersions.filter(isSameDoc);
   const otherDocVersions = nonEmptyVersions.filter(item => !isSameDoc(item));
   const undoCandidate = session ? sameDocVersions.find(item => item.text !== session.draft) : undefined;
@@ -431,19 +433,19 @@ export function SidePanel({ v }: { v: AppView }) {
                             {proposalMode === 'diff' ? (
                               <DraftDiffView before={session.draft} after={p.text} />
                             ) : (
-                              <RichText className="proposal-text" text={p.text} />
+                              <RichText className="proposal-text" text={p.text} onLink={openLink} />
                             )}
                           </>
                         ) : (
                           <details open>
                             <summary>{t('อ่านร่างจาก AI')}</summary>
-                            <RichText className="proposal-text" text={p.text} />
+                            <RichText className="proposal-text" text={p.text} onLink={openLink} />
                           </details>
                         )}
                         {p.review && (
                           <details className="document-review">
                             <summary>{t('ผลตรวจและข้อมูลที่ต้องยืนยัน (ไม่ส่งออกในเอกสาร)')}</summary>
-                            <RichText text={p.review} />
+                            <RichText text={p.review} onLink={openLink} />
                           </details>
                         )}
                       </section>
@@ -457,7 +459,7 @@ export function SidePanel({ v }: { v: AppView }) {
                           ? t('ผลตรวจของร่างจาก AI ต้องตรวจไฟล์ส่งออกและผู้มีอำนาจก่อนเสนอ')
                           : t('ร่างเปลี่ยนจากฉบับที่ AI ตรวจแล้ว กรุณาตรวจข้อมูลและรูปแบบอีกครั้ง')}
                       </p>
-                      <RichText text={session.documentReview.text} />
+                      <RichText text={session.documentReview.text} onLink={openLink} />
                     </details>
                   )}
                   <div className="draft-tools">

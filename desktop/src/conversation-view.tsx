@@ -11,11 +11,13 @@ import {
   Circle,
   Compass,
   Copy,
+  Download,
   Eye,
   FileText,
   ImagePlus,
   LoaderCircle,
   Paperclip,
+  Play,
   Plus,
   ShieldCheck,
   Sparkles,
@@ -25,7 +27,7 @@ import {
 } from './icons';
 import { ArtifactsList, type OpenedArtifact } from './artifacts-list';
 import { CLAUDE_CODE, connectionName, effortLabel, errorText, explainError } from './messages';
-import { ChatMarkdown } from './chat-markdown';
+import { ChatMarkdown, visibleAnswer } from './chat-markdown';
 import { ContextWindowGauge } from './context-window-gauge';
 import { FeedbackButtons } from './feedback';
 import { GoogleChangesList } from './google-changes-list';
@@ -35,7 +37,7 @@ import { Readiness } from './readiness';
 import { RichText, formatElapsed } from './ui';
 import { ThinkingScribble, waitingKind } from './thinking-scribble';
 import { VoiceButton } from './voice';
-import { WORKFLOW_LABELS, WorkPlanCard } from './work-plan';
+import { COMPOSER_WORKFLOWS, WORKFLOW_LABELS, WorkPlanCard } from './work-plan';
 import { WelcomeGreeting } from './welcome-greeting';
 import { liveAnswer, liveThinking, offerWriteNow, useElapsed, useLiveRun, useSteadyLabel } from './live-run';
 import { SavedThinking, ThinkingPanel } from './thinking-panel';
@@ -178,6 +180,52 @@ export function ConversationView({ v }: { v: AppView }) {
   // once per run.
   const [writeNowAt, setWriteNowAt] = useState(0);
   const [expandedScheduleHistory, setExpandedScheduleHistory] = useState<string[]>([]);
+  const [generatedPreviews, setGeneratedPreviews] = useState<Record<string, string>>({});
+  const [activeChangeIds, setActiveChangeIds] = useState<Set<string> | null>(null);
+  const hasStagedWritten = Boolean(session?.messages.some(m => m.written?.some(file => file.status === 'staged')));
+  useEffect(() => {
+    let live = true;
+    if (!hasStagedWritten) {
+      setActiveChangeIds(null);
+      return;
+    }
+    void api
+      .call('toolChanges')
+      .then((list: { id: string }[]) => {
+        if (live) setActiveChangeIds(new Set((list || []).map(c => c.id)));
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [api, hasStagedWritten, session?.id, session?.updatedAt, snapshot?.sessions]);
+  useEffect(() => {
+    let live = true;
+    setGeneratedPreviews({});
+    if (!session?.id || !session.images?.length) return;
+    for (const image of session.images.slice(-20)) {
+      void api
+        .call('imageRead', { id: session.id, imageId: image.id })
+        .then((res: { url: string }) => {
+          if (live && res?.url) setGeneratedPreviews(prev => ({ ...prev, [image.id]: res.url }));
+        })
+        .catch(() => {});
+    }
+    return () => {
+      live = false;
+    };
+  }, [api, session?.id, session?.images?.length]);
+  const ensureWritableForPlan = async () => {
+    if (snapshot.policy?.mode !== 'plan') return true;
+    if (!snapshot.policy.modes.includes('ask')) {
+      notify(t('สิทธิ์เครื่องมือถูกล็อกเป็นอ่านอย่างเดียวโดยนโยบายองค์กร จึงยังลงมือทำตามแผนไม่ได้'), 'error');
+      return false;
+    }
+    await api.call('permissionMode', { mode: 'ask' });
+    await refresh();
+    notify(t('เปลี่ยนสิทธิ์เป็น “ถามก่อนแก้ไข” เพื่อลงมือทำตามแผน'), 'info');
+    return true;
+  };
   const activeSlashOption = useRef<HTMLButtonElement>(null);
   const activeSlashSkill =
     !questionPending && slashAtCaret && !(snapshot.settings.vimMode && vimNormal) ? slashMatches[slashIndex] || slashMatches[0] : undefined;
@@ -279,7 +327,7 @@ export function ConversationView({ v }: { v: AppView }) {
             )}
             {session?.messages.map((message, index) => (
               <article
-                key={index}
+                key={`${session.id}:${index}`}
                 // Like other AI chat apps: no name above each turn; the user's turn is a bubble, the answer is plain text.
                 aria-label={message.role === 'user' ? t('คุณ') : message.role === 'status' ? t('สถานะงาน') : snapshot.settings.assistant}
                 className={`message ${message.role}${message.role === 'status' && message.text === 'CANCELLED' ? ' neutral' : ''}${
@@ -312,6 +360,36 @@ export function ConversationView({ v }: { v: AppView }) {
                     )}
                   </div>
                 )}
+                {message.role === 'assistant' &&
+                  (() => {
+                    const matchedImages = (session.images || []).filter(
+                      img => message.imageIds?.includes(img.id) || (!message.imageIds?.length && img.at === message.at),
+                    );
+                    if (!matchedImages.length) return null;
+                    return (
+                      <div className="message-files" aria-label={t('ภาพที่ AI สร้าง')}>
+                        {matchedImages.map(img => (
+                          <figure key={img.id} className="message-image">
+                            {generatedPreviews[img.id] ? (
+                              <img src={generatedPreviews[img.id]} alt={`${t('ภาพที่ AI สร้าง')}: ${img.name}`} />
+                            ) : (
+                              <div className="small muted">{img.name}</div>
+                            )}
+                            <figcaption>
+                              <span>{img.model}</span>{' '}
+                              <button
+                                type="button"
+                                className="quiet small"
+                                onClick={() => void action(() => api.call('imageExport', { id: session.id, imageId: img.id }))}
+                              >
+                                <Download size={12} /> {t('ดาวน์โหลดรูป')}
+                              </button>
+                            </figcaption>
+                          </figure>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 {!!message.docSources?.length && (
                   <p className="doc-sources small muted">
                     <BookOpen size={13} />
@@ -322,34 +400,41 @@ export function ConversationView({ v }: { v: AppView }) {
                 )}
                 {!!message.written?.length && (
                   <ul className="written-files small">
-                    {message.written.map(file => (
-                      <li key={file.path}>
-                        <FileText size={13} />
-                        <span className="written-path">{file.path}</span>
-                        <span className="muted">{file.status === 'applied' ? t('บันทึกแล้ว') : t('รอตรวจในรายการแก้ไข')}</span>
-                        {/\.html?$/i.test(file.path) && (
-                          <button
-                            className="quiet small"
-                            onClick={() =>
-                              void action(() => api.call('previewHtml', file.status === 'applied' ? { path: file.path } : { id: file.id }))
-                            }
-                          >
-                            <Eye size={13} /> {t('ดูตัวอย่าง')}
-                          </button>
-                        )}
-                        {file.status === 'staged' && (
-                          <button
-                            className="quiet small"
-                            onClick={() => {
-                              setToolTab('changes');
-                              openPanel();
-                            }}
-                          >
-                            {t('ไปตรวจ')}
-                          </button>
-                        )}
-                      </li>
-                    ))}
+                    {message.written.map(file => {
+                      const stillStaged = file.status === 'staged' && (activeChangeIds === null || activeChangeIds.has(file.id));
+                      return (
+                        <li key={file.path}>
+                          <FileText size={13} />
+                          <span className="written-path">{file.path}</span>
+                          <span className="muted">
+                            {file.status === 'applied' ? t('บันทึกแล้ว') : stillStaged ? t('รอตรวจในรายการแก้ไข') : t('จัดการแล้ว')}
+                          </span>
+                          {/\.html?$/i.test(file.path) && (
+                            <button
+                              className="quiet small"
+                              onClick={() =>
+                                void action(() =>
+                                  api.call('previewHtml', stillStaged ? { id: file.id, path: file.path } : { path: file.path }),
+                                )
+                              }
+                            >
+                              <Eye size={13} /> {t('ดูตัวอย่าง')}
+                            </button>
+                          )}
+                          {stillStaged && (
+                            <button
+                              className="quiet small"
+                              onClick={() => {
+                                setToolTab('changes');
+                                openPanel();
+                              }}
+                            >
+                              {t('ไปตรวจ')}
+                            </button>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
                 {!!message.google?.length && (
@@ -373,10 +458,24 @@ export function ConversationView({ v }: { v: AppView }) {
                         const opened = (await api.call('artifactOpen', {
                           sessionId: session.id,
                           id: artifact.id,
+                          version: artifact.version,
                         })) as OpenedArtifact | null;
                         if (opened) setViewingArtifact(opened);
                       })
                     }
+                    onInlineHtml={async artifact => {
+                      try {
+                        return (await api.call('artifactOpen', {
+                          sessionId: session.id,
+                          id: artifact.id,
+                          version: artifact.version,
+                          inline: true,
+                        })) as OpenedArtifact | null;
+                      } catch (e) {
+                        notify(explainError(e), 'error');
+                        return null;
+                      }
+                    }}
                   />
                 )}
                 {!message.check && checkStillRunning(message.checkPending) && (
@@ -431,34 +530,36 @@ export function ConversationView({ v }: { v: AppView }) {
                       title={t('คัดลอก')}
                       onClick={() =>
                         void navigator.clipboard
-                          .writeText(message.text)
+                          .writeText(visibleAnswer(message.text))
                           .then(() => notify(t('คัดลอกแล้ว'), 'success'))
                           .catch(e => notify(explainError(e), 'error'))
                       }
                     >
                       <Copy size={15} />
                     </button>
-                    {/* A drafting run's note is not a document; the draft itself is already in Output. */}
-                    {!message.draftSummary && (
-                      <button
-                        className="quiet message-open"
-                        title={t('เปิดในผลงาน')}
-                        onClick={() =>
-                          void action(async () => {
-                            await save();
-                            // In a document task the answer becomes a proposal to compare, never a direct overwrite.
-                            await api.call('stageMessage', { id: session.id, index });
-                            await refresh();
-                            setToolTab('output');
-                            openPanel();
-                            if (session.documentTool) notify(t('ส่งเป็นข้อเสนอแล้ว เทียบกับร่างแล้วกด “ใช้ร่างนี้”'), 'info');
-                          })
-                        }
-                      >
-                        <FileText size={15} />
-                        {t('เปิดในผลงาน')}
-                      </button>
-                    )}
+                    {/* A drafting run's note, clarification prompt, or pure image reply is not a draftable document. */}
+                    {!message.draftSummary &&
+                      !message.clarification &&
+                      !(message.imageIds?.length && /^(?:สร้างรูปแล้ว|Image created)\b/i.test(message.text.trim())) && (
+                        <button
+                          className="quiet message-open"
+                          title={t('เปิดในผลงาน')}
+                          onClick={() =>
+                            void action(async () => {
+                              await save();
+                              // In a document task the answer becomes a proposal to compare, never a direct overwrite.
+                              await api.call('stageMessage', { id: session.id, index });
+                              await refresh();
+                              setToolTab('output');
+                              openPanel();
+                              if (session.documentTool) notify(t('ส่งเป็นข้อเสนอแล้ว เทียบกับร่างแล้วกด “ใช้ร่างนี้”'), 'info');
+                            })
+                          }
+                        >
+                          <FileText size={15} />
+                          {t('เปิดในผลงาน')}
+                        </button>
+                      )}
                     <FeedbackButtons
                       sessionId={session.id}
                       index={index}
@@ -697,11 +798,13 @@ export function ConversationView({ v }: { v: AppView }) {
                   continuation={session.longTask}
                   onExecute={continuous =>
                     void action(async () => {
-                      setWorkflow('execute');
-                      workflowRef.current = 'execute';
+                      if (!(await ensureWritableForPlan())) return;
+                      setWorkflow('');
+                      workflowRef.current = '';
                       setWorkMode('chat');
                       await start(session.id, t('ลงมือทำตามแผน'), {
                         mode: 'chat',
+                        workflow: 'execute',
                         imageModel: '',
                         retry: false,
                         coordinator: false,
@@ -732,7 +835,40 @@ export function ConversationView({ v }: { v: AppView }) {
                       );
                     })
                   }
+                  onDismiss={() =>
+                    void action(async () => {
+                      await api!.call('planClear', { id: session.id });
+                      await refresh();
+                    })
+                  }
                 />
+              ) : workflow === 'plan' && session && lastAnswer >= 0 && !running && !submitting ? (
+                <div className="work-plan work-plan-proceed" role="group" aria-label={t('ลงมือทำตามแผน')}>
+                  <span className="small muted">{t('พร้อมลงมือทำตามแผนที่คุยกันแล้วหรือยัง?')}</span>
+                  <div className="work-plan-actions">
+                    <button
+                      type="button"
+                      className="work-plan-run"
+                      onClick={() =>
+                        void action(async () => {
+                          if (!(await ensureWritableForPlan())) return;
+                          setWorkflow('');
+                          workflowRef.current = '';
+                          setWorkMode('chat');
+                          await start(session.id, t('ลงมือทำตามแผนที่คุยกัน'), {
+                            mode: 'chat',
+                            imageModel: '',
+                            retry: false,
+                            coordinator: false,
+                          });
+                        })
+                      }
+                    >
+                      <Play size={14} />
+                      {t('ลงมือทำตามแผน')}
+                    </button>
+                  </div>
+                </div>
               ) : null}
               {questions
                 .filter(q => q.sessionId === selected)
@@ -917,7 +1053,7 @@ export function ConversationView({ v }: { v: AppView }) {
                         <p role="alert">{explainError(new Error(q.code))}</p>
                       ) : (
                         <>
-                          <ChatMarkdown text={q.answer || ''} />
+                          <ChatMarkdown text={q.answer || ''} onLink={openLink} />
                           {!!q.docSources?.length && (
                             <p className="small muted">
                               {t('อ้างอิงเอกสาร STeP')}: {q.docSources.join(' · ')}
@@ -1076,7 +1212,7 @@ export function ConversationView({ v }: { v: AppView }) {
                     data-tour="mode"
                     aria-label={t('โหมดทำงาน')}
                     title={t('โหมดทำงาน')}
-                    value={workflow || workMode}
+                    value={workflow === 'execute' ? 'chat' : workflow || workMode}
                     disabled={running || submitting}
                     onChange={e => {
                       const value = e.target.value;
@@ -1092,8 +1228,8 @@ export function ConversationView({ v }: { v: AppView }) {
                     <option value="chat">{t('คุยกับผู้ช่วย')}</option>
                     {/* Native workflows of the harness, like Claude Code's plan mode: rules for how the assistant works. */}
                     <optgroup label={t('ขั้นตอนทำงาน')}>
-                      {(Object.keys(WORKFLOW_LABELS) as Workflow[]).map(id => (
-                        <option key={id} value={id} disabled={id === 'execute' && !session?.workPlan?.tasks.length}>
+                      {COMPOSER_WORKFLOWS.map(id => (
+                        <option key={id} value={id}>
                           {t(WORKFLOW_LABELS[id])}
                         </option>
                       ))}

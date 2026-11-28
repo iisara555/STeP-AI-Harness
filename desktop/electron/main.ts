@@ -22,6 +22,7 @@ import {
   clipboard,
   Notification,
   net,
+  protocol,
   session as electronSession,
 } from 'electron';
 import { mkdir, mkdtemp, rmdir, writeFile, appendFile, rm, readFile, open, stat, lstat } from 'node:fs/promises';
@@ -57,6 +58,7 @@ import { inspectCodingProject, resolveCodingCheck } from './coding-project';
 import { AgentBrowser } from './browser-agent';
 import { BrowserDock } from './browser-dock';
 import { PREVIEW_LIMIT, isHtmlPath, openHtmlPreview } from './html-preview';
+import { HTML_IFRAME_CSP, buildSandboxedHtmlDoc } from '../src/inline-preview';
 import { autoUpdater } from 'electron-updater';
 import { Updater, RELEASES_URL, type SelfInstall } from './updater';
 import { appBundlePath, canReplace, downloadVerified, macUpdateAsset, startSwap } from './mac-update';
@@ -299,9 +301,35 @@ async function makeWindow(splash?: Splash, prepared: Promise<unknown> = Promise.
   await window.loadFile(join(__dirname, 'renderer/index.html'));
 }
 
+const SANDBOX_MAX_DOCS = 48;
+const SANDBOX_MAX_BYTES = 250_000;
+const sandboxDocs = new Map<string, string>();
+function registerSandboxHtml(doc: string): string {
+  const id = randomUUID();
+  sandboxDocs.set(id, doc);
+  while (sandboxDocs.size > SANDBOX_MAX_DOCS) {
+    const oldest = sandboxDocs.keys().next().value;
+    if (oldest) sandboxDocs.delete(oldest);
+  }
+  return `step-sandbox://widget/${id}`;
+}
+protocol.registerSchemesAsPrivileged([{ scheme: 'step-sandbox', privileges: { standard: true, secure: true } }]);
+
 async function main() {
   if (!app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME) app.setPath('userData', process.env.STEP_DESKTOP_TEST_HOME);
   await app.whenReady();
+  protocol.handle('step-sandbox', req => {
+    const id = /^step-sandbox:\/\/widget\/([a-f0-9-]+)$/i.exec(req.url)?.[1];
+    const html = id ? sandboxDocs.get(id) : undefined;
+    if (!html) return new Response('Not Found', { status: 404 });
+    return new Response(html, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Security-Policy': HTML_IFRAME_CSP,
+      },
+    });
+  });
   if (!app.requestSingleInstanceLock()) {
     app.quit();
     return;
@@ -3044,7 +3072,14 @@ async function main() {
         return openBrowserTab(input);
       case 'previewHtml': {
         // An HTML file in the workspace, or one the AI staged for review, shown in the Web tab as it works in a browser.
-        const change = input.id ? workbench.change(inputText(input.id, 60)) : undefined;
+        let change: ReturnType<typeof workbench.change> | undefined;
+        if (input.id) {
+          try {
+            change = workbench.change(inputText(input.id, 60));
+          } catch (error) {
+            if (!(error instanceof Error && error.message === 'CHANGE_NOT_FOUND' && input.path)) throw error;
+          }
+        }
         const target = change ? change.path : inputText(input.path, 2000);
         if (!isHtmlPath(target)) throw new Error('INVALID_PATH');
         return gate.run({ tool: 'read', readOnly: true, path: target }, { title: '', body: '', key: target }, async () => {
@@ -3071,13 +3106,23 @@ async function main() {
           }
         });
       }
+      case 'sandboxHtml': {
+        // Serves an inline chat HTML preview over a dedicated opaque-origin protocol with strict offline CSP headers,
+        // so interactive widgets can run inside <iframe sandbox="allow-scripts"> without relaxing the main window CSP.
+        const raw = typeof input?.html === 'string' ? input.html : '';
+        if (!raw.trim()) throw new Error('INVALID_CONTENT');
+        if (Buffer.byteLength(raw, 'utf8') > SANDBOX_MAX_BYTES) throw new Error('FILE_TOO_LARGE');
+        const doc = buildSandboxedHtmlDoc(raw, Boolean(input?.dark));
+        return { url: registerSandboxHtml(doc) };
+      }
       case 'artifactOpen': {
         // An artifact the AI saved for this task. HTML opens in the Web tab's isolated preview, like an HTML draft;
         // every other kind is returned as text for the answer's viewer, which renders Markdown without raw HTML.
-        const artifact = workbench.getArtifact(inputText(input.sessionId, 60), inputText(input.id, 80));
+        const version = Number.isSafeInteger(input.version) && input.version > 0 ? input.version : undefined;
+        const artifact = workbench.getArtifact(inputText(input.sessionId, 60), inputText(input.id, 80), version);
         if (!artifact) throw new Error('ARTIFACT_NOT_FOUND');
         const ref = { id: artifact.id, title: artifact.title, kind: artifact.kind, version: artifact.version };
-        if (artifact.kind !== 'html') return { ...ref, content: artifact.content };
+        if (artifact.kind !== 'html' || input.inline === true) return { ...ref, content: artifact.content };
         if (browsers.size >= 4) throw new Error('TASK_LIMIT');
         const id = randomUUID();
         browsers.add(id);
@@ -4338,10 +4383,14 @@ async function main() {
         if (chats.some(s => s.status === 'queued' || service.isActive(s.id) || coordinator.has(s.id)))
           throw new Error('RUN_ALREADY_ACTIVE');
         const deleted = receiptPackets.delete(packetId, () => {
-          for (const s of chats) store.remove('session', s.id);
+          for (const s of chats) {
+            store.remove('session', s.id);
+            workbench.deleteSessionArtifacts(s.id);
+          }
         });
         await deleted;
         for (const s of chats) {
+          for (const img of s.images || []) await rm(images.path(img), { force: true }).catch(() => {});
           for (const [aid, a] of attachments) if (a.sessionId === s.id) attachments.delete(aid);
         }
         return true;
@@ -4757,6 +4806,10 @@ async function main() {
             !input.documentTool &&
             !requestedId &&
             !input.attachments?.length &&
+            !input.sourceText &&
+            !input.workflow &&
+            !input.coordinator &&
+            !input.autoContinue &&
             input.mode === 'draft' &&
             isDocumentQuestion(sending.documentTool, text));
         if (
@@ -4783,6 +4836,7 @@ async function main() {
           if (unavailable) throw new Error(unavailable);
         }
         if (input.autoContinue && workflow !== 'execute') throw new Error('INVALID_INPUT');
+        if (workflow === 'execute' && permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
         const imageRequest = !claimCase && !workflow && mode === 'chat' && input.autoImage !== false && isImageRequest(text);
         const requested =
           !claimCase &&
@@ -4842,6 +4896,8 @@ async function main() {
         if (draftingTool && coordinated) throw new Error('INVALID_DOCUMENT_TOOL');
         if (coordinated && (!policyState.policy.features.coordinator || workMode !== 'draft' || input.skill || (input.retry && !resuming)))
           throw new Error('COORDINATOR_DISABLED');
+        if (coordinated && permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
+        if (coordinated && coordinator.isBusy()) throw new Error('RUN_ALREADY_ACTIVE');
         if (workMode === 'image' && !canGenerateImages(sendingConnection)) throw new Error('IMAGE_API_REQUIRED');
         const selectedImageModel = input.imageModel ? inputText(input.imageModel, 120) : undefined;
         // A directly invoked Skill must be one the router can reach.
@@ -5004,7 +5060,10 @@ async function main() {
           throw new Error('HOOK_BLOCKED');
         }
         // Awaited hooks can admit another run. Check again before changing task state or snapshots.
-        if ((aside && service.isQuestionActive(id)) || (!aside && (service.isActive(id) || coordinator.has(id))))
+        if (
+          (aside && service.isQuestionActive(id)) ||
+          (!aside && (service.isActive(id) || coordinator.has(id) || (coordinated && coordinator.isBusy())))
+        )
           throw new Error('RUN_ALREADY_ACTIVE');
         if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
         if (autoDocument) {
@@ -5020,7 +5079,7 @@ async function main() {
         if (aside) {
           void service.sideQuestion(id, text, true, questionSnapshot!).catch(error => {
             diagnose('side-question-failed', { code: errorCode(error) });
-            emit({ sessionId: id, type: 'changed' });
+            emit({ sessionId: id, type: 'side-question' });
           });
           return { started: true, aside: true, mode: 'chat', masked: review.labels, warning };
         }
@@ -5117,6 +5176,12 @@ async function main() {
         workbench.commentWorkTask(id, Number(input.number), inputText(input.comment, PLAN_COMMENT_LIMIT));
         return store.session(id);
       }
+      case 'planClear': {
+        const id = inputText(input.id, 60);
+        if (['running', 'queued'].includes(store.session(id).status)) throw new Error('SESSION_BUSY');
+        workbench.clearWorkPlan(id);
+        return store.session(id);
+      }
       case 'rename': {
         const s = store.session(inputText(input.id, 60)),
           title = inputText(input.title, 120).trim();
@@ -5127,16 +5192,23 @@ async function main() {
       }
       case 'remove': {
         const id = inputText(input.id, 60);
-        store.session(id);
+        const removingSession = store.session(id);
         if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
         const ended = await fireHook({ event: 'session_end', sessionId: id });
         if (ended.blocked) throw new Error('HOOK_BLOCKED');
         if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
         // A coordinated draft's subtasks are part of it and go with it.
-        for (const child of coordinator.children(id)) store.remove('session', child.id);
+        const children = coordinator.children(id);
+        for (const child of children) {
+          store.remove('session', child.id);
+          workbench.deleteSessionArtifacts(child.id);
+        }
         store.remove('session', id);
+        workbench.deleteSessionArtifacts(id);
         documentTemplates.remove(id);
         documentAssets.remove(id);
+        for (const img of [...(removingSession.images || []), ...children.flatMap(child => child.images || [])])
+          await rm(images.path(img), { force: true }).catch(() => {});
         for (const [aid, a] of attachments) if (a.sessionId === id) attachments.delete(aid);
         return true;
       }

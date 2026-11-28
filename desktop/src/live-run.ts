@@ -14,42 +14,104 @@ import { ThinkingLog, type Thinking } from './thinking';
 export type LiveRun = { stream: string; thought: number; heartbeatAt: number; now: number };
 type Update<T> = T | ((previous: T) => T);
 
+type SessionLive = { stream: string; thinking: ThinkingLog; heartbeatAt: number };
+
+let activeSession = '';
+const sessions = new Map<string, SessionLive>();
 let live: LiveRun = { stream: '', thought: 0, heartbeatAt: 0, now: Date.now() };
-// The same log main keeps for the saved answer (src/thinking.ts), fed from the run's events to show it while it works.
-let thinking = new ThinkingLog();
 const listeners = new Set<(next: LiveRun) => void>();
 
-function patch<K extends keyof LiveRun>(key: K, update: Update<LiveRun[K]>) {
-  const value = typeof update === 'function' ? (update as (previous: LiveRun[K]) => LiveRun[K])(live[key]) : update;
-  if (Object.is(value, live[key])) return;
-  live = { ...live, [key]: value };
+function bucket(sessionId: string): SessionLive {
+  let state = sessions.get(sessionId);
+  if (!state) {
+    state = { stream: '', thinking: new ThinkingLog(), heartbeatAt: 0 };
+    sessions.set(sessionId, state);
+  }
+  return state;
+}
+
+function publish() {
   for (const listener of listeners) listener(live);
 }
 
-export const setStream = (update: Update<string>) => patch('stream', update);
+function syncActive(bumpThought = false) {
+  const current = sessions.get(activeSession);
+  live = {
+    stream: current?.stream || '',
+    thought: bumpThought ? live.thought + 1 : live.thought,
+    heartbeatAt: current?.heartbeatAt || 0,
+    now: live.now,
+  };
+  publish();
+}
+
+/** Switches which task's live stream and thinking log are shown, keeping background runs intact. */
+export function focusLiveSession(sessionId: string) {
+  activeSession = sessionId;
+  syncActive(true);
+}
+
+/** Releases a finished task's live buffer once its saved reply is in the workspace snapshot. */
+export function clearLiveSession(sessionId: string) {
+  sessions.delete(sessionId);
+  if (sessionId === activeSession) syncActive(true);
+}
+
+export const setStream = (update: Update<string>, sessionId = activeSession) => {
+  const state = bucket(sessionId);
+  const next = typeof update === 'function' ? update(state.stream) : update;
+  if (Object.is(next, state.stream)) return;
+  state.stream = next;
+  if (sessionId === activeSession) {
+    live = { ...live, stream: next };
+    publish();
+  }
+};
 /** A new run (or a cleared view) starts an empty thinking log. */
-export function resetThinking(started = Date.now()) {
-  thinking = new ThinkingLog(started);
-  patch('thought', n => n + 1);
+export function resetThinking(started = Date.now(), sessionId = activeSession) {
+  const state = bucket(sessionId);
+  state.thinking = new ThinkingLog(started);
+  if (sessionId === activeSession) {
+    live = { ...live, thought: live.thought + 1 };
+    publish();
+  }
 }
 /** A run event that adds to the thinking: a stage, streamed reasoning, or the end of a model turn. */
-export function think(event: { type: string; text?: string; quiet?: boolean; stage?: string }) {
+export function think(event: { type: string; text?: string; quiet?: boolean; stage?: string }, sessionId = activeSession) {
+  const state = bucket(sessionId);
   const changed =
     event.type === 'reasoning'
-      ? thinking.reason(event.text || '')
+      ? state.thinking.reason(event.text || '')
       : event.type === 'status' || event.type === 'activity'
         ? event.stage
-          ? thinking.step(event.stage)
+          ? state.thinking.step(event.stage)
           : event.quiet
-            ? (thinking.turn(), false)
-            : thinking.step(event.text || '')
+            ? (state.thinking.turn(), false)
+            : state.thinking.step(event.text || '')
         : false;
-  if (changed) patch('thought', n => n + 1);
+  if (changed && sessionId === activeSession) {
+    live = { ...live, thought: live.thought + 1 };
+    publish();
+  }
 }
 /** The live thinking to show; read it in a component that follows `thought`. */
-export const liveThinking = (now = Date.now()): Thinking | undefined => thinking.result(now);
-export const setHeartbeatAt = (at: number) => patch('heartbeatAt', at);
-export const tickLiveClock = () => patch('now', Date.now());
+export const liveThinking = (now = Date.now(), sessionId = activeSession): Thinking | undefined =>
+  sessions.get(sessionId)?.thinking.result(now);
+export const setHeartbeatAt = (at: number, sessionId = activeSession) => {
+  const state = bucket(sessionId);
+  if (Object.is(at, state.heartbeatAt)) return;
+  state.heartbeatAt = at;
+  if (sessionId === activeSession) {
+    live = { ...live, heartbeatAt: at };
+    publish();
+  }
+};
+export const tickLiveClock = () => {
+  const now = Date.now();
+  if (Object.is(now, live.now)) return;
+  live = { ...live, now };
+  publish();
+};
 
 /** One value from the live run; the component re-renders only when that value changes. */
 export function useLiveRun<T extends string | number>(select: (run: LiveRun) => T): T {
@@ -98,13 +160,17 @@ export function useElapsed(running: boolean, startedAt: number) {
 }
 
 /** The streamed text to show, and whether the saved answer already shows it (a refresh can land in between). */
-export function liveAnswer(stream: string, lastMessage?: { role: string; text: string }) {
+export function liveAnswer(stream: string, lastMessage?: { role: string; text: string; draftSummary?: boolean }) {
   const liveText = visibleStream(stream);
+  const savedText = lastMessage?.role === 'assistant' ? lastMessage.text.trim() : '';
   const streamSaved =
     Boolean(liveText) &&
     lastMessage?.role === 'assistant' &&
-    Boolean(lastMessage.text.trim()) &&
-    liveText.endsWith(lastMessage.text.trim());
+    (Boolean(lastMessage.draftSummary) ||
+      (Boolean(savedText) &&
+        (liveText.endsWith(savedText) ||
+          savedText.endsWith(liveText) ||
+          liveText.replace(/\s+/g, ' ') === savedText.replace(/\s+/g, ' '))));
   return { liveText, streamSaved };
 }
 

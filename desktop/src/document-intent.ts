@@ -15,19 +15,31 @@ const PARTIAL =
 const GENERIC =
   /^(?:(?:ช่วย|ขอ|ขอให้|รบกวน|กรุณา)\s*)?(?:ยกร่าง|ร่าง|เขียน|จัดทำ|สรุปเป็น|ทำเป็น)\s*(?:(?:เอกสาร|ให้(?:หน่อย|ที|ด้วย)?|จากที่คุยกัน|ตามที่คุยกัน|ตามข้อสรุป|เลย|หน่อย|ที|ด้วย)\s*)+(?:ครับ|ค่ะ|คะ)?$/i;
 
+const NON_DOCUMENT_DELIVERABLE =
+  /(?:แคปชัน|แคปชั่น|โพสต์|คอนเทนต์|อีเมล|เมล|สคริปต์|สคริป|ข่าวประชาสัมพันธ์|ข่าวสั้น|ข้อความประชาสัมพันธ์|ข้อความแจ้ง|ข้อความสั้น|บรีฟ|สไลด์|พรีเซนต์|พรีเซนเทชัน|โปสเตอร์|แบนเนอร์|โบรชัวร์|อินโฟกราฟิก|บทความ|คำกล่าว|สุนทรพจน์|บทพูด|พิธีกร|โค้ด|สูตร|สโลแกน|แท็กไลน์|แฮชแท็ก|แบบสอบถาม|แบบสำรวจ|\b(?:caption|post|email|mail|script|slide|deck|brief|poster|banner|article|blog|copy|slogan|tagline|code|prompt|quiz|survey)\b)/i;
+const BARE_PROJECT_CONTEXT =
+  /(?:ประชาสัมพันธ์|โปรโมต|โปรโมท|สื่อสาร|กิจกรรม|อบรม|สัมมนา|นิทรรศการ|บูธ|ภาพ|คลิป|วิดีโอ|สื่อ|โปสเตอร์|ข่าว|รายละเอียด|ข้อมูล|เกี่ยวกับ|ของ|ใน|สำหรับ)\s*$/i;
+const BARE_NOTICE_CONTEXT = /(?:แจ้ง|ข้อความ|โพสต์|แคปชัน|แคปชั่น|อีเมล|เมล|ข่าว|ไลน์|\bline\b)\s*$/i;
+
 const TYPES: { id: DocumentToolId; pattern: RegExp }[] = [
   { id: 'tor', pattern: /\btor\b|ทีโออาร์|ขอบเขตของงาน/gi },
   { id: 'memo', pattern: /บันทึกข้อความ|หนังสือภายใน|บันทึกราชการ/gi },
   { id: 'letter', pattern: /หนังสือราชการ|หนังสือภายนอก|จดหมายราชการ|หนังสือเชิญ|หนังสือตอบกลับ|หนังสือประสานงาน/gi },
   { id: 'minutes', pattern: /รายงานการประชุม|บันทึกการประชุม/gi },
-  { id: 'project', pattern: /(?:ข้อเสนอ|เอกสาร)โครงการ|(?<!ชื่อ)โครงการ/gi },
+  { id: 'project', pattern: /(?:ข้อเสนอ|เอกสาร|แบบเสนอ)โครงการ|(?<!ชื่อ)โครงการ/gi },
   { id: 'other', pattern: /หนังสือรับรอง|ประกาศ|คำสั่ง|ข้อตกลง|สัญญา|รายงาน(?:ผล|ความคืบหน้า|สรุปผล)/gi },
 ];
 
 function mentionedTypes(value: string) {
   return TYPES.flatMap(({ id, pattern }) =>
     [...value.matchAll(pattern)].map(match => ({ id, start: match.index!, end: match.index! + match[0].length, name: match[0] })),
-  ).filter(match => !(match.name === 'คำสั่ง' && /(?:sql|shell|terminal|command|โค้ด|โปรแกรม)/i.test(value)));
+  ).filter(match => {
+    if (match.name === 'คำสั่ง' && /(?:sql|shell|terminal|command|โค้ด|โปรแกรม)/i.test(value)) return false;
+    const before = value.slice(0, match.start);
+    if (match.name === 'โครงการ' && BARE_PROJECT_CONTEXT.test(before)) return false;
+    if (match.name === 'ประกาศ' && BARE_NOTICE_CONTEXT.test(before)) return false;
+    return true;
+  });
 }
 
 /** Subtypes come from user requests, never from generated prose or attached examples. */
@@ -74,9 +86,24 @@ export function requestedDocumentTool(text: string, priorUserMessages: string[] 
   const actions = [...value.matchAll(ACTION)];
   if (!actions.length) return undefined;
   const action = EXPLANATION.test(value) ? actions.at(-1)! : actions[0];
+  const actionEnd = action.index! + action[0].length;
+  const afterAction = value.slice(actionEnd);
+  const nonDocBeforeConvert = (segment: string) => {
+    const pivot = segment.search(/เป็น|\b(?:to|into)\b/i);
+    const head = pivot >= 0 ? segment.slice(0, pivot) : segment;
+    return NON_DOCUMENT_DELIVERABLE.test(head);
+  };
   const types = mentionedTypes(value);
-  const following = types.filter(match => match.start >= action.index!).sort((a, b) => a.start - b.start || b.end - a.end);
-  const previous = types.filter(match => match.end <= action.index!).sort((a, b) => b.end - a.end || b.end - b.start - (a.end - a.start));
+  const following = types
+    .filter(match => match.start >= action.index!)
+    .filter(match => {
+      const between = value.slice(actionEnd, match.start);
+      return !(NON_DOCUMENT_DELIVERABLE.test(between) && !/เป็น|\b(?:to|into)\b/i.test(between));
+    })
+    .sort((a, b) => a.start - b.start || b.end - a.end);
+  const previous = nonDocBeforeConvert(afterAction.slice(0, 40))
+    ? []
+    : types.filter(match => match.end <= action.index!).sort((a, b) => b.end - a.end || b.end - b.start - (a.end - a.start));
   const explicit = following[0] || previous[0];
   if (explicit) return explicit.id;
   if (!GENERIC.test(value)) return undefined;

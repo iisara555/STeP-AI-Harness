@@ -31,6 +31,22 @@ import { googleChangesEn } from './google-changes-en';
 export const en: Record<string, string> = {
   'ขอร่างเอกสารต่อจากบทสนทนาได้ โดยใช้ Skill และแม่แบบเดียวกับหน้าเอกสาร และเก็บร่างเดิมไว้เมื่อเริ่มเอกสารใหม่':
     'Draft documents from a conversation with the same Skills and templates as the document page, preserving earlier drafts when starting a new document.',
+  ปิดแผนที่เสร็จแล้ว: 'Dismiss completed plan',
+  ร่างทั่วไป: 'General draft',
+  'ตอนนี้เปิดสิทธิ์ “อ่านอย่างเดียว” จึงยังบันทึกความจำนี้ไม่ได้ เปลี่ยนสิทธิ์เครื่องมือหรือเอาติ๊กจำไว้ออกแล้วลองใหม่':
+    'Read-only permission mode is active, so this memory cannot be saved. Change tool permissions or uncheck remember and try again.',
+  'งานหยุดกลางคันเมื่อปิดแอป กรุณาส่งคำขอใหม่': 'The task stopped when the app closed. Please send your request again.',
+  'ไม่พบรายการแก้ไขที่รอตรวจแล้ว อาจถูกนำไปใช้หรือปฏิเสธไปแล้ว':
+    'This pending change was no longer found. It may already have been applied or rejected.',
+  'สิทธิ์เครื่องมือถูกล็อกเป็นอ่านอย่างเดียวโดยนโยบายองค์กร จึงยังลงมือทำตามแผนไม่ได้':
+    'Tool permissions are locked to read-only by organization policy, so the plan cannot be executed yet.',
+  'เปลี่ยนสิทธิ์เป็น “ถามก่อนแก้ไข” เพื่อลงมือทำตามแผน': 'Switched permissions to “Ask before editing” to execute the plan.',
+  จัดการแล้ว: 'Handled',
+  ดาวน์โหลดรูป: 'Download image',
+  'ภาพที่ AI สร้าง': 'AI-generated image',
+  'พร้อมลงมือทำตามแผนที่คุยกันแล้วหรือยัง?': 'Ready to proceed with the plan?',
+  ลงมือทำตามแผนที่คุยกัน: 'Proceed with the discussed plan',
+  ต่อจากแผนเดิมที่ยังไม่เสร็จ: 'Continue the unfinished tasks in the approved plan',
   'ร่าง TOR ใช้โครงครบ 16 ข้อ พร้อมแจ้งหัวข้อที่ตรวจไม่พบให้ทบทวนก่อนนำไปใช้':
     'TOR drafts use the complete 16-section outline and flag headings not found for review before use.',
   'แก้ข้อความไม่ปรากฏหลังกด Enter และวางภาพในช่องแชตเพื่อดูตัวอย่างหรือนำออกก่อนส่งได้':
@@ -3627,6 +3643,22 @@ export const en: Record<string, string> = {
     'Pick a Skill with a trailing slash, open scheduled results, and set a profile photo',
   'แก้ข้อความซ้อนเมื่อลองตอบใหม่ และจัดการไฟล์แนบเมื่อสลับหรือลบงาน':
     'Retries replace earlier response text, and attachments stay with the correct task when switching or deleting tasks',
+  หมายเหตุ: 'Note',
+  ข้อมูลสำคัญ: 'Important',
+  ข้อควรระวัง: 'Warning',
+  คำเตือนสำคัญ: 'Caution',
+  ดูโค้ด: 'View code',
+  ดูแผนภาพ: 'View diagram',
+  ดูภาพ: 'View graphic',
+  'กำลังวาดแผนภาพ…': 'Rendering diagram…',
+  'ดาวน์โหลด SVG': 'Download SVG',
+  แสดงตัวอย่าง: 'Preview',
+  'ตัวอย่างภาพ SVG': 'SVG graphic preview',
+  'ตัวอย่างหน้าเว็บ HTML': 'HTML page preview',
+  'แสดงผลในกล่องแยกออฟไลน์ (ไม่เชื่อมอินเทอร์เน็ต)': 'Rendered in an offline sandbox (no internet access)',
+  ดูในแชต: 'Preview here',
+  ซ่อนตัวอย่าง: 'Hide preview',
+  เปิดในแท็บเว็บ: 'Open in Web tab',
   'กำลังทดสอบ API key ด้วยข้อความสั้น ๆ': 'Testing API key with a short message',
   'โควตาบัญชีหลักเต็ม ({0}) · สลับไปใช้บัญชีสำรองชั่วคราว': 'Primary account quota hit ({0}) · temporarily switching to backup account',
   'คำขอ (Requests)': 'Requests',

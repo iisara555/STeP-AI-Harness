@@ -14,12 +14,43 @@ export function thinkingTime(ms: number) {
   return minutes ? t('{0} นาที {1} วินาที', minutes, seconds % 60) : t('{0} วินาที', seconds);
 }
 
-/** A tool stage arrives as "reference docs/x.md": said in the employee's words, with the file or page it used. */
+/** Maps host-localized tool activity labels (electron/tools.ts) back to their tool icon key. */
+const ACTIVITY_TOOLS: [RegExp, string][] = [
+  [/^(?:กำลังค้นเว็บ|Searching the web)/, 'web_search'],
+  [/^(?:กำลังอ่านเว็บไซต์|Reading the website)/, 'web_fetch'],
+  [/^(?:กำลังทำงานบนเว็บ|Working on the web page)/, 'browser_control'],
+  [
+    /^(?:กำลังอ่านเอกสาร|กำลังเปิดเอกสาร STeP|กำลังดูรายชื่อเอกสาร STeP|Reading document|Opening STeP document|Checking STeP document list)/,
+    'reference',
+  ],
+  [/^(?:กำลังอ่าน Skill|กำลังเลือก Skill|เลือก Skill|Reading Skill|Choosing a Skill)/, 'skill'],
+  [/^(?:กำลังอ่านไฟล์งาน|Reading workspace file)/, 'files'],
+  [/^(?:กำลังค้นไฟล์ในพื้นที่งาน|Searching workspace files)/, 'search_files'],
+  [/^(?:กำลังค้นงานเก่า|Searching earlier tasks)/, 'session_search'],
+  [/^(?:กำลังเตรียมแก้ข้อความเฉพาะจุด|Preparing a targeted edit)/, 'patch'],
+  [/^(?:กำลังเตรียมการแก้ไขไฟล์|Preparing file changes)/, 'changes'],
+  [/^(?:กำลังจัดทำไฟล์ Excel|Creating Excel workbook)/, 'sheet_create'],
+  [/^(?:กำลังจัดทำไฟล์ PowerPoint|Creating PowerPoint)/, 'slides_create'],
+  [/^(?:กำลังค้นหาสัญลักษณ์|Searching code symbols)/, 'code_symbols'],
+  [/^(?:กำลังค้นหาจุดอ้างอิง|Searching code references)/, 'code_references'],
+  [/^(?:กำลังคำนวณด้วยโค้ด|Running JavaScript calculation)/, 'repl_eval'],
+  [/^(?:กำลังบันทึกเอกสารทำงาน|Saving working artifact)/, 'artifact_save'],
+  [/^(?:กำลังอ่านเอกสารทำงาน|Reading working artifact)/, 'artifact_read'],
+  [/^(?:กำลังให้ผู้ช่วยย่อยค้นคว้า|Delegating to research subagent)/, 'invoke_subagent'],
+  [/^(?:ส่งแผนให้คุณอนุมัติ|Submitting plan for approval)/, 'plan'],
+  [/^(?:บันทึกความคืบหน้าของแผน|Updating plan progress)/, 'plan_update'],
+  [/^(?:รอคำตอบจากคุณ|Waiting for your answer)/, 'ask_user'],
+  [/^(?:กำลังตรวจงานเบื้องหลัง|Checking background tasks)/, 'tasks'],
+  [/^(?:กำลังค้นรายการเครื่องมือ|กำลังอ่านรายละเอียดเครื่องมือ|Checking available tools)/, 'tool_search'],
+];
+
+/** A tool stage arrives as "reference docs/x.md" or a localized tool activity: map it to its label and icon. */
 export function stageLabel(title: string) {
   const tool = /^([a-z_]+)(?:\s+(.+))?$/.exec(title);
   if (tool && ACTION_LABELS[tool[1]])
     return { label: t(ACTION_LABELS[tool[1]]), detail: tool[2]?.split(/[\\/]/).pop() || '', tool: tool[1] };
-  return { label: t(title), detail: '', tool: '' };
+  const byActivity = ACTIVITY_TOOLS.find(([pattern]) => pattern.test(title))?.[1] || '';
+  return { label: t(title), detail: '', tool: byActivity };
 }
 
 // Reasoning is Markdown-ish; the panel shows it as quiet text without the emphasis markers.

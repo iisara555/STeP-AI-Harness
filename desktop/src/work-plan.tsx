@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Check, Circle, LoaderCircle, MessageSquare, OctagonAlert, Play, ListChecks } from './icons';
+import { useEffect, useState } from 'react';
+import { Check, Circle, LoaderCircle, MessageSquare, OctagonAlert, Play, ListChecks, X } from './icons';
 import type { WorkPlan, Workflow } from './types';
 import { commentedTasks, PLAN_COMMENT_LIMIT } from './plan-comments';
 import { t } from './i18n';
@@ -13,6 +13,9 @@ export const WORKFLOW_LABELS: Record<Workflow, string> = {
   diagnose: 'วิเคราะห์ปัญหา',
   coding: 'เขียนและตรวจโค้ด',
 };
+
+/** Workflows selectable directly in the composer dropdown. Running an approved plan uses the Proceed button instead. */
+export const COMPOSER_WORKFLOWS: readonly Workflow[] = ['assistant', 'plan', 'requirements', 'diagnose', 'coding'];
 
 /** One comment being written on a task: the box opens under the task, like a comment on an Antigravity artifact. */
 function CommentBox({ initial, onSave, onCancel }: { initial: string; onSave: (comment: string) => void; onCancel: () => void }) {
@@ -59,6 +62,7 @@ export function WorkPlanCard({
   onExecute,
   onComment,
   onRevise,
+  onDismiss,
 }: {
   plan: WorkPlan;
   running: boolean;
@@ -68,20 +72,42 @@ export function WorkPlanCard({
   onComment: (number: number, comment: string) => Promise<boolean>;
   /** Asks the assistant to revise the plan by the comments. */
   onRevise: () => void;
+  /** Clears the plan card from the task when no longer needed. */
+  onDismiss?: () => void;
 }) {
   const [editing, setEditing] = useState<number>();
   const done = plan.tasks.filter(task => task.status === 'done').length;
   const finished = done === plan.tasks.length;
+  const [open, setOpen] = useState(!finished);
+  useEffect(() => {
+    setOpen(!finished);
+  }, [finished, plan.approvedAt]);
   const comments = commentedTasks(plan).length;
   const save = async (number: number, comment: string) => {
     if (await onComment(number, comment)) setEditing(undefined);
   };
   return (
-    <details className="work-plan" open>
+    <details className="work-plan" open={open} onToggle={event => setOpen(event.currentTarget.open)}>
       <summary>
         <ListChecks size={16} />
         <strong>{t('แผนงาน')}</strong>
         <span className="muted">{t('เสร็จ {0}/{1}', done, plan.tasks.length)}</span>
+        {finished && onDismiss && (
+          <button
+            type="button"
+            className="icon quiet work-plan-dismiss"
+            disabled={running}
+            aria-label={t('ปิดแผนที่เสร็จแล้ว')}
+            title={t('ปิดแผนที่เสร็จแล้ว')}
+            onClick={event => {
+              event.preventDefault();
+              event.stopPropagation();
+              onDismiss();
+            }}
+          >
+            <X size={14} />
+          </button>
+        )}
       </summary>
       {plan.goal && <p className="work-plan-goal">{plan.goal}</p>}
       <ol>

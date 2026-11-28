@@ -365,7 +365,9 @@ export type RunOptions = {
   isolatedQuestion?: boolean;
   /** Explicit continuation of an approved native plan, bounded across provider/tool turns. */
   autoContinue?: boolean;
-  longBudget?: { deadline: number; tokens: number; maxTokens: number };
+  /** Synthetic continuation round triggered by autoContinue; sent to the model without adding a user bubble. */
+  internalContinuation?: boolean;
+  longBudget?: { deadline: number; tokens: number; maxTokens: number; abortedByBudget?: () => boolean };
   documentTool?: DocumentToolId;
   documentVariant?: string;
   invitation?: InvitationPresentation;
@@ -449,7 +451,10 @@ export class WorkService {
           total: fresh.usage.total + done.counted.total,
         };
       this.store.save(fresh);
-      if (this.active.has(id)) this.lateChecks.set(id, [...(this.lateChecks.get(id) || []), apply]);
+      if (this.active.has(id)) {
+        this.lateChecks.set(id, [...(this.lateChecks.get(id) || []), apply]);
+        return;
+      }
       this.emit({ sessionId: id, type: 'changed' });
     })().catch(() => {});
     this.checks.add(pending);
@@ -663,13 +668,28 @@ export class WorkService {
     this.active.set(id, controller);
     try {
       const initial = this.store.session(id);
+      if (options.workflow === 'execute' && this.harness.permissionMode?.() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
       if (options.autoContinue && (options.workflow !== 'execute' || !initial.workPlan?.approvedAt)) throw new Error('PLAN_REQUIRED');
       const started = Date.now(),
         initialTokens = initial.usage?.total || 0;
       const budget = { maxRounds: 3, maxTokens: 50000, maxMs: 10 * 60 * 1000 };
+      let budgetTimedOut = false;
       if (options.autoContinue)
-        options = { ...options, longBudget: { deadline: started + budget.maxMs, tokens: 0, maxTokens: budget.maxTokens } };
-      const deadline = options.autoContinue ? setTimeout(() => controller.abort(), budget.maxMs) : undefined;
+        options = {
+          ...options,
+          longBudget: {
+            deadline: started + budget.maxMs,
+            tokens: 0,
+            maxTokens: budget.maxTokens,
+            abortedByBudget: () => budgetTimedOut,
+          },
+        };
+      const deadline = options.autoContinue
+        ? setTimeout(() => {
+            budgetTimedOut = true;
+            controller.abort();
+          }, budget.maxMs)
+        : undefined;
       const progress = (s: Session) => (s.workPlan?.tasks || []).map(t => t.status).join(',');
       try {
         for (let round = 0; round < (options.autoContinue ? budget.maxRounds : 1); round++) {
@@ -681,14 +701,14 @@ export class WorkService {
           }
           await this.execute(
             id,
-            round ? 'ต่อจากแผนเดิมที่ยังไม่เสร็จ' : input,
+            round ? tm('ต่อจากแผนเดิมที่ยังไม่เสร็จ') : input,
             round ? '' : attachmentText,
             reviewed,
             skill,
             mode,
             imageModel,
             round ? [] : fileNames,
-            options,
+            round ? { ...options, internalContinuation: true } : options,
             controller,
           );
           if (!options.autoContinue) break;
@@ -696,7 +716,7 @@ export class WorkService {
             tasks = done.workPlan?.tasks || [];
           const pending = tasks.some(t => t.status === 'todo' || t.status === 'doing');
           const reason =
-            done.runs?.at(-1)?.code === 'LONG_TASK_BUDGET' || Date.now() - started >= budget.maxMs
+            budgetTimedOut || done.runs?.at(-1)?.code === 'LONG_TASK_BUDGET' || Date.now() - started >= budget.maxMs
               ? 'budget'
               : controller.signal.aborted
                 ? 'cancelled'
@@ -787,7 +807,7 @@ export class WorkService {
       delete session.documentTask;
     }
     const documentTask = besideDocument && mode === 'draft' && Boolean(session.draft.trim() || session.proposals.length);
-    const documentQuestion = documentTask && !attachmentText && isDocumentQuestion(session.documentTool, text);
+    const documentQuestion = documentTask && isDocumentQuestion(session.documentTool, text);
     if (documentQuestion) mode = 'chat';
     // Chat is one continuous conversation. Drafts keep task boundaries so an unrelated task starts clean.
     const chat = mode === 'chat';
@@ -848,7 +868,7 @@ export class WorkService {
       : -1;
     if (options.acceptedMessageAt && acceptedIndex < 0) throw new Error('ACCEPTED_MESSAGE_NOT_FOUND');
     const priorMessages = session.messages.filter((_, index) => index !== acceptedIndex);
-    if (acceptedIndex < 0 && (!retrying || !options.retry)) {
+    if (acceptedIndex < 0 && !options.internalContinuation && (!retrying || !options.retry)) {
       session.messages.push({
         role: 'user',
         text,
@@ -1000,7 +1020,14 @@ export class WorkService {
         }
         session.contextStart = fromConversation ? 0 : priorMessages.length;
         delete session.checkpoint;
-        delete session.approvedPlan;
+        const planActive = Boolean(session.workPlan?.tasks.some(t => t.status !== 'done'));
+        if (options.workflow !== 'execute' && options.workflow !== 'plan' && (!planActive || policy.history === 'ignore')) {
+          delete session.workPlan;
+          delete session.longTask;
+          delete session.approvedPlan;
+        } else if (!session.workPlan) {
+          delete session.approvedPlan;
+        }
       }
     }
     const latest = retrying && options.retry ? session.lastRun?.latest || text : text;
@@ -1076,6 +1103,7 @@ export class WorkService {
     // Completed Google writes of this run, for the list under the answer (src/google-changes.ts).
     const googleChanges: GoogleChange[] = [];
     const artifacts = new Map<string, ArtifactRef>();
+    const generatedImages: string[] = [];
     try {
       status(tm('กำลังเตรียมงาน'), { quiet: true });
       const routeQuery = options.part?.request || session.originalQuery;
@@ -1106,6 +1134,7 @@ export class WorkService {
             (question.options?.length ? '\n' + question.options.map((o: any, i: number) => `${i + 1}. ${o.label}`).join('\n') : ''),
           at: new Date().toISOString(),
           ms: Date.now() - started,
+          clarification: true,
         });
         delete session.lastRun;
         finish(session, 'clarify');
@@ -1114,6 +1143,7 @@ export class WorkService {
       }
       if (blockedRoute(contract) || contract.mode === 'UNAVAILABLE') throw new Error('AUTHORITY_REVIEW_REQUIRED');
       if (contract.readiness?.status === 'unavailable') throw new Error('CONTEXT_UNAVAILABLE');
+      const activeWorkPlan = Boolean(session.workPlan?.tasks.some(t => t.status !== 'done'));
       const textCandidate =
         mode !== 'image' &&
         !options.draftOnly &&
@@ -1121,7 +1151,7 @@ export class WorkService {
         !session.skill &&
         !session.documentTool &&
         !session.approvedPlan &&
-        !session.workPlan &&
+        !activeWorkPlan &&
         !options.images?.length &&
         !clarification &&
         !continuing &&
@@ -1192,7 +1222,7 @@ export class WorkService {
         (!options.workflow || options.workflow === 'assistant') &&
         !clarification &&
         !session.approvedPlan &&
-        !session.workPlan &&
+        !activeWorkPlan &&
         this.harness.permissionMode?.() !== 'plan' &&
         skillRegistry.length
       ) {
@@ -1442,7 +1472,7 @@ export class WorkService {
         checkAbort();
         session = this.store.session(id);
         session.images = [...(session.images || []), image].slice(-50);
-        session.messages.push({ role: 'assistant', text: tm('สร้างรูปแล้ว · {0}', image.model), at: image.at });
+        session.messages.push({ role: 'assistant', text: tm('สร้างรูปแล้ว · {0}', image.model), at: image.at, imageIds: [image.id] });
         session.status = 'review';
         session.clarification = false;
         delete session.lastRun;
@@ -2486,6 +2516,12 @@ export class WorkService {
               lastAnswerStreamChars = 0;
               activity(tm('กำลังเติมส่วนที่ยังขาด'));
             },
+            // If the rewrite was rejected or failed, replace any partial rewrite on screen with the kept reviewed answer.
+            kept: keptAnswer => {
+              discardLive(lastAnswerStreamChars);
+              lastAnswerStreamChars = keptAnswer.length;
+              if (keptAnswer) this.emit({ sessionId: id, type: 'delta', text: keptAnswer });
+            },
             // Fold earlier tool results once, just before the prompt would need compacting on every turn.
             tooLarge: text => tokens(activeSystem.system + text) > budget * LOOP_FOLD_SHARE,
             progress: progressed,
@@ -2503,7 +2539,10 @@ export class WorkService {
               if (request.tool === 'reference' && request.input) opened.add(request.input);
               if (['web_fetch', 'web_extract', 'browser'].includes(request.tool) && request.input) browsed.add(request.input);
               const done = host.execute(request, signal);
-              if ((request.tool === 'changes' && request.content !== undefined) || request.tool === 'patch')
+              if (
+                (request.tool === 'changes' && request.content !== undefined) ||
+                ['patch', 'sheet_create', 'sheet_edit', 'slides_create'].includes(request.tool)
+              )
                 void done.then(
                   (change: any) => {
                     if (change && typeof change.path === 'string' && typeof change.id === 'string')
@@ -2512,6 +2551,13 @@ export class WorkService {
                         id: change.id,
                         status: change.status === 'applied' ? 'applied' : 'staged',
                       });
+                  },
+                  () => {},
+                );
+              if (request.tool === 'image_generate')
+                void done.then(
+                  (image: any) => {
+                    if (image && typeof image.id === 'string' && !generatedImages.includes(image.id)) generatedImages.push(image.id);
                   },
                   () => {},
                 );
@@ -2770,6 +2816,7 @@ export class WorkService {
         ...(written.size ? { written: [...written.values()] } : {}),
         ...(googleChanges.length ? { google: [...googleChanges] } : {}),
         ...(artifacts.size ? { artifacts: [...artifacts.values()] } : {}),
+        ...(generatedImages.length ? { imageIds: [...generatedImages] } : {}),
         ...(check ? { check } : {}),
         ...(checkLater ? { checkPending: answeredAt } : {}),
         ...(shownSources.length ? { webSources: shownSources } : {}),
@@ -2781,9 +2828,10 @@ export class WorkService {
       await this.harness.completed?.(session);
     } catch (error) {
       session = this.store.session(id);
-      session.status = controller.signal.aborted && !timedOut ? 'cancelled' : 'error';
       const code = codeOf(error);
-      const shown = timedOut ? 'RUN_TIMEOUT' : controller.signal.aborted ? 'CANCELLED' : code;
+      const budgetAborted = Boolean(options.longBudget?.abortedByBudget?.()) || code === 'LONG_TASK_BUDGET';
+      session.status = controller.signal.aborted && !timedOut && !budgetAborted ? 'cancelled' : 'error';
+      const shown = budgetAborted ? 'LONG_TASK_BUDGET' : timedOut ? 'RUN_TIMEOUT' : controller.signal.aborted ? 'CANCELLED' : code;
       const done = session.checkpoint?.done || 0;
       // A failed or cancelled run can still have sent an email or created a file: those stay listed.
       session.messages.push({
