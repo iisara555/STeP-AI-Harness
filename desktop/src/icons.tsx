@@ -1,9 +1,12 @@
 import {
   AlertTriangle as StillAlertTriangle,
+  AreaChart as StillAreaChart,
   ArrowDownToLine as StillArrowDownToLine,
   ArrowLeft as StillArrowLeft,
   ArrowRight as StillArrowRight,
   ArrowUp as StillArrowUp,
+  ArrowUpDown as StillArrowUpDown,
+  BarChart3 as StillBarChart3,
   Blocks as StillBlocks,
   Bold as StillBold,
   BookOpen as StillBookOpen,
@@ -39,11 +42,13 @@ import {
   Italic as StillItalic,
   KeyRound as StillKeyRound,
   Lightbulb as StillLightbulb,
+  LineChart as StillLineChart,
   List as StillList,
   ListChecks as StillListChecks,
   ListOrdered as StillListOrdered,
   LockKeyhole as StillLockKeyhole,
   Mail as StillMail,
+  Maximize2 as StillMaximize2,
   Megaphone as StillMegaphone,
   MessageCircleQuestion as StillMessageCircleQuestion,
   MessageSquare as StillMessageSquare,
@@ -60,6 +65,7 @@ import {
   Pause as StillPause,
   PenLine as StillPenLine,
   Pencil as StillPencil,
+  PieChart as StillPieChart,
   Pin as StillPin,
   PinOff as StillPinOff,
   Play as StillPlay,
@@ -73,6 +79,7 @@ import {
   RotateCw as StillRotateCw,
   Save as StillSave,
   ScanText as StillScanText,
+  ScatterChart as StillScatterChart,
   Search as StillSearch,
   Send as StillSend,
   SeparatorHorizontal as StillSeparatorHorizontal,
@@ -83,6 +90,7 @@ import {
   Sparkles as StillSparkles,
   Square as StillSquare,
   Sun as StillSun,
+  Table2 as StillTable2,
   TextQuote as StillTextQuote,
   ThumbsDown as StillThumbsDown,
   ThumbsUp as StillThumbsUp,
@@ -169,10 +177,13 @@ function animated(Drawing: LucideIcon, name: string, movement: Movement = 'pulse
 }
 
 export const AlertTriangle = /* @__PURE__ */ animated(StillAlertTriangle, 'AlertTriangle', 'pulse');
+export const AreaChart = /* @__PURE__ */ animated(StillAreaChart, 'AreaChart', 'pulse');
 export const ArrowDownToLine = /* @__PURE__ */ animated(StillArrowDownToLine, 'ArrowDownToLine', 'down');
 export const ArrowLeft = /* @__PURE__ */ animated(StillArrowLeft, 'ArrowLeft', 'left');
 export const ArrowRight = /* @__PURE__ */ animated(StillArrowRight, 'ArrowRight', 'right');
 export const ArrowUp = /* @__PURE__ */ animated(StillArrowUp, 'ArrowUp', 'up');
+export const ArrowUpDown = /* @__PURE__ */ animated(StillArrowUpDown, 'ArrowUpDown', 'pulse');
+export const BarChart3 = /* @__PURE__ */ animated(StillBarChart3, 'BarChart3', 'pulse');
 export const Blocks = /* @__PURE__ */ animated(StillBlocks, 'Blocks', 'pulse');
 export const Bold = /* @__PURE__ */ animated(StillBold, 'Bold', 'pulse');
 export const BookOpen = /* @__PURE__ */ animated(StillBookOpen, 'BookOpen', 'document');
@@ -208,11 +219,13 @@ export const IndentIncrease = /* @__PURE__ */ animated(StillIndentIncrease, 'Ind
 export const Italic = /* @__PURE__ */ animated(StillItalic, 'Italic', 'pulse');
 export const KeyRound = /* @__PURE__ */ animated(StillKeyRound, 'KeyRound', 'turn');
 export const Lightbulb = /* @__PURE__ */ animated(StillLightbulb, 'Lightbulb', 'pulse');
+export const LineChart = /* @__PURE__ */ animated(StillLineChart, 'LineChart', 'pulse');
 export const List = /* @__PURE__ */ animated(StillList, 'List', 'pulse');
 export const ListChecks = /* @__PURE__ */ animated(StillListChecks, 'ListChecks', 'pulse');
 export const ListOrdered = /* @__PURE__ */ animated(StillListOrdered, 'ListOrdered', 'pulse');
 export const LockKeyhole = /* @__PURE__ */ animated(StillLockKeyhole, 'LockKeyhole', 'pulse');
 export const Mail = /* @__PURE__ */ animated(StillMail, 'Mail', 'pulse');
+export const Maximize2 = /* @__PURE__ */ animated(StillMaximize2, 'Maximize2', 'pulse');
 export const Megaphone = /* @__PURE__ */ animated(StillMegaphone, 'Megaphone', 'document');
 export const MessageCircleQuestion = /* @__PURE__ */ animated(StillMessageCircleQuestion, 'MessageCircleQuestion', 'pulse');
 export const MessageSquare = /* @__PURE__ */ animated(StillMessageSquare, 'MessageSquare', 'pulse');
@@ -229,6 +242,7 @@ export const Paperclip = /* @__PURE__ */ animated(StillPaperclip, 'Paperclip', '
 export const Pause = /* @__PURE__ */ animated(StillPause, 'Pause', 'pulse');
 export const PenLine = /* @__PURE__ */ animated(StillPenLine, 'PenLine', 'pulse');
 export const Pencil = /* @__PURE__ */ animated(StillPencil, 'Pencil', 'pulse');
+export const PieChart = /* @__PURE__ */ animated(StillPieChart, 'PieChart', 'pulse');
 export const Pin = /* @__PURE__ */ animated(StillPin, 'Pin', 'turn');
 export const PinOff = /* @__PURE__ */ animated(StillPinOff, 'PinOff', 'turn');
 export const Play = /* @__PURE__ */ animated(StillPlay, 'Play', 'pulse');
@@ -242,6 +256,7 @@ export const RotateCcw = /* @__PURE__ */ animated(StillRotateCcw, 'RotateCcw', '
 export const RotateCw = /* @__PURE__ */ animated(StillRotateCw, 'RotateCw', 'refresh');
 export const Save = /* @__PURE__ */ animated(StillSave, 'Save', 'down');
 export const ScanText = /* @__PURE__ */ animated(StillScanText, 'ScanText', 'pulse');
+export const ScatterChart = /* @__PURE__ */ animated(StillScatterChart, 'ScatterChart', 'pulse');
 export const Search = /* @__PURE__ */ animated(StillSearch, 'Search', 'pulse');
 export const Send = /* @__PURE__ */ animated(StillSend, 'Send', 'right');
 export const SeparatorHorizontal = /* @__PURE__ */ animated(StillSeparatorHorizontal, 'SeparatorHorizontal', 'pulse');
@@ -252,6 +267,7 @@ export const Split = /* @__PURE__ */ animated(StillSplit, 'Split', 'pulse');
 export const Sparkles = /* @__PURE__ */ animated(StillSparkles, 'Sparkles', 'pulse');
 export const Square = /* @__PURE__ */ animated(StillSquare, 'Square', 'pulse');
 export const Sun = /* @__PURE__ */ animated(StillSun, 'Sun', 'turn');
+export const Table2 = /* @__PURE__ */ animated(StillTable2, 'Table2', 'pulse');
 export const TextQuote = /* @__PURE__ */ animated(StillTextQuote, 'TextQuote', 'pulse');
 export const ThumbsDown = /* @__PURE__ */ animated(StillThumbsDown, 'ThumbsDown', 'pulse');
 export const ThumbsUp = /* @__PURE__ */ animated(StillThumbsUp, 'ThumbsUp', 'pulse');
