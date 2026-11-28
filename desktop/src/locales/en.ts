@@ -3700,4 +3700,21 @@ export const en: Record<string, string> = {
     'Shows live rate-limit headers from recent API requests, matches the quota chip to the active model family, and separates Cache read/write counts',
   'เพิ่มตัวเลือก OpenRouter แบบไม่เก็บข้อมูลคำขอ (ZDR) และจัดลำดับผู้ให้บริการ พร้อมตั้งบัญชีสำรองอัตโนมัติ (Fallback) เมื่อโควตาเต็มได้เอง':
     'Adds OpenRouter Zero Data Retention (ZDR) and provider routing order, plus an opt-in automatic backup account (Fallback) when quota runs out',
+  'อัปเดตคลังความรู้ STeP ออนไลน์': 'Refresh STeP knowledge pack online',
+  'คลังความรู้องค์กร STeP': 'STeP organisation knowledge',
+  ชุดติดมากับแอป: 'Bundled with app',
+  'ชุดอัปเดตล่าสุดรุ่น {0} ({1} ฉบับ · เผยแพร่ {2})': 'Updated pack v{0} ({1} docs · published {2})',
+  'อัปเดตเอกสารระเบียบและคู่มือ STeP ล่าสุดได้ทันทีโดยไม่ต้องรออัปเดตแอปทั้งชุด ทุกไฟล์ตรวจรหัส SHA-256 ก่อนใช้งาน':
+    'Pull the latest STeP rules and manuals without waiting for a full app update. Every file is SHA-256 verified before activation.',
+  ตรวจอัปเดตคลังความรู้: 'Check for knowledge updates',
+  'กำลังอัปเดตคลังความรู้…': 'Updating knowledge pack…',
+  กลับไปใช้ชุดติดมากับแอป: 'Revert to bundled knowledge',
+  ผู้ดูแลปิดการอัปเดตคลังความรู้ออนไลน์สำหรับเครื่องนี้ไว้:
+    'Online knowledge pack updates are disabled by your administrator on this device',
+  ไฟล์รายการคลังความรู้ไม่ถูกต้องหรืออยู่นอกขอบเขตที่อนุญาต: 'The knowledge pack manifest is invalid or points outside allowed paths',
+  'รหัสตรวจสอบ (SHA-256) ของคลังความรู้ไม่ตรงกับรายการที่รับรอง จึงยกเลิกการติดตั้งอัตโนมัติ':
+    'The knowledge pack SHA-256 checksum did not match the manifest, so installation was aborted',
+  'ยังดึงคลังความรู้รุ่นใหม่ไม่สำเร็จ กรุณาตรวจการเชื่อมต่อเครือข่ายหรือแจ้งผู้ดูแล':
+    'Could not download the latest knowledge pack. Check your network connection or contact your administrator',
+  คลังความรู้มีขนาดใหญ่เกินกำหนดที่แอปอนุญาต: 'The knowledge pack exceeds the maximum size allowed by the app',
 };

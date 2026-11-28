@@ -8,6 +8,8 @@ import {
   Minus,
   Monitor,
   Moon,
+  RefreshCw,
+  RotateCcw,
   Settings2,
   ShieldCheck,
   Sparkles,
@@ -56,6 +58,7 @@ const featureNames: Record<string, string> = localized({
   skillSuggestions: 'แนะนำ Skill เหนือช่องพิมพ์',
   receiptVision: 'ให้ AI อ่านภาพใบเสร็จ',
   autoUpdate: 'อัปเดตแอปอัตโนมัติ',
+  knowledgePackRefresh: 'อัปเดตคลังความรู้ STeP ออนไลน์',
   claudeSubscription: 'ใช้แพ็กเกจ Claude Pro/Max',
   developmentMode: 'ให้พนักงานเปิดโหมดนักพัฒนา',
   learningReview: 'ทบทวนหาบทเรียนอัตโนมัติ',
@@ -107,7 +110,10 @@ const POLICY_GROUPS: [string, string[]][] = [
       'ocrTrial',
     ],
   ],
-  ['การอัปเดตและนักพัฒนา', ['autoUpdate', 'developmentMode', 'claudeSubscription', 'shellByAi', 'autoMerge', 'sandbox', 'headless']],
+  [
+    'การอัปเดตและนักพัฒนา',
+    ['autoUpdate', 'knowledgePackRefresh', 'developmentMode', 'claudeSubscription', 'shellByAi', 'autoMerge', 'sandbox', 'headless'],
+  ],
 ];
 function policyGroups(features: Record<string, boolean>) {
   const names = Object.keys(features),
@@ -169,6 +175,13 @@ export function SettingsPanel({
   const [saveError, setSaveError] = useState<unknown>();
   const [outputStyle, setOutputStyle] = useState(snapshot.settings.outputStyle || '');
   const [outputStyles, setOutputStyles] = useState<string[] | null>(null);
+  const [knowledgePack, setKnowledgePack] = useState<{
+    enabled: boolean;
+    source: 'bundled' | 'pack';
+    packVersion?: string;
+    publishedAt?: string;
+    documentCount?: number;
+  } | null>(null);
   const [busy, setBusy] = useState('');
   const panelRef = useRef<HTMLDivElement>(null),
     footerRef = useRef<HTMLDivElement>(null);
@@ -211,6 +224,11 @@ export function SettingsPanel({
       .catch(error => {
         if (active) onError(error);
       });
+    void call('knowledgePackStatus')
+      .then(status => {
+        if (active) setKnowledgePack(status);
+      })
+      .catch(() => {});
     return () => {
       active = false;
     };
@@ -615,6 +633,56 @@ export function SettingsPanel({
       )}
       {/* Startup is a Windows switch set once: it follows the everyday settings and leaves other systems alone. */}
       {page === 'general' && <StartupSettings call={call} onError={onError} />}
+      {page === 'general' && snapshot.policy?.features.knowledgePackRefresh !== false && (
+        <section>
+          <h2>{t('คลังความรู้องค์กร STeP')}</h2>
+          <p className="small muted">
+            {t('อัปเดตเอกสารระเบียบและคู่มือ STeP ล่าสุดได้ทันทีโดยไม่ต้องรออัปเดตแอปทั้งชุด ทุกไฟล์ตรวจรหัส SHA-256 ก่อนใช้งาน')}
+          </p>
+          <div className="folder-row">
+            <span>
+              {knowledgePack?.source === 'pack'
+                ? t(
+                    'ชุดอัปเดตล่าสุดรุ่น {0} ({1} ฉบับ · เผยแพร่ {2})',
+                    knowledgePack.packVersion || '',
+                    knowledgePack.documentCount || 0,
+                    knowledgePack.publishedAt || '',
+                  )
+                : t('ชุดติดมากับแอป')}
+            </span>
+            <div className="choice-row">
+              <button
+                className="quiet"
+                disabled={Boolean(busy)}
+                onClick={() =>
+                  void run('knowledgePackRefresh', async () => {
+                    const next = await call('knowledgePackRefresh');
+                    setKnowledgePack(next);
+                  })
+                }
+              >
+                <RefreshCw size={15} />
+                {busy === 'knowledgePackRefresh' ? t('กำลังอัปเดตคลังความรู้…') : t('ตรวจอัปเดตคลังความรู้')}
+              </button>
+              {knowledgePack?.source === 'pack' && (
+                <button
+                  className="quiet"
+                  disabled={Boolean(busy)}
+                  onClick={() =>
+                    void run('knowledgePackReset', async () => {
+                      const next = await call('knowledgePackReset');
+                      setKnowledgePack(next);
+                    })
+                  }
+                >
+                  <RotateCcw size={15} />
+                  {t('กลับไปใช้ชุดติดมากับแอป')}
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
       {page === 'appearance' && (
         <section>
           <h2>{t('ภาษาของแอป')}</h2>

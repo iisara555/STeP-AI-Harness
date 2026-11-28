@@ -46,6 +46,7 @@ export const FEATURES = [
   'morningBrief',
   'receiptVision',
   'autoUpdate',
+  'knowledgePackRefresh',
   'claudeSubscription',
   'antigravityNativeBridge',
   'nativeToolCalls',
@@ -176,6 +177,8 @@ export type Policy = {
   credentialStorage?: { sharedDevice?: boolean; blockHostExecution?: boolean };
   /** สรุปเช้านี้: whether an employee may let it read today's Calendar and Tasks every day without asking again. */
   morningBrief?: { rememberConsent: boolean };
+  /** Signed/checksummed STeP Knowledge Pack source for refreshing org docs without a full Store release. */
+  knowledgePack?: { manifestUrl: string; sha256?: string };
 };
 
 // Off until an administrator turns them on: anything that runs code, merges, or sends data somewhere new.
@@ -238,6 +241,8 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // The installed app checks for a newer version, downloads it in the background and offers "restart to update".
   // IT can set it to false where software is rolled out centrally.
   autoUpdate: true,
+  // Checksum-verified STeP Knowledge Pack refresh lets staff pull updated organization documents between app releases.
+  knowledgePackRefresh: true,
   // The employee's own Claude plan through Claude Code in the app: the official, unmodified Claude Code runs the chat
   // and each employee signs in to their own Claude account on Anthropic's page. Off until Anthropic confirms how its
   // Claude Code terms apply (docs/claude-subscription.md); pilot machines turn it on in the managed policy.
@@ -405,6 +410,25 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
     )
       problems.push('morningBrief.rememberConsent must be boolean');
     else policy.morningBrief = { rememberConsent: raw.morningBrief.rememberConsent };
+  }
+  if (raw.knowledgePack !== undefined) {
+    if (
+      !isObject(raw.knowledgePack) ||
+      Object.keys(raw.knowledgePack).some(k => !['manifestUrl', 'sha256'].includes(k)) ||
+      typeof raw.knowledgePack.manifestUrl !== 'string'
+    ) {
+      problems.push('invalid knowledgePack configuration');
+    } else {
+      try {
+        const u = new URL(raw.knowledgePack.manifestUrl);
+        if (u.protocol !== 'https:' || u.username || u.password || u.hash) throw new Error('invalid');
+        const sha = raw.knowledgePack.sha256;
+        if (sha !== undefined && (typeof sha !== 'string' || !/^[a-f0-9]{64}$/.test(sha))) throw new Error('invalid');
+        policy.knowledgePack = { manifestUrl: u.toString(), ...(sha ? { sha256: sha } : {}) };
+      } catch {
+        problems.push('knowledgePack requires an HTTPS manifestUrl and optional 64-hex sha256');
+      }
+    }
   }
   if (raw.receiptLocalOnly !== undefined) {
     if (typeof raw.receiptLocalOnly !== 'boolean') problems.push('receiptLocalOnly must be boolean');

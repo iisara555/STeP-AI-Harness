@@ -175,8 +175,8 @@ export class DesktopTools {
     /** Earlier tasks on this computer, for session_search; without it the tool reports it is unavailable. */
     private history?: Store,
   ) {}
-  private async context(path: string, allowedDirectory?: string) {
-    const root = await realpath(this.harness.root),
+  private async context(path: string, allowedDirectory?: string, baseRoot = this.harness.root) {
+    const root = await realpath(baseRoot),
       full = resolve(root, path);
     // Only the part inside the harness is checked against the sensitive-path patterns: the app is installed under a
     // folder named "STeP Desktop" on Windows, which those patterns protect where it holds the app's own data.
@@ -1097,10 +1097,11 @@ export class DesktopTools {
             };
           }
           case 'reference': {
+            const activeKnowledgeRoot = () => this.harness.knowledgeRoot?.() || this.harness.root;
             if (a.action === 'catalog')
               return {
                 entries: (
-                  await new OrganizationKnowledge(this.harness.root, this.harness.documentCatalog || (async () => [])).entries()
+                  await new OrganizationKnowledge(activeKnowledgeRoot, this.harness.documentCatalog || (async () => [])).entries()
                 ).map(entry => ({ id: entry.id, name: entry.title })),
               };
             let ref = (await this.harness.documentMetadata?.([target]))?.[0];
@@ -1113,7 +1114,8 @@ export class DesktopTools {
             }
             if (!ref?.path || ref.status === 'unregistered') throw new Error('REFERENCE_UNAVAILABLE');
             if (ref.title) scope.activity(tm('กำลังอ่านเอกสาร {0}', shortTitle(ref.title)));
-            const text = await this.context(ref.path);
+            const knowledgeBase = ref.path.startsWith('docs/knowledge/') ? activeKnowledgeRoot() : this.harness.root;
+            const text = await this.context(ref.path, undefined, knowledgeBase);
             if (a.action === 'outline') return { id: ref.id, title: ref.title, sections: documentHeadings(text) };
             if (a.sections !== undefined) {
               if (!Array.isArray(a.sections) || a.sections.length < 1 || a.sections.length > 5) throw new Error('INVALID_INPUT');
