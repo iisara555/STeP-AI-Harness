@@ -52,6 +52,9 @@ publicProfile:
   contact:
     addressTh: "อาคาร A ชั้น 2 อาคารอำนวยการอุทยานวิทยาศาสตร์ภูมิภาค ภาคเหนือ (จังหวัดเชียงใหม่) 155 หมู่ 2 ตำบลแม่เหียะ อำเภอเมือง จังหวัดเชียงใหม่ 50100"
     addressEn: "Floor 2 (A Building), Regional Science Park (North) Building, 155 Mae Hia, Mueang, Chiang Mai 50100"
+    contactUrl: "https://www.step.cmu.ac.th/contact"
+    mapUrl: "https://maps.app.goo.gl/HMPZjhafSpNSJP9j9"
+    coordinates: "18.764640, 98.934470"
     phone: "0 5394 8678"
     email: "info@step.cmu.ac.th"
     officialChannels: ["Facebook: cmustep", "Instagram: cmustep", "TikTok: cmustep", "LinkedIn: cmustep2012", "YouTube", "Line"]

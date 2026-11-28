@@ -51,6 +51,8 @@ export function shouldRunModelSkillSelection(routed: any, query: string, source:
       query,
     );
   if (hasStrongKnowledge && !deliverableCue) return false;
+  const quickLookup = /(?:แผนที่|เส้นทาง|พิกัด|อยู่ที่ไหน|เบอร์โทร|ติดต่อที่ไหน|เปิดกี่โมง|วันหยุดราชการ)/.test(query);
+  if (quickLookup && !deliverableCue) return false;
   const topScore = Number(routed?.ranked?.[0]?.score ?? routed?.candidateSkills?.[0]?.score ?? 0);
   if (!deliverableCue && (!routed?.candidateSkills?.length || topScore < 0.22)) return false;
   return true;
