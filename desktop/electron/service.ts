@@ -174,6 +174,8 @@ export type Harness = {
   /** Track temporary quota/rate-limit cooldowns per (connectionId, model). */
   recordCooldown?: (connection: Connection, code: string, retryAfterMs?: number) => void;
   clearCooldown?: (connection: Connection) => void;
+  /** Whether this account and model are still cooling down from a recorded quota/rate-limit failure. */
+  cooledDown?: (connection: Connection) => boolean;
   /** Optional opt-in backup account when the primary account hits quota/rate limit. */
   fallbackConnection?: (primary: Connection, reason: string) => Connection | undefined;
   /** Administrator limits, else the window a model on this computer actually loaded (electron/local-context.ts). */
@@ -2090,6 +2092,19 @@ export class WorkService {
           let activeConnection = connection;
           let activeRuntime = selectedRuntime;
           let failedOver = false;
+          // A primary account still cooling down from a quota/rate-limit failure is not called again on the next model
+          // turn of the run: the turn goes straight to the opted-in backup account, when there is one.
+          if (!search && !analysisImage && !controller.signal.aborted && this.harness.cooledDown?.(activeConnection)) {
+            const backup = this.harness.fallbackConnection?.(activeConnection, 'COOLDOWN');
+            if (backup) {
+              failedOver = true;
+              await providerSession.closeAndWait();
+              const backupLimits = await this.harness.modelLimits?.(backup);
+              activeConnection = { ...backup, ...backupLimits };
+              activeRuntime = await this.runtime(activeConnection, false);
+              trace.failover = { fromConnectionId: connection.id, toConnectionId: activeConnection.id, reason: 'COOLDOWN' };
+            }
+          }
           let beganTurn = false;
           let visibleChars = 0;
           for (;;) {

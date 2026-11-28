@@ -180,7 +180,7 @@ test('compatibleRun streams reasoning_content/thinking_delta, OpenRouter exact c
   assert.equal(text, 'Final answer');
   assert.deepEqual(reasoning, ['Step 1. ', 'Step 2.']);
   assert.equal(usages[0].costUsd, 0.001234);
-  assert.deepEqual(seenBodies[0].provider, { data_collection: 'deny', sort: 'latency' });
+  assert.deepEqual(seenBodies[0].provider, { zdr: true, data_collection: 'deny', sort: 'latency' });
   assert.equal(seenHeaders[0]['X-Title'], 'STeP Desktop');
   assert.equal(observedLimits.length, 1);
   assert.equal(observedLimits[0].name, 'requests');
@@ -578,6 +578,83 @@ test('CooldownTracker isolates per (connectionId, model) and WorkService fails o
     fromConnectionId: 'primary',
     toConnectionId: 'backup',
     reason: 'PROVIDER_QUOTA',
+  });
+  store.close();
+});
+
+test('WorkService does not call a primary account that is still cooling down when a backup is opted in', async () => {
+  // A primary still cooling down is skipped: the turn goes straight to the backup without calling it again.
+  const store = new Store(':memory:');
+  const primary: Connection = {
+    id: 'primary',
+    provider: 'gemini',
+    mode: 'api',
+    model: 'gemini-2.5-pro',
+    executable: '',
+    ready: true,
+    note: '',
+  };
+  const backup: Connection = {
+    id: 'backup',
+    provider: 'claude',
+    mode: 'api',
+    model: 'claude-sonnet-4-5',
+    executable: '',
+    ready: true,
+    note: '',
+  };
+  store.put('connection', primary.id, primary);
+  store.put('connection', backup.id, backup);
+  const session = store.create(primary.id, 'CC');
+  const calledIds: string[] = [];
+  const billedIds: string[] = [];
+  const cooldownRecorded: string[] = [];
+  const svc = new WorkService(
+    store,
+    {
+      root: tmpdir(),
+      route: async () => ({
+        routingContract: { mode: 'GENERAL', confidenceTier: 'FALLBACK', authority: { status: 'ALLOW' }, mandatoryReferences: [] },
+      }),
+      contextPolicy: () => ({ history: 'ignore', carryover: false }),
+      privacy: text => ({ action: 'pass', redactedText: text, findings: [] }),
+      skillMetadata: async () => null,
+      documentPrivacy: async () => ({ action: 'pass' }),
+      nextOutput: async () => ({ path: '' }),
+      recordUsage: (conn, count) => {
+        if (count.total) billedIds.push(conn.id);
+      },
+      recordCooldown: (conn, code) => cooldownRecorded.push(`${conn.id}:${code}`),
+      cooledDown: conn => conn.id === 'primary',
+      fallbackConnection: conn => (conn.id === 'primary' ? backup : undefined),
+    },
+    async () => ({
+      adapter: {
+        run: async (_prompt, activeConn, ctx) => {
+          calledIds.push(activeConn.id);
+          if (activeConn.id === 'primary') throw new Error('PROVIDER_QUOTA');
+          ctx.onUsage?.({ input: 10, output: 5, total: 15 });
+          ctx.emit('Answered by backup');
+          return 'Answered by backup';
+        },
+      },
+      context: { cwd: tmpdir(), env: {}, key: 'k' },
+    }),
+    () => {},
+    10_000,
+    undefined,
+    [0],
+  );
+  await svc.run(session.id, 'สรุปให้หน่อย', '', true, undefined, 'chat');
+  const finished = store.session(session.id);
+  assert.equal(finished.status, 'review');
+  assert.deepEqual(calledIds, ['backup']);
+  assert.deepEqual(billedIds, ['backup']);
+  assert.deepEqual(cooldownRecorded, []);
+  assert.deepEqual(finished.runs?.at(-1)?.failover, {
+    fromConnectionId: 'primary',
+    toConnectionId: 'backup',
+    reason: 'COOLDOWN',
   });
   store.close();
 });

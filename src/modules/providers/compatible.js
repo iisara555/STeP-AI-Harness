@@ -219,8 +219,10 @@ export async function compatibleRun(
       (profile.preset === "openrouter" &&
         ["127.0.0.1", "localhost", "[::1]"].includes(endpoint.hostname)))
       ? {
+          // OpenRouter's ZDR filter is `zdr: true` ("only Zero Data Retention endpoints"); `data_collection: "deny"`
+          // alone only avoids providers that may store data, so both are sent.
           ...(profile.providerRouting.zdrOnly
-            ? { data_collection: "deny" }
+            ? { zdr: true, data_collection: "deny" }
             : {}),
           ...(profile.providerRouting.sort &&
           ["price", "throughput", "latency"].includes(

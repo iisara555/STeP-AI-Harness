@@ -1369,6 +1369,7 @@ async function main() {
   };
   harness.recordCooldown = (connection, code, retryAfterMs) => cooldowns.recordFailure(connection.id, connection.model, code, retryAfterMs);
   harness.clearCooldown = connection => cooldowns.recordSuccess(connection.id, connection.model);
+  harness.cooledDown = connection => cooldowns.isCooledDown(connection.id, connection.model);
   harness.fallbackConnection = primary => {
     const fallbackId = store.settings().fallbackConnectionId;
     if (!fallbackId || fallbackId === primary.id || connecting.has(fallbackId)) return undefined;
