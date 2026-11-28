@@ -13,6 +13,7 @@ import {
   Copy,
   Download,
   Eye,
+  FileAudio,
   FileText,
   ImagePlus,
   LoaderCircle,
@@ -933,7 +934,13 @@ export function ConversationView({ v }: { v: AppView }) {
                         onClick={() => setInspecting(f)}
                         title={f.usable ? f.status : errorText[f.reason || ''] || f.status}
                       >
-                        {f.imagePreview ? <img src={f.imagePreview} alt={t('ตัวอย่างภาพแนบ')} /> : <Paperclip size={13} />}
+                        {f.imagePreview ? (
+                          <img src={f.imagePreview} alt={t('ตัวอย่างภาพแนบ')} />
+                        ) : f.audio ? (
+                          <FileAudio size={13} />
+                        ) : (
+                          <Paperclip size={13} />
+                        )}
                         <span className="attachment-label">
                           {f.name}
                           {f.imagePreview && f.usable && <small>{t(f.vision ? 'ส่งภาพให้ AI' : 'ส่งเฉพาะข้อความ OCR')}</small>}
@@ -945,6 +952,36 @@ export function ConversationView({ v }: { v: AppView }) {
                       </button>
                     </span>
                   ))}
+                </div>
+              )}
+              {files.some(f => f.audio && f.usable) && !query.trim() && !running && (
+                <div className="composer-chips" role="group" aria-label={t('คำสั่งด่วนสำหรับไฟล์เสียงประชุม')}>
+                  <button
+                    type="button"
+                    className="source-chip quiet"
+                    onClick={() => {
+                      setQuery(
+                        t(
+                          'ช่วยสรุปมติที่ประชุม ประเด็นสำคัญ และรายการงาน (Action Items พร้อมผู้รับผิดชอบและกำหนดส่ง) จากบันทึกเสียงที่ถอดข้อความไว้',
+                        ),
+                      );
+                      composerRef.current?.focus();
+                    }}
+                  >
+                    <FileAudio size={13} /> {t('สรุปมติและ Action Items')}
+                  </button>
+                  <button
+                    type="button"
+                    className="source-chip quiet"
+                    onClick={() => {
+                      setQuery(
+                        t('ช่วยร่างรายงานการประชุมฉบับทางการจากบันทึกเสียงที่ถอดข้อความไว้ แยกระเบียบวาระ มติ และสิ่งที่ต้องติดตาม'),
+                      );
+                      composerRef.current?.focus();
+                    }}
+                  >
+                    <FileText size={13} /> {t('ร่างรายงานการประชุม')}
+                  </button>
                 </div>
               )}
               {pastingImage && (
@@ -1205,6 +1242,15 @@ export function ConversationView({ v }: { v: AppView }) {
                       <ImagePlus size={18} />
                     </button>
                   )}
+                  <button
+                    className="icon"
+                    aria-label={t('แนบไฟล์เสียงประชุม')}
+                    title={t('แนบไฟล์เสียงประชุมเพื่อถอดเทปและสรุปมติ (MP3, M4A, WAV)')}
+                    disabled={running || pastingImage || (!session && connectionId === CLAUDE_CODE)}
+                    onClick={() => void action(() => attachFiles(false, true))}
+                  >
+                    <FileAudio size={18} />
+                  </button>
                   <select
                     className="pill-select"
                     data-tour="mode"

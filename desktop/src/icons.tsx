@@ -27,6 +27,7 @@ import {
   Download as StillDownload,
   ExternalLink as StillExternalLink,
   Eye as StillEye,
+  FileAudio as StillFileAudio,
   FileSearch as StillFileSearch,
   FileText as StillFileText,
   Folder as StillFolder,
@@ -196,6 +197,7 @@ export const Copy = /* @__PURE__ */ animated(StillCopy, 'Copy', 'document');
 export const Download = /* @__PURE__ */ animated(StillDownload, 'Download', 'down');
 export const ExternalLink = /* @__PURE__ */ animated(StillExternalLink, 'ExternalLink', 'right');
 export const Eye = /* @__PURE__ */ animated(StillEye, 'Eye', 'pulse');
+export const FileAudio = /* @__PURE__ */ animated(StillFileAudio, 'FileAudio', 'document');
 export const FileSearch = /* @__PURE__ */ animated(StillFileSearch, 'FileSearch', 'document');
 export const FileText = /* @__PURE__ */ animated(StillFileText, 'FileText', 'document');
 export const Folder = /* @__PURE__ */ animated(StillFolder, 'Folder', 'document');

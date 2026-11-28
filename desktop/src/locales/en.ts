@@ -3700,4 +3700,27 @@ export const en: Record<string, string> = {
     'Shows live rate-limit headers from recent API requests, matches the quota chip to the active model family, and separates Cache read/write counts',
   'เพิ่มตัวเลือก OpenRouter แบบไม่เก็บข้อมูลคำขอ (ZDR) และจัดลำดับผู้ให้บริการ พร้อมตั้งบัญชีสำรองอัตโนมัติ (Fallback) เมื่อโควตาเต็มได้เอง':
     'Adds OpenRouter Zero Data Retention (ZDR) and provider routing order, plus an opt-in automatic backup account (Fallback) when quota runs out',
+  แนบไฟล์เสียงประชุม: 'Attach meeting audio',
+  'แนบไฟล์เสียงประชุมเพื่อถอดเทปและสรุปมติ (MP3, M4A, WAV)': 'Attach meeting audio to transcribe and summarise decisions (MP3, M4A, WAV)',
+  คำสั่งด่วนสำหรับไฟล์เสียงประชุม: 'Quick actions for meeting audio',
+  'สรุปมติและ Action Items': 'Summarise decisions & Action Items',
+  ร่างรายงานการประชุม: 'Draft meeting minutes',
+  'ช่วยสรุปมติที่ประชุม ประเด็นสำคัญ และรายการงาน (Action Items พร้อมผู้รับผิดชอบและกำหนดส่ง) จากบันทึกเสียงที่ถอดข้อความไว้':
+    'Summarise meeting decisions, key points, and Action Items (owners and due dates) from the transcribed recording',
+  'ช่วยร่างรายงานการประชุมฉบับทางการจากบันทึกเสียงที่ถอดข้อความไว้ แยกระเบียบวาระ มติ และสิ่งที่ต้องติดตาม':
+    'Draft formal meeting minutes from the transcribed recording, separated by agenda items, resolutions, and follow-ups',
+  อนุญาตส่งไฟล์เสียงประชุมเพื่อถอดข้อความ: 'Allow sending meeting audio for transcription',
+  'ไฟล์เสียง "{0}" ({1}) จะถูกส่งไปถอดข้อความผ่าน {2} ก่อนนำบทถอดความมาตรวจข้อมูลส่วนบุคคลให้คุณทบทวน':
+    'Audio file "{0}" ({1}) will be sent to {2} for transcription; the transcript will then pass the privacy check for your review',
+  'ถอดเสียงประชุมแล้ว ({0} · {1} ตัวอักษร) · ตรวจข้อความก่อนส่ง':
+    'Meeting audio transcribed ({0} · {1} chars) · review transcript before sending',
+  'ไฟล์เสียงประชุมมีขนาดเกิน 20 MB กรุณาบีบอัดเป็น MP3/M4A หรือแบ่งไฟล์เป็นช่วงก่อนแนบใหม่':
+    'Meeting audio exceeds 20 MB. Compress to MP3/M4A or split into shorter segments and attach again',
+  'ไฟล์เสียงไม่ถูกต้องหรือยังไม่รองรับ กรุณาใช้ไฟล์ MP3, M4A, WAV, OGG, WEBM, FLAC หรือ AAC':
+    'Audio file is invalid or unsupported. Use MP3, M4A, WAV, OGG, WEBM, FLAC, or AAC',
+  'บัญชี AI ที่เลือกยังไม่รองรับการถอดเสียงไฟล์ประชุมโดยตรง กรุณาเลือก Gemini API หรือ OpenAI API (หรือเปิดใช้ Whisper ในเครื่อง) แล้วลองใหม่':
+    'The selected AI account cannot transcribe meeting audio directly. Switch to Gemini API or OpenAI API (or enable local Whisper) and try again',
+  'ถอดข้อความจากไฟล์เสียงประชุมไม่สำเร็จ กรุณาตรวจว่าไฟล์มีเสียงพูดชัดเจนและบัญชี AI พร้อมใช้งาน':
+    'Could not transcribe the meeting audio. Check that speech is audible and the AI connection is ready',
+  ยกเลิกการส่งไฟล์เสียงเพื่อถอดข้อความแล้ว: 'Cancelled sending meeting audio for transcription',
 };
