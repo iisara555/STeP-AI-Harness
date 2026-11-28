@@ -121,6 +121,15 @@ import { installOcr, ocrComponentCurrent } from './components';
 import { validateKeybindings } from '../src/commands';
 import { Voice } from './voice';
 import {
+  AUDIO_EXTENSIONS,
+  formatAudioBytes,
+  formatMeetingTranscript,
+  isAudioExtension,
+  resolveAudioTranscriptionTarget,
+  transcribeMeetingAudio,
+  validateAudioBuffer,
+} from './meeting-audio';
+import {
   installPack,
   installSkillFile,
   installSkillText,
@@ -5234,9 +5243,11 @@ async function main() {
         const fromClipboard = method === 'attachClipboard';
         const allowMultiple = !fromClipboard && input.multiple === true && input.documentTool === undefined;
         const vision = fromClipboard ? policyState.policy.features.vision : input.vision === true;
+        const audioOnly = !fromClipboard && !vision && input.audio === true;
         // Pictures go only to a connection that can carry them. Gemini through Antigravity (and Copilot) get the local
         // OCR text of an image or scanned PDF instead (src/vision-transport.ts).
-        const imagesAccepted = takesImages(store.get<Connection>('connection', attachingSession.connectionId)?.provider);
+        const sessionConnection = store.get<Connection>('connection', attachingSession.connectionId);
+        const imagesAccepted = takesImages(sessionConnection?.provider);
         if (vision && !policyState.policy.features.vision) throw new Error('VISION_DISABLED');
         const attachmentTool = input.documentTool === undefined ? undefined : documentTool(input.documentTool);
         if (input.documentTool !== undefined && !attachmentTool) throw new Error('INVALID_DOCUMENT_TOOL');
@@ -5257,8 +5268,68 @@ async function main() {
               // A file unsuitable for native export may still be readable under the ordinary source privacy gate.
             }
           }
-          let report: any = await harness.documentPrivacy(path, { includeRedacted: true }),
-            images: VisionInput[] | undefined;
+          let report: any;
+          let audioMeta: { backendLabel: string; chars: number } | undefined;
+          let images: VisionInput[] | undefined;
+          if (isAudioExtension(extension)) {
+            const bytes = await readFile(path);
+            validateAudioBuffer(extension, bytes);
+            let transcript = '';
+            let backendLabel = '';
+            // Prefer local offline Whisper when installed & compatible (16kHz mono WAV <= 60s); otherwise use consented AI audio API.
+            const voiceState = await voice.status().catch(() => ({ enabled: false, installed: false }));
+            if (voiceState.enabled && voiceState.installed && extension === 'wav' && bytes.length <= 1_920_044) {
+              try {
+                const local = await voice.transcribe(bytes);
+                transcript = local.text;
+                backendLabel = 'Whisper ในเครื่อง';
+              } catch {
+                // Fall through to configured audio transcription API when WAV encoding differs from 16kHz mono PCM.
+              }
+            }
+            if (!transcript) {
+              const target = resolveAudioTranscriptionTarget(sessionConnection, policyState.policy);
+              if (!target) throw new Error('AUDIO_PROVIDER_UNSUPPORTED');
+              const apiKey = sessionConnection ? await key(sessionConnection) : undefined;
+              if (target.keyRequired && !apiKey) throw new Error('API_KEY_REQUIRED');
+              const ok = await approvals.request(
+                approvals.rule(store.settings().workspace || data, 'audio_transcribe', `${basename(path)}:${target.hostLabel}`),
+                {
+                  title: tm('อนุญาตส่งไฟล์เสียงประชุมเพื่อถอดข้อความ'),
+                  body: tm(
+                    'ไฟล์เสียง "{0}" ({1}) จะถูกส่งไปถอดข้อความผ่าน {2} ก่อนนำบทถอดความมาตรวจข้อมูลส่วนบุคคลให้คุณทบทวน',
+                    basename(path),
+                    formatAudioBytes(bytes.length),
+                    target.hostLabel,
+                  ),
+                  privacyClass: 'restricted',
+                  allowRemember: false,
+                  sessionId,
+                },
+              );
+              if (!ok) throw new Error('AUDIO_CONSENT_DENIED');
+              const transcribed = await transcribeMeetingAudio({
+                fileName: basename(path),
+                extension,
+                bytes,
+                target,
+                apiKey,
+              });
+              transcript = transcribed.transcript;
+              backendLabel = transcribed.backendLabel;
+            }
+            const formatted = formatMeetingTranscript({
+              fileName: basename(path),
+              bytes: bytes.length,
+              backendLabel,
+              transcript,
+            });
+            const scanned = harness.privacy(formatted);
+            report = { ...scanned, extractionStatus: 'text-extracted' };
+            audioMeta = { backendLabel, chars: transcript.length };
+          } else {
+            report = await harness.documentPrivacy(path, { includeRedacted: true });
+          }
           // With privacy checks off, an image for a vision model is sent as it is, like other AI apps: no local OCR pass.
           // That holds whichever attach button picked it (owner, 2026-10-31: local OCR reads too poorly to stand in for the
           // picture), as long as the organization allows sending images.
@@ -5337,17 +5408,20 @@ async function main() {
                     ? directImage
                       ? tm('ภาพต้นฉบับพร้อมส่ง · ตรวจภาพก่อนส่ง')
                       : tm('ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน')
-                    : report.ocr
-                      ? tm('อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง')
-                      : report.images
-                        ? tm('ตรวจข้อความแล้ว · รูปภาพ {0} รูปในไฟล์ไม่ได้ส่งให้ AI ถ้ามีข้อมูลสำคัญในรูปให้พิมพ์เพิ่ม', report.images)
-                        : tm('ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง')
+                    : audioMeta
+                      ? tm('ถอดเสียงประชุมแล้ว ({0} · {1} ตัวอักษร) · ตรวจข้อความก่อนส่ง', audioMeta.backendLabel, audioMeta.chars)
+                      : report.ocr
+                        ? tm('อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง')
+                        : report.images
+                          ? tm('ตรวจข้อความแล้ว · รูปภาพ {0} รูปในไฟล์ไม่ได้ส่งให้ AI ถ้ามีข้อมูลสำคัญในรูปให้พิมพ์เพิ่ม', report.images)
+                          : tm('ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง')
                 : tm('ส่งไฟล์นี้ให้ AI ไม่ได้'),
             preview: nativeDescription ? tm('ใช้โครงแม่แบบและชื่อช่อง กรอกข้อมูลของงานใหม่แยกในฟอร์ม') : usable ? report.redactedText : '',
             usable,
             ...(nativeDescription ? { templateReady: true } : {}),
             sourceUsable,
             ...(images?.length ? { vision: true } : {}),
+            ...(audioMeta ? { audio: true } : {}),
             ...(clipboardPreview || images?.length
               ? { imagePreview: clipboardPreview || `data:${images![0].mime};base64,${images![0].data}` }
               : {}),
@@ -5381,12 +5455,17 @@ async function main() {
           } else {
             const result = await dialog.showOpenDialog(window, {
               properties: allowMultiple ? ['openFile', 'multiSelections'] : ['openFile'],
-              filters: [
-                {
-                  name: 'Documents and images',
-                  extensions: vision ? ['png', 'jpg', 'jpeg', 'webp'] : ['txt', 'md', 'csv', 'tsv', 'pdf', 'docx', ...OCR_EXTENSIONS],
-                },
-              ],
+              filters: audioOnly
+                ? [{ name: 'Meeting audio (MP3, M4A, WAV, OGG, WEBM)', extensions: [...AUDIO_EXTENSIONS] }]
+                : vision
+                  ? [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }]
+                  : [
+                      {
+                        name: 'Documents, images and audio',
+                        extensions: ['txt', 'md', 'csv', 'tsv', 'pdf', 'docx', ...OCR_EXTENSIONS, ...AUDIO_EXTENSIONS],
+                      },
+                      { name: 'Meeting audio (MP3, M4A, WAV)', extensions: [...AUDIO_EXTENSIONS] },
+                    ],
             });
             if (result.canceled || !result.filePaths.length) return allowMultiple ? [] : null;
             filePaths = result.filePaths.slice(0, MAX_ATTACHMENTS_PER_SEND);

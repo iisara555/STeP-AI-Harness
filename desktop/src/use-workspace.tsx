@@ -954,11 +954,11 @@ export function useWorkspace() {
       return merged;
     });
   }
-  async function attachFiles(vision = false) {
+  async function attachFiles(vision = false, audio = false) {
     const version = navigationVersion.current;
     const id = selected || (await createTask(version))?.id;
     if (!id || version !== navigationVersion.current) return;
-    const response = await api!.call('attach', { id, vision, multiple: true });
+    const response = await api!.call('attach', { id, vision, audio, multiple: true });
     const added: Attachment[] = Array.isArray(response) ? response : response ? [response] : [];
     if (version !== navigationVersion.current || currentId.current !== id) {
       await Promise.all(added.map(({ id: attachmentId }) => api!.call('detach', { id, attachmentId })));

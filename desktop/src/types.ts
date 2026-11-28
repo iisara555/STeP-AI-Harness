@@ -481,6 +481,7 @@ export type Attachment = {
   usable: boolean;
   reason?: string;
   vision?: boolean;
+  audio?: boolean;
   imagePreview?: string;
 };
 export type VisionInput = { mime: 'image/png' | 'image/jpeg' | 'image/webp'; data: string };

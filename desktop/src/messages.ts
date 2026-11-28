@@ -81,6 +81,12 @@ export const errorText: Record<string, string> = localized({
   VOICE_APPROVAL_REQUIRED: 'กรุณาอนุญาตการบันทึกเสียงครั้งนี้ก่อน',
   VOICE_AUDIO_INVALID: 'เสียงไม่อยู่ในรูปแบบที่รองรับหรือยาวเกิน 60 วินาที',
   VOICE_TRANSCRIPTION_FAILED: 'ถอดเสียงไม่สำเร็จ กรุณาลองบันทึกใหม่',
+  AUDIO_TOO_LARGE: 'ไฟล์เสียงประชุมมีขนาดเกิน 20 MB กรุณาบีบอัดเป็น MP3/M4A หรือแบ่งไฟล์เป็นช่วงก่อนแนบใหม่',
+  AUDIO_FORMAT_INVALID: 'ไฟล์เสียงไม่ถูกต้องหรือยังไม่รองรับ กรุณาใช้ไฟล์ MP3, M4A, WAV, OGG, WEBM, FLAC หรือ AAC',
+  AUDIO_PROVIDER_UNSUPPORTED:
+    'บัญชี AI ที่เลือกยังไม่รองรับการถอดเสียงไฟล์ประชุมโดยตรง กรุณาเลือก Gemini API หรือ OpenAI API (หรือเปิดใช้ Whisper ในเครื่อง) แล้วลองใหม่',
+  AUDIO_TRANSCRIPTION_FAILED: 'ถอดข้อความจากไฟล์เสียงประชุมไม่สำเร็จ กรุณาตรวจว่าไฟล์มีเสียงพูดชัดเจนและบัญชี AI พร้อมใช้งาน',
+  AUDIO_CONSENT_DENIED: 'ยกเลิกการส่งไฟล์เสียงเพื่อถอดข้อความแล้ว',
   COMPONENT_CHECKSUM_FAILED: 'ส่วนเสริมไม่ตรงกับไฟล์ที่ผู้ดูแลรับรอง กรุณาแจ้งผู้ดูแล',
   COMPONENT_DOWNLOAD_FAILED: 'ดาวน์โหลดส่วนเสริมไม่สำเร็จ กรุณาตรวจเครือข่าย',
   COMPONENT_BUSY: 'ส่วนเสริมกำลังทำงาน กรุณารอให้เสร็จก่อน',
