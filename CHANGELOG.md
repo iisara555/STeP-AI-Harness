@@ -6,6 +6,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Desktop: สวิตช์ "ZDR เท่านั้น" ของ OpenRouter ส่ง `zdr: true` ให้ใช้เฉพาะปลายทางที่ไม่เก็บข้อมูลจริง และเมื่อบัญชีหลักโควตาเต็ม งานรอบถัดไปจะไปบัญชีสำรองทันทีโดยไม่เรียกบัญชีหลักซ้ำ
 - Desktop: แชตแสดงแผนภาพ Mermaid สูตรคณิต กล่องหมายเหตุ และตัวอย่าง SVG/HTML ได้ในคำตอบ ตัวอย่าง HTML ในแชตเป็นภาพนิ่งไม่รันสคริปต์ หน้าเว็บที่ต้องใช้งานจริงเปิดในแท็บเว็บ
 - Desktop: ปุ่ม "ลงมือทำตามแผน" ถามก่อนเปลี่ยนสิทธิ์จากอ่านอย่างเดียวเป็น "ถามก่อนแก้ไข" คำขอ "เขียนรายละเอียดโครงการ…" เปิดเครื่องมือแบบเสนอโครงการตามเดิม และการคัดลอกคำตอบเก็บบรรทัดว่างในโค้ดไว้ครบ
 - Desktop distribution: GitHub Actions checks Windows and macOS installer trust and integrity before publishing. A separate workflow builds and tests the Windows x64 MSIX for submission through Partner Center.
