@@ -9,19 +9,127 @@
 .chat-code header {
   display: flex;
   align-items: center;
+  gap: var(--space-2);
   padding: var(--space-1-5) var(--space-3);
   background: var(--selected);
   font-size: var(--text-xs);
   color: var(--muted);
 }
-.chat-code header button {
+.chat-code-status {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.chat-code-actions {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+.chat-code header button {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   font-size: var(--text-xs);
   border: 0;
   padding: var(--space-1) var(--space-1-5);
+}
+.chat-diagram-canvas {
+  padding: var(--space-4);
+  background: var(--paper);
+  overflow-x: auto;
+  text-align: center;
+}
+.chat-diagram-canvas svg {
+  max-width: 100%;
+  height: auto;
+  display: inline-block;
+}
+.chat-preview-wrap {
+  background: var(--paper);
+}
+.chat-preview-frame {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: var(--paper);
+}
+.chat-svg-frame {
+  height: 240px;
+}
+.chat-html-frame {
+  height: 420px;
+}
+.chat-preview-note {
+  margin: 0;
+  padding: var(--space-1-5) var(--space-3);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+.inline-artifact-preview {
+  margin-top: var(--space-2-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--paper);
+}
+.inline-artifact-preview > header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1-5) var(--space-3);
+  background: var(--selected);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-xs);
+}
+/* GitHub-style callout alerts (> [!NOTE], [!TIP], [!IMPORTANT], [!WARNING], [!CAUTION]). */
+.rich-text .chat-alert {
+  margin: var(--space-3-5) 0;
+  padding: var(--space-3) var(--space-3-5);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--alert-tone, var(--line-strong));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--alert-tone, var(--muted)) 8%, var(--paper));
+}
+.rich-text .chat-alert.alert-note {
+  --alert-tone: var(--alert-stopped);
+}
+.rich-text .chat-alert.alert-tip {
+  --alert-tone: var(--alert-done);
+}
+.rich-text .chat-alert.alert-important {
+  --alert-tone: var(--syntax-keyword);
+}
+.rich-text .chat-alert.alert-warning {
+  --alert-tone: var(--accent-ink);
+}
+.rich-text .chat-alert.alert-caution {
+  --alert-tone: var(--danger);
+}
+.rich-text .chat-alert-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin-bottom: var(--space-1-5);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--alert-tone, var(--text));
+}
+.rich-text .chat-alert-body > :first-child {
+  margin-top: 0;
+}
+.rich-text .chat-alert-body > :last-child {
+  margin-bottom: 0;
+}
+/* KaTeX display formulas scroll horizontally on narrow panes instead of clipping the message column. */
+.rich-text .katex-display {
+  margin: var(--space-3-5) 0;
+  padding: var(--space-1-5) 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.rich-text .katex {
+  font-size: 1.04em;
 }
 .chat-code pre {
   margin: 0;
@@ -41,9 +149,12 @@
 }
 .chat-code .hljs-string,
 .chat-code .hljs-attr-value,
-.chat-code .hljs-regexp,
-.chat-code .hljs-addition {
+.chat-code .hljs-regexp {
   color: var(--syntax-string);
+}
+.chat-code .hljs-addition {
+  color: var(--diff-added);
+  background: color-mix(in srgb, var(--diff-added) 12%, transparent);
 }
 .chat-code .hljs-number,
 .chat-code .hljs-literal,
@@ -75,7 +186,8 @@
   font-style: italic;
 }
 .chat-code .hljs-deletion {
-  color: var(--syntax-attribute);
+  color: var(--diff-removed);
+  background: color-mix(in srgb, var(--diff-removed) 12%, transparent);
 }
 .chat-table {
   overflow: auto;

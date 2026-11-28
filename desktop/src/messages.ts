@@ -341,6 +341,9 @@ export const errorText: Record<string, string> = localized({
   WEB_SEARCH_INVALID_RESPONSE: 'บริการค้นเว็บส่งผลที่อ่านไม่ได้ กรุณาลองใหม่หรือระบุเว็บไซต์ให้ AI อ่าน',
   WEB_SEARCH_NO_RESULTS: 'ยังไม่พบผลค้นเว็บ ลองเปลี่ยนคำค้นหรือระบุเว็บไซต์ให้ AI อ่าน',
   ROUTE_CHECK_FAILED: 'ตรวจขอบเขตของข้อความนี้ไม่สำเร็จ จึงยังไม่ส่งให้ AI กรุณาส่งอีกครั้ง',
+  PLAN_READ_ONLY: 'ตอนนี้เปิดสิทธิ์ “อ่านอย่างเดียว” จึงยังบันทึกความจำนี้ไม่ได้ เปลี่ยนสิทธิ์เครื่องมือหรือเอาติ๊กจำไว้ออกแล้วลองใหม่',
+  RUN_INTERRUPTED: 'งานหยุดกลางคันเมื่อปิดแอป กรุณาส่งคำขอใหม่',
+  CHANGE_NOT_FOUND: 'ไม่พบรายการแก้ไขที่รอตรวจแล้ว อาจถูกนำไปใช้หรือปฏิเสธไปแล้ว',
 });
 export const effortLabel: Record<string, string> = {
   none: 'None',
@@ -352,9 +355,11 @@ export const effortLabel: Record<string, string> = {
   max: 'Max',
   ultra: 'Ultra',
 };
+const errorKeysByLength = Object.keys(errorText).sort((a, b) => b.length - a.length);
 export const explainError = (value: unknown) => {
   const text = String(value);
-  return Object.entries(errorText).find(([key]) => text.includes(key))?.[1] || t('ดำเนินการไม่สำเร็จ กรุณาตรวจข้อมูลแล้วลองใหม่');
+  const key = errorKeysByLength.find(code => text.includes(code));
+  return (key && errorText[key]) || t('ดำเนินการไม่สำเร็จ กรุณาตรวจข้อมูลแล้วลองใหม่');
 };
 // First visible character: Thai marks stay attached to their base letter (ต้น → ต้, not ต + ้).
 export const initial = (name: string) =>

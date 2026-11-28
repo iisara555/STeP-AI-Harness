@@ -25,6 +25,7 @@ export class ToolGate {
       sessionId?: string;
       hostOwnedConsent?: boolean;
       requireConfirmation?: boolean;
+      effectiveMode?: PermissionMode;
     },
     action: () => Promise<T> | T,
     signal?: AbortSignal,
@@ -35,7 +36,7 @@ export class ToolGate {
     const mode = this.mode();
     const check = () => {
       if (request.execute) this.executionAllowed();
-      const decision = evaluatePermission(request, this.mode(), this.policy(), { root: workspace });
+      const decision = evaluatePermission(request, detail.effectiveMode ?? this.mode(), this.policy(), { root: workspace });
       if (!decision.allowed)
         throw new Error(
           decision.reason.startsWith('SENSITIVE_PATH')

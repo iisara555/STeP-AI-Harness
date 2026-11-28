@@ -47,6 +47,7 @@ export function AppDialogs({ v }: { v: AppView }) {
     memoryOpen,
     navigate,
     notify,
+    openLink,
     packsOpen,
     palette,
     paletteItems,
@@ -108,8 +109,9 @@ export function AppDialogs({ v }: { v: AppView }) {
     return (note: string) =>
       start(id, t('แก้คำตอบก่อนหน้าตามนี้: {0}', note) + (latest || !first ? '' : '\n' + t('(คำตอบที่ขึ้นต้นว่า “{0}”)', first)), {
         skill: task.skill,
-        mode: task.mode || (task.draft ? 'draft' : 'chat'),
+        mode: task.mode === 'draft' || task.documentTool ? 'draft' : 'chat',
         coordinator: false,
+        isolated: true,
         sourceText: '',
       });
   };
@@ -227,6 +229,7 @@ export function AppDialogs({ v }: { v: AppView }) {
                 attachmentRole: ask.attachmentRole,
                 isolated: ask.isolated,
                 aside: ask.aside,
+                workflow: ask.workflow,
                 autoContinue: ask.autoContinue,
                 documentVariant: ask.documentVariant,
                 invitation: ask.invitation,
@@ -366,11 +369,11 @@ export function AppDialogs({ v }: { v: AppView }) {
               </details>
               <details>
                 <summary>{t('อ่านร่างปัจจุบัน')}</summary>
-                <RichText text={replacingDraft.draft || t('ยังไม่มีเนื้อหาในร่างปัจจุบัน')} />
+                <RichText text={replacingDraft.draft || t('ยังไม่มีเนื้อหาในร่างปัจจุบัน')} onLink={openLink} />
               </details>
               <details>
                 <summary>{t('อ่านข้อเสนอจาก AI')}</summary>
-                <RichText text={replacingDraft.proposal} />
+                <RichText text={replacingDraft.proposal} onLink={openLink} />
               </details>
             </ConfirmDialog>
           );
@@ -519,7 +522,7 @@ export function AppDialogs({ v }: { v: AppView }) {
           </section>
         </div>
       )}
-      {viewingArtifact && <ArtifactDialog artifact={viewingArtifact} onClose={() => setViewingArtifact(null)} />}
+      {viewingArtifact && <ArtifactDialog artifact={viewingArtifact} onLink={openLink} onClose={() => setViewingArtifact(null)} />}
       {inspecting && (
         <div
           className="dialog-backdrop"

@@ -451,10 +451,10 @@ try {
   }, photo);
   const attached = await page.evaluate(id => window.step.call('attach', { id, vision: true }), id);
   assert.equal(attached.usable, true, JSON.stringify(attached));
-  // Native workflows: the composer offers them, and an approved plan shows as a card whose button runs the execute workflow.
+  // Native workflows: the composer offers planning/work workflows, while executing an approved plan uses the Proceed button on the plan card (not a dropdown item).
   const picker = page.getByRole('combobox', { name: 'โหมดทำงาน' });
   for (const workflow of ['plan', 'requirements', 'diagnose']) assert.equal(await picker.locator(`option[value="${workflow}"]`).count(), 1);
-  assert.equal(await picker.locator('option[value="execute"]').isDisabled(), true, 'nothing to execute before a plan is approved');
+  assert.equal(await picker.locator('option[value="execute"]').count(), 0, 'execute is triggered via the Proceed button, not the dropdown');
   await app.evaluate(async ({ app }, id) => {
     const { DatabaseSync } = process.mainModule.require('node:sqlite');
     const db = new DatabaseSync(app.getPath('userData') + '/workspace.sqlite');
@@ -476,7 +476,7 @@ try {
   await card.getByText('ส่งให้ทีมแล้ว').waitFor();
   const sent = (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === id).messages.length;
   await card.getByRole('button', { name: 'ทำตามแผนต่อ' }).click();
-  await expect(picker).toHaveValue('execute');
+  await expect(picker).toHaveValue('chat');
   await expect
     .poll(async () => {
       const s = (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === id);
@@ -487,7 +487,6 @@ try {
     .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === id).status)
     .not.toBe('running');
   await page.screenshot({ path: 'release/qa/work-plan.png' });
-  await picker.selectOption('chat');
   // Paste a synthetic image through the real renderer, preload, host, privacy and provider paths.
   const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGMw7Vz8HwAEuQJhv9Bd3QAAAABJRU5ErkJggg==';
   const composer = page.locator('.composer textarea');

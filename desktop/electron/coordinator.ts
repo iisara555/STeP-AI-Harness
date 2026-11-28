@@ -126,6 +126,9 @@ export class Coordinator {
   has(id: string) {
     return this.active.has(id);
   }
+  isBusy() {
+    return this.active.size > 0;
+  }
   /** A coordinated draft that failed or was stopped before its merged draft, and can continue from its open subtasks. */
   resumable(id: string) {
     const saved = this.store.session(id).coordination;
@@ -227,8 +230,27 @@ export class Coordinator {
       });
       check();
       const completed = this.store.session(child.id);
-      if (completed.status !== 'review')
-        throw new Error(completed.status === 'waiting' ? 'COORDINATOR_NEEDS_INPUT' : 'COORDINATOR_CHILD_FAILED');
+      if (completed.status !== 'review') {
+        if (completed.status === 'waiting') throw new Error('COORDINATOR_NEEDS_INPUT');
+        const childCode =
+          completed.runs?.at(-1)?.code ||
+          [...completed.messages].reverse().find(m => m.role === 'status' && /^[A-Z_]+$/.test(m.text))?.text;
+        throw new Error(
+          childCode &&
+            [
+              'LOGIN_REQUIRED',
+              'PROVIDER_QUOTA',
+              'MODEL_NOT_AVAILABLE',
+              'CONTEXT_LIMIT',
+              'PROVIDER_RATE_LIMITED',
+              'PLAN_MODE_BLOCKED',
+              'AUTHORITY_REVIEW_REQUIRED',
+              'CANCELLED',
+            ].includes(childCode)
+            ? childCode
+            : 'COORDINATOR_CHILD_FAILED',
+        );
+      }
       return { child: child.id, text: draftOf(completed) };
     };
     const plan = async () => {
