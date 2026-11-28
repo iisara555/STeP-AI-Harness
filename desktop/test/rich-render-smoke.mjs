@@ -52,6 +52,30 @@ const SAMPLE_REPLY = [
   '-const limit = 10;',
   '+const limit = 20;',
   '```',
+  '',
+  '```chart',
+  JSON.stringify({
+    type: 'bar',
+    title: 'งบประมาณโครงการรายไตรมาส',
+    subtitle: 'ปีงบประมาณ 2569',
+    unit: 'ล้านบาท',
+    labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+    series: [
+      { name: 'แผนงบ', data: [12, 15, 18, 22] },
+      { name: 'เบิกจ่ายจริง', data: [14, 16.5, 17, 25] },
+    ],
+  }),
+  '```',
+  '',
+  '```chart',
+  JSON.stringify({
+    type: 'donut',
+    title: 'สัดส่วนผู้รับบริการ STeP',
+    unit: 'ราย',
+    labels: ['SMEs', 'Startup', 'ชุมชน', 'ภาครัฐ'],
+    series: [{ name: 'จำนวนผู้รับบริการ', data: [140, 85, 60, 45] }],
+  }),
+  '```',
 ].join('\n');
 
 const SAMPLE_HTML_ARTIFACT =
@@ -145,10 +169,24 @@ try {
   await expect(pricePara).toContainText('ราคาประเมิน $100 ถึง $200 บาท');
   await expect(pricePara.locator('.katex')).toHaveCount(0);
 
-  // 3. Offline Mermaid SVG Diagram + View Code toggle
+  // 3. Offline Mermaid SVG Diagram + Zoom + Fullscreen Lightbox + PNG export + View Code toggle
   const diagramSvg = page.locator('.chat-diagram-canvas svg');
   await expect(diagramSvg).toBeVisible({ timeout: 15000 });
   const diagramFigure = page.locator('figure.chat-diagram');
+  await expect(diagramFigure).toHaveAttribute('data-zoom', '100%');
+  await diagramFigure.getByRole('button', { name: 'ซูมเข้า' }).click();
+  await expect(diagramFigure).toHaveAttribute('data-zoom', '125%');
+  await diagramFigure.getByRole('button', { name: '125%' }).click();
+  await expect(diagramFigure).toHaveAttribute('data-zoom', '100%');
+  await diagramFigure.getByRole('button', { name: 'ขยายเต็มจอ' }).click();
+  const modal = page.getByRole('dialog', { name: 'แผนภาพ Mermaid' });
+  await expect(modal).toBeVisible();
+  await expect(modal.locator('.chat-diagram-modal-canvas svg')).toBeVisible();
+  await modal.getByRole('button', { name: 'ซูมเข้า' }).click();
+  await expect(modal.locator('.chat-diagram-zoom-pct')).toHaveText('125%');
+  await page.keyboard.press('Escape');
+  await expect(modal).toBeHidden();
+  await diagramFigure.getByRole('button', { name: 'PNG' }).click();
   await diagramFigure.getByRole('button', { name: 'ดูโค้ด' }).click();
   await expect(diagramFigure.locator('pre code')).toContainText('flowchart LR');
   await diagramFigure.getByRole('button', { name: 'ดูแผนภาพ' }).click();
@@ -184,9 +222,55 @@ try {
   // The artifact's script stays off in the chat; it only runs in the Web tab's isolated preview.
   await expect(artifactInner.locator('#iso')).toHaveText('');
 
+  // 8. Interactive offline charts (Bar -> hover tooltip -> switch to Line -> legend toggle -> sort -> Table view + Donut)
+  const barChart = page.locator('figure.chat-chart').first();
+  await expect(barChart).toBeVisible();
+  await expect(barChart).toHaveAttribute('data-chart-type', 'bar');
+  await expect(barChart.locator('.chat-chart-title')).toHaveText('งบประมาณโครงการรายไตรมาส');
+  await expect(barChart.locator('rect.chart-bar')).toHaveCount(8);
+
+  // Hovering a column opens the floating tooltip with both series and total.
+  await barChart.locator('rect.chart-hit').nth(3).hover();
+  const tooltip = barChart.locator('.chat-chart-tooltip');
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toContainText('Q4');
+  await expect(tooltip).toContainText('25 ล้านบาท');
+  await expect(tooltip).toContainText('47 ล้านบาท');
+
+  // Toggle first series off via interactive legend -> halves visible bars from 8 to 4.
+  await barChart.locator('.chat-chart-legend-item', { hasText: 'แผนงบ' }).click();
+  await expect(barChart.locator('rect.chart-bar')).toHaveCount(4);
+  await barChart.locator('.chat-chart-legend-item', { hasText: 'แผนงบ' }).click();
+  await expect(barChart.locator('rect.chart-bar')).toHaveCount(8);
+
+  // Live switch chart type Bar -> Line and verify SVG paths render + PNG export causes no CSP errors.
+  await barChart.locator('.chat-chart-switcher').getByRole('button', { name: 'เส้น' }).click();
+  await expect(barChart).toHaveAttribute('data-chart-type', 'line');
+  await expect(barChart.locator('svg path[fill="none"]')).toHaveCount(2);
+  await barChart.getByRole('button', { name: 'PNG' }).click();
+
+  // Switch to sortable Table view and back.
+  await barChart.getByRole('button', { name: 'ตาราง' }).click();
+  await expect(barChart.locator('.chat-chart-table-wrap table tbody tr')).toHaveCount(4);
+  await expect(barChart.getByRole('button', { name: 'ดาวน์โหลด CSV' })).toBeVisible();
+  await barChart.getByRole('button', { name: 'ดูกราฟ' }).click();
+  await expect(barChart.locator('svg.chat-chart-svg')).toBeVisible();
+
+  // Donut chart: hovering a breakdown row (or focusing a slice) updates center KPI and shows percentage tooltip.
+  const donutChart = page.locator('figure.chat-chart').nth(1);
+  await expect(donutChart).toHaveAttribute('data-chart-type', 'donut');
+  await expect(donutChart.locator('.chart-center-total')).toHaveText('330');
+  await donutChart.locator('g.chart-slice-row').first().hover();
+  await expect(donutChart.locator('.chat-chart-tooltip')).toContainText('SMEs');
+  await expect(donutChart.locator('.chart-center-total')).toContainText('%');
+  await donutChart.locator('g.chart-slice').nth(1).focus();
+  await expect(donutChart.locator('.chat-chart-tooltip')).toContainText('Startup');
+
   assert.deepEqual(pageErrors, [], `Unexpected page errors: ${pageErrors.join('; ')}`);
   assert.deepEqual(cspErrors, [], `Unexpected CSP violations: ${cspErrors.join('; ')}`);
-  console.log('Rich chat rendering Electron smoke passed (Mermaid SVG, KaTeX, Alerts, diff, inline SVG & static HTML previews).');
+  console.log(
+    'Rich chat rendering Electron smoke passed (Mermaid SVG, KaTeX, Alerts, diff, inline SVG, static HTML & interactive charts).',
+  );
 } finally {
   await app.close();
   await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });

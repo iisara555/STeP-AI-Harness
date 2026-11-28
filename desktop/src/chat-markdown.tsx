@@ -3,14 +3,42 @@
 // inline sandboxed previews for SVG graphics and self-contained HTML widgets.
 // Raw HTML in Markdown prose is dropped (skipHtml), links open in the app's own browser panel, and remote images are
 // never fetched automatically.
-import { Children, isValidElement, memo, useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react';
+import {
+  Children,
+  isValidElement,
+  memo,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import Markdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import { AlertTriangle, Check, CircleAlert, Copy, Download, Eye, Lightbulb, MessageSquareWarning, OctagonAlert } from './icons';
+import {
+  AlertTriangle,
+  Check,
+  CircleAlert,
+  Copy,
+  Download,
+  Eye,
+  Lightbulb,
+  Maximize2,
+  MessageSquareWarning,
+  OctagonAlert,
+  RotateCcw,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from './icons';
 import { t } from './i18n';
 import { buildSandboxedHtmlSrc, buildSandboxedSvgSrc, isPreviewableHtml, isPreviewableSvg, sanitizeStaticSvg } from './inline-preview';
+import { parseChartSpec } from './chart-spec';
+import { InteractiveChart } from './chat-chart';
 
 type Highlight = (code: string, language: string) => string;
 let highlighter: Highlight | null = null;
@@ -207,6 +235,75 @@ function downloadSvg(svg: string, filename = 'diagram.svg') {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/** Renders an offline Mermaid SVG onto a 2x HiDPI canvas with solid theme background and downloads PNG (CSP-safe data: URI). */
+function downloadSvgAsPng(svg: string, dark: boolean, filename = 'diagram.png') {
+  const parsed = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement;
+  if (!parsed || parsed.nodeName.toLowerCase() !== 'svg') return;
+  const vb = (parsed.getAttribute('viewBox') || '')
+    .trim()
+    .split(/[\s,]+/)
+    .map(Number);
+  let width = vb.length === 4 && Number.isFinite(vb[2]) && vb[2] > 0 ? vb[2] : parseFloat(parsed.getAttribute('width') || '');
+  let height = vb.length === 4 && Number.isFinite(vb[3]) && vb[3] > 0 ? vb[3] : parseFloat(parsed.getAttribute('height') || '');
+  if (!Number.isFinite(width) || width <= 0) width = 800;
+  if (!Number.isFinite(height) || height <= 0) height = 480;
+  width = Math.min(3200, Math.max(120, Math.ceil(width)));
+  height = Math.min(3200, Math.max(80, Math.ceil(height)));
+
+  const pad = 16;
+  const totalW = width + pad * 2;
+  const totalH = height + pad * 2;
+  const bg = dark ? '#231f20' : '#ffffff';
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const wrapper = document.createElementNS(ns, 'svg');
+  wrapper.setAttribute('xmlns', ns);
+  wrapper.setAttribute('width', String(totalW));
+  wrapper.setAttribute('height', String(totalH));
+  wrapper.setAttribute('viewBox', `0 0 ${totalW} ${totalH}`);
+
+  const rect = document.createElementNS(ns, 'rect');
+  rect.setAttribute('width', String(totalW));
+  rect.setAttribute('height', String(totalH));
+  rect.setAttribute('rx', '8');
+  rect.setAttribute('fill', bg);
+  wrapper.appendChild(rect);
+
+  const inner = parsed.cloneNode(true) as SVGSVGElement;
+  inner.setAttribute('x', String(pad));
+  inner.setAttribute('y', String(pad));
+  inner.setAttribute('width', String(width));
+  inner.setAttribute('height', String(height));
+  wrapper.appendChild(inner);
+
+  const markup = new XMLSerializer().serializeToString(wrapper);
+  const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
+  const scale = 2;
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(totalW * scale);
+    canvas.height = Math.round(totalH * scale);
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, 0, 0, totalW, totalH);
+      canvas.toBlob(blob => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }, 'image/png');
+    }
+  };
+  img.src = dataUrl;
+}
+
 const textOf = (node: ReactNode): string =>
   typeof node === 'string' || typeof node === 'number'
     ? String(node)
@@ -239,11 +336,21 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 3;
+const ZOOM_STEP = 0.25;
+const clampZoom = (v: number) => Math.round(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, v)) * 100) / 100;
+
 function MermaidBlock({ code }: { code: string }) {
   const dark = useDarkTheme();
   const [svg, setSvg] = useState<string | null>(null);
   const [rendering, setRendering] = useState(true);
   const [showCode, setShowCode] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [fullscreen, setFullscreen] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const dragOrigin = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -268,14 +375,97 @@ function MermaidBlock({ code }: { code: string }) {
     };
   }, [code, dark]);
 
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [fullscreen]);
+
+  const resetView = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+  const zoomIn = () => setZoom(z => clampZoom(z + ZOOM_STEP));
+  const zoomOut = () =>
+    setZoom(z => {
+      const next = clampZoom(z - ZOOM_STEP);
+      if (next <= 1 && !fullscreen) setPan({ x: 0, y: 0 });
+      return next;
+    });
+
+  const canPan = fullscreen || zoom > 1;
+  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (!canPan || e.button !== 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragging(true);
+    dragOrigin.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
+  };
+  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (!dragOrigin.current) return;
+    setPan({
+      x: dragOrigin.current.px + (e.clientX - dragOrigin.current.x),
+      y: dragOrigin.current.py + (e.clientY - dragOrigin.current.y),
+    });
+  };
+  const endDrag = () => {
+    dragOrigin.current = null;
+    setDragging(false);
+  };
+
   const showingDiagram = Boolean(svg) && !showCode;
+  const zoomPercent = `${Math.round(zoom * 100)}%`;
 
   return (
-    <figure className="chat-code chat-diagram">
+    <figure className="chat-code chat-diagram" data-zoom={zoomPercent}>
       <header>
         <span>mermaid</span>
         {rendering && !svg && <span className="chat-code-status">{t('กำลังวาดแผนภาพ…')}</span>}
         <div className="chat-code-actions">
+          {showingDiagram && (
+            <div className="chat-diagram-zoom" role="group" aria-label={t('ซูมแผนภาพ')}>
+              <button
+                type="button"
+                className="quiet"
+                onClick={zoomOut}
+                disabled={zoom <= MIN_ZOOM}
+                aria-label={t('ซูมออก')}
+                title={t('ซูมออก')}
+              >
+                <ZoomOut size={13} />
+              </button>
+              <button type="button" className="quiet chat-diagram-zoom-pct" onClick={resetView} title={t('รีเซ็ตซูม')}>
+                {zoomPercent}
+              </button>
+              <button
+                type="button"
+                className="quiet"
+                onClick={zoomIn}
+                disabled={zoom >= MAX_ZOOM}
+                aria-label={t('ซูมเข้า')}
+                title={t('ซูมเข้า')}
+              >
+                <ZoomIn size={13} />
+              </button>
+            </div>
+          )}
+          {showingDiagram && (
+            <button
+              type="button"
+              className="quiet"
+              onClick={() => setFullscreen(true)}
+              aria-label={t('ขยายเต็มจอ')}
+              title={t('ขยายเต็มจอ')}
+            >
+              <Maximize2 size={13} />
+              {t('ขยายเต็มจอ')}
+            </button>
+          )}
           {svg && (
             <button type="button" className="quiet" onClick={() => setShowCode(v => !v)}>
               <Eye size={13} />
@@ -283,20 +473,127 @@ function MermaidBlock({ code }: { code: string }) {
             </button>
           )}
           {svg && (
-            <button type="button" className="quiet" onClick={() => downloadSvg(svg, 'diagram.svg')}>
-              <Download size={13} />
-              {t('ดาวน์โหลด SVG')}
-            </button>
+            <>
+              <button type="button" className="quiet" onClick={() => downloadSvgAsPng(svg, dark, 'diagram.png')} title={t('ดาวน์โหลด PNG')}>
+                <Download size={13} />
+                PNG
+              </button>
+              <button type="button" className="quiet" onClick={() => downloadSvg(svg, 'diagram.svg')} title={t('ดาวน์โหลด SVG')}>
+                <Download size={13} />
+                SVG
+              </button>
+            </>
           )}
           <CopyButton text={code} />
         </div>
       </header>
       {showingDiagram ? (
-        <div className="chat-diagram-canvas" dangerouslySetInnerHTML={{ __html: svg! }} />
+        <div
+          className={`chat-diagram-canvas${canPan ? ' can-pan' : ''}${dragging ? ' is-dragging' : ''}`}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onDoubleClick={resetView}
+        >
+          <div
+            className="chat-diagram-stage"
+            style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
+            dangerouslySetInnerHTML={{ __html: svg! }}
+          />
+        </div>
       ) : (
         <pre tabIndex={0}>
           <code>{code}</code>
         </pre>
+      )}
+      {fullscreen && svg && (
+        <div
+          className="dialog-backdrop"
+          onClick={e => {
+            if (e.target === e.currentTarget) setFullscreen(false);
+          }}
+        >
+          <section role="dialog" aria-modal="true" aria-label={t('แผนภาพ Mermaid')} className="chat-diagram-modal">
+            <header>
+              <strong>{t('แผนภาพ Mermaid')}</strong>
+              <div className="chat-code-actions">
+                <div className="chat-diagram-zoom" role="group" aria-label={t('ซูมแผนภาพ')}>
+                  <button
+                    type="button"
+                    className="quiet"
+                    onClick={zoomOut}
+                    disabled={zoom <= MIN_ZOOM}
+                    aria-label={t('ซูมออก')}
+                    title={t('ซูมออก')}
+                  >
+                    <ZoomOut size={14} />
+                  </button>
+                  <button type="button" className="quiet chat-diagram-zoom-pct" onClick={resetView} title={t('รีเซ็ตซูม')}>
+                    {zoomPercent}
+                  </button>
+                  <button
+                    type="button"
+                    className="quiet"
+                    onClick={zoomIn}
+                    disabled={zoom >= MAX_ZOOM}
+                    aria-label={t('ซูมเข้า')}
+                    title={t('ซูมเข้า')}
+                  >
+                    <ZoomIn size={14} />
+                  </button>
+                </div>
+                <button type="button" className="quiet" onClick={resetView} title={t('รีเซ็ตซูม')}>
+                  <RotateCcw size={13} />
+                  {t('รีเซ็ตซูม')}
+                </button>
+                <button
+                  type="button"
+                  className="quiet"
+                  onClick={() => downloadSvgAsPng(svg, dark, 'diagram.png')}
+                  title={t('ดาวน์โหลด PNG')}
+                >
+                  <Download size={13} />
+                  PNG
+                </button>
+                <button type="button" className="quiet" onClick={() => downloadSvg(svg, 'diagram.svg')} title={t('ดาวน์โหลด SVG')}>
+                  <Download size={13} />
+                  SVG
+                </button>
+                <button
+                  type="button"
+                  className="icon"
+                  autoFocus
+                  onClick={() => setFullscreen(false)}
+                  aria-label={t('ปิด')}
+                  title={t('ปิด')}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </header>
+            <div
+              className={`chat-diagram-modal-canvas can-pan${dragging ? ' is-dragging' : ''}`}
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={endDrag}
+              onPointerCancel={endDrag}
+              onDoubleClick={resetView}
+              onWheel={e => {
+                if (!e.ctrlKey && !e.metaKey) return;
+                e.preventDefault();
+                setZoom(z => clampZoom(z + (e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP)));
+              }}
+            >
+              <div
+                className="chat-diagram-stage"
+                style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
+                dangerouslySetInnerHTML={{ __html: svg }}
+              />
+            </div>
+            <footer className="chat-diagram-modal-foot small muted">{t('ลากเพื่อเลื่อน · ดับเบิลคลิกเพื่อรีเซ็ต')}</footer>
+          </section>
+        </div>
       )}
     </figure>
   );
@@ -413,6 +710,15 @@ function renderAlertBlockquote(children: ReactNode): ReactNode {
   );
 }
 
+const CHART_LANGUAGES = new Set(['chart', 'step-chart', 'chartjs', 'viz']);
+
+function ChartBlock({ code }: { code: string }) {
+  const dark = useDarkTheme();
+  const spec = useMemo(() => parseChartSpec(code), [code]);
+  if (!spec) return <CodeBlock code={code} language="json" />;
+  return <InteractiveChart spec={spec} rawCode={code} dark={dark} />;
+}
+
 function components(onLink?: (url: string) => void): Components {
   return {
     pre: ({ children }) => {
@@ -421,6 +727,7 @@ function components(onLink?: (url: string) => void): Components {
       const language = /language-([\w+#.-]+)/.exec(props.className || '')?.[1]?.toLowerCase() || '';
       const raw = textOf(props.children).replace(/\n$/, '');
       if (language === 'mermaid') return <MermaidBlock code={raw} />;
+      if (CHART_LANGUAGES.has(language)) return <ChartBlock code={raw} />;
       return <CodeBlock code={raw} language={language} />;
     },
     blockquote: ({ children }) => renderAlertBlockquote(children),
