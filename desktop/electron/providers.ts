@@ -21,6 +21,7 @@ import type { GovernedBridgeExecutor } from './antigravity-mcp-bridge';
 export { prewarmAntigravity, antigravitySpareCount, closeAntigravitySpares };
 import { strictJsonSchema, jsonSchemaInstruction } from './json-schema';
 import { ProviderPromptLimitError, tokens } from './compact';
+import { lookupCatalogModel } from './model-catalog';
 
 // A failure keeps its code when the runtime said why; the scrubbed tail travels as `detail`.
 export function runtimeError(error: unknown, rpc: Rpc) {
@@ -32,7 +33,7 @@ export function runtimeError(error: unknown, rpc: Rpc) {
     ...((base as any).retryAfterMs !== undefined ? { retryAfterMs: (base as any).retryAfterMs } : {}),
   });
 }
-import type { Connection, ModelOption, VisionInput } from '../src/types';
+import type { Connection, ModelOption, ModelPricing, RateLimitReading, VisionInput } from '../src/types';
 
 export type ProviderContext = {
   images?: VisionInput[];
@@ -54,6 +55,8 @@ export type ProviderContext = {
   discard?: (chars: number) => void;
   onReasoning?: (text: string) => void;
   onUsage?: (usage: TokenCount) => void;
+  /** Passive rate-limit telemetry extracted from provider HTTP response headers. */
+  onRateLimits?: (readings: RateLimitReading[]) => void;
   /** Text prompt allowance after the adapter's own instructions, for a full send. */
   onFullPromptBudget?: (tokens: number) => void;
   onTransport?: (info: {
@@ -229,8 +232,108 @@ export async function initialize(rpc: Rpc, provider: string) {
   });
 }
 
+type DirectConversation = {
+  identity: string;
+  sent: string;
+  messages: { role: 'user' | 'assistant'; content: string }[];
+};
+
+const DIRECT_ERROR_MAP: Record<string, string> = {
+  PROVIDER_NETWORK_FAILED: 'PROVIDER_NETWORK',
+  PROVIDER_RATE_LIMIT: 'PROVIDER_BUSY',
+  PROVIDER_UNAVAILABLE: 'PROVIDER_BUSY',
+  PROVIDER_AUTH_FAILED: 'LOGIN_REQUIRED',
+};
+
+/** Direct HTTP SSE transport for official OpenAI/Anthropic API keys (zero CLI/SDK subprocess overhead + live rate-limit headers). */
+async function runDirectHttpApi(
+  prompt: string,
+  connection: Connection,
+  context: ProviderContext,
+  options: {
+    baseUrl: string;
+    protocol: 'openai' | 'anthropic';
+    defaultModel: string;
+    promptCaching?: 'off' | 'anthropic-ephemeral';
+    fetcher: typeof fetch;
+    conversations: WeakMap<ProviderSession, DirectConversation>;
+  },
+): Promise<string> {
+  if (prompt.length > MAX_COMPATIBLE_PROMPT_CHARS) {
+    const maxPromptTokens = Math.max(1, Math.floor((tokens(prompt) * SAFE_COMPATIBLE_PROMPT_CHARS) / prompt.length));
+    throw new ProviderPromptLimitError(maxPromptTokens, true);
+  }
+  const model = connection.model && connection.model !== 'default' ? connection.model : options.defaultModel;
+  const system = context.jsonSchema
+    ? [context.system, jsonSchemaInstruction(context.jsonSchema)].filter(Boolean).join('\n\n')
+    : context.system;
+  const session = !context.images?.length ? context.session : undefined;
+  const identity = providerSessionKey({ ...connection, model }, context);
+  let conv = session ? options.conversations.get(session) : undefined;
+  const reuse = Boolean(
+    conv && conv.identity === identity && conv.sent && prompt.startsWith(conv.sent) && prompt.length > conv.sent.length,
+  );
+  if (session && !reuse && conv) {
+    options.conversations.delete(session);
+    conv = undefined;
+  }
+  const turnPrompt = reuse ? prompt.slice(conv!.sent.length) : prompt;
+  context.onTransport?.({
+    mode: reuse ? 'delta' : 'full',
+    sentChars: turnPrompt.length,
+    startupMs: 0,
+    ...(options.promptCaching === 'anthropic-ephemeral' ? { cacheStatus: reuse ? 'reused' : 'created' } : {}),
+  });
+  try {
+    const answer = await compatibleRun(
+      turnPrompt,
+      {
+        baseUrl: options.baseUrl,
+        protocol: options.protocol,
+        model,
+        maxOutputTokens: connection.maxOutputTokens,
+        promptCaching: options.promptCaching,
+      },
+      {
+        ...context,
+        ...(system ? { system } : {}),
+        ...(reuse ? { messages: conv!.messages } : {}),
+      },
+      options.fetcher,
+    );
+    if (session) {
+      options.conversations.set(session, {
+        identity,
+        sent: prompt,
+        messages: [...(reuse ? conv!.messages : []), { role: 'user', content: turnPrompt }, { role: 'assistant', content: answer }],
+      });
+      session.onClose = () => {
+        options.conversations.delete(session);
+      };
+    }
+    return answer;
+  } catch (error) {
+    if (session) options.conversations.delete(session);
+    if (context.signal.aborted) throw new Error('CANCELLED');
+    if (error instanceof Error && DIRECT_ERROR_MAP[error.message])
+      throw Object.assign(new Error(DIRECT_ERROR_MAP[error.message]), { retryAfterMs: (error as any).retryAfterMs });
+    throw error;
+  }
+}
+
 export class CodexAdapter implements ProviderAdapter {
+  private directConversations = new WeakMap<ProviderSession, DirectConversation>();
+  constructor(private directFetcher?: typeof fetch) {}
   async run(prompt: string, connection: Connection, context: ProviderContext) {
+    if (this.directFetcher && connection.mode === 'api' && !connection.customRuntime && !context.webSearch && context.key) {
+      return runDirectHttpApi(prompt, connection, context, {
+        baseUrl: 'https://api.openai.com/v1',
+        protocol: 'openai',
+        defaultModel: 'gpt-4.1',
+        fetcher: this.directFetcher,
+        conversations: this.directConversations,
+      });
+    }
     return recoverSessionTurn(context, attempt => this.turn(prompt, connection, attempt));
   }
   private async turn(prompt: string, connection: Connection, context: ProviderContext) {
@@ -409,13 +512,18 @@ export class CodexAdapter implements ProviderAdapter {
 }
 
 export class GeminiAdapter implements ProviderAdapter {
-  constructor(private api = new GeminiApiAdapter()) {}
+  constructor(
+    private api = new GeminiApiAdapter(),
+    private defaultDirectApi = false,
+  ) {}
   async run(prompt: string, connection: Connection, context: ProviderContext) {
+    // Production adapter('gemini') enables defaultDirectApi so all standard Gemini API key text/receipt calls use
+    // native REST (zero Gemini CLI subprocess overhead). Web search, non-receipt images, OAuth, and custom runtimes stay on CLI.
+    const wantsRest = this.defaultDirectApi || connection.promptCaching === 'gemini-explicit' || Boolean(context.receiptOcr);
     if (
       connection.mode === 'api' &&
-      (connection.promptCaching === 'gemini-explicit' || context.receiptOcr) &&
+      wantsRest &&
       !connection.customRuntime &&
-      connection.model &&
       !context.webSearch &&
       (!context.images?.length || context.receiptOcr)
     ) {
@@ -531,7 +639,7 @@ export class GeminiAdapter implements ProviderAdapter {
         resetReason,
       });
       if (context.signal.aborted) throw new Error('CANCELLED');
-      await rpc.request(
+      const promptResult = await rpc.request(
         'session/prompt',
         {
           sessionId,
@@ -539,6 +647,20 @@ export class GeminiAdapter implements ProviderAdapter {
         },
         600_000,
       );
+      const rawCliUsage = promptResult?.usage || promptResult?.usageMetadata;
+      if (rawCliUsage && typeof rawCliUsage === 'object') {
+        const inputTok = Number(rawCliUsage.inputTokens ?? rawCliUsage.promptTokenCount ?? 0);
+        const outputTok = Number(rawCliUsage.outputTokens ?? rawCliUsage.candidatesTokenCount ?? 0);
+        const cachedTok = rawCliUsage.cachedInputTokens ?? rawCliUsage.cachedContentTokenCount;
+        if (Number.isSafeInteger(inputTok) && Number.isSafeInteger(outputTok) && inputTok + outputTok > 0) {
+          context.onUsage?.({
+            input: inputTok,
+            output: outputTok,
+            total: inputTok + outputTok,
+            ...(Number.isSafeInteger(cachedTok) && cachedTok >= 0 && cachedTok <= inputTok ? { cachedInput: cachedTok } : {}),
+          });
+        }
+      }
       if (context.signal.aborted) throw new Error('CANCELLED');
       if (session) {
         session.sent = prompt;
@@ -701,8 +823,24 @@ export class ClaudeAdapter implements ProviderAdapter {
     ProviderSession,
     { stream: Query; input: InputQueue<SDKUserMessage>; controller: AbortController; identity: string; sent: string; usage: TokenCount }
   >();
-  constructor(private loadSdk = () => import('@anthropic-ai/claude-agent-sdk')) {}
+  private directConversations = new WeakMap<ProviderSession, DirectConversation>();
+  constructor(
+    private loadSdk = () => import('@anthropic-ai/claude-agent-sdk'),
+    private directFetcher?: typeof fetch,
+  ) {}
   async run(prompt: string, connection: Connection, context: ProviderContext) {
+    // Fast path for official Claude API keys: direct Anthropic Messages HTTP SSE with automatic ephemeral caching,
+    // extended thinking, and passive anthropic-ratelimit-* telemetry — zero 250 MB CLI/SDK subprocess overhead.
+    if (this.directFetcher && connection.mode === 'api' && !connection.customRuntime && !context.webSearch && context.key) {
+      return runDirectHttpApi(prompt, connection, context, {
+        baseUrl: 'https://api.anthropic.com/v1',
+        protocol: 'anthropic',
+        defaultModel: 'claude-sonnet-4-5',
+        promptCaching: connection.promptCaching === 'off' ? 'off' : 'anthropic-ephemeral',
+        fetcher: this.directFetcher,
+        conversations: this.directConversations,
+      });
+    }
     // A retained conversation that dies between tool turns is tried once more from a fresh start, as Codex/Gemini are.
     const held = context.session && !context.webSearch && !context.images?.length ? this.conversations.get(context.session) : undefined;
     const continuing = Boolean(held && held.identity === providerSessionKey(connection, context) && prompt.startsWith(held.sent));
@@ -1025,35 +1163,199 @@ export function googleLoginUrl(line: string) {
 }
 const isGoogleLogin = (line: string) => Boolean(googleLoginUrl(line));
 const text = (value: unknown, limit: number) => (typeof value === 'string' ? value.trim().slice(0, limit) : '');
-// Provider catalogs are untrusted input: keep short plain strings and a bounded list.
+const positiveInt = (value: unknown, min: number, max: number) => {
+  const n = typeof value === 'string' && /^\d+$/.test(value.trim()) ? Number(value.trim()) : typeof value === 'number' ? value : NaN;
+  return Number.isSafeInteger(n) && n >= min && n <= max ? n : undefined;
+};
+const pricePerMillion = (value: unknown): number | undefined => {
+  const n = typeof value === 'string' ? Number(value.trim()) : typeof value === 'number' ? value : NaN;
+  if (!Number.isFinite(n) || n < 0 || n > 10_000) return undefined;
+  // OpenRouter reports USD per token (e.g. "0.000003" = $3/1M); direct catalogs may already report USD per 1M.
+  const scaled = n > 0 && n < 0.01 ? n * 1_000_000 : n;
+  return Math.round(scaled * 10_000) / 10_000;
+};
+function normalizePricing(raw: any): ModelPricing | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const input = pricePerMillion(raw.input ?? raw.prompt);
+  const output = pricePerMillion(raw.output ?? raw.completion);
+  if (input === undefined || output === undefined) return undefined;
+  const cachedInput = pricePerMillion(raw.cachedInput ?? raw.input_cache_read);
+  const cacheWriteInput = pricePerMillion(raw.cacheWriteInput ?? raw.input_cache_write);
+  return {
+    input,
+    output,
+    ...(cachedInput !== undefined ? { cachedInput } : {}),
+    ...(cacheWriteInput !== undefined ? { cacheWriteInput } : {}),
+  };
+}
+// Provider catalogs are untrusted input: keep short plain strings, bounded metadata, and a bounded list.
 export function normalizeModels(items: unknown[]): ModelOption[] {
   const seen = new Set<string>(),
     models: ModelOption[] = [];
   for (const item of items as any[]) {
-    const id = text(item?.id, 100);
-    if (!id || !/^[\w.:/@-]+$/.test(id) || seen.has(id) || models.length >= 100) continue;
+    const id = text(item?.id, 160);
+    if (!id || !/^[\w.:/@-]+$/.test(id) || seen.has(id) || models.length >= 200) continue;
     seen.add(id);
     const efforts = (Array.isArray(item.efforts) ? item.efforts : [])
       .map((e: any) => ({ id: text(e?.id, 20), description: text(e?.description, 200) || undefined }))
       .filter((e: any) => /^[a-z]+$/.test(e.id))
       .slice(0, 10);
     const defaultEffort = efforts.some((e: any) => e.id === item.defaultEffort) ? item.defaultEffort : undefined;
+    const contextWindow = positiveInt(item.contextWindow, 1024, 10_000_000);
+    const maxOutputTokens = positiveInt(item.maxOutputTokens, 256, 1_000_000);
+    const pricing = normalizePricing(item.pricing);
+    const supportsVision = typeof item.supportsVision === 'boolean' ? item.supportsVision : undefined;
+    const supportsReasoning = typeof item.supportsReasoning === 'boolean' ? item.supportsReasoning : undefined;
+    const supportsTools = typeof item.supportsTools === 'boolean' ? item.supportsTools : undefined;
     models.push({
       id,
-      label: text(item.label, 100) || id,
+      label: text(item.label, 160) || id,
       description: text(item.description, 300) || undefined,
       isDefault: item.isDefault === true || undefined,
       ...(efforts.length ? { efforts, defaultEffort } : {}),
+      ...(contextWindow !== undefined ? { contextWindow } : {}),
+      ...(maxOutputTokens !== undefined ? { maxOutputTokens } : {}),
+      ...(pricing ? { pricing } : {}),
+      ...(supportsVision !== undefined ? { supportsVision } : {}),
+      ...(supportsReasoning !== undefined ? { supportsReasoning } : {}),
+      ...(supportsTools !== undefined ? { supportsTools } : {}),
     });
   }
   return models;
 }
 
+/** Direct REST model catalog lookup for Gemini API keys (avoids spawning Gemini CLI). */
+export async function geminiApiModels(
+  key: string,
+  baseUrl = 'https://generativelanguage.googleapis.com',
+  fetcher: typeof fetch = fetch,
+): Promise<ModelOption[]> {
+  const url = baseUrl.replace(/\/$/, '') + '/v1beta/models?pageSize=100';
+  const response = await fetcher(url, {
+    headers: { accept: 'application/json', 'x-goog-api-key': key },
+    redirect: 'error',
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => {});
+    return [];
+  }
+  const body = (await response.json()) as { models?: unknown };
+  if (!Array.isArray(body?.models) || !body.models.length) return [];
+  const items = (body.models as any[])
+    .filter(m => {
+      const id = String(m?.name || '').replace(/^models\//, '');
+      const methods = Array.isArray(m?.supportedGenerationMethods) ? m.supportedGenerationMethods : [];
+      return /^gemini-/.test(id) && (!methods.length || methods.includes('generateContent'));
+    })
+    .map(m => {
+      const id = String(m.name).replace(/^models\//, '');
+      const catalog = lookupCatalogModel(id);
+      const thinking = Boolean(m.thinking) || /^gemini-(?:2\.5|[3-9])/.test(id);
+      return {
+        id,
+        label: m.displayName || id,
+        description: m.description,
+        isDefault: id === 'gemini-2.5-flash',
+        contextWindow: m.inputTokenLimit ?? catalog?.contextWindow,
+        maxOutputTokens: m.outputTokenLimit ?? catalog?.maxOutputTokens,
+        pricing: catalog?.pricing,
+        supportsVision: catalog?.supportsVision ?? true,
+        supportsReasoning: thinking,
+        ...(thinking ? { efforts: [{ id: 'low' }, { id: 'medium' }, { id: 'high' }] } : {}),
+      };
+    });
+  return normalizeModels(items);
+}
+
+/** Direct REST model catalog lookup for Anthropic API keys (avoids spawning Agent SDK subprocess). */
+export async function anthropicApiModels(key: string, fetcher: typeof fetch = fetch): Promise<ModelOption[]> {
+  const response = await fetcher('https://api.anthropic.com/v1/models?limit=100', {
+    headers: { accept: 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+    redirect: 'error',
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => {});
+    return [];
+  }
+  const body = (await response.json()) as { data?: unknown };
+  if (!Array.isArray(body?.data) || !body.data.length) return [];
+  const items = (body.data as any[]).map(m => {
+    const id = String(m?.id || '');
+    const catalog = lookupCatalogModel(id);
+    const reasoning = catalog?.supportsReasoning ?? /^claude-(?:3[-.]7|sonnet-4|opus-4|haiku-4)/.test(id);
+    return {
+      id,
+      label: m.display_name || id,
+      contextWindow: catalog?.contextWindow ?? 200_000,
+      maxOutputTokens: catalog?.maxOutputTokens ?? 16_384,
+      pricing: catalog?.pricing,
+      supportsVision: catalog?.supportsVision ?? true,
+      supportsReasoning: reasoning,
+      ...(reasoning ? { efforts: [{ id: 'low' }, { id: 'medium' }, { id: 'high' }, { id: 'max' }] } : {}),
+    };
+  });
+  return normalizeModels(items);
+}
+
+/** Direct REST model catalog lookup for OpenAI API keys (avoids spawning Codex CLI). */
+export async function openAiApiModels(key: string, fetcher: typeof fetch = fetch): Promise<ModelOption[]> {
+  const response = await fetcher('https://api.openai.com/v1/models', {
+    headers: { accept: 'application/json', authorization: 'Bearer ' + key },
+    redirect: 'error',
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => {});
+    return [];
+  }
+  const body = (await response.json()) as { data?: unknown };
+  if (!Array.isArray(body?.data) || !body.data.length) return [];
+  const chatModel = /^(?:gpt-(?:4\.1|4o|[5-9])|o[134](?:$|-)|chatgpt-|codex)/i;
+  const nonChat = /(?:audio|realtime|transcribe|tts|dall-e|embedding|moderation|whisper|image|search-preview|instruct)/i;
+  const items = (body.data as any[])
+    .filter(m => typeof m?.id === 'string' && chatModel.test(m.id) && !nonChat.test(m.id))
+    .sort((a, b) => Number(b.created || 0) - Number(a.created || 0))
+    .map(m => {
+      const id = String(m.id);
+      const catalog = lookupCatalogModel(id);
+      const reasoning = catalog?.supportsReasoning ?? /^(?:gpt-[5-9]|o[134]|codex)/i.test(id);
+      return {
+        id,
+        label: id,
+        isDefault: id === 'gpt-4.1',
+        contextWindow: catalog?.contextWindow,
+        maxOutputTokens: catalog?.maxOutputTokens,
+        pricing: catalog?.pricing,
+        supportsVision: catalog?.supportsVision,
+        supportsReasoning: reasoning,
+        ...(reasoning ? { efforts: [{ id: 'low' }, { id: 'medium' }, { id: 'high' }] } : {}),
+      };
+    });
+  return normalizeModels(items);
+}
+
 // Read provider catalogs through isolated runtime configuration. Antigravity's catalog does not prove account entitlement.
-export async function listModels(connection: Connection, context: Pick<ProviderContext, 'cwd' | 'env' | 'key'>): Promise<ModelOption[]> {
+export async function listModels(
+  connection: Connection,
+  context: Pick<ProviderContext, 'cwd' | 'env' | 'key' | 'geminiBaseUrl'>,
+): Promise<ModelOption[]> {
   if (connection.provider === 'antigravity') return antigravityModels(connection, context);
   if (connection.provider === 'compatible') return compatibleModels(connection, context.key);
   if (connection.provider === 'copilot') return copilotModels(context);
+  if (connection.provider === 'gemini' && connection.mode === 'api' && !connection.customRuntime && context.key) {
+    const direct = await geminiApiModels(context.key, context.geminiBaseUrl || undefined).catch(() => []);
+    if (direct.length) return direct;
+  }
+  if (connection.provider === 'claude' && connection.mode === 'api' && !connection.customRuntime && context.key) {
+    const direct = await anthropicApiModels(context.key).catch(() => []);
+    if (direct.length) return direct;
+  }
+  if (connection.provider === 'openai' && connection.mode === 'api' && !connection.customRuntime && context.key) {
+    const direct = await openAiApiModels(context.key).catch(() => []);
+    if (direct.length) return direct;
+  }
   if (connection.provider === 'claude') {
     const authOptions = claudeSdkOptions(connection, context);
     // The Agent SDK catalog is what Claude's own apps offer, including supported effort levels.
@@ -1178,7 +1480,46 @@ export async function compatibleModels(connection: Connection, key?: string, fet
       const id = text(item?.id ?? item?.name, 160);
       if (!id || models.some(m => m.id === id)) continue;
       const label = text(item?.name ?? item?.display_name, 160) || id;
-      models.push({ id, label, ...(id === connection.model ? { isDefault: true } : {}) });
+      const description = text(item?.description, 300) || undefined;
+      const contextWindow = positiveInt(
+        item?.context_length ?? item?.top_provider?.context_length ?? item?.context_window,
+        1024,
+        10_000_000,
+      );
+      const maxOutputTokens = positiveInt(
+        item?.top_provider?.max_completion_tokens ?? item?.max_completion_tokens ?? item?.max_output_tokens,
+        256,
+        1_000_000,
+      );
+      const pricing = normalizePricing(item?.pricing);
+      const inputModalities = Array.isArray(item?.architecture?.input_modalities)
+        ? item.architecture.input_modalities.map((v: unknown) => String(v).toLowerCase())
+        : undefined;
+      const supportsVision =
+        typeof item?.supports_vision === 'boolean' ? item.supports_vision : inputModalities ? inputModalities.includes('image') : undefined;
+      const params = Array.isArray(item?.supported_parameters)
+        ? item.supported_parameters.map((v: unknown) => String(v).toLowerCase())
+        : undefined;
+      const supportsReasoning =
+        typeof item?.supports_reasoning === 'boolean'
+          ? item.supports_reasoning
+          : params
+            ? params.some((p: string) => p === 'reasoning' || p === 'include_reasoning' || p === 'reasoning_effort')
+            : undefined;
+      const supportsTools = typeof item?.supports_tools === 'boolean' ? item.supports_tools : params ? params.includes('tools') : undefined;
+      models.push({
+        id,
+        label,
+        ...(description ? { description } : {}),
+        ...(id === connection.model ? { isDefault: true } : {}),
+        ...(contextWindow !== undefined ? { contextWindow } : {}),
+        ...(maxOutputTokens !== undefined ? { maxOutputTokens } : {}),
+        ...(pricing ? { pricing } : {}),
+        ...(supportsVision !== undefined ? { supportsVision } : {}),
+        ...(supportsReasoning !== undefined ? { supportsReasoning } : {}),
+        ...(supportsReasoning ? { efforts: [{ id: 'low' }, { id: 'medium' }, { id: 'high' }] } : {}),
+        ...(supportsTools !== undefined ? { supportsTools } : {}),
+      });
       if (models.length >= 500) break;
     }
     if (connection.model && !models.some(m => m.id === connection.model)) models.unshift(...fallback);
@@ -1209,8 +1550,10 @@ export class CompatibleAdapter implements ProviderAdapter {
           baseUrl: connection.baseUrl || '',
           protocol: connection.protocol,
           model: connection.model,
+          preset: connection.preset,
           maxOutputTokens: connection.maxOutputTokens,
           promptCaching: connection.promptCaching,
+          providerRouting: connection.providerRouting,
         },
         system ? { ...context, system } : context,
         this.fetcher,
@@ -1233,8 +1576,8 @@ export function adapter(provider: string): ProviderAdapter {
   if (provider === 'antigravity') return new AntigravityAdapter();
   if (provider === 'compatible') return new CompatibleAdapter();
   if (provider === 'copilot') return new CopilotAdapter();
-  if (provider === 'openai') return new CodexAdapter();
-  if (provider === 'gemini') return new GeminiAdapter();
-  if (provider === 'claude') return new ClaudeAdapter();
+  if (provider === 'openai') return new CodexAdapter(fetch);
+  if (provider === 'gemini') return new GeminiAdapter(new GeminiApiAdapter(), true);
+  if (provider === 'claude') return new ClaudeAdapter(undefined, fetch);
   throw new Error('UNKNOWN_PROVIDER');
 }

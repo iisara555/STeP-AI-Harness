@@ -4,7 +4,7 @@ import { createRpc, initialize, claudeSdkOptions } from './providers';
 import { antigravityQuota } from './antigravity';
 import { presetFor } from '../src/provider-presets';
 import type { ProviderContext } from './providers';
-import type { Connection, ProviderUsageData, ProviderUsageReport } from '../src/types';
+import type { Connection, ProviderUsageData, ProviderUsageReport, RateLimitReading } from '../src/types';
 
 type Context = Pick<ProviderContext, 'cwd' | 'env' | 'key'>;
 type Dependencies = {
@@ -696,9 +696,20 @@ export async function readProviderUsage(c: Connection, context: Context, deps: D
   return result;
 }
 
+function passiveSourceFor(c: Connection): ProviderUsageData['source'] {
+  if (c.provider === 'openai') return 'openai-api';
+  if (c.provider === 'claude') return 'claude-api';
+  if (c.provider === 'gemini') return 'gemini-api';
+  return 'compatible-headers';
+}
+
 /** Memory-only account snapshots; serialize runtimes on small machines and coalesce repeated reads for one minute. */
 export class ProviderUsage {
   private cache = new Map<string, { signature: string; report: ProviderUsageReport }>();
+  private passive = new Map<
+    string,
+    { signature: string; limits: ProviderUsageData['limits']; source: ProviderUsageData['source']; checkedAt: string }
+  >();
   private pending = new Map<string, { signature: string; task: Promise<ProviderUsageReport> }>();
   private versions = new Map<string, number>();
   private queue: Promise<unknown> = Promise.resolve();
@@ -738,13 +749,63 @@ export class ProviderUsage {
       spend: [],
     };
   }
+  /** Record live rate-limit headers observed passively from an HTTP API response (200 or 429). */
+  observeRateLimits(c: Connection, readings: RateLimitReading[]) {
+    if (!c?.id || !Array.isArray(readings) || !readings.length) return;
+    const limits: ProviderUsageData['limits'] = [];
+    for (const row of readings.slice(0, 8)) {
+      if (!row || typeof row.name !== 'string') continue;
+      const total = nonnegative(row.limit);
+      const remaining = nonnegative(row.remaining);
+      const used = total !== undefined && remaining !== undefined ? Math.max(0, total - remaining) : undefined;
+      const usedPercent =
+        percent(row.usedPercent) ?? (total !== undefined && total > 0 && used !== undefined ? percent((used / total) * 100) : undefined);
+      if (usedPercent === undefined && total === undefined) continue;
+      limits.push({
+        name: row.name,
+        ...(usedPercent !== undefined ? { usedPercent } : {}),
+        ...(used !== undefined ? { used } : {}),
+        ...(total !== undefined ? { total } : {}),
+        ...(row.windowMinutes ? { windowMinutes: row.windowMinutes } : {}),
+        ...(row.resetsAt ? { resetsAt: timestamp(row.resetsAt) } : {}),
+      });
+    }
+    if (!limits.length) return;
+    this.passive.set(c.id, {
+      signature: this.signature(c),
+      limits,
+      source: passiveSourceFor(c),
+      checkedAt: this.now().toISOString(),
+    });
+  }
   snapshot(c: Connection): ProviderUsageReport {
+    const signature = this.signature(c);
+    const base = this.base(c);
     const item = this.cache.get(c.id);
-    return item?.signature === this.signature(c) ? { ...item.report, label: this.base(c).label } : this.base(c);
+    const passive = this.passive.get(c.id);
+    const validPassive = passive?.signature === signature ? passive : undefined;
+    if (item?.signature === signature) {
+      const report = { ...item.report, label: base.label };
+      if (validPassive && report.status === 'ok' && report.limits.length === 0) {
+        return { ...report, limits: validPassive.limits };
+      }
+      return report;
+    }
+    if (validPassive && c.ready) {
+      return {
+        ...base,
+        status: 'ok',
+        source: base.source || validPassive.source,
+        checkedAt: validPassive.checkedAt,
+        limits: validPassive.limits,
+      };
+    }
+    return base;
   }
   forget(id: string) {
     this.versions.set(id, (this.versions.get(id) || 0) + 1);
     this.cache.delete(id);
+    this.passive.delete(id);
     this.pending.delete(id);
   }
   refresh(c: Connection): Promise<ProviderUsageReport> {

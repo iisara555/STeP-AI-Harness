@@ -765,7 +765,13 @@ function ProviderDetail({
       {value.provider === 'gemini' && value.mode === 'api' && (
         <p className="small muted">{t('ถ้าใช้คีย์แบบฟรี ให้ตรวจเงื่อนไขของ Google เรื่องการนำข้อมูลไปใช้ก่อนส่งงานขององค์กร')}</p>
       )}
-      {preset && preset.key !== 'none' && <p className="small muted">{t('ร่างข้อความได้อย่างเดียว ยังไม่รองรับรูปภาพและการค้นเว็บ')}</p>}
+      {preset && preset.key !== 'none' && (
+        <p className="small muted">
+          {preset.id === 'openrouter' || preset.id === 'organization'
+            ? t('รองรับแชต อ่านภาพ สร้างภาพ และค้นเว็บผ่านเครื่องมือของ STeP')
+            : t('รองรับแชต อ่านภาพ (ตามโมเดล) และค้นเว็บผ่านเครื่องมือของ STeP')}
+        </p>
+      )}
       <p className="connection-cost" role="status">
         {value.provider === 'antigravity'
           ? t('ใช้สิทธิ์และโควตาของบัญชี Google ที่ลงชื่อ ไม่ต้องใช้ API key')

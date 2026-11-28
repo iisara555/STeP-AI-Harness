@@ -1,9 +1,10 @@
-import { providerUsage, type TokenCount } from '../../src/modules/providers/usage.js';
-import type { ProviderAdapter, ProviderContext } from './providers';
+import { parseRateLimitHeaders, providerUsage, type TokenCount } from '../../src/modules/providers/usage.js';
+import type { ProviderAdapter, ProviderContext, ProviderSession } from './providers';
 import { providerSessionKey } from './provider-session-key';
 import { ProviderPromptLimitError, tokens } from './compact';
 import type { Connection } from '../src/types';
 
+const DEFAULT_GEMINI_API_MODEL = 'gemini-2.5-flash';
 const MAX_GEMINI_API_PROMPT_CHARS = 400_000;
 const SAFE_GEMINI_API_PROMPT_CHARS = 360_000;
 
@@ -63,6 +64,10 @@ async function apiError(response: Response) {
 
 /** API-key text transport and host-scoped receipt images; search/subscription/custom runtimes retain the CLI. */
 export class GeminiApiAdapter implements ProviderAdapter {
+  private conversations = new WeakMap<
+    ProviderSession,
+    { identity: string; sent: string; history: { role: 'user' | 'model'; text: string }[] }
+  >();
   constructor(
     private request = fetch,
     private caches = prefixes,
@@ -144,7 +149,7 @@ export class GeminiApiAdapter implements ProviderAdapter {
       imageBytes += bytes;
       if (bytes > 4_000_000 || imageBytes > 12_000_000) throw new Error('ATTACH_TOO_LARGE');
     }
-    const model = connection.model.replace(/^models\//, '');
+    const model = (connection.model || DEFAULT_GEMINI_API_MODEL).replace(/^models\//, '');
     if (!/^gemini-[a-zA-Z0-9._-]{1,120}$/.test(model)) throw new Error('INVALID_INPUT');
     if (prompt.length > MAX_GEMINI_API_PROMPT_CHARS) {
       const maxPromptTokens = Math.max(1, Math.floor((tokens(prompt) * SAFE_GEMINI_API_PROMPT_CHARS) / prompt.length));
@@ -178,16 +183,38 @@ export class GeminiApiAdapter implements ProviderAdapter {
           }
         : undefined;
     const signal = AbortSignal.any([context.signal, AbortSignal.timeout(600_000)]);
-    const cached = context.receiptOcr
-      ? { name: undefined, status: 'bypassed' as const }
-      : await this.prefix(connection, context, base, model);
+    const explicitCache = connection.promptCaching === 'gemini-explicit' && !context.receiptOcr;
+    const cached = explicitCache ? await this.prefix(connection, context, base, model) : { name: undefined, status: 'bypassed' as const };
     let name = cached.name;
+    // Maintain multi-turn REST conversation history across tool turns when a ProviderSession is active.
+    const session = !context.receiptOcr && !context.images?.length && !explicitCache ? context.session : undefined;
+    const identity = providerSessionKey({ ...connection, model }, context);
+    let conversation = session ? this.conversations.get(session) : undefined;
+    const reuse = Boolean(
+      conversation &&
+      conversation.identity === identity &&
+      conversation.sent &&
+      prompt.startsWith(conversation.sent) &&
+      prompt.length > conversation.sent.length,
+    );
+    if (session && !reuse && conversation) {
+      this.conversations.delete(session);
+      conversation = undefined;
+    }
+    const turnInput = reuse ? prompt.slice(conversation!.sent.length) : prompt;
+    const contents = [
+      ...(reuse ? conversation!.history.map(item => ({ role: item.role, parts: [{ text: item.text }] })) : []),
+      {
+        role: 'user',
+        parts: [{ text: turnInput }, ...(context.images || []).map(image => ({ inlineData: { mimeType: image.mime, data: image.data } }))],
+      },
+    ];
     let response: Response;
     for (let attempt = 0; ; attempt++) {
       if (signal.aborted) throw new Error(context.signal.aborted ? 'CANCELLED' : 'PROVIDER_TIMEOUT');
       context.onTransport?.({
-        mode: 'full',
-        sentChars: prompt.length,
+        mode: reuse ? 'delta' : 'full',
+        sentChars: turnInput.length,
         cacheStatus: name ? cached.status : 'bypassed',
         ...(attempt ? { resetReason: 'cache-invalid' } : {}),
       });
@@ -199,15 +226,7 @@ export class GeminiApiAdapter implements ProviderAdapter {
           signal,
           body: JSON.stringify({
             ...(name ? { cachedContent: name } : context.system ? { systemInstruction: { parts: [{ text: context.system }] } } : {}),
-            contents: [
-              {
-                role: 'user',
-                parts: [
-                  { text: prompt },
-                  ...(context.images || []).map(image => ({ inlineData: { mimeType: image.mime, data: image.data } })),
-                ],
-              },
-            ],
+            contents,
             ...(connection.maxOutputTokens || context.jsonSchema || thinkingConfig
               ? {
                   generationConfig: {
@@ -226,6 +245,8 @@ export class GeminiApiAdapter implements ProviderAdapter {
       } catch {
         throw new Error(signal.aborted ? (context.signal.aborted ? 'CANCELLED' : 'PROVIDER_TIMEOUT') : 'PROVIDER_NETWORK');
       }
+      const rateLimits = parseRateLimitHeaders(response.headers);
+      if (rateLimits.length) context.onRateLimits?.(rateLimits);
       if (response.ok) break;
       if (name && !attempt && [400, 404].includes(response.status)) {
         await response.body?.cancel().catch(() => {});
@@ -303,8 +324,20 @@ export class GeminiApiAdapter implements ProviderAdapter {
       buffer += decoder.decode();
       if (buffer.trim()) consume(buffer);
       if (!ended || !text.trim()) throw new Error('PROVIDER_STREAM_INCOMPLETE');
+      if (session) {
+        const nextHistory = [
+          ...(reuse ? conversation!.history : []),
+          { role: 'user' as const, text: turnInput },
+          { role: 'model' as const, text },
+        ];
+        this.conversations.set(session, { identity, sent: prompt, history: nextHistory });
+        session.onClose = () => {
+          this.conversations.delete(session);
+        };
+      }
       return text;
     } catch (error) {
+      if (session) this.conversations.delete(session);
       if (signal.aborted) throw new Error(context.signal.aborted ? 'CANCELLED' : 'PROVIDER_TIMEOUT');
       if (error instanceof SyntaxError || error instanceof TypeError) throw new Error('PROVIDER_STREAM_INVALID');
       throw error;

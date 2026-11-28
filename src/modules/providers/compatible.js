@@ -1,4 +1,4 @@
-import { providerUsage } from "./usage.js";
+import { parseRateLimitHeaders, providerUsage } from "./usage.js";
 // Error bodies are untrusted and may contain private text. Inspect only a bounded structured code/type
 // and test message against static limit patterns without returning or logging raw text.
 async function failureCode(response) {
@@ -174,15 +174,119 @@ export async function compatibleRun(
     headers["x-api-key"] = context.key;
     headers["anthropic-version"] = "2023-06-01";
   } else if (context.key) headers.authorization = "Bearer " + context.key;
+  if (endpoint.hostname === "openrouter.ai") {
+    headers["HTTP-Referer"] = "https://step.cmu.ac.th";
+    headers["X-Title"] = "STeP Desktop";
+  }
+  const hasHistory =
+    Array.isArray(context.messages) && context.messages.length > 0;
+  const historyMessages = hasHistory
+    ? context.messages
+        .filter(
+          (m) =>
+            (m?.role === "user" || m?.role === "assistant") &&
+            typeof m.content === "string" &&
+            m.content.length > 0,
+        )
+        .map((m) => ({ role: m.role, content: m.content }))
+    : [];
   let sentReasoningEffort =
     protocol === "openai" &&
     ["low", "medium", "high"].includes(context.effort);
+  const anthropicThinkingBudgets = {
+    low: 1024,
+    medium: 4096,
+    high: 8192,
+    xhigh: 16384,
+    max: 24576,
+  };
+  let sentAnthropicThinking =
+    protocol === "anthropic" &&
+    !images.length &&
+    typeof context.effort === "string" &&
+    Object.hasOwn(anthropicThinkingBudgets, context.effort);
+  const thinkingBudget = sentAnthropicThinking
+    ? anthropicThinkingBudgets[context.effort]
+    : 0;
+  const anthropicBaseMax = profile.maxOutputTokens || 8192;
+  const anthropicMaxTokens = sentAnthropicThinking
+    ? Math.min(64_000, Math.max(anthropicBaseMax, thinkingBudget + 4096))
+    : anthropicBaseMax;
+  const openRouterRouting =
+    protocol === "openai" &&
+    profile.providerRouting &&
+    (endpoint.hostname === "openrouter.ai" ||
+      (profile.preset === "openrouter" &&
+        ["127.0.0.1", "localhost", "[::1]"].includes(endpoint.hostname)))
+      ? {
+          ...(profile.providerRouting.zdrOnly
+            ? { data_collection: "deny" }
+            : {}),
+          ...(profile.providerRouting.sort &&
+          ["price", "throughput", "latency"].includes(
+            profile.providerRouting.sort,
+          )
+            ? { sort: profile.providerRouting.sort }
+            : {}),
+        }
+      : undefined;
+  const routingPayload =
+    openRouterRouting && Object.keys(openRouterRouting).length
+      ? { provider: openRouterRouting }
+      : {};
+  let sentJsonFormat =
+    protocol === "openai" &&
+    Boolean(context.jsonSchema) &&
+    endpoint.hostname === "api.openai.com";
+  const anthropicUserContent = images.length
+    ? [{ type: "text", text: prompt }, ...images]
+    : profile.promptCaching === "anthropic-ephemeral" &&
+        !historyMessages.length &&
+        prompt.length >= 2048 &&
+        prompt.includes("\n\n<current_message>\n")
+      ? [
+          {
+            type: "text",
+            text: prompt.slice(0, prompt.indexOf("\n\n<current_message>\n")),
+            cache_control: { type: "ephemeral" },
+          },
+          {
+            type: "text",
+            text: prompt.slice(
+              prompt.indexOf("\n\n<current_message>\n") + 2,
+            ),
+          },
+        ]
+      : prompt;
+  const anthropicMessages = historyMessages.length
+    ? [
+        ...historyMessages.map((m, idx) =>
+          profile.promptCaching === "anthropic-ephemeral" &&
+          idx === historyMessages.length - 1
+            ? {
+                role: m.role,
+                content: [
+                  {
+                    type: "text",
+                    text: m.content,
+                    cache_control: { type: "ephemeral" },
+                  },
+                ],
+              }
+            : m,
+        ),
+        { role: "user", content: anthropicUserContent },
+      ]
+    : [{ role: "user", content: anthropicUserContent }];
   const body =
     protocol === "anthropic"
       ? {
           model: profile.model,
-          max_tokens: profile.maxOutputTokens || 8192,
+          max_tokens: anthropicMaxTokens,
           stream: true,
+          ...(sentAnthropicThinking
+            ? { thinking: { type: "enabled", budget_tokens: thinkingBudget } }
+            : {}),
           system:
             profile.promptCaching === "anthropic-ephemeral" && context.system
               ? [
@@ -193,28 +297,7 @@ export async function compatibleRun(
                   },
                 ]
               : context.system || "",
-          messages: [
-            {
-              role: "user",
-              content: images.length
-                ? [{ type: "text", text: prompt }, ...images]
-                : profile.promptCaching === 'anthropic-ephemeral' &&
-                    prompt.length >= 2048 &&
-                    prompt.includes('\n\n<current_message>\n')
-                  ? [
-                      {
-                        type: 'text',
-                        text: prompt.slice(0, prompt.indexOf('\n\n<current_message>\n')),
-                        cache_control: { type: 'ephemeral' },
-                      },
-                      {
-                        type: 'text',
-                        text: prompt.slice(prompt.indexOf('\n\n<current_message>\n') + 2),
-                      },
-                    ]
-                  : prompt,
-            },
-          ],
+          messages: anthropicMessages,
         }
       : {
           model: profile.model,
@@ -226,6 +309,8 @@ export async function compatibleRun(
           stream: true,
           stream_options: { include_usage: true },
           ...(sentReasoningEffort ? { reasoning_effort: context.effort } : {}),
+          ...(sentJsonFormat ? { response_format: { type: "json_object" } } : {}),
+          ...routingPayload,
           // Native tool calling (policy nativeToolCalls): the service returns tool requests as structured calls whose
           // arguments it has already escaped, instead of JSON the model writes by hand in a step-tool fence.
           ...(native ? { tools: context.nativeTools } : {}),
@@ -233,6 +318,7 @@ export async function compatibleRun(
             ...(context.system
               ? [{ role: "system", content: context.system }]
               : []),
+            ...historyMessages,
             {
               role: "user",
               content: images.length
@@ -258,16 +344,29 @@ export async function compatibleRun(
         );
       throw new Error("PROVIDER_NETWORK_FAILED");
     }
+    const rateLimits = parseRateLimitHeaders(response.headers);
+    if (rateLimits.length) context.onRateLimits?.(rateLimits);
     if (response.ok) break;
     let code = await failureCode(response);
     if (
-      sentReasoningEffort &&
+      (sentReasoningEffort || sentAnthropicThinking || sentJsonFormat) &&
       attempt === 0 &&
       [400, 422].includes(response.status) &&
       code === "PROVIDER_REQUEST_FAILED"
     ) {
-      delete body.reasoning_effort;
-      sentReasoningEffort = false;
+      if (sentReasoningEffort) {
+        delete body.reasoning_effort;
+        sentReasoningEffort = false;
+      }
+      if (sentAnthropicThinking) {
+        delete body.thinking;
+        body.max_tokens = anthropicBaseMax;
+        sentAnthropicThinking = false;
+      }
+      if (sentJsonFormat) {
+        delete body.response_format;
+        sentJsonFormat = false;
+      }
       continue;
     }
     if (
@@ -346,6 +445,19 @@ export async function compatibleRun(
       rawUsage = { ...rawUsage, ...reported };
       usage = providerUsage(protocol, rawUsage);
     }
+    const reasoningDelta =
+      protocol === "anthropic"
+        ? event.type === "content_block_delta" &&
+          event.delta?.type === "thinking_delta" &&
+          typeof event.delta.thinking === "string"
+          ? event.delta.thinking
+          : ""
+        : typeof event.choices?.[0]?.delta?.reasoning_content === "string"
+          ? event.choices[0].delta.reasoning_content
+          : typeof event.choices?.[0]?.delta?.reasoning === "string"
+            ? event.choices[0].delta.reasoning
+            : "";
+    if (reasoningDelta) context.onReasoning?.(reasoningDelta);
     const delta =
       protocol === "anthropic"
         ? event.type === "content_block_delta" &&

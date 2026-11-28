@@ -135,9 +135,10 @@ export function useAiChoice({ api, snapshot, session, running, workMode, query, 
   useEffect(() => {
     if (running) setAiPicker(false);
   }, [running]);
-  // Load the provider's model list once for ready connections that have never fetched it.
+  // Load the provider's model list once for ready connections that have never fetched it or whose catalog is over 24 hours old.
   useEffect(() => {
-    if (!api || !connection?.ready || connection.modelsAt || modelsRequested.current.has(connection.id)) return;
+    const stale = connection?.modelsAt ? Date.now() - Date.parse(connection.modelsAt) > 24 * 60 * 60 * 1000 : true;
+    if (!api || !connection?.ready || !stale || modelsRequested.current.has(connection.id)) return;
     modelsRequested.current.add(connection.id);
     void api
       .call('models', { id: connection.id })

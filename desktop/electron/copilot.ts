@@ -197,10 +197,19 @@ export async function copilotModels(context: Pick<ProviderContext, 'cwd' | 'env'
         typeof m.defaultReasoningEffort === 'string' && efforts.some(e => e.id === m.defaultReasoningEffort)
           ? m.defaultReasoningEffort
           : undefined;
+      const maxCtx = m.capabilities?.limits?.max_context_window_tokens;
+      const maxOut = (m.capabilities?.limits as any)?.max_output_tokens;
+      const supportsVision = typeof m.capabilities?.supports?.vision === 'boolean' ? m.capabilities.supports.vision : undefined;
+      const supportsReasoning =
+        typeof m.capabilities?.supports?.reasoningEffort === 'boolean' ? m.capabilities.supports.reasoningEffort : undefined;
       return {
         id: m.id,
         label: m.name || m.id,
         ...(efforts.length ? { efforts, ...(defaultEffort ? { defaultEffort } : {}) } : {}),
+        ...(typeof maxCtx === 'number' && Number.isSafeInteger(maxCtx) && maxCtx >= 1024 ? { contextWindow: maxCtx } : {}),
+        ...(typeof maxOut === 'number' && Number.isSafeInteger(maxOut) && maxOut >= 256 ? { maxOutputTokens: maxOut } : {}),
+        ...(supportsVision !== undefined ? { supportsVision } : {}),
+        ...(supportsReasoning !== undefined ? { supportsReasoning } : {}),
       };
     });
   } catch {

@@ -148,7 +148,7 @@ export async function signInAndTest(connection: Connection, deps: ConnectDeps, s
     await claudeLogin(connection.executable, runtime.context, deps, signal);
     deps.signedIn?.();
   }
-  if (['openai', 'gemini'].includes(connection.provider)) {
+  if (['openai', 'gemini'].includes(connection.provider) && (connection.mode !== 'api' || connection.customRuntime)) {
     progress(tm('กำลังเปิดตัวเชื่อม ') + (connection.provider === 'openai' ? 'OpenAI' : 'Gemini'));
     const rpc = createRpc(connection, runtime.context);
     const close = () => rpc.close('CANCELLED');
@@ -176,7 +176,9 @@ export async function signInAndTest(connection: Connection, deps: ConnectDeps, s
       ? tm('ยืนยัน Claude Console OAuth แล้ว · กำลังทดสอบส่งข้อความสั้น ๆ')
       : connection.provider === 'antigravity'
         ? tm('กำลังตรวจบัญชี Google และทดสอบส่งข้อความสั้น ๆ')
-        : tm('ลงชื่อสำเร็จ · กำลังทดสอบส่งข้อความสั้น ๆ'),
+        : connection.mode === 'api'
+          ? tm('กำลังทดสอบ API key ด้วยข้อความสั้น ๆ')
+          : tm('ลงชื่อสำเร็จ · กำลังทดสอบส่งข้อความสั้น ๆ'),
   );
   if (signal.aborted) throw new Error('CANCELLED');
   let timedOut = false;

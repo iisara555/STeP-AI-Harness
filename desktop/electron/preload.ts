@@ -119,6 +119,8 @@ const allowed = new Set([
   'models',
   'model',
   'connectionModel',
+  'connectionRouting',
+  'fallbackConnection',
   'developmentMode',
   'authCode',
   'skills',

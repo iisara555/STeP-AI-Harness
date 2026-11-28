@@ -1,6 +1,7 @@
 import { section } from './prompt';
 import { createHash } from 'node:crypto';
-import type { SummaryCheckpoint } from '../src/types';
+import type { ModelOption, SummaryCheckpoint } from '../src/types';
+import { lookupCatalogModel } from './model-catalog';
 import {
   CHECKPOINT_FORMAT,
   CHECKPOINT_TOKENS,
@@ -73,6 +74,7 @@ export function contextBudget(connection: {
   customRuntime?: boolean;
   contextWindow?: number;
   maxOutputTokens?: number;
+  models?: ModelOption[];
 }) {
   if (
     Number.isSafeInteger(connection.contextWindow) &&
@@ -86,7 +88,13 @@ export function contextBudget(connection: {
   // A runtime the organization points at its own executable may run any model.
   if (connection.customRuntime) return CONTEXT_TOKENS;
   const model = String(connection.model || '');
+  const liveWindow = connection.models?.find(m => m.id === model)?.contextWindow;
+  const validLiveWindow =
+    Number.isSafeInteger(liveWindow) && liveWindow! >= MIN_CONTEXT_WINDOW && liveWindow! <= 2_000_000 ? liveWindow : undefined;
+  const catalogWindow = model ? lookupCatalogModel(model)?.contextWindow : undefined;
   const window =
+    validLiveWindow ??
+    catalogWindow ??
     WINDOWS.find(([pattern]) => model && pattern.test(model))?.[1] ??
     (connection.preset ? PRESET_WINDOWS[connection.preset] : undefined) ??
     (connection.provider && connection.provider !== 'compatible' ? PROVIDER_WINDOWS[connection.provider] : undefined);

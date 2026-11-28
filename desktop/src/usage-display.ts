@@ -16,6 +16,10 @@ export function usageSourceName(source: ProviderUsageData['source'] | string) {
     minimax: 'MiniMax',
     zai: 'Z.AI (GLM)',
     kimi: 'Kimi (Moonshot AI)',
+    'openai-api': 'OpenAI API',
+    'claude-api': 'Claude API',
+    'gemini-api': 'Gemini API',
+    'compatible-headers': 'API Rate-Limit',
   };
   return Object.hasOwn(names, source) ? names[source as ProviderUsageData['source']] : '—';
 }
