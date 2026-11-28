@@ -6,15 +6,22 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-- Desktop: สวิตช์ "ZDR เท่านั้น" ของ OpenRouter ส่ง `zdr: true` ให้ใช้เฉพาะปลายทางที่ไม่เก็บข้อมูลจริง และเมื่อบัญชีหลักโควตาเต็ม งานรอบถัดไปจะไปบัญชีสำรองทันทีโดยไม่เรียกบัญชีหลักซ้ำ
-- Desktop: แชตแสดงแผนภาพ Mermaid สูตรคณิต กล่องหมายเหตุ และตัวอย่าง SVG/HTML ได้ในคำตอบ ตัวอย่าง HTML ในแชตเป็นภาพนิ่งไม่รันสคริปต์ หน้าเว็บที่ต้องใช้งานจริงเปิดในแท็บเว็บ
-- Desktop: ปุ่ม "ลงมือทำตามแผน" ถามก่อนเปลี่ยนสิทธิ์จากอ่านอย่างเดียวเป็น "ถามก่อนแก้ไข" คำขอ "เขียนรายละเอียดโครงการ…" เปิดเครื่องมือแบบเสนอโครงการตามเดิม และการคัดลอกคำตอบเก็บบรรทัดว่างในโค้ดไว้ครบ
 - Desktop distribution: GitHub Actions checks Windows and macOS installer trust and integrity before publishing. A separate workflow builds and tests the Windows x64 MSIX for submission through Partner Center.
 - Developer tooling: เพิ่ม Skill และตัวตรวจข้อมูลออฟไลน์เพื่อทบทวนรายการนำเข้าจาก MIS, Gmail และ Google Sheets ก่อนอัปเดตคลังความรู้
 - อัปเดตบน Windows ครั้งแรกหลังย้ายตัวอัปเดตไปโฟลเดอร์ `Tools` ไม่ขึ้นข้อความ "The batch file cannot be found." ตอนปิดหน้าต่างอีก ไฟล์ `Update-STeP-AI` เดิมที่หน้าแรกจะพาไปตัวอัปเดตใหม่ และถูกลบให้เองในการอัปเดตครั้งถัดไป
 - พิมพ์ `step-ai` เฉย ๆ จะเห็นแค่ 7 คำสั่งของพนักงานในหน้าจอเดียว คำสั่งของผู้ดูแลระบบดูได้ด้วย `step-ai help --all`
 - ชุดติดตั้งมีไฟล์ให้เปิดไฟล์เดียวที่หน้าแรก (`Install-STeP-AI`): ตัวอัปเดต แจ้งปัญหา และตรวจก่อนแนบ ย้ายไปอยู่ในโฟลเดอร์ `Tools` และเครื่องที่อัปเดตจะลบไฟล์เดิมที่หน้าแรกให้เอง (ย้อนกลับได้)
 - ตัวติดตั้งและ START-HERE ชี้ไปที่ไฟล์เดียว `Install-STeP-AI` ไม่มีข้อความ "วิธีติดตั้งแบบนี้เลิกใช้แล้ว" ขัดกันอีก หน้าต่างติดตั้ง อัปเดต และแจ้งปัญหาใช้ภาษาไทยทั้งหมด และ `step-ai --help` แยกคำสั่งของพนักงานออกจากคำสั่งผู้ดูแลระบบ
+
+## Desktop v0.6.47 (2026-11-28)
+
+- **Rich Chat Rendering (ออฟไลน์ 100%)**: แชตแสดงผลแผนภาพ Mermaid (SVG พร้อมปุ่มดาวน์โหลดและรองรับธีมสว่าง–มืด), สมการคณิตศาสตร์ KaTeX (ป้องกันตัวเลขสกุลเงิน `\$`), กล่องแจ้งเตือน GitHub Callout Alerts (`[!NOTE]`–`[!CAUTION]`), ไฮไลต์โค้ด 22 ภาษาพร้อม `diff`, และตัวอย่างภาพ SVG / HTML แบบอินไลน์ (HTML เป็นภาพนิ่งไม่รันสคริปต์ หน้าเว็บที่ต้องใช้งานจริงเปิดในแท็บเว็บ) รวมถึงปุ่ม "ดูในแชต" บน HTML Artifact และภาพที่ AI สร้าง
+- **Chat, Inline Drafting & Plan/Execute Hardening**: ปรับการแยกคำขอคุยกับคำขอร่างเอกสารให้แม่นขึ้น, ปรับโหมดวางแผนให้กดลงมือทำผ่านการ์ดแผนพร้อมปุ่มปิด `×` และบังคับอ่านอย่างเดียวระหว่างวางแผน, แยกสถานะการสตรีม/ความคิด/ตัวจับเวลาต่อแชต (`live-run.ts`) ไม่ให้ปนกันเมื่อสลับงาน, แก้ข้อความผิดพลาดและ ClaimCaseChat ให้ครบถ้วน และเก็บกวาด Artifact/ภาพเมื่อลบงาน
+- **Direct HTTP Fast Paths & Model Discovery**: เชื่อมต่อ Gemini API (`GeminiApiAdapter` พร้อม multi-turn `ProviderSession` เป็นค่าเริ่มต้น), Claude API (พร้อม Ephemeral Prompt Caching อัตโนมัติและ Extended Thinking) และ OpenAI API ผ่าน HTTP SSE โดยตรงไม่ต้องเปิด subprocess พร้อมดึงรายชื่อและสเปกโมเดล (`contextWindow`, `maxOutputTokens`, `pricing`, `supportsVision`, `supportsReasoning`, `supportsTools`) จาก `/models` จริงของทุกผู้ให้บริการและ Copilot SDK รวมถึงรีเฟรชรายการโมเดลเก่าเกิน 24 ชม. อัตโนมัติ
+- **Telemetry, Rate-Limit Headers & Cost Accounting**: เพิ่ม Offline Model Catalog (`model-catalog.ts`) สำหรับคำนวณงบบริบทและประมาณการค่าใช้จ่าย (ลำดับ: นโยบายองค์กร > `usage.cost` จาก OpenRouter > ราคาจาก `/models` > แคตตาล็อกออฟไลน์), อ่าน `x-ratelimit-*` และ `anthropic-ratelimit-*` HTTP headers มาแสดงเป็นแถบโควตาคงเหลือ, จับคู่ชิปโควตาให้ตรงกลุ่มโมเดลที่กำลังใช้ (เช่น Antigravity Gemini vs Claude/GPT), รีเฟรชโควตาเบื้องหลังหลังจบงาน และแยกป้าย "อ่าน Cache" กับ "เขียน Cache"
+- **Reasoning Streams, OpenRouter ZDR Routing & Opt-In Fallback**: รองรับสตรีมความคิด `reasoning_content`/`reasoning`/`thinking_delta` สำหรับ DeepSeek/Qwen/Kimi/MiniMax/OpenRouter/Claude, เพิ่มตัวเลือก OpenRouter **ZDR เท่านั้น** (`zdr: true`) และ **จัดลำดับผู้ให้บริการ** (`price`/`throughput`/`latency`), เชื่อม OAuth คลิกเดียว, และเพิ่ม `CooldownTracker` แยกตามโมเดลพร้อม **บัญชีสำรองอัตโนมัติ (Fallback)** แบบเปิดใช้เองเมื่อบัญชีหลักโควตาเต็ม
+- Desktop: สวิตช์ "ZDR เท่านั้น" ของ OpenRouter ส่ง `zdr: true` ให้ใช้เฉพาะปลายทางที่ไม่เก็บข้อมูลจริง และเมื่อบัญชีหลักโควตาเต็ม งานรอบถัดไปจะไปบัญชีสำรองทันทีโดยไม่เรียกบัญชีหลักซ้ำ
+- Desktop: ปุ่ม "ลงมือทำตามแผน" ถามก่อนเปลี่ยนสิทธิ์จากอ่านอย่างเดียวเป็น "ถามก่อนแก้ไข" คำขอ "เขียนรายละเอียดโครงการ…" เปิดเครื่องมือแบบเสนอโครงการตามเดิม และการคัดลอกคำตอบเก็บบรรทัดว่างในโค้ดไว้ครบ
 
 ## Desktop v0.6.46 (2026-11-27)
 
