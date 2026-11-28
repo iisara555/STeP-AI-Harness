@@ -10,7 +10,7 @@
 
 **STeP Desktop** คือหน้าจอทำงานหลักของ STeP AI สำหรับพนักงาน STeP / RSP North ใช้ภาษาไทยได้ ไม่ต้องจำชื่อ Skill หรือพิมพ์คำสั่งติดตั้งเอง ภาพในหน้านี้ใช้ข้อมูลตัวอย่าง หน้าจอจริงอาจต่างตามรุ่นและการตั้งค่าขององค์กร
 
-**รุ่นที่เผยแพร่ล่าสุด** [**STeP Desktop v0.6.46**](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.46) เพิ่มคำถามเลือก Skill ในแชต การตรวจคำตอบตาม Skill การแบ่งงานร่างเอกสาร และพื้นที่เขียนโค้ด ดูรายละเอียดใน [CHANGELOG](CHANGELOG.md#desktop-v0646-2026-11-27)
+**รุ่นที่เผยแพร่ล่าสุด** [**STeP Desktop v0.6.47**](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.47) ยกระดับการแสดงผลในแชต (Mermaid, KaTeX, Callouts, SVG/HTML แซนด์บ็อกซ์) ปรับโหมดวางแผนและการร่างเอกสาร และอัปเกรดการเชื่อมต่อ AI ทุกผู้ให้บริการพร้อมโควตาและบัญชีสำรอง ดูรายละเอียดใน [CHANGELOG](CHANGELOG.md#desktop-v0647-2026-11-28)
 
 ## ทำอะไรได้บ้าง
 
@@ -186,6 +186,6 @@ AI ช่วยเตรียมงานให้ตรวจต่อ ส่�
 
 ประวัติการเปลี่ยนแปลงของแต่ละรุ่นอยู่ใน [CHANGELOG](CHANGELOG.md)
 
-รุ่นที่เผยแพร่ล่าสุด [STeP Desktop v0.6.46](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.46) และ [**Harness v0.7.7**](https://github.com/iisara555/STeP-AI-Harness/releases/tag/v0.7.7) การใช้งานในหน่วยงานให้ยึดรุ่นที่ผู้ดูแลอนุมัติ
+รุ่นที่เผยแพร่ล่าสุด [STeP Desktop v0.6.47](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.47) และ [**Harness v0.7.7**](https://github.com/iisara555/STeP-AI-Harness/releases/tag/v0.7.7) การใช้งานในหน่วยงานให้ยึดรุ่นที่ผู้ดูแลอนุมัติ
 
 โค้ดเผยแพร่ภายใต้ [MIT License](LICENSE) ไฟล์บุคคลที่สามมีเงื่อนไขของตน เช่น [ภาพตราครุฑ](docs/third-party-notices/thai-garuda.md) Repository นี้เป็น public จึงไม่ใช่ที่เก็บเอกสารภายในหรือข้อมูลของผู้ใช้

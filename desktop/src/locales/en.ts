@@ -3687,4 +3687,14 @@ export const en: Record<string, string> = {
   ราคาถูกที่สุด: 'Lowest price',
   'เร็วที่สุด (Throughput)': 'Highest throughput',
   'ตอบไวสุด (Latency)': 'Lowest latency',
+  'แชตแสดงแผนภาพ Mermaid, สมการคณิตศาสตร์ KaTeX, กล่องแจ้งเตือน, โค้ดพร้อม diff และตัวอย่าง SVG/HTML แบบออฟไลน์ในกล่องแยกที่ปลอดภัย':
+    'Chat renders Mermaid diagrams, KaTeX math, callout alerts, code with diff highlighting, and offline sandboxed SVG/HTML previews',
+  'ปรับโหมดวางแผนและลงมือทำ การร่างเอกสารต่อเนื่อง และแยกสถานะกำลังพิมพ์ต่อแชตไม่ให้ปนกันเมื่อสลับงาน':
+    'Improved Plan & Execute, continuous inline drafting, and per-session live streaming state when switching tasks',
+  'เชื่อมต่อ Gemini API, Claude API และ OpenAI API ตรงผ่าน HTTP เร็วขึ้น พร้อมดึงสเปกโมเดล (บริบท ราคา การอ่านภาพ และการคิด) จากบริการจริง':
+    'Faster direct HTTP connections for Gemini, Claude, and OpenAI API keys with live model specs (context, pricing, vision, and reasoning)',
+  'แสดงโควตาจาก HTTP header ของคำขอล่าสุด จับคู่แถบโควตาให้ตรงกลุ่มโมเดลที่เลือก และแยกยอดอ่าน/เขียน Cache ในหน้าการใช้งาน AI':
+    'Shows live rate-limit headers from recent API requests, matches the quota chip to the active model family, and separates Cache read/write counts',
+  'เพิ่มตัวเลือก OpenRouter แบบไม่เก็บข้อมูลคำขอ (ZDR) และจัดลำดับผู้ให้บริการ พร้อมตั้งบัญชีสำรองอัตโนมัติ (Fallback) เมื่อโควตาเต็มได้เอง':
+    'Adds OpenRouter Zero Data Retention (ZDR) and provider routing order, plus an opt-in automatic backup account (Fallback) when quota runs out',
 };
