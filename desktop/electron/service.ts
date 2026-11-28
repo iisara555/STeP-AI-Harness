@@ -189,6 +189,8 @@ export type Harness = {
   documentMetadata?: (ids: string[]) => Promise<any[]>;
   /** Registered organization documents the assistant may read (manifest/documents.yaml). */
   documentCatalog?: () => Promise<CatalogEntry[]>;
+  /** Active root holding organization knowledge (may point to a verified refreshed Knowledge Pack overlay). */
+  knowledgeRoot?: () => string;
   permissionMode?: () => 'ask' | 'acceptEdits' | 'plan' | 'auto';
   memoryDir?: () => string;
   root: string;
@@ -410,7 +412,10 @@ export class WorkService {
   private knowledgeIndex?: OrganizationKnowledge;
   private knowledge() {
     if (!this.harness.documentCatalog) return undefined;
-    this.knowledgeIndex ??= new OrganizationKnowledge(this.harness.root, this.harness.documentCatalog);
+    this.knowledgeIndex ??= new OrganizationKnowledge(
+      () => this.harness.knowledgeRoot?.() || this.harness.root,
+      this.harness.documentCatalog,
+    );
     return this.knowledgeIndex;
   }
   /**

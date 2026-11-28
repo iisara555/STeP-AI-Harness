@@ -120,6 +120,7 @@ import { assertPrivateTrialPath } from './receipt-trial-path';
 import { installOcr, ocrComponentCurrent } from './components';
 import { validateKeybindings } from '../src/commands';
 import { Voice } from './voice';
+import { KnowledgePackManager } from './knowledge-pack';
 import {
   installPack,
   installSkillFile,
@@ -469,10 +470,12 @@ async function main() {
   function strictPrivacy(text: string, options?: any) {
     return privacy.evaluatePrivacyGate(vaultRedaction.mask(text, options?.credentialMetadata === true), options);
   }
+  const knowledgePack = new KnowledgePackManager(join(data, 'knowledge-pack'), root, () => policyState.policy);
   const harness: Harness = {
     permissionMode: () => permissionMode(),
     memoryDir: () => store.settings().workspace || app.getPath('userData'),
     root,
+    knowledgeRoot: () => knowledgePack.activeRoot(),
     // The service can select a Skill through the hybrid stage, the employee, or governed tools.
     // Full Router/Playbook clarification remains separate. Authority checks follow checks.authority.
     route: (query: string, options: any = {}) =>
@@ -489,8 +492,8 @@ async function main() {
     privacy: scanText,
     publicSearch: (query, signal) => searchPublicWeb(query, signal, policyState.policy.network?.proxyUrl),
     catalog: skillCatalog.createSkillCatalog(root),
-    documentMetadata: routing.loadDocumentContextMetadata,
-    documentCatalog: routing.loadDocumentCatalog,
+    documentMetadata: ids => knowledgePack.overlayDocumentMetadata(ids, routing.loadDocumentContextMetadata),
+    documentCatalog: async () => (await knowledgePack.overlayDocumentCatalog()) || routing.loadDocumentCatalog(),
     toolLoop: () => policyState.policy.features.toolLoop,
     assistantPolicy: () => assistantPolicyError(policyState.policy),
     hybridSkillSelection: () => policyState.policy.features.hybridSkillSelection,
@@ -3435,6 +3438,12 @@ async function main() {
       }
       case 'voiceStatus':
         return voice.status();
+      case 'knowledgePackStatus':
+        return knowledgePack.status();
+      case 'knowledgePackRefresh':
+        return knowledgePack.refresh();
+      case 'knowledgePackReset':
+        return knowledgePack.reset();
       case 'packList':
         return listPacks(store.settings().workspace || data, {
           ...policyState.policy,

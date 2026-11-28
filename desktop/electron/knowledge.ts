@@ -156,12 +156,16 @@ export class OrganizationKnowledge {
   private documents = new Map<string, string>();
   private revision = '';
   constructor(
-    private root: string,
+    private root: string | (() => string),
     private catalog: () => Promise<CatalogEntry[]>,
   ) {}
+  private resolveRoot() {
+    return typeof this.root === 'function' ? this.root() : this.root;
+  }
   async entries() {
+    const activeRoot = this.resolveRoot();
     return (await this.catalog().catch(() => [])).filter(entry => {
-      const rel = relative(this.root, resolve(this.root, entry.path));
+      const rel = relative(activeRoot, resolve(activeRoot, entry.path));
       return (
         entry.path &&
         !rel.startsWith('..') &&
@@ -171,21 +175,22 @@ export class OrganizationKnowledge {
     });
   }
   private async load() {
+    const activeRoot = this.resolveRoot();
     const entries = await this.entries();
     const versions = await Promise.all(
       entries.map(async entry => {
-        const info = await stat(resolve(this.root, entry.path), { bigint: true }).catch(() => undefined);
+        const info = await stat(resolve(activeRoot, entry.path), { bigint: true }).catch(() => undefined);
         return [entry, info ? `${info.ino}:${info.size}:${info.mtimeNs}:${info.ctimeNs}` : 'missing'];
       }),
     );
-    const revision = JSON.stringify(versions);
+    const revision = JSON.stringify([activeRoot, versions]);
     if (!this.sections || this.revision !== revision) {
       this.revision = revision;
       this.sections = (async () => {
         const all: Section[] = [];
         const documents = new Map<string, string>();
         for (const entry of entries) {
-          const body = await readFile(resolve(this.root, entry.path), 'utf8').catch(() => '');
+          const body = await readFile(resolve(activeRoot, entry.path), 'utf8').catch(() => '');
           if (body.trim()) documents.set(entry.path, body.trim());
           const provenance = snapshotContext(body);
           for (const part of body.split(/\n(?=#{1,3} )/)) {
