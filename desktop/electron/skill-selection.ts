@@ -52,6 +52,16 @@ export function shouldRunModelSkillSelection(routed: any, query: string, source:
     );
   if (hasStrongKnowledge && !deliverableCue) return false;
   const topScore = Number(routed?.ranked?.[0]?.score ?? routed?.candidateSkills?.[0]?.score ?? 0);
+  const trimmed = query.trim();
+  // Short acknowledgements or pure public-fact questions without a strong Skill hit skip the extra selector call.
+  if (
+    !deliverableCue &&
+    topScore < 0.35 &&
+    (/^(?:ขอบคุณ|ขอบใจ|รับทราบ|โอเค|ok|thanks?|ได้ครับ|ได้ค่ะ|ครับ|ค่ะ|สวัสดี|หวัดดี|ดีครับ|ดีค่ะ)[!.\sครับค่ะคะๆ]*$/i.test(trimmed) ||
+      /อากาศวันนี้|พยากรณ์อากาศ|อัตราแลกเปลี่ยน|ค่าเงินบาท|ราคาทองคำ|วันหยุดราชการ|วันหยุดนักขัตฤกษ์/.test(trimmed))
+  ) {
+    return false;
+  }
   if (!deliverableCue && (!routed?.candidateSkills?.length || topScore < 0.22)) return false;
   return true;
 }

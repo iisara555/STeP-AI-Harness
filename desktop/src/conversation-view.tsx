@@ -1253,42 +1253,53 @@ export function ConversationView({ v }: { v: AppView }) {
                       {coordinated && <span>{t('แบ่งงานย่อย')}</span>}
                     </label>
                   )}
-                  {/* Permission as a small shield pill with a short word; the native list underneath keeps the full
-                        wording, so opening it still explains each level. */}
-                  {snapshot.policy && (
-                    <label className="pill-select permission-pill" title={t('สิทธิ์เครื่องมือ')}>
-                      <ShieldCheck size={14} aria-hidden="true" />
-                      <span>{t(PERMISSION_SHORT[snapshot.policy.mode] || 'ถามก่อน')}</span>
-                      <ChevronDown size={13} aria-hidden="true" />
-                      <select
-                        aria-label={t('สิทธิ์เครื่องมือ')}
-                        title={t('สิทธิ์เครื่องมือ')}
-                        value={snapshot.policy.mode}
-                        disabled={running || submitting}
-                        onChange={e =>
-                          void action(async () => {
-                            await api.call('permissionMode', { mode: e.target.value });
-                            await refresh();
-                          })
-                        }
-                      >
-                        <option value="ask" disabled={!snapshot.policy.modes.includes('ask')}>
-                          {t('ถามก่อนแก้ไข')}
-                        </option>
-                        <option value="acceptEdits" disabled={!snapshot.policy.modes.includes('acceptEdits')}>
-                          {t('แก้ไฟล์ได้เลย · ถามก่อนรันคำสั่ง')}
-                          {!snapshot.policy.modes.includes('acceptEdits') ? t(' · ปิดโดยผู้ดูแล') : ''}
-                        </option>
-                        <option value="auto" disabled={!snapshot.policy.modes.includes('auto')}>
-                          {t('อัตโนมัติเต็มรูปแบบ')}
-                          {!snapshot.policy.modes.includes('auto') ? t(' · ปิดโดยผู้ดูแล') : ''}
-                        </option>
-                        <option value="plan" disabled={!snapshot.policy.modes.includes('plan')}>
-                          {t('อ่านอย่างเดียว · ห้ามแก้ไขไฟล์')}
-                        </option>
-                      </select>
-                    </label>
-                  )}
+                  {/* Permission as a small shield pill with a short word; ordinary office staff see only the two everyday
+                        choices (Ask vs Read-only), while Dev Mode or an explicit advanced mode unlocks all four levels. */}
+                  {snapshot.policy &&
+                    (() => {
+                      const showAdvancedPermissions = Boolean(
+                        (snapshot.features?.developmentMode && snapshot.settings.developmentMode) ||
+                        !['ask', 'plan'].includes(snapshot.policy.mode),
+                      );
+                      return (
+                        <label className="pill-select permission-pill" title={t('สิทธิ์เครื่องมือ')}>
+                          <ShieldCheck size={14} aria-hidden="true" />
+                          <span>{t(PERMISSION_SHORT[snapshot.policy.mode] || 'ถามก่อน')}</span>
+                          <ChevronDown size={13} aria-hidden="true" />
+                          <select
+                            aria-label={t('สิทธิ์เครื่องมือ')}
+                            title={t('สิทธิ์เครื่องมือ')}
+                            value={snapshot.policy.mode}
+                            disabled={running || submitting}
+                            onChange={e =>
+                              void action(async () => {
+                                await api.call('permissionMode', { mode: e.target.value });
+                                await refresh();
+                              })
+                            }
+                          >
+                            <option value="ask" disabled={!snapshot.policy.modes.includes('ask')}>
+                              {t('ถามก่อนแก้ไข')}
+                            </option>
+                            {showAdvancedPermissions && (
+                              <option value="acceptEdits" disabled={!snapshot.policy.modes.includes('acceptEdits')}>
+                                {t('แก้ไฟล์ได้เลย · ถามก่อนรันคำสั่ง')}
+                                {!snapshot.policy.modes.includes('acceptEdits') ? t(' · ปิดโดยผู้ดูแล') : ''}
+                              </option>
+                            )}
+                            {showAdvancedPermissions && (
+                              <option value="auto" disabled={!snapshot.policy.modes.includes('auto')}>
+                                {t('อัตโนมัติเต็มรูปแบบ')}
+                                {!snapshot.policy.modes.includes('auto') ? t(' · ปิดโดยผู้ดูแล') : ''}
+                              </option>
+                            )}
+                            <option value="plan" disabled={!snapshot.policy.modes.includes('plan')}>
+                              {t('อ่านอย่างเดียว · ห้ามแก้ไขไฟล์')}
+                            </option>
+                          </select>
+                        </label>
+                      );
+                    })()}
                 </div>
                 <div className="composer-submit">
                   <div className="ai-picker" ref={aiPickerRef}>
