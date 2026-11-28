@@ -40,7 +40,10 @@ export const en: Record<string, string> = {
     'This pending change was no longer found. It may already have been applied or rejected.',
   'สิทธิ์เครื่องมือถูกล็อกเป็นอ่านอย่างเดียวโดยนโยบายองค์กร จึงยังลงมือทำตามแผนไม่ได้':
     'Tool permissions are locked to read-only by organization policy, so the plan cannot be executed yet.',
-  'เปลี่ยนสิทธิ์เป็น “ถามก่อนแก้ไข” เพื่อลงมือทำตามแผน': 'Switched permissions to “Ask before editing” to execute the plan.',
+  'เปลี่ยนสิทธิ์เป็น “ถามก่อนแก้ไข”?': 'Switch permissions to “Ask before editing”?',
+  เปลี่ยนแล้วลงมือทำ: 'Switch and run',
+  'ตอนนี้อ่านอย่างเดียว การทำตามแผนต้องแก้ไฟล์ได้ ระบบจะถามก่อนแก้ทุกครั้ง และสิทธิ์นี้คงอยู่จนกว่าคุณเปลี่ยนในตั้งค่า':
+    'Tools are read-only now. Running the plan needs to edit files. STeP will ask before every edit, and this setting stays until you change it in Settings.',
   จัดการแล้ว: 'Handled',
   ดาวน์โหลดรูป: 'Download image',
   'ภาพที่ AI สร้าง': 'AI-generated image',
@@ -3655,7 +3658,7 @@ export const en: Record<string, string> = {
   แสดงตัวอย่าง: 'Preview',
   'ตัวอย่างภาพ SVG': 'SVG graphic preview',
   'ตัวอย่างหน้าเว็บ HTML': 'HTML page preview',
-  'แสดงผลในกล่องแยกออฟไลน์ (ไม่เชื่อมอินเทอร์เน็ต)': 'Rendered in an offline sandbox (no internet access)',
+  'ภาพนิ่ง ไม่รันสคริปต์': 'Static preview, scripts off',
   ดูในแชต: 'Preview here',
   ซ่อนตัวอย่าง: 'Hide preview',
   เปิดในแท็บเว็บ: 'Open in Web tab',
@@ -3687,8 +3690,8 @@ export const en: Record<string, string> = {
   ราคาถูกที่สุด: 'Lowest price',
   'เร็วที่สุด (Throughput)': 'Highest throughput',
   'ตอบไวสุด (Latency)': 'Lowest latency',
-  'แชตแสดงแผนภาพ Mermaid, สมการคณิตศาสตร์ KaTeX, กล่องแจ้งเตือน, โค้ดพร้อม diff และตัวอย่าง SVG/HTML แบบออฟไลน์ในกล่องแยกที่ปลอดภัย':
-    'Chat renders Mermaid diagrams, KaTeX math, callout alerts, code with diff highlighting, and offline sandboxed SVG/HTML previews',
+  'แชตแสดงแผนภาพ Mermaid, สมการคณิตศาสตร์ KaTeX, กล่องแจ้งเตือน, โค้ดพร้อม diff และตัวอย่าง SVG/HTML แบบออฟไลน์':
+    'Chat renders Mermaid diagrams, KaTeX math, callout alerts, code with diff highlighting, and offline SVG/HTML previews',
   'ปรับโหมดวางแผนและลงมือทำ การร่างเอกสารต่อเนื่อง และแยกสถานะกำลังพิมพ์ต่อแชตไม่ให้ปนกันเมื่อสลับงาน':
     'Improved Plan & Execute, continuous inline drafting, and per-session live streaming state when switching tasks',
   'เชื่อมต่อ Gemini API, Claude API และ OpenAI API ตรงผ่าน HTTP เร็วขึ้น พร้อมดึงสเปกโมเดล (บริบท ราคา การอ่านภาพ และการคิด) จากบริการจริง':

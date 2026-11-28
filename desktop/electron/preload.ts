@@ -22,7 +22,6 @@ const allowed = new Set([
   'googleOpen',
   'googleOpenChange',
   'artifactOpen',
-  'sandboxHtml',
   'morningBriefState',
   'morningBriefRun',
   'morningBriefSettings',

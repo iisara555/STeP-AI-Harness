@@ -10,7 +10,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { AlertTriangle, Check, CircleAlert, Copy, Download, Eye, Lightbulb, MessageSquareWarning, OctagonAlert } from './icons';
 import { t } from './i18n';
-import { buildSandboxedSvgSrc, isPreviewableHtml, isPreviewableSvg, resolveSandboxedHtmlSrc, sanitizeStaticSvg } from './inline-preview';
+import { buildSandboxedHtmlSrc, buildSandboxedSvgSrc, isPreviewableHtml, isPreviewableSvg, sanitizeStaticSvg } from './inline-preview';
 
 type Highlight = (code: string, language: string) => string;
 let highlighter: Highlight | null = null;
@@ -71,7 +71,7 @@ export const visibleAnswer = (text: string) =>
   text
     .replace(/^\s{0,3}(`{3,}|~{3,})step-tool[^\n]*\n[\s\S]*?(?:^\s{0,3}\1\s*$|(?![\s\S]))/gm, '')
     .replace(/```step-tool[ \t]*\r?\n[\s\S]*?(?:```|$)/g, '')
-    .replace(/\n{3,}/g, '\n\n')
+    // Blank lines are kept as written: Markdown already folds them in prose, and code (copied or shown) needs them.
     .trim();
 
 /** Protects ordinary currency prices (e.g. "$100 ถึง $200") from being parsed as inline KaTeX math. */
@@ -320,20 +320,11 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
 
   const html = !preview && highlightCode && name ? highlightCode(code, name) : '';
   const svgSrc = useMemo(() => (preview && canPreviewSvg ? buildSandboxedSvgSrc(code, dark) : ''), [preview, canPreviewSvg, code, dark]);
-  const [htmlSrc, setHtmlSrc] = useState('');
-  useEffect(() => {
-    if (!preview || !canPreviewHtml) {
-      setHtmlSrc('');
-      return;
-    }
-    let alive = true;
-    void resolveSandboxedHtmlSrc(code, dark).then(url => {
-      if (alive) setHtmlSrc(url);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [preview, canPreviewHtml, code, dark]);
+  // HTML previews are static (sandbox=""): AI-written scripts never run in the app window.
+  const htmlSrc = useMemo(
+    () => (preview && canPreviewHtml ? buildSandboxedHtmlSrc(code, dark) : ''),
+    [preview, canPreviewHtml, code, dark],
+  );
   const previewSrc = canPreviewSvg ? svgSrc : htmlSrc;
 
   return (
@@ -361,10 +352,10 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
           <iframe
             className={`chat-preview-frame ${canPreviewSvg ? 'chat-svg-frame' : 'chat-html-frame'}`}
             title={canPreviewSvg ? t('ตัวอย่างภาพ SVG') : t('ตัวอย่างหน้าเว็บ HTML')}
-            sandbox={canPreviewSvg ? '' : 'allow-scripts'}
+            sandbox=""
             src={previewSrc}
           />
-          {canPreviewHtml && <p className="chat-preview-note small muted">{t('แสดงผลในกล่องแยกออฟไลน์ (ไม่เชื่อมอินเทอร์เน็ต)')}</p>}
+          {canPreviewHtml && <p className="chat-preview-note small muted">{t('ภาพนิ่ง ไม่รันสคริปต์')}</p>}
         </div>
       ) : (
         <pre tabIndex={0}>{html ? <code className="hljs" dangerouslySetInnerHTML={{ __html: html }} /> : <code>{code}</code>}</pre>

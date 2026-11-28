@@ -43,6 +43,19 @@ test('[DRAFT-02] communication/CC chat requests mentioning โครงการ
   assert.equal(requestedDocumentTool('แปลงอีเมลนี้เป็นบันทึกข้อความ'), 'memo');
 });
 
+test('[DRAFT-02] project proposal requests phrased with รายละเอียด/ข้อมูล/สำหรับ still open the project tool', () => {
+  for (const prompt of [
+    // The project's own name mentions หนังสือราชการ; it must not become a letter.
+    'ช่วยเขียนรายละเอียดโครงการอบรมการเขียนหนังสือราชการ',
+    'ร่างข้อมูลโครงการพัฒนาบุคลากร',
+    'ร่างเอกสารสำหรับโครงการพัฒนาบุคลากร',
+  ]) {
+    assert.equal(requestedDocumentTool(prompt), 'project', prompt);
+  }
+  // Communication pieces about a project still stay in chat.
+  assert.equal(requestedDocumentTool('เขียนข่าวประชาสัมพันธ์เกี่ยวกับโครงการ'), undefined);
+});
+
 test('[DRAFT-03] adding a new section, multi-section edits, and word-level เฉพาะ fall back to full revision; fenced JSON inside patch parses', () => {
   const base = markdownDocument('# โครงการจำลอง\n\n## 1 วัตถุประสงค์\n\nเดิม 1\n\n## 2 กิจกรรม\n\nเดิม 2\n\n## 3 ระยะเวลา\n\nเดิม 3');
   assert.equal(documentTarget(base, 'เพิ่มข้อ 17 เรื่องการรับประกัน', 1), undefined);
@@ -249,6 +262,11 @@ test('[RENDER-01 / RENDER-03 / RENDER-05] stream sanitization, thinking icons, p
   assert.equal(visibleStream('ตัวอย่าง:\n```html\n<think>keep</think>\n```'), 'ตัวอย่าง:\n```html\n<think>keep</think>\n```');
   // Inline step-tool blocks are hidden from saved answers too.
   assert.equal(visibleAnswer('คำตอบ ```step-tool\n{"tool":"files","input":"a"}\n``` จบ'), 'คำตอบ  จบ');
+  // Code keeps its blank lines (Python's two between functions), so Copy gives back what the AI wrote.
+  assert.equal(
+    visibleAnswer('```python\ndef a():\n    pass\n\n\ndef b():\n    pass\n```'),
+    '```python\ndef a():\n    pass\n\n\ndef b():\n    pass\n```',
+  );
   // Unclosed claim-update block while streaming is hidden.
   assert.equal(splitClaimReply('ข้อความ\n```claim-update\n{"title":"x"', true).text, 'ข้อความ');
   // Localized Thai tool activity maps back to its tool icon key.
