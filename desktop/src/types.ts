@@ -2,6 +2,16 @@ import type { DraftNode } from './draft';
 import type { DocumentToolId } from './document-tools';
 export type Provider = 'openai' | 'claude' | 'gemini' | 'antigravity' | 'compatible' | 'copilot';
 export type EffortOption = { id: string; description?: string };
+export type ModelPricing = {
+  /** USD per 1M input tokens */
+  input: number;
+  /** USD per 1M output tokens */
+  output: number;
+  /** USD per 1M cached input read tokens */
+  cachedInput?: number;
+  /** USD per 1M cache creation write tokens */
+  cacheWriteInput?: number;
+};
 export type ModelOption = {
   id: string;
   label: string;
@@ -9,6 +19,24 @@ export type ModelOption = {
   isDefault?: boolean;
   efforts?: EffortOption[];
   defaultEffort?: string;
+  contextWindow?: number;
+  maxOutputTokens?: number;
+  pricing?: ModelPricing;
+  supportsVision?: boolean;
+  supportsReasoning?: boolean;
+  supportsTools?: boolean;
+};
+export type ProviderRouting = {
+  zdrOnly?: boolean;
+  sort?: 'default' | 'price' | 'throughput' | 'latency';
+};
+export type RateLimitReading = {
+  name: 'requests' | 'tokens' | 'input_tokens' | 'output_tokens';
+  limit?: number;
+  remaining?: number;
+  usedPercent?: number;
+  resetsAt?: string;
+  windowMinutes?: number;
 };
 export type Connection = {
   id: string;
@@ -26,6 +54,8 @@ export type Connection = {
   contextWindow?: number;
   maxOutputTokens?: number;
   promptCaching?: 'off' | 'anthropic-ephemeral' | 'gemini-explicit';
+  /** OpenRouter provider routing preferences (sent only to official OpenRouter). */
+  providerRouting?: ProviderRouting;
   /** Optional Google Cloud project for Workspace / organization Google OAuth accounts. */
   googleCloudProject?: string;
   /** A login may have written runtime-owned credentials, including OS keychain entries. */
@@ -76,7 +106,20 @@ export type Usage = { input: number; output: number; total: number; runs: number
 /** Only provider-reported account meters. Unknown values stay absent, never zero. */
 export type ProviderUsageData = {
   status: 'ok' | 'unavailable';
-  source: 'codex' | 'claude' | 'copilot' | 'antigravity' | 'openrouter' | 'deepseek' | 'minimax' | 'zai' | 'kimi';
+  source:
+    | 'codex'
+    | 'claude'
+    | 'copilot'
+    | 'antigravity'
+    | 'openrouter'
+    | 'deepseek'
+    | 'minimax'
+    | 'zai'
+    | 'kimi'
+    | 'openai-api'
+    | 'claude-api'
+    | 'gemini-api'
+    | 'compatible-headers';
   experimental?: boolean;
   plan?: string;
   reason?: string;
@@ -206,6 +249,8 @@ export type RunTrace = {
   skillSelection?: { method: 'router' | 'model' | 'previous' | 'fallback' | 'asked'; skill?: string; asked?: boolean };
   /** Reasoning level sent for this run: the employee's choice, or picked by task size (auto). No level means the model default. */
   effort?: { size: 'small' | 'medium' | 'large'; auto: boolean; level?: string };
+  /** Automatic failover to the employee's opt-in backup account when the primary hit quota/rate limits. */
+  failover?: { fromConnectionId: string; toConnectionId: string; reason: string };
   /** Provider research before the first model step, when host-side search is enabled. */
   providerCalls?: ProviderCallTrace[];
 };
@@ -417,6 +462,8 @@ export type Settings = {
   termsVersion?: string;
   ocrAiConsentedAt?: string;
   receiptVisionConsentedAt?: string;
+  /** Optional opt-in backup account used automatically only when the active account hits quota/rate limit. */
+  fallbackConnectionId?: string;
 };
 /** `reason` says why a file cannot be sent (an ATTACH_* code), so the chip and the send button can tell the person. */
 export type Attachment = {

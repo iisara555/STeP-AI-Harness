@@ -66,6 +66,10 @@ export function shortWindowLabel(row: ProviderUsageReport['limits'][number]): st
   if (row.name === 'premium_interactions') return 'PRM';
   if (row.name === 'chat') return 'CHAT';
   if (row.name === 'completions') return 'CMP';
+  if (row.name === 'requests') return 'RPM';
+  if (row.name === 'tokens') return 'TPM';
+  if (row.name === 'input_tokens') return 'IN';
+  if (row.name === 'output_tokens') return 'OUT';
   if (row.name.includes('seven_day') || row.name.includes('week')) return '1W';
   if (row.name === 'five_hour' || row.name === 'primary') return '5H';
   return 'Q';
@@ -93,6 +97,10 @@ export function limitLabel(row: ProviderUsageReport['limits'][number]): string {
     premium_interactions: t('Premium requests'),
     chat: 'Chat',
     completions: t('Completions'),
+    requests: t('คำขอ (Requests)'),
+    tokens: t('Token รวม'),
+    input_tokens: t('Token ขาเข้า'),
+    output_tokens: t('Token ขาออก'),
   };
   return [period, row.scope || names[row.name]].filter(Boolean).join(' · ') || t('โควตา');
 }
@@ -142,7 +150,9 @@ export function limitReading(row: ProviderUsageReport['limits'][number], index =
   const parts: string[] = [];
   if (computedUsed !== undefined) parts.push(t('ใช้แล้ว {0}%', displayNumber(computedUsed)));
   if (row.used !== undefined) {
-    parts.push(t('ใช้แล้ว {0} ครั้ง', displayNumber(row.used)) + (row.total !== undefined ? ` / ${displayNumber(row.total)}` : ''));
+    const isTokenMeter = ['tokens', 'input_tokens', 'output_tokens'].includes(row.name);
+    const usedText = isTokenMeter ? t('ใช้แล้ว {0} tokens', displayNumber(row.used)) : t('ใช้แล้ว {0} ครั้ง', displayNumber(row.used));
+    parts.push(usedText + (row.total !== undefined ? ` / ${displayNumber(row.total)}` : ''));
   }
   if (row.resetsAt) {
     parts.push(
@@ -245,14 +255,33 @@ export function usageReadingsFor(account: ProviderUsageReport, now = Date.now())
   return [...limits, ...credits];
 }
 
+function scopeMatchesModel(scope: string | undefined, activeModel: string | undefined): boolean {
+  if (!scope || !activeModel) return false;
+  const s = scope.toLowerCase();
+  const m = activeModel.toLowerCase();
+  if (/gemini/.test(m)) return s.includes('gemini');
+  if (/claude|opus|sonnet|haiku/.test(m)) return /claude|opus|sonnet|haiku/.test(s);
+  if (/gpt|codex|\bo[134]\b|\bo[134]-/.test(m)) return /gpt|codex|openai/.test(s);
+  return false;
+}
+
 /**
  * Picks up to 2 concise readings for the inline chip in the composer / AI picker,
  * matching Token Bar's `ProviderChip` (e.g. `5H 65% · 1W 30%` or `$60.00`).
+ * When an account reports multiple model-scoped buckets (such as Antigravity), prefers buckets matching `activeModel`.
  */
-export function inlineQuotaReadings(account?: ProviderUsageReport, now = Date.now()): QuotaReading[] {
+export function inlineQuotaReadings(account?: ProviderUsageReport, now = Date.now(), activeModel?: string): QuotaReading[] {
   if (!account || account.status !== 'ok') return [];
-  const limits = account.limits.map((row, i) => limitReading(row, i, now)).filter(r => r.remainingPercent !== undefined);
-  if (limits.length > 0) return limits.slice(0, 2);
+  const pairs = account.limits
+    .map((row, i) => ({ row, reading: limitReading(row, i, now) }))
+    .filter(item => item.reading.remainingPercent !== undefined);
+  if (pairs.length > 0) {
+    if (activeModel) {
+      const matched = pairs.filter(item => scopeMatchesModel(item.row.scope, activeModel));
+      if (matched.length > 0) return matched.slice(0, 2).map(item => item.reading);
+    }
+    return pairs.slice(0, 2).map(item => item.reading);
+  }
   const credits = account.credits.map((c, i) => creditReading(c, account, i)).filter(r => !r.unlimited && r.compactValue !== '—');
   return credits.slice(0, 2);
 }
@@ -265,6 +294,14 @@ export function accountTokenSummary(connectionId: string, report?: UsageReport) 
   const total = entries.reduce((sum, e) => sum + e.total, 0);
   const usd = entries.reduce((sum, e) => sum + e.usd, 0);
   return { input, output, cached, total, usd, hasBreakdown: entries.some(e => e.input !== undefined || e.output !== undefined) };
+}
+
+/** Separate Cache Read vs Cache Write counts for detailed telemetry display in UsageDialog. */
+export function accountCacheBreakdown(connectionId: string, report?: UsageReport) {
+  const entries = (report?.entries || []).filter(e => e.connectionId === connectionId);
+  const cacheRead = entries.reduce((sum, e) => sum + (e.cachedInput || 0), 0);
+  const cacheWrite = entries.reduce((sum, e) => sum + (e.cacheWriteInput || 0), 0);
+  return { cacheRead, cacheWrite };
 }
 
 export function budgetReading(kind: 'dailyTokens' | 'monthlyCostUsd', report: UsageReport): QuotaReading | undefined {

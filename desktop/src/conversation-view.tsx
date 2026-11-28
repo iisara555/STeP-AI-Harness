@@ -1255,6 +1255,7 @@ export function ConversationView({ v }: { v: AppView }) {
                         ) : null}
                         <AccountQuotaMenuSummary
                           account={activeUsageAccount}
+                          activeModel={currentModel}
                           busy={quotaRefreshing}
                           onRefresh={() => void action(refreshActiveQuota)}
                           onOpenUsage={() => {
@@ -1311,7 +1312,7 @@ export function ConversationView({ v }: { v: AppView }) {
                 {workMode !== 'image' && (
                   <ContextWindowGauge session={session} connectionId={connection?.id} model={currentModel} onEvent={api.onEvent} />
                 )}
-                <InlineQuotaChip account={activeUsageAccount} onClick={() => setUsageOpen(true)} />
+                <InlineQuotaChip account={activeUsageAccount} activeModel={currentModel} onClick={() => setUsageOpen(true)} />
               </div>
             </div>
             {!session?.messages.length && (

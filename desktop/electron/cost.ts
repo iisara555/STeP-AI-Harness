@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
 import { Store } from './store';
-import type { Connection } from '../src/types';
+import type { Connection, ModelPricing } from '../src/types';
 import type { TokenCount } from './providers';
 import type { Policy } from './policy';
+import { lookupCatalogModel } from './model-catalog';
 type Entry = TokenCount & {
   day: string;
   provider: string;
@@ -29,17 +30,33 @@ export class CostLedger {
     if (!total) return;
     const day = this.now().toISOString().slice(0, 10),
       model = connection.model || 'provider-default';
-    const price = this.policy().prices[model] || this.policy().prices[connection.provider + ':*'];
+    // Pricing precedence:
+    // 1) Admin policy override (`policy.prices[model]` or `policy.prices[provider:*]`)
+    // 2) Provider-reported exact per-request cost (`count.costUsd`, e.g. OpenRouter SSE `usage.cost`)
+    // 3) Live `/models` pricing on API connections (`connection.models[].pricing`)
+    // 4) Offline baseline catalog pricing on API connections (`model-catalog.ts`)
+    const policyPrice = this.policy().prices[model] || this.policy().prices[connection.provider + ':*'];
+    const hasExactCost = !policyPrice && typeof count.costUsd === 'number' && Number.isFinite(count.costUsd) && count.costUsd >= 0;
+    const liveModelPrice: ModelPricing | undefined =
+      !policyPrice && !hasExactCost && connection.mode === 'api' ? connection.models?.find(m => m.id === model)?.pricing : undefined;
+    const catalogPrice: ModelPricing | undefined =
+      !policyPrice && !hasExactCost && !liveModelPrice && connection.mode === 'api' && model !== 'provider-default'
+        ? lookupCatalogModel(model)?.pricing
+        : undefined;
+    const price = policyPrice || liveModelPrice || catalogPrice;
     const cached = Math.min(input, clean(count.cachedInput ?? 0));
     const written = Math.min(input - cached, clean(count.cacheWriteInput ?? 0));
     const missing = price ? (price.cachedInput === undefined ? cached : 0) + (price.cacheWriteInput === undefined ? written : 0) : 0;
-    const usd = price
-      ? ((input - cached - written) * price.input +
-          cached * (price.cachedInput ?? price.input) +
-          written * (price.cacheWriteInput ?? price.input) +
-          output * price.output) /
-        1_000_000
-      : 0;
+    const usd = hasExactCost
+      ? count.costUsd!
+      : price
+        ? ((input - cached - written) * price.input +
+            cached * (price.cachedInput ?? price.input) +
+            written * (price.cacheWriteInput ?? price.input) +
+            output * price.output) /
+          1_000_000
+        : 0;
+    const priced = Boolean(price || hasExactCost);
     const id = createHash('sha256')
       .update(JSON.stringify([day, connection.provider, model, connection.id || null, connection.mode || null]))
       .digest('hex');
@@ -60,7 +77,7 @@ export class CostLedger {
         : {}),
       cachePriceMissingTokens: missing + (old?.cachePriceMissingTokens || 0),
       usd: dollars((old?.usd || 0) + usd),
-      unpricedTokens: (old?.unpricedTokens || 0) + (price ? 0 : total),
+      unpricedTokens: (old?.unpricedTokens || 0) + (priced ? 0 : total),
     });
   }
   report() {

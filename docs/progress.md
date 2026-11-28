@@ -4,9 +4,11 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-11-27_
+_Last updated: 2026-11-28_
 
 ## In flight
+
+- **AI connection, provider telemetry & cross-provider best-practices upgrade (2026-11-28, branch `feat/ai-connection-telemetry-upgrade`)**. Brought the strongest capabilities of every supported provider into STeP Desktop: (1) direct HTTP SSE fast paths and `/models` REST discovery for Gemini API (default for API text turns with multi-turn `ProviderSession`), Claude API (auto ephemeral prompt caching + extended thinking + `anthropic-ratelimit-*`), and OpenAI API (`x-ratelimit-*` + structured JSON) with zero CLI/SDK subprocess overhead; (2) rich `/models` metadata extraction (`contextWindow`, `maxOutputTokens`, `pricing`, `supportsVision`, `supportsReasoning`, `supportsTools`) across OpenRouter, compatible endpoints, Copilot SDK, Gemini/Anthropic/OpenAI REST, plus an offline baseline catalog (`desktop/electron/model-catalog.ts`) feeding `contextBudget()` and `CostLedger` (Policy > provider `costUsd` > live `/models` > offline catalog > unpriced); (3) reasoning stream support (`reasoning_content`/`reasoning`/`thinking_delta`), OpenRouter ZDR-only & provider sort routing (`connectionRouting` IPC), passive HTTP rate-limit header telemetry (`ProviderUsage.observeRateLimits`), model-family-aware `InlineQuotaChip` matching, separate Cache Read/Write pills, 24h stale-catalog auto-refresh, one-click OAuth connect, and accurate preset capability descriptions; (4) model-scoped cooldown tracker (`desktop/electron/cooldown.ts`) and strictly opt-in automatic backup account failover (`fallbackConnection` IPC) on `PROVIDER_QUOTA` / exhausted `PROVIDER_BUSY`.
 
 - **Desktop v0.6.46 prepared (2026-11-27)**. Includes the eight integrated Desktop fixes and features. Harness remains 0.7.7. Publish the Windows x64 and macOS Apple silicon installers and build the Windows x64 Store MSIX from the validated main commit. Store certification and publication follow Partner Center.
 

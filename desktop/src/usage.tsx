@@ -5,7 +5,17 @@ import { connectionBrand, connectionName, explainError, shownDate, shownMonth } 
 import { locale, t } from './i18n';
 import './usage.css';
 import { formatUsd, usageSourceName } from './usage-display';
-import { accountTokenSummary, budgetReading, creditReading, inlineQuotaReadings, limitReading, type QuotaReading } from './usage-readings';
+import {
+  accountCacheBreakdown,
+  accountTokenSummary,
+  budgetReading,
+  creditReading,
+  inlineQuotaReadings,
+  limitReading,
+  type QuotaReading,
+} from './usage-readings';
+
+const PASSIVE_HEADER_SOURCES = new Set(['openai-api', 'claude-api', 'gemini-api', 'compatible-headers']);
 
 function statusText(account: ProviderUsageReport) {
   if (account.status === 'idle') return t('ยังไม่ได้อ่านการใช้งานจากผู้ให้บริการ');
@@ -18,6 +28,7 @@ function statusText(account: ProviderUsageReport) {
     if (account.reason === 'USAGE_TIMEOUT') return t('อ่านการใช้งานไม่ทันเวลา ลองรีเฟรชอีกครั้ง');
     return t('อ่านการใช้งานไม่สำเร็จ ลองรีเฟรชหรือตรวจที่ผู้ให้บริการ');
   }
+  if (account.source && PASSIVE_HEADER_SOURCES.has(account.source)) return t('อ่านจาก HTTP header ของคำขอล่าสุด');
   return t('ข้อมูลจากผู้ให้บริการ');
 }
 
@@ -88,8 +99,16 @@ export function QuotaTankMeter({ reading, compact = false }: { reading: QuotaRea
 /**
  * Compact Token-Bar style pill shown beside the AI selector in the composer bar when an account has live readings.
  */
-export function InlineQuotaChip({ account, onClick }: { account?: ProviderUsageReport; onClick: () => void }) {
-  const readings = inlineQuotaReadings(account);
+export function InlineQuotaChip({
+  account,
+  activeModel,
+  onClick,
+}: {
+  account?: ProviderUsageReport;
+  activeModel?: string;
+  onClick: () => void;
+}) {
+  const readings = inlineQuotaReadings(account, Date.now(), activeModel);
   if (!account || !readings.length) return null;
   const summary = readings.map(r => `${r.longLabel}: ${r.valueText}`).join(' · ');
   return (
@@ -113,17 +132,19 @@ export function InlineQuotaChip({ account, onClick }: { account?: ProviderUsageR
  */
 export function AccountQuotaMenuSummary({
   account,
+  activeModel,
   busy,
   onRefresh,
   onOpenUsage,
 }: {
   account?: ProviderUsageReport;
+  activeModel?: string;
   busy?: boolean;
   onRefresh?: () => void;
   onOpenUsage: () => void;
 }) {
   if (!account) return null;
-  const readings = inlineQuotaReadings(account);
+  const readings = inlineQuotaReadings(account, Date.now(), activeModel);
   return (
     <div className="ai-picker-quota" data-picker-quota={account.connectionId}>
       <div className="ai-picker-quota-head">
@@ -166,6 +187,7 @@ function UsageAccount({
   onDashboard: () => void;
 }) {
   const tokenStats = accountTokenSummary(account.connectionId, report);
+  const cacheStats = accountCacheBreakdown(account.connectionId, report);
   const limitReadings = account.limits.map((row, i) => limitReading(row, i));
   const creditReadings = account.credits.map((credit, i) => ({
     credit,
@@ -230,7 +252,19 @@ function UsageAccount({
             <span>
               {t('ขาออก')}: {displayNumber(tokenStats.output)}
             </span>
-            {tokenStats.cached > 0 && <span>Cache: {displayNumber(tokenStats.cached)}</span>}
+            {cacheStats.cacheRead > 0 && (
+              <span>
+                {t('อ่าน Cache')}: {displayNumber(cacheStats.cacheRead)}
+              </span>
+            )}
+            {cacheStats.cacheWrite > 0 && (
+              <span>
+                {t('เขียน Cache')}: {displayNumber(cacheStats.cacheWrite)}
+              </span>
+            )}
+            {tokenStats.cached > 0 && cacheStats.cacheRead === 0 && cacheStats.cacheWrite === 0 && (
+              <span>Cache: {displayNumber(tokenStats.cached)}</span>
+            )}
           </div>
         )}
       </div>

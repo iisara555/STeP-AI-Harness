@@ -65,6 +65,7 @@ import { interactionStyleId, languageStyleId } from '../src/speaking-styles';
 import { Images } from './images';
 import { canGenerateImages, isImageRequest } from '../src/image-routing';
 import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
+import { CooldownTracker } from './cooldown';
 import { searchPublicWeb } from './public-search';
 import { Splash } from './splash';
 import { documentTool, documentVariant } from '../src/document-tools';
@@ -1360,7 +1361,22 @@ async function main() {
       );
     return sandbox.run(request.input, (request.args?.files || []) as string[], scope.signal, scope.sessionId);
   };
+  const cooldowns = new CooldownTracker();
   harness.recordUsage = (connection, count) => ledger.record(connection, count);
+  harness.observeRateLimits = (connection, readings) => {
+    providerUsage.observeRateLimits(connection, readings);
+    emit({ sessionId: '', type: 'changed' });
+  };
+  harness.recordCooldown = (connection, code, retryAfterMs) => cooldowns.recordFailure(connection.id, connection.model, code, retryAfterMs);
+  harness.clearCooldown = connection => cooldowns.recordSuccess(connection.id, connection.model);
+  harness.fallbackConnection = primary => {
+    const fallbackId = store.settings().fallbackConnectionId;
+    if (!fallbackId || fallbackId === primary.id || connecting.has(fallbackId)) return undefined;
+    const backup = store.get<Connection>('connection', fallbackId);
+    if (!backup?.ready || connectionPolicyBlocked(backup)) return undefined;
+    if (cooldowns.isCooledDown(backup.id, backup.model)) return undefined;
+    return backup;
+  };
   const memories = new Memories(store, data, () => policyState.policy, harness.privacy);
   const learning = new Learning(store, data, text => privacy.evaluatePrivacyGate(text));
   // Step 6 of the agent-learning plan: a local daily check of what was learned, kept as a board per work folder and team.
@@ -1683,6 +1699,14 @@ async function main() {
   harness.completed = async session => {
     reviewInBackground(session);
     await memories.dream(session);
+    const activeConn = session.connectionId ? store.get<Connection>('connection', session.connectionId) : undefined;
+    if (activeConn?.ready && !connecting.has(activeConn.id) && providerUsage.snapshot(activeConn).canRefresh) {
+      // Rate-limited to once per minute per account inside ProviderUsage.refresh(); updates remaining quota chip passively.
+      void providerUsage
+        .refresh(activeConn)
+        .then(() => emit({ sessionId: '', type: 'changed' }))
+        .catch(() => {});
+    }
     emit({ sessionId: session.id, type: 'changed' });
   };
   harness.extraContext = async (id, query, connection, signal) => {
@@ -2202,7 +2226,7 @@ async function main() {
   }
   // Empty means the provider default; anything else must come from the provider's own catalog.
   const modelChoice = (connection: Connection, value: unknown) => {
-    const model = inputText(value ?? '', 100);
+    const model = inputText(value ?? '', 160);
     if (model && model !== connection.model && !connection.models?.some(m => m.id === model)) throw new Error('INVALID_MODEL');
     return model;
   };
@@ -3718,10 +3742,11 @@ async function main() {
           id,
           provider: input.provider as Provider,
           mode: input.mode,
-          model: inputText(input.model || '', 100),
+          model: inputText(input.model || '', 160),
           executable: previous?.customRuntime && previous.provider === input.provider ? previous.executable : '',
           ...(previous?.customRuntime && previous.provider === input.provider ? { customRuntime: true } : {}),
           ...(previous?.claudeAuthStarted ? { claudeAuthStarted: true } : {}),
+          ...(previous?.providerRouting && preset?.id === 'openrouter' ? { providerRouting: previous.providerRouting } : {}),
           ...(input.provider === 'gemini' && input.mode === 'subscription' && googleCloudProject ? { googleCloudProject } : {}),
           ...(input.provider === 'compatible' && preset
             ? {
@@ -3742,6 +3767,7 @@ async function main() {
         }
         if (input.mode === 'subscription' || input.mode === 'oauth') removeKey(id);
         providerUsage.forget(id);
+        cooldowns.clear(id);
         store.put('connection', id, connection);
         return connection;
       }
@@ -3754,6 +3780,28 @@ async function main() {
         connection.model = model;
         store.put('connection', connection.id, connection);
         return connection;
+      }
+      case 'connectionRouting': {
+        const connection = store.get<Connection>('connection', inputText(input.id, 60));
+        if (!connection) throw new Error('CONNECTION_NOT_FOUND');
+        if (connection.provider !== 'compatible' || connection.preset !== 'openrouter') throw new Error('INVALID_CONNECTION');
+        const zdrOnly = input.zdrOnly === true;
+        const sort = ['default', 'price', 'throughput', 'latency'].includes(input.sort)
+          ? (input.sort as 'default' | 'price' | 'throughput' | 'latency')
+          : 'default';
+        if (zdrOnly || sort !== 'default') connection.providerRouting = { zdrOnly, sort };
+        else delete connection.providerRouting;
+        store.put('connection', connection.id, connection);
+        return connection;
+      }
+      case 'fallbackConnection': {
+        const fallbackId = inputText(input.id ?? '', 60).trim();
+        if (fallbackId && !store.get<Connection>('connection', fallbackId)) throw new Error('CONNECTION_NOT_FOUND');
+        const next: Settings = { ...store.settings() };
+        if (fallbackId) next.fallbackConnectionId = fallbackId;
+        else delete next.fallbackConnectionId;
+        store.put('settings', 'main', next);
+        return next;
       }
       case 'runtime': {
         const connection = store.get<Connection>('connection', input.id);
@@ -3790,6 +3838,7 @@ async function main() {
           throw new Error('FEATURE_DISABLED');
         if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
         providerUsage.forget(connection.id);
+        cooldowns.clear(connection.id);
         connecting.add(connection.id);
         const controller = new AbortController(),
           // Antigravity may first download its CLI (about 190 MB on Windows) and wait for the Google sign-in.
@@ -4515,6 +4564,12 @@ async function main() {
         if (!c) throw new Error('CONNECTION_NOT_FOUND');
         if (connecting.has(c.id)) throw new Error('RUN_ALREADY_ACTIVE');
         providerUsage.forget(c.id);
+        cooldowns.clear(c.id);
+        if (store.settings().fallbackConnectionId === c.id) {
+          const next = { ...store.settings() };
+          delete next.fallbackConnectionId;
+          store.put('settings', 'main', next);
+        }
         closeClaudeSpares(c.id);
         for (const session of store.list<any>('session')) if (session.connectionId === c.id) service.cancel(session.id);
         if (c.provider === 'claude' && c.mode === 'subscription' && c.claudeAuthStarted) {
@@ -4561,6 +4616,12 @@ async function main() {
         }
         if (connecting.has(c.id)) throw new Error('CONNECTION_BUSY');
         providerUsage.forget(c.id);
+        cooldowns.clear(c.id);
+        if (store.settings().fallbackConnectionId === c.id) {
+          const next = { ...store.settings() };
+          delete next.fallbackConnectionId;
+          store.put('settings', 'main', next);
+        }
         const sessions = store.list<Session>('session').filter(session => session.connectionId === c.id);
         if (sessions.some(session => service.isActive(session.id))) throw new Error('RUN_ALREADY_ACTIVE');
         // Signing out is best effort: a connection that never signed in, or whose CLI is gone, must still be removable.

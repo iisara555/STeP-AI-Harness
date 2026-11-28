@@ -24,11 +24,31 @@ import {
   connectLabel,
   type ProviderChoice,
 } from './ui';
-import { explainError, connectionBrand, connectionKind, connectionLabel, shownDate } from './messages';
-import type { Connection, Snapshot } from './types';
+import { explainError, connectionBrand, connectionKind, connectionLabel, connectionName, shownDate } from './messages';
+import type { Connection, ModelOption, Snapshot } from './types';
 import { t } from './i18n';
 import { connectionCapabilities, organizationCapabilities, type Capability } from './connection-capabilities';
 import { connectionState } from './connection-state';
+
+function formatTokenCount(n: number): string {
+  if (n >= 1_000_000) return `${Math.round((n / 1_000_000) * 10) / 10}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
+  return String(n);
+}
+
+function modelSpecPills(model?: ModelOption): string[] {
+  if (!model) return [];
+  const pills: string[] = [];
+  if (model.contextWindow) pills.push(`${formatTokenCount(model.contextWindow)} ctx`);
+  if (model.maxOutputTokens) pills.push(`${formatTokenCount(model.maxOutputTokens)} out`);
+  if (model.supportsVision) pills.push('Vision');
+  if (model.supportsReasoning) pills.push('Reasoning');
+  if (model.pricing) {
+    const fmt = (v: number) => (v < 0.1 ? v.toFixed(3).replace(/0+$/, '').replace(/\.$/, '') : v.toFixed(2).replace(/\.00$/, ''));
+    pills.push(`$${fmt(model.pricing.input)}/$${fmt(model.pricing.output)} / 1M`);
+  }
+  return pills;
+}
 
 /** Shared by first-run setup and Settings: choose/connect, then show actual test readiness. */
 export function AIConnections({
@@ -65,7 +85,9 @@ export function AIConnections({
     // null: closed; a string: the passcode dialog for turning Dev mode on is open.
     [devPasscode, setDevPasscode] = useState<string | null>(null);
   const connectNow =
-    (choice.mode === 'subscription' && ['openai', 'claude', 'antigravity'].includes(choice.provider)) || choice.mode === 'api';
+    (choice.mode === 'subscription' && ['openai', 'claude', 'antigravity'].includes(choice.provider)) ||
+    choice.mode === 'api' ||
+    choice.mode === 'oauth';
   useEffect(() => {
     if (newConnectionId) readiness.current?.focus();
   }, [newConnectionId]);
@@ -184,6 +206,33 @@ export function AIConnections({
               />
             ))}
           </ul>
+          {connections.filter(c => c.ready && !c.policyBlocked).length >= 2 && (
+            <div className="fallback-connection" data-fallback-connection>
+              <label>
+                <span>{t('บัญชีสำรองอัตโนมัติ (Fallback)')}</span>
+                <select
+                  aria-label={t('เลือกบัญชีสำรองอัตโนมัติ')}
+                  value={snapshot.settings.fallbackConnectionId || ''}
+                  disabled={Boolean(busy)}
+                  onChange={e => void run('fallback', () => call('fallbackConnection', { id: e.target.value }))}
+                >
+                  <option value="">{t('ปิดใช้งาน (ไม่สลับบัญชีอัตโนมัติ)')}</option>
+                  {connections
+                    .filter(c => c.ready && !c.policyBlocked)
+                    .map(c => (
+                      <option key={c.id} value={c.id}>
+                        {connectionName(c)}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <p className="small muted">
+                {t(
+                  'สลับไปใช้บัญชีสำรองเฉพาะรอบที่บัญชีหลักโควตาเต็มหรือถูกจำกัดความถี่ · ปิดเป็นค่าเริ่มต้นเพื่อไม่ให้มีค่าใช้จ่ายโดยไม่ตั้งใจ',
+                )}
+              </p>
+            </div>
+          )}
         </div>
       )}
       {/* One stable element for the picker, so a choice in progress survives the first account appearing above it. */}
@@ -485,6 +534,60 @@ function ConnectionCard({
                 {t('ดูโมเดลที่ใช้ได้')}
               </button>
             )}
+          </div>
+        )}
+        {(() => {
+          const activeModel = c.models?.find(m => m.id === c.model) || (!c.model ? c.models?.find(m => m.isDefault) : undefined);
+          const pills = modelSpecPills(activeModel);
+          return pills.length ? (
+            <div className="model-spec-pills" aria-label={t('สเปกโมเดลที่เลือก')}>
+              {pills.map(pill => (
+                <span key={pill}>{pill}</span>
+              ))}
+            </div>
+          ) : null;
+        })()}
+        {c.provider === 'compatible' && c.preset === 'openrouter' && (
+          <div className="connection-routing" data-openrouter-routing>
+            <label className="routing-toggle">
+              <input
+                type="checkbox"
+                checked={Boolean(c.providerRouting?.zdrOnly)}
+                disabled={Boolean(busy) || c.policyBlocked}
+                onChange={e =>
+                  void run(c.id + ':routing', () =>
+                    call('connectionRouting', {
+                      id: c.id,
+                      zdrOnly: e.target.checked,
+                      sort: c.providerRouting?.sort || 'default',
+                    }),
+                  )
+                }
+              />
+              <span>{t('ZDR เท่านั้น (ไม่เก็บข้อมูลคำขอ)')}</span>
+            </label>
+            <label className="routing-sort">
+              <span>{t('จัดลำดับผู้ให้บริการ')}</span>
+              <select
+                aria-label={t('จัดลำดับผู้ให้บริการ OpenRouter')}
+                value={c.providerRouting?.sort || 'default'}
+                disabled={Boolean(busy) || c.policyBlocked}
+                onChange={e =>
+                  void run(c.id + ':routing', () =>
+                    call('connectionRouting', {
+                      id: c.id,
+                      zdrOnly: Boolean(c.providerRouting?.zdrOnly),
+                      sort: e.target.value,
+                    }),
+                  )
+                }
+              >
+                <option value="default">{t('ค่าเริ่มต้นของ OpenRouter')}</option>
+                <option value="price">{t('ราคาถูกที่สุด')}</option>
+                <option value="throughput">{t('เร็วที่สุด (Throughput)')}</option>
+                <option value="latency">{t('ตอบไวสุด (Latency)')}</option>
+              </select>
+            </label>
           </div>
         )}
         {c.provider === 'gemini' && c.googleCloudProject && <p className="small muted">Google Cloud Project: {c.googleCloudProject}</p>}

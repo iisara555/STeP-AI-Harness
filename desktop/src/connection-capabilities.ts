@@ -50,14 +50,27 @@ export function connectionCapabilities(c: Connection, policy?: PolicySnapshot): 
     vision = entry('vision', definitions[2][1], 'blocked', 'privacy', 'โหมดตรวจข้อมูลขององค์กรไม่ส่งภาพ ใช้ OCR ในเครื่องแทน');
   else if (feature('vision') !== true || policy?.checks?.privacy !== false)
     vision = entry('vision', definitions[2][1], 'unknown', 'unknown', 'ยังไม่ทราบนโยบายการส่งภาพ ติดต่อ IT');
-  else
-    vision = entry(
-      'vision',
-      definitions[2][1],
-      'conditional',
-      'model',
-      'เลือกโมเดลที่รองรับภาพ และยินยอมส่งภาพก่อนใช้ ผลทดสอบแชตยังไม่ยืนยันการอ่านภาพ',
-    );
+  else {
+    const activeModel = c.models?.find(m => m.id === c.model) || (!c.model ? c.models?.find(m => m.isDefault) : undefined);
+    if (activeModel?.supportsVision === true)
+      vision = entry('vision', definitions[2][1], 'available', 'model-verified', 'โมเดลที่เลือกรองรับการอ่านภาพ ยืนยันก่อนส่งภาพทุกครั้ง');
+    else if (activeModel?.supportsVision === false)
+      vision = entry(
+        'vision',
+        definitions[2][1],
+        'blocked',
+        'model-unsupported',
+        'โมเดลที่เลือกไม่รองรับการอ่านภาพ เลือกโมเดลอื่นหรือใช้ OCR แทน',
+      );
+    else
+      vision = entry(
+        'vision',
+        definitions[2][1],
+        'conditional',
+        'model',
+        'เลือกโมเดลที่รองรับภาพ และยินยอมส่งภาพก่อนใช้ ผลทดสอบแชตยังไม่ยืนยันการอ่านภาพ',
+      );
+  }
   const image = !canGenerateImages(c)
     ? entry(
         'image',

@@ -9,6 +9,7 @@ import type {
   ConversationFile,
   ImageArtifact,
   Message,
+  RateLimitReading,
   RunEvent,
   RunTrace,
   Session,
@@ -168,6 +169,13 @@ export type Harness = {
   nativeToolCalls?: () => boolean;
   tools?: (scope: ToolScope) => Promise<LoopHost>;
   recordUsage?: (connection: Connection, count: TokenCount) => void;
+  /** Passive rate-limit telemetry observed on provider HTTP responses. */
+  observeRateLimits?: (connection: Connection, readings: RateLimitReading[]) => void;
+  /** Track temporary quota/rate-limit cooldowns per (connectionId, model). */
+  recordCooldown?: (connection: Connection, code: string, retryAfterMs?: number) => void;
+  clearCooldown?: (connection: Connection) => void;
+  /** Optional opt-in backup account when the primary account hits quota/rate limit. */
+  fallbackConnection?: (primary: Connection, reason: string) => Connection | undefined;
   /** Administrator limits, else the window a model on this computer actually loaded (electron/local-context.ts). */
   modelLimits?: (
     connection: Connection,
@@ -936,9 +944,9 @@ export class WorkService {
       const switched = { ...stored, model };
       connection = { ...switched, ...(await this.harness.modelLimits?.(switched)) };
     };
-    const recordUsage = (count: TokenCount) => {
+    const recordUsage = (count: TokenCount, targetConnection = connection) => {
       if (options.longBudget) options.longBudget.tokens += count.total;
-      this.harness.recordUsage?.(connection, count);
+      this.harness.recordUsage?.(targetConnection, count);
     };
     const recent = (from: number, count: number) =>
       priorMessages
@@ -2049,6 +2057,9 @@ export class WorkService {
           let reactiveRetried = false,
             retryCount = 0,
             partialTor = '';
+          let activeConnection = connection;
+          let activeRuntime = selectedRuntime;
+          let failedOver = false;
           let beganTurn = false;
           let visibleChars = 0;
           for (;;) {
@@ -2106,11 +2117,14 @@ export class WorkService {
                 beganTurn = true;
               }
               checkAbort();
-              const answer = await selectedRuntime.adapter.run(nextPrompt, connection, {
-                ...selectedRuntime.context,
+              const answer = await activeRuntime.adapter.run(nextPrompt, activeConnection, {
+                ...activeRuntime.context,
                 system: providerSystem,
                 onTransport: info => {
                   call.transport = info;
+                },
+                onRateLimits: readings => {
+                  this.harness.observeRateLimits?.(activeConnection, readings);
                 },
                 onFullPromptBudget: measureAnswer
                   ? promptBudget => {
@@ -2164,6 +2178,7 @@ export class WorkService {
               if (search && (searchFailed || !completed || !answer.trim())) throw new Error('WEB_SEARCH_UNAVAILABLE');
               if (partialTor && repeatedTorContinuation(partialTor, answer)) throw new Error('DOCUMENT_OUTPUT_INVALID');
               call.outcome = 'completed';
+              this.harness.clearCooldown?.(activeConnection);
               if (!search && !analysisImage) {
                 lastAnswerStreamChars = visibleChars;
                 if (!partialTor) onSent?.(nextPrompt);
@@ -2172,7 +2187,8 @@ export class WorkService {
               return partialTor + answer;
             } catch (error) {
               call.outcome = 'error';
-              call.code = codeOf(error);
+              const errCode = codeOf(error);
+              call.code = errCode;
               call.ms = Date.now() - calledAt;
               if (continueTor && (error as any)?.outputTruncated === true && !controller.signal.aborted && streamed.trim()) {
                 if (partialTor && repeatedTorContinuation(partialTor, streamed)) throw new Error('DOCUMENT_OUTPUT_INVALID');
@@ -2252,7 +2268,27 @@ export class WorkService {
                 continue;
               }
               const retries = this.retryDelays.length;
-              if (controller.signal.aborted || !RETRYABLE_CODES.has(codeOf(error)) || retryCount >= retries) throw error;
+              const exhaustedBusy = errCode === 'PROVIDER_BUSY' && retryCount >= retries;
+              if (errCode === 'PROVIDER_QUOTA' || exhaustedBusy) {
+                this.harness.recordCooldown?.(activeConnection, errCode, (error as any)?.retryAfterMs);
+                if (!failedOver && !search && !analysisImage && !controller.signal.aborted) {
+                  const backup = this.harness.fallbackConnection?.(activeConnection, errCode);
+                  if (backup) {
+                    failedOver = true;
+                    discard(attemptChars);
+                    await providerSession.closeAndWait();
+                    const backupLimits = await this.harness.modelLimits?.(backup);
+                    activeConnection = { ...backup, ...backupLimits };
+                    activeRuntime = await this.runtime(activeConnection, false);
+                    trace.failover = { fromConnectionId: connection.id, toConnectionId: activeConnection.id, reason: errCode };
+                    status(tm('โควตาบัญชีหลักเต็ม ({0}) · สลับไปใช้บัญชีสำรองชั่วคราว', errCode));
+                    retryCount = 0;
+                    arm();
+                    continue;
+                  }
+                }
+              }
+              if (controller.signal.aborted || !RETRYABLE_CODES.has(errCode) || retryCount >= retries) throw error;
               discard(attemptChars);
               retryCount++;
               activity(tm('บริการ AI ขัดข้องชั่วคราว กำลังลองใหม่ ({0}/{1})', retryCount, retries));
@@ -2261,7 +2297,7 @@ export class WorkService {
             } finally {
               if (call.outcome !== 'error') call.ms = Date.now() - calledAt;
               if (counted.total) call.usage = counted;
-              recordUsage(counted);
+              recordUsage(counted, activeConnection);
             }
           }
         };
