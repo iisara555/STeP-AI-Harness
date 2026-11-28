@@ -1,8 +1,10 @@
-// Safe inline sandboxed HTML and SVG preview builders for chat code blocks and HTML artifacts.
-// Rendered inside an isolated opaque-origin iframe (no allow-same-origin, no preload bridge, no network egress).
+// Safe inline HTML and SVG preview builders for chat code blocks and HTML artifacts.
+// Previews in the chat are static: they render inside <iframe sandbox=""> (no scripts, opaque origin, no preload bridge,
+// no network). AI-written JavaScript never runs in the main window's renderer; interactive HTML runs only in the Web
+// tab's isolated preview (electron/html-preview.ts), which has its own partition and no bridge.
 
 export const HTML_IFRAME_CSP =
-  "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none';";
+  "default-src 'none'; style-src 'unsafe-inline'; script-src 'none'; img-src data:; font-src data:; connect-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none';";
 const SVG_IFRAME_CSP =
   "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none';";
 
@@ -31,7 +33,7 @@ export function sanitizeStaticSvg(svg: string): string {
     .replace(/javascript\s*:/gi, '');
 }
 
-/** Wraps an HTML snippet or document with strict offline CSP and matching theme defaults. */
+/** Wraps an HTML snippet or document with a strict offline, script-free CSP and matching theme defaults. */
 export function buildSandboxedHtmlDoc(html: string, dark: boolean): string {
   const cspTag = `<meta http-equiv="Content-Security-Policy" content="${HTML_IFRAME_CSP}">`;
   const baseStyle = `<style>html{color-scheme:${dark ? 'dark' : 'light'}}body{margin:12px;font-family:system-ui,-apple-system,sans-serif;color:${dark ? '#f4f1ea' : '#231f20'};background:${dark ? '#231f20' : '#ffffff'}}</style>`;
@@ -46,26 +48,9 @@ export function buildSandboxedHtmlDoc(html: string, dark: boolean): string {
   return doc;
 }
 
-/** Builds a self-contained, offline-CSP data URL fallback for environments without the Electron sandbox protocol. */
+/** A static, script-free data URL for an HTML preview inside a sandbox="" iframe. */
 export function buildSandboxedHtmlSrc(html: string, dark: boolean): string {
   return `data:text/html;charset=utf-8,${encodeURIComponent(buildSandboxedHtmlDoc(html, dark))}`;
-}
-
-/**
- * Registers an HTML widget with Electron's isolated `step-sandbox:` protocol (own offline CSP header, opaque origin)
- * so interactive scripts work inside `<iframe sandbox="allow-scripts">` while keeping the main window's `script-src 'self'`.
- */
-export async function resolveSandboxedHtmlSrc(html: string, dark: boolean): Promise<string> {
-  const bridge = typeof window !== 'undefined' ? (window as any).step : undefined;
-  if (bridge?.call) {
-    try {
-      const res = (await bridge.call('sandboxHtml', { html, dark })) as { url?: string } | null;
-      if (res?.url && res.url.startsWith('step-sandbox://widget/')) return res.url;
-    } catch {
-      /* Fall back to static data URL below when unavailable. */
-    }
-  }
-  return buildSandboxedHtmlSrc(html, dark);
 }
 
 /** Builds a script-free data URL for rendering an SVG diagram safely inside a sandbox="" iframe. */

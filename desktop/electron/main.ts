@@ -22,7 +22,6 @@ import {
   clipboard,
   Notification,
   net,
-  protocol,
   session as electronSession,
 } from 'electron';
 import { mkdir, mkdtemp, rmdir, writeFile, appendFile, rm, readFile, open, stat, lstat } from 'node:fs/promises';
@@ -58,7 +57,6 @@ import { inspectCodingProject, resolveCodingCheck } from './coding-project';
 import { AgentBrowser } from './browser-agent';
 import { BrowserDock } from './browser-dock';
 import { PREVIEW_LIMIT, isHtmlPath, openHtmlPreview } from './html-preview';
-import { HTML_IFRAME_CSP, buildSandboxedHtmlDoc } from '../src/inline-preview';
 import { autoUpdater } from 'electron-updater';
 import { Updater, RELEASES_URL, type SelfInstall } from './updater';
 import { appBundlePath, canReplace, downloadVerified, macUpdateAsset, startSwap } from './mac-update';
@@ -301,35 +299,9 @@ async function makeWindow(splash?: Splash, prepared: Promise<unknown> = Promise.
   await window.loadFile(join(__dirname, 'renderer/index.html'));
 }
 
-const SANDBOX_MAX_DOCS = 48;
-const SANDBOX_MAX_BYTES = 250_000;
-const sandboxDocs = new Map<string, string>();
-function registerSandboxHtml(doc: string): string {
-  const id = randomUUID();
-  sandboxDocs.set(id, doc);
-  while (sandboxDocs.size > SANDBOX_MAX_DOCS) {
-    const oldest = sandboxDocs.keys().next().value;
-    if (oldest) sandboxDocs.delete(oldest);
-  }
-  return `step-sandbox://widget/${id}`;
-}
-protocol.registerSchemesAsPrivileged([{ scheme: 'step-sandbox', privileges: { standard: true, secure: true } }]);
-
 async function main() {
   if (!app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME) app.setPath('userData', process.env.STEP_DESKTOP_TEST_HOME);
   await app.whenReady();
-  protocol.handle('step-sandbox', req => {
-    const id = /^step-sandbox:\/\/widget\/([a-f0-9-]+)$/i.exec(req.url)?.[1];
-    const html = id ? sandboxDocs.get(id) : undefined;
-    if (!html) return new Response('Not Found', { status: 404 });
-    return new Response(html, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Content-Security-Policy': HTML_IFRAME_CSP,
-      },
-    });
-  });
   if (!app.requestSingleInstanceLock()) {
     app.quit();
     return;
@@ -3105,15 +3077,6 @@ async function main() {
             throw error;
           }
         });
-      }
-      case 'sandboxHtml': {
-        // Serves an inline chat HTML preview over a dedicated opaque-origin protocol with strict offline CSP headers,
-        // so interactive widgets can run inside <iframe sandbox="allow-scripts"> without relaxing the main window CSP.
-        const raw = typeof input?.html === 'string' ? input.html : '';
-        if (!raw.trim()) throw new Error('INVALID_CONTENT');
-        if (Buffer.byteLength(raw, 'utf8') > SANDBOX_MAX_BYTES) throw new Error('FILE_TOO_LARGE');
-        const doc = buildSandboxedHtmlDoc(raw, Boolean(input?.dark));
-        return { url: registerSandboxHtml(doc) };
       }
       case 'artifactOpen': {
         // An artifact the AI saved for this task. HTML opens in the Web tab's isolated preview, like an HTML draft;

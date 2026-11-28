@@ -34,7 +34,7 @@ import { GoogleChangesList } from './google-changes-list';
 import { MorningBriefCard } from './morning-brief';
 import { QuestionCard } from './tool-question';
 import { Readiness } from './readiness';
-import { RichText, formatElapsed } from './ui';
+import { ConfirmDialog, RichText, formatElapsed } from './ui';
 import { ThinkingScribble, waitingKind } from './thinking-scribble';
 import { VoiceButton } from './voice';
 import { COMPOSER_WORKFLOWS, WORKFLOW_LABELS, WorkPlanCard } from './work-plan';
@@ -215,16 +215,16 @@ export function ConversationView({ v }: { v: AppView }) {
       live = false;
     };
   }, [api, session?.id, session?.images?.length]);
-  const ensureWritableForPlan = async () => {
-    if (snapshot.policy?.mode !== 'plan') return true;
+  // Running a plan needs write tools. In read-only mode the employee is asked before the permission changes; it is
+  // never switched silently, and the new mode stays until they change it again in Settings.
+  const [planWriteAsk, setPlanWriteAsk] = useState<(() => Promise<void>) | null>(null);
+  const withWritableForPlan = (proceed: () => Promise<void>) => {
+    if (snapshot.policy?.mode !== 'plan') return void action(proceed);
     if (!snapshot.policy.modes.includes('ask')) {
       notify(t('สิทธิ์เครื่องมือถูกล็อกเป็นอ่านอย่างเดียวโดยนโยบายองค์กร จึงยังลงมือทำตามแผนไม่ได้'), 'error');
-      return false;
+      return;
     }
-    await api.call('permissionMode', { mode: 'ask' });
-    await refresh();
-    notify(t('เปลี่ยนสิทธิ์เป็น “ถามก่อนแก้ไข” เพื่อลงมือทำตามแผน'), 'info');
-    return true;
+    setPlanWriteAsk(() => proceed);
   };
   const activeSlashOption = useRef<HTMLButtonElement>(null);
   const activeSlashSkill =
@@ -797,8 +797,7 @@ export function ConversationView({ v }: { v: AppView }) {
                   running={running || submitting}
                   continuation={session.longTask}
                   onExecute={continuous =>
-                    void action(async () => {
-                      if (!(await ensureWritableForPlan())) return;
+                    withWritableForPlan(async () => {
                       setWorkflow('');
                       workflowRef.current = '';
                       setWorkMode('chat');
@@ -850,8 +849,7 @@ export function ConversationView({ v }: { v: AppView }) {
                       type="button"
                       className="work-plan-run"
                       onClick={() =>
-                        void action(async () => {
-                          if (!(await ensureWritableForPlan())) return;
+                        withWritableForPlan(async () => {
                           setWorkflow('');
                           workflowRef.current = '';
                           setWorkMode('chat');
@@ -1508,6 +1506,24 @@ export function ConversationView({ v }: { v: AppView }) {
             )}
           </div>
         </div>
+      )}
+      {planWriteAsk && (
+        <ConfirmDialog
+          title={t('เปลี่ยนสิทธิ์เป็น “ถามก่อนแก้ไข”?')}
+          confirmLabel={t('เปลี่ยนแล้วลงมือทำ')}
+          onCancel={() => setPlanWriteAsk(null)}
+          onConfirm={async () => {
+            const proceed = planWriteAsk;
+            setPlanWriteAsk(null);
+            await action(async () => {
+              await api.call('permissionMode', { mode: 'ask' });
+              await refresh();
+              await proceed();
+            });
+          }}
+        >
+          <p>{t('ตอนนี้อ่านอย่างเดียว การทำตามแผนต้องแก้ไฟล์ได้ ระบบจะถามก่อนแก้ทุกครั้ง และสิทธิ์นี้คงอยู่จนกว่าคุณเปลี่ยนในตั้งค่า')}</p>
+        </ConfirmDialog>
       )}
     </>
   );

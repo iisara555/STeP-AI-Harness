@@ -161,14 +161,15 @@ try {
   const svgBox = await page.frameLocator('iframe.chat-svg-frame').locator('svg').boundingBox();
   assert.ok(svgBox && svgBox.width > 50 && svgBox.height > 20, `Expected visible SVG inside sandbox iframe, got ${JSON.stringify(svgBox)}`);
 
-  // 5. Inline HTML preview toggle (sandbox="allow-scripts", isolated origin, no window.step)
+  // 5. Inline HTML preview toggle: a static picture (sandbox=""), AI-written scripts never run in the app window
   const htmlFigure = page.locator('figure.chat-code').filter({ has: page.locator('header > span', { hasText: /^html$/ }) });
   await htmlFigure.getByRole('button', { name: 'แสดงตัวอย่าง' }).click();
   const htmlFrame = htmlFigure.locator('iframe.chat-html-frame');
-  await expect(htmlFrame).toHaveAttribute('sandbox', 'allow-scripts');
+  await expect(htmlFrame).toHaveAttribute('sandbox', '');
+  await expect(htmlFrame).toHaveAttribute('src', /^data:text\/html/);
   const htmlFrameContent = htmlFigure.frameLocator('iframe.chat-html-frame');
   await htmlFrameContent.locator('#inc').click();
-  await expect(htmlFrameContent.locator('#n')).toHaveText('SAFE-OK');
+  await expect(htmlFrameContent.locator('#n')).toHaveText('idle');
 
   // 6. Unified diff syntax highlighting
   await expect(page.locator('.chat-code .hljs-deletion').first()).toBeVisible({ timeout: 10000 });
@@ -177,14 +178,15 @@ try {
   // 7. Inline HTML artifact preview ("ดูในแชต")
   await page.getByRole('button', { name: 'ดูในแชต' }).click();
   const artifactFrame = page.locator('.inline-artifact-preview iframe.chat-html-frame');
-  await expect(artifactFrame).toHaveAttribute('sandbox', 'allow-scripts');
+  await expect(artifactFrame).toHaveAttribute('sandbox', '');
   const artifactInner = page.locator('.inline-artifact-preview').frameLocator('iframe.chat-html-frame');
   await expect(artifactInner.locator('#art-title')).toHaveText('Widget Ready');
-  await expect(artifactInner.locator('#iso')).toHaveText('ISOLATED');
+  // The artifact's script stays off in the chat; it only runs in the Web tab's isolated preview.
+  await expect(artifactInner.locator('#iso')).toHaveText('');
 
   assert.deepEqual(pageErrors, [], `Unexpected page errors: ${pageErrors.join('; ')}`);
   assert.deepEqual(cspErrors, [], `Unexpected CSP violations: ${cspErrors.join('; ')}`);
-  console.log('Rich chat rendering Electron smoke passed (Mermaid SVG, KaTeX, Alerts, diff, inline SVG & HTML sandbox).');
+  console.log('Rich chat rendering Electron smoke passed (Mermaid SVG, KaTeX, Alerts, diff, inline SVG & static HTML previews).');
 } finally {
   await app.close();
   await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
