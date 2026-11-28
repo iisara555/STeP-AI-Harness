@@ -59,6 +59,7 @@ import { sanitizeModelOutput, evaluateOutputQuality, buildRepairPrompt } from '.
 import {
   SKILL_REVIEW_SCHEMA,
   SKILL_REVIEW_SYSTEM,
+  isClarifyingQuestionReply,
   parseSkillReview,
   qualityFeedback,
   skillChecklist,
@@ -285,6 +286,17 @@ function skillRegistryText(entries: { name: string; description?: string }[]) {
 }
 const KNOWLEDGE_RULE =
   'STeP knowledge registry: ID | title | short purpose. <organization_knowledge> holds matching excerpts; a document under § ทั้งฉบับ is given complete, so answer from it without opening it again. If they do not answer the question, use reference(input=ID,args.action=outline) for headings, then reference(input=ID,args.section=heading) for a section, or reference(input=ID) to read the document. The index may show only the top three matching documents plus mandatory references; use reference(input="",args.action=catalog) for the complete readable index if needed. Read the relevant registered source before saying the documents do not cover it.';
+const CHART_GUIDANCE =
+  'When presenting numeric comparisons, trends, or proportions from verified data or spreadsheet attachments in chat, you may include a declarative fenced ```chart JSON block ({"type":"bar"|"stackedBar"|"horizontalBar"|"line"|"area"|"donut"|"pie"|"scatter","title":"...","unit":"...","labels":[...],"series":[{"name":"...","values":[...]}]}) so the app renders an interactive chart beside your summary. Use only exact verified figures from the provided data or host-computed statistics; never invent numbers.';
+
+/** Offer interactive chart guidance when spreadsheet data is attached or the user asks for charts/trends/comparisons. */
+export function shouldOfferChartHint(query: string, files: { name: string }[] = [], sourceText = ''): boolean {
+  if (files.some(f => /\.(?:xlsx|xls|csv|tsv)$/i.test(f.name || ''))) return true;
+  if (/สรุปสถิติตัวเลขที่ระบบคำนวณจากข้อมูลจริง/.test(sourceText)) return true;
+  return /กราฟ|แผนภูมิ|ชาร์ต|\bchart\b|\bplot\b|visualiz|แนวโน้ม|เปรียบเทียบ.*(?:ยอด|งบ|ค่าใช้จ่าย|เดือน|ไตรมาส|ปี)|สัดส่วน.*(?:งบ|ยอด|ค่าใช้จ่าย)/i.test(
+    query,
+  );
+}
 const ORGANIZATION_RULE =
   'For anything about STeP itself (people and HR, welfare, leave, careers, procedures, policies, the quality system, facilities, contacts), answer from <organization_knowledge> or a registered document read with the reference tool, and name the document and section you used. If the organization documents do not cover it, say so plainly and suggest the owning team; never fill the gap from general knowledge, other organizations or the web.';
 /** The Skill every disbursement case chat answers with (skills/common/claims-case-expert). */
@@ -1925,6 +1937,7 @@ export class WorkService {
               ]
             : []),
           ...(handoff ? [section('previous_step_draft', handoff)] : []),
+          ...(chat && !textOnly && shouldOfferChartHint(latest, session.files || [], attachments || filesSection) ? [CHART_GUIDANCE] : []),
           ...requestSections,
           ...(revising ? [section('revision_requests', masked((session.followUps || []).join('\n')))] : []),
         ].join('\n\n');
@@ -2479,7 +2492,8 @@ export class WorkService {
                 skillReviewed ||
                 !this.harness.skillReview?.() ||
                 !skillReviewSupported(connection) ||
-                this.harness.permissionMode?.() === 'plan'
+                this.harness.permissionMode?.() === 'plan' ||
+                isClarifyingQuestionReply(text)
                   ? ''
                   : skillChecklist(activeSystem.selectedInstructions.join('\n\n'));
               if (!checklist) return undefined;
@@ -2741,7 +2755,7 @@ export class WorkService {
       // The answer check compares the answer with the STeP excerpts it drew on. A chat answer is finished and shown
       // first and the check runs after it in the background (it can take far longer than the answer on some models);
       // an isolated side question still waits for it, since its record is read once when the question ends.
-      const checking = groundedIn.length > 0 && Boolean(this.harness.answerCheck?.());
+      const checking = groundedIn.length > 0 && Boolean(this.harness.answerCheck?.()) && !isClarifyingQuestionReply(handoff);
       const checkLater = checking && !options.isolatedQuestion;
       const runCheck = async (signal: AbortSignal) => {
         const calledAt = Date.now();
