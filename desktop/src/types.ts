@@ -529,6 +529,8 @@ export type Snapshot = {
   teams: { id: string; name: string; nameEn?: string }[];
   userFile: string;
   appVersion?: string;
+  /** True when the active workspace contains software project markers (package.json, .git, etc.). */
+  codingWorkspace?: boolean;
 };
 export type PermissionMode = 'ask' | 'acceptEdits' | 'plan' | 'auto';
 export type PolicySnapshot = {

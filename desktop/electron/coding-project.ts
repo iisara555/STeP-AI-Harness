@@ -1,7 +1,38 @@
 import { createHash } from 'node:crypto';
+import { readdir, stat } from 'node:fs/promises';
 import { dirname, join, sep } from 'node:path';
 import { CODING_CHECKS, type CodingCheck, type CodingPackage, type CodingProject, type PackageManager } from '../src/coding-project';
 import type { Workbench } from './workbench';
+
+const CODING_MARKERS = new Set(['.git', 'package.json', 'tsconfig.json', 'pyproject.toml', 'Cargo.toml', 'go.mod', 'Makefile']);
+
+/** Lightweight check for whether an employee's active workspace is a software repository rather than an office folder. */
+export async function hasCodingWorkspace(workspace?: string): Promise<boolean> {
+  if (!workspace?.trim()) return false;
+  try {
+    const entries = await readdir(workspace, { withFileTypes: true });
+    for (const entry of entries) {
+      if (CODING_MARKERS.has(entry.name)) return true;
+    }
+    const subdirs = entries.filter(e => e.isDirectory() && (ROOT_PACKAGES.includes(e.name) || GROUPS.includes(e.name)));
+    for (const dir of subdirs) {
+      const dirPath = join(workspace, dir.name);
+      if (GROUPS.includes(dir.name)) {
+        const nested = await readdir(dirPath, { withFileTypes: true }).catch(() => []);
+        for (const child of nested.filter(e => e.isDirectory()).slice(0, 12)) {
+          const hit = await stat(join(dirPath, child.name, 'package.json')).catch(() => null);
+          if (hit?.isFile()) return true;
+        }
+      } else {
+        const hit = await stat(join(dirPath, 'package.json')).catch(() => null);
+        if (hit?.isFile()) return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 const FRONTEND = ['app', 'client', 'frontend', 'web'];
 const BACKEND = ['api', 'backend', 'server'];

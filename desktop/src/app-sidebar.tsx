@@ -255,13 +255,17 @@ export function AppSidebar({ v }: { v: AppView }) {
               </span>
               <span className="count">{staffSkills ? staffSkills.length + toolCount : ''}</span>
             </button>
-            <button className={showPanel && toolTab === 'coding' ? 'nav-active' : ''} onClick={() => commandRef.current.coding?.()}>
-              <CodeXml size={17} />
-              <span className="nav-label">{t('พื้นที่เขียนโค้ด')}</span>
-              <span className="nav-short" aria-hidden="true">
-                {t('โค้ด')}
-              </span>
-            </button>
+            {(Boolean(snapshot.features?.developmentMode && snapshot.settings.developmentMode) ||
+              Boolean(snapshot.codingWorkspace) ||
+              (showPanel && toolTab === 'coding')) && (
+              <button className={showPanel && toolTab === 'coding' ? 'nav-active' : ''} onClick={() => commandRef.current.coding?.()}>
+                <CodeXml size={17} />
+                <span className="nav-label">{t('พื้นที่เขียนโค้ด')}</span>
+                <span className="nav-short" aria-hidden="true">
+                  {t('โค้ด')}
+                </span>
+              </button>
+            )}
             <button
               data-tour="receipt"
               className={view === 'receipt' && !settings ? 'nav-active' : ''}

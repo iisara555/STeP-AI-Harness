@@ -287,7 +287,7 @@ documents:
 
   step-public-profile:
     title: "ข้อมูลทั่วไปของ STeP จากแหล่งสาธารณะ (พันธกิจ บริการ ช่องทางทางการ)"
-    keywords: [พันธกิจ, วิสัยทัศน์, อุทยานวิทยาศาสตร์และเทคโนโลยี, บริการของอุทยาน]
+    keywords: [พันธกิจ, วิสัยทัศน์, อุทยานวิทยาศาสตร์และเทคโนโลยี, บริการของอุทยาน, ที่อยู่, แผนที่, การเดินทาง, เส้นทาง, พิกัด, ติดต่อ, เบอร์โทร, อีเมล, Google Maps]
     path: docs/knowledge/step-public-profile.md
     owner: cc
     type: organization-reference

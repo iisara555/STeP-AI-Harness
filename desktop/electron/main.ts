@@ -53,7 +53,9 @@ import { googleResultConsent } from './google-consent';
 import { executeGoogleRead } from './google-read-tool';
 import { PLAN_COMMENT_LIMIT } from '../src/plan-comments';
 import { Workbench, browserUrl } from './workbench';
-import { inspectCodingProject, resolveCodingCheck } from './coding-project';
+import { inspectCodingProject, resolveCodingCheck, hasCodingWorkspace } from './coding-project';
+import { sheetWorker } from './sheets';
+import { enrichDelimitedAttachmentText, formatWorkbookForAttachment } from './spreadsheet-attachment';
 import { AgentBrowser } from './browser-agent';
 import { BrowserDock } from './browser-dock';
 import { PREVIEW_LIMIT, isHtmlPath, openHtmlPreview } from './html-preview';
@@ -2262,6 +2264,7 @@ async function main() {
   };
   const snapshot = async () => ({
     appVersion: app.getVersion(),
+    codingWorkspace: await hasCodingWorkspace(store.settings().workspace),
     usage: { ...ledger.report(), accounts: store.connections().map(c => providerUsage.snapshot(c)) },
     features: {
       claudeSubscription: claudeSubscriptionOn(),
@@ -5257,8 +5260,47 @@ async function main() {
               // A file unsuitable for native export may still be readable under the ordinary source privacy gate.
             }
           }
-          let report: any = await harness.documentPrivacy(path, { includeRedacted: true }),
-            images: VisionInput[] | undefined;
+          let report: any;
+          let excelMeta: { sheets: number; rows: number } | undefined;
+          let images: VisionInput[] | undefined;
+          if (extension === 'xlsx') {
+            try {
+              const info = await stat(path);
+              if (info.size > 8_000_000) {
+                report = {
+                  classification: 'restricted',
+                  action: 'human-confirm',
+                  extractionStatus: 'unavailable',
+                  reviewReasons: ['file-size-limit'],
+                };
+              } else {
+                const bytes = await readFile(path);
+                const extracted = await sheetWorker(
+                  bytes,
+                  { operation: 'sheet_extract' },
+                  new AbortController().signal,
+                  join(__dirname, 'sheet-worker.cjs'),
+                );
+                const formatted = formatWorkbookForAttachment(extracted.sheets || []);
+                const scanned = harness.privacy(formatted.text);
+                report = { ...scanned, extractionStatus: 'text-extracted' };
+                excelMeta = { sheets: (extracted.sheets || []).length, rows: formatted.totalRows };
+              }
+            } catch (error) {
+              const code = error instanceof Error ? error.message : '';
+              report = {
+                classification: 'restricted',
+                action: 'human-confirm',
+                extractionStatus: 'unavailable',
+                reviewReasons: [code === 'FILE_LIMIT' || code === 'OFFICE_PACKAGE_LIMIT' ? 'file-size-limit' : 'parser-failed'],
+              };
+            }
+          } else {
+            report = await harness.documentPrivacy(path, { includeRedacted: true });
+            if ((extension === 'csv' || extension === 'tsv') && typeof report?.redactedText === 'string' && report.redactedText.trim()) {
+              report = { ...report, redactedText: enrichDelimitedAttachmentText(report.redactedText, extension) };
+            }
+          }
           // With privacy checks off, an image for a vision model is sent as it is, like other AI apps: no local OCR pass.
           // That holds whichever attach button picked it (owner, 2026-10-31: local OCR reads too poorly to stand in for the
           // picture), as long as the organization allows sending images.
@@ -5339,9 +5381,15 @@ async function main() {
                       : tm('ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน')
                     : report.ocr
                       ? tm('อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง')
-                      : report.images
-                        ? tm('ตรวจข้อความแล้ว · รูปภาพ {0} รูปในไฟล์ไม่ได้ส่งให้ AI ถ้ามีข้อมูลสำคัญในรูปให้พิมพ์เพิ่ม', report.images)
-                        : tm('ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง')
+                      : excelMeta
+                        ? tm(
+                            'อ่านไฟล์ Excel แล้ว ({0} ชีต · {1} แถว) · คำนวณสถิติเบื้องต้นพร้อมวิเคราะห์',
+                            excelMeta.sheets,
+                            excelMeta.rows,
+                          )
+                        : report.images
+                          ? tm('ตรวจข้อความแล้ว · รูปภาพ {0} รูปในไฟล์ไม่ได้ส่งให้ AI ถ้ามีข้อมูลสำคัญในรูปให้พิมพ์เพิ่ม', report.images)
+                          : tm('ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง')
                 : tm('ส่งไฟล์นี้ให้ AI ไม่ได้'),
             preview: nativeDescription ? tm('ใช้โครงแม่แบบและชื่อช่อง กรอกข้อมูลของงานใหม่แยกในฟอร์ม') : usable ? report.redactedText : '',
             usable,
@@ -5384,7 +5432,9 @@ async function main() {
               filters: [
                 {
                   name: 'Documents and images',
-                  extensions: vision ? ['png', 'jpg', 'jpeg', 'webp'] : ['txt', 'md', 'csv', 'tsv', 'pdf', 'docx', ...OCR_EXTENSIONS],
+                  extensions: vision
+                    ? ['png', 'jpg', 'jpeg', 'webp']
+                    : ['txt', 'md', 'csv', 'tsv', 'xlsx', 'pdf', 'docx', ...OCR_EXTENSIONS],
                 },
               ],
             });

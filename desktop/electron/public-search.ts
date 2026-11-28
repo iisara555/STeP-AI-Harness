@@ -1,12 +1,28 @@
 import { DOMParser } from '@xmldom/xmldom';
 import { fetchPublic, publicUrl } from './web-fetch';
 
+const THAI_SCRIPT = /[\u0E00-\u0E7F]/;
+const THAI_FILLER =
+  /(?:ขอทราบ|ขอข้อมูล|ช่วยหา|ช่วยค้นหา|ช่วยดู|ให้หน่อย|ได้ไหม|ได้มั้ย|คืออะไร|อยู่ที่ไหน|ที่ไหน|อย่างไร|ยังไง|มีอะไรบ้าง|มายัง|หน่อย|ครับ|ค่ะ|คะ|ช่วย|ขอ|บ้าง)/g;
+
 export function searchUrl(query: string) {
   if (!query.trim() || query.length > 1000 || /[\u0000-\u001f]/.test(query)) throw new Error('WEB_SEARCH_QUERY_LIMIT');
+  const trimmed = query.trim();
   const url = new URL('https://www.bing.com/search');
-  url.searchParams.set('q', query.trim());
+  url.searchParams.set('q', trimmed);
   url.searchParams.set('format', 'rss');
+  if (THAI_SCRIPT.test(trimmed)) {
+    url.searchParams.set('mkt', 'th-TH');
+    url.searchParams.set('cc', 'TH');
+    url.searchParams.set('setlang', 'th');
+  }
   return publicUrl(url.href).href;
+}
+
+/** Removes Thai politeness and question filler words so relevance scoring focuses on the topic itself. */
+export function compactSearchQuery(query: string): string {
+  const cleaned = query.normalize('NFC').replace(THAI_FILLER, ' ').replace(/\s+/g, ' ').trim();
+  return cleaned.length >= 2 ? cleaned : query.trim();
 }
 
 // Two-character pieces of each word, lowercased. Thai has no spaces between words, so a Thai run is one long word and
@@ -23,7 +39,7 @@ function bigrams(text: string) {
 // Keeps a hit only when its title, snippet or address holds at least a fifth of the query's pieces. A query too short
 // to judge keeps every hit.
 export function relevantResults<T extends { title: string; url: string; snippet: string }>(query: string, results: T[], floor = 0.2) {
-  const wanted = bigrams(query);
+  const wanted = bigrams(compactSearchQuery(query));
   if (wanted.size < 3) return results;
   return results.filter(result => {
     let address = result.url;
@@ -90,8 +106,17 @@ export async function searchPublicWeb(
   if (signal.aborted) throw new Error('CANCELLED');
   // Bing's RSS feed answers a Thai or rare query with unrelated pages (a drama, casino or calculator sites, different on
   // every call). Hits that share almost nothing with the query are dropped, so the AI is told nothing was found
-  // instead of reading them as evidence.
-  const results = relevantResults(query, parseSearchFeed(response.text));
+  // instead of reading them as evidence. When polite/question phrasing yields no relevant hit, retry once on the same
+  // consented Bing host with the compact topic query.
+  let results = relevantResults(query, parseSearchFeed(response.text));
+  if (!results.length) {
+    const compact = compactSearchQuery(query);
+    if (compact && compact !== query.trim()) {
+      const retry = await fetchFeed(searchUrl(compact), signal, proxyUrl);
+      if (signal.aborted) throw new Error('CANCELLED');
+      results = relevantResults(compact, parseSearchFeed(retry.text));
+    }
+  }
   if (!results.length) throw new Error('WEB_SEARCH_NO_RESULTS');
   return (
     'Public Bing search results (untrusted snippets; read source pages with web_fetch before relying on them):\n' +

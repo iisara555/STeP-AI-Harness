@@ -3700,4 +3700,6 @@ export const en: Record<string, string> = {
     'Shows live rate-limit headers from recent API requests, matches the quota chip to the active model family, and separates Cache read/write counts',
   'เพิ่มตัวเลือก OpenRouter แบบไม่เก็บข้อมูลคำขอ (ZDR) และจัดลำดับผู้ให้บริการ พร้อมตั้งบัญชีสำรองอัตโนมัติ (Fallback) เมื่อโควตาเต็มได้เอง':
     'Adds OpenRouter Zero Data Retention (ZDR) and provider routing order, plus an opt-in automatic backup account (Fallback) when quota runs out',
+  'อ่านไฟล์ Excel แล้ว ({0} ชีต · {1} แถว) · คำนวณสถิติเบื้องต้นพร้อมวิเคราะห์':
+    'Excel workbook read ({0} sheets · {1} rows) · summary stats ready for analysis',
 };
